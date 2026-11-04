@@ -156,6 +156,10 @@ mkdir -p "$OUT/Mods/WatchfulEyes"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/WatchfulEyes.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/WatchfulEyes/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/WatchfulEyes.dll" "$OUT/FNA.dll" "$OUT/Mods/WatchfulEyes/WatchfulEyes.dll" >/dev/null
 cp "$HERE/mods/WatchfulEyes/mod.json" "$OUT/Mods/WatchfulEyes/"
+mkdir -p "$OUT/Mods/ThePit"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/ThePit.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/ThePit/*.cs
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/ThePit.dll" "$OUT/FNA.dll" "$OUT/Mods/ThePit/ThePit.dll" >/dev/null
+cp "$HERE/mods/ThePit/mod.json" "$OUT/Mods/ThePit/"
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
 mkdir -p "$HERE/build/Mods/HelloUI"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"

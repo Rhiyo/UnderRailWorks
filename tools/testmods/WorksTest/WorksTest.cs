@@ -67,6 +67,7 @@ public sealed class WorksTest : WorksMod
                 if (all.Count > 0) { if (all[0].Items.Count == 0) { all[0].Add("currency\\StygianCoin", 3); all[0].Add("consumables\\medicine\\bandage", 2); } Log.Info("open nearest: " + all[0].Open()); }
             }
             if (Input.Pressed(Keys.S) && Input.Down(Keys.LeftControl)) Log.Info("sneak: " + StatusEffects.Apply(World.Player, "stealthMode", 0));
+            if (Input.Pressed(Keys.T) && Input.Down(Keys.LeftControl)) Log.Info("pit master: " + Dialogs.Start(World.Placed("pit_master"), "pit/master"));
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }

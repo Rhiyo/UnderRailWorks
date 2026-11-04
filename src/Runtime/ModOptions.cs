@@ -196,6 +196,10 @@ public static class ModOptions
         if (fixes) ButtonRow(options, page, "Engine fixes", 1);
         UnderrailOptions.SeparatorRow(options);
         UnderrailOptions.HeadingRow(options, ModLoader.Mods.Count == 0 ? "No mods installed (Mods folder)" : "Mods (" + ModLoader.Mods.Count(m => m.Loaded) + " of " + ModLoader.Mods.Count + " loaded)");
+        // Mods load when the game starts. Switching them is left to the main menu: a change made in a game would only
+        // show after a restart, and that game's saves would then load with a different set of mods than they were played with.
+        if (InGame) Text(options, page, "Mods are switched on and off from the main menu's Options; settings can be changed here.", Quiet);
+        else if (ModLoader.Mods.Count > 0) Text(options, page, "Switching a mod on or off applies when you restart the game.", Quiet);
 
         foreach (var mod in ModLoader.Mods.OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase))
         {
@@ -213,6 +217,7 @@ public static class ModOptions
         // Line 1: [x] Name  version  by author ................ status
         int y = UnderrailOptions.RowY(options), left = UnderrailOptions.Left(options);
         var box = UnderrailOptions.NewTick(options, mod.Enabled);
+        if (InGame) box.Enabled = false;     // see ListView
         UnderrailOptions.PlaceRow(options, box);
         tab.Switches.Add(new KeyValuePair<ModInfo, cao>(mod, box));
         int x = left + UnderrailDropdownScroll.W(box.Size) + 12, lineH = UnderrailDropdownScroll.H(box.Size);
@@ -224,7 +229,8 @@ public static class ModOptions
         UnderrailDropdownScroll.Move(name, x, y + (lineH - UnderrailDropdownScroll.H(name.Size)) / 2);
         UnderrailDropdownScroll.Add(page, name);
         string status; Color colour;
-        if (!mod.Enabled) { status = "Off"; colour = Quiet; }
+        if (!mod.Enabled) { status = mod.Loaded ? "Off at restart" : "Off"; colour = Quiet; }
+        else if (!mod.Loaded && mod.Error == null) { status = "On at restart"; colour = Good; }
         else if (mod.Loaded) { status = "Loaded"; colour = Good; }
         else { status = "Not loaded"; colour = Bad; }
         var state = UnderrailOptions.Label(options, 200);
@@ -308,6 +314,8 @@ public static class ModOptions
         }
     }
 
+    static bool InGame { get { return Hud.Exists; } }
+
     internal static void Save(t1 options)
     {
         Tab tab;
@@ -321,7 +329,7 @@ public static class ModOptions
                 var dep = ModLoader.Find(d.Id);
                 if (dep != null && !on.Contains(dep)) { on.Add(dep); Log.Write("mods: " + dep.Id + " switched on, " + on[i].Id + " needs it"); }
             }
-        foreach (var s in tab.Switches)
+        foreach (var s in tab.Switches.Where(x => !InGame))
         {
             bool want = on.Contains(s.Key);
             if (want != s.Key.Enabled) { ModLoader.SetEnabled(s.Key.Id, want); s.Key.Enabled = want; }

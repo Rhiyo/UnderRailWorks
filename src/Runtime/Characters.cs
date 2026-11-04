@@ -94,6 +94,8 @@ public sealed class Item
     public override string ToString() { return Name + (Stacks > 1 ? " x" + Stacks : ""); }
 }
 
+public enum SpawnSide { Neutral, Hostile, PlayerOnly }
+
 // A character placed by a mod: re-created each time its zone loads, while When holds; never saved.
 public sealed class Placement
 {
@@ -108,6 +110,7 @@ public sealed class Placement
     public Condition When;           // present only while this holds (checked when the zone loads)
     public string Store;             // makes it a merchant with this game store (data/Rules/Stores, e.g. "bigbret")
     public Action<Character> Setup;  // anything else, after it's placed
+    internal bool Temporary;         // World.Spawn: once only, forgotten when the zone goes
 }
 
 public static partial class World
@@ -159,6 +162,61 @@ public static partial class World
         if (p == null || p.Id == null || p.Zone == null || p.Blueprint == null) throw new ArgumentException("a placement needs Id, Zone and Blueprint");
         lock (placements) { placements.RemoveAll(x => x.Id == p.Id); placements.Add(p); }
         if (string.Equals(ZoneId, p.Zone, StringComparison.OrdinalIgnoreCase)) SpawnPlacements(Areas.CurrentZone(), p.Zone);
+    }
+
+    // --- Temporary characters (arena waves, ambushes, summons) ------------------------------------------------------
+    // A character from a blueprint, now, in the player's area at a tile (see FreeTilesNear). Unlike a placement it
+    // is created once: never saved (taken out around saves like placements), gone when the zone is left or another
+    // game loaded, never re-created. hostile: attacks the player (else neutral and passive).
+    public static Character Spawn(string blueprint, int x, int y, bool hostile) { return Spawn(blueprint, x, y, hostile ? SpawnSide.Hostile : SpawnSide.Neutral); }
+    // side: PlayerOnly fights the player and nobody else (a duel, an arena: a station's guards stay out of it). How:
+    // a character's attitude to a faction is its own override (efk.an), else the faction table (oj.abu), else neutral;
+    // the spawn gets a faction of its own that no table knows (everyone is neutral to it) and an override making it
+    // hostile to "player". (Giving it the player's own faction instead turned the whole station on the player.)
+    public static Character Spawn(string blueprint, int x, int y, SpawnSide side)
+    {
+        bool hostile = side != SpawnSide.Neutral;
+        var player = Player;
+        var zone = ZoneId;
+        if (player == null || zone == null || player.Area == null) return null;
+        var id = "spawn:" + (++spawned);
+        var p = new Placement { Id = id, Zone = zone, Area = player.Area.Name, X = x, Y = y, Blueprint = blueprint, Friendly = !hostile, Temporary = true };
+        if (side == SpawnSide.PlayerOnly) p.Setup = c => { c.Faction = "works_spawn"; c.SetAttitudeToPlayer(Attitude.Hostile); };
+        else if (hostile) p.Setup = c => c.SetAttitudeToPlayer(Attitude.Hostile);
+        Place(p);
+        p.When = Condition.Code(() => false);     // created: never again
+        return Placed(id);
+    }
+    static int spawned;
+
+    // Removes a spawned (or placed) character from the world now.
+    public static void Despawn(Character c)
+    {
+        if (c == null) return;
+        var kv = placed.FirstOrDefault(x => x.Value == c.Entity);
+        if (kv.Key == null) return;
+        placed.Remove(kv.Key);
+        lock (placements) placements.RemoveAll(x => x.Id == kv.Key && x.Temporary);
+        if (kv.Value.Area != null) kv.Value.an();
+    }
+
+    // Floor tiles in the player's area within radius, nearest first, not taken by a character or a solid object.
+    public static IList<Point> FreeTilesNear(int x, int y, int radius)
+    {
+        var result = new List<Point>();
+        var player = Player;
+        var area = player == null ? null : player.Area;
+        if (area == null) return result;
+        var taken = new HashSet<Point>(Characters.Select(c => new Point((int)Math.Round(c.Position.X), (int)Math.Round(c.Position.Y))));
+        for (int dy = -radius; dy <= radius; dy++)
+            for (int dx = -radius; dx <= radius; dx++)
+            {
+                int tx = x + dx, ty = y + dy;
+                if (tx < 0 || ty < 0 || tx >= area.Width || ty >= area.Height || dx * dx + dy * dy > radius * radius) continue;
+                var at = new Point(tx, ty);
+                if (!taken.Contains(at) && area.KindAt(tx, ty, false) == TileKind.Floor) result.Add(at);
+            }
+        return result.OrderBy(t => (t.X - x) * (t.X - x) + (t.Y - y) * (t.Y - y)).ToList();
     }
 
     // The character a placement put in the world (null if it isn't there now).
@@ -253,7 +311,11 @@ public static partial class World
     }
 
     // A game is loading or starting: the placed entities belong to the game state being replaced.
-    internal static void ForgetAll() { placed.Clear(); }
+    internal static void ForgetAll() { placed.Clear(); lock (placements) placements.RemoveAll(p => p.Temporary); }
 
-    internal static void Forget(c1a zone) { foreach (var kv in placed.ToList()) if (kv.Value.Area == null) placed.Remove(kv.Key); }
+    internal static void Forget(c1a zone)
+    {
+        foreach (var kv in placed.ToList()) if (kv.Value.Area == null) placed.Remove(kv.Key);
+        lock (placements) placements.RemoveAll(p => p.Temporary && !placed.ContainsKey(p.Id));     // spawns don't follow the player out
+    }
 }

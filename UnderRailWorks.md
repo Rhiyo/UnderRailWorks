@@ -438,6 +438,19 @@ converted and kept its place relative to the edges).
   Minimap's hidden state survives HUD rebuilds and merchant squares follow zone changes at once; Difficulty Dial
   announces the detection setting; Loadouts opens with K by default.
 
+## Temporary characters; switching mods (Nov 2026)
+
+- `World.Spawn(blueprint, x, y, hostile | SpawnSide)`: a character now, in the player's area, created once (a
+  placement marked Temporary: taken out around saves, forgotten with its zone or on load, never re-created);
+  `World.Despawn`; `World.FreeTilesNear(x, y, radius)`.
+- `SpawnSide.PlayerOnly`: fights the player and no one else. An NPC's attitude to a faction is its own override
+  (`efk.an`), else the faction table (`oj.abu`), else neutral; the spawn gets a faction no table knows plus an
+  override hostile to "player". Measured: hostile rathounds at South Gate were killed by the guards in two seconds;
+  making the guards Passive didn't stop them; giving the spawns the player's own faction turned the whole station on
+  the player; with PlayerOnly the guards stayed out and the rathounds fought the player alone.
+- Mods load at start. In a game the Mods tab's switches are greyed ("switched on and off from the main menu's
+  Options"); at the main menu they apply at the next start, and the status says "On at restart" / "Off at restart".
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
@@ -456,6 +469,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | Loadouts | three gear sets per game, saved with the save; Wear swaps from the bag, not in combat | Equipment, WorksMod.Data, Keybinds (unbound by default), UiPanel.Clear |
 | Pacing | XP per level, XP earned, extra skill / feat / ability points per level | Progression (ModifyXpNeeded, ModifyExperience, ModifyLevelPoints) |
 | WatchfulEyes | opening a container that isn't yours names who would see a theft; optional: no lock picking in view of a guard | ContainerOpened, Container.Owned / IsOwner / Witnesses, Locks.ModifyAttempt (Force) |
+| ThePit | an arena: pay the pit master, waves of creatures that fight only the player, pay per wave, best run per save, a HUD part | World.Spawn (SpawnSide.PlayerOnly), FreeTilesNear, Despawn, CharacterDied, anchored Hud.AddPart, WorksMod.Data |
 | MerchantLedger | every merchant's stock and prices recorded on trade (plain variables), L opens a search over all of them | TradeOpened, Stock/Markup, Ui.TextBox, Keybinds, Character.Key |
 | StatusBoard | health, status effects in words with turns left, AP/MP and whose turn in combat; a HUD part | StatusEffects, Combat.ActionPoints/MovementPoints (any fighter: crp.ahu), Hud.AddPart |
 | HudLayout | a Layout button on the HUD (a setting, off by default; movable itself) or a key (none by default): drag the HUD's parts, Reset all, Done (the game's, and mods' named parts: Minimap, Quest Tracker), right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
