@@ -8,6 +8,7 @@ using Microsoft.Xna.Framework.Input;
 
 public sealed class WorksTest : WorksMod
 {
+    UiTextBox box;
     public override void Load()
     {
         GameEvents.Update.Add(this, seconds =>
@@ -27,6 +28,15 @@ public sealed class WorksTest : WorksMod
             {
                 var s = World.Placed("stranger_npc");
                 if (s != null) { s.Passive = false; s.SetAttitudeToPlayer(Attitude.Hostile); Log.Info("stranger now " + s.AttitudeToPlayer); }
+            }
+            if (Input.Pressed(Keys.F4) && box == null)
+            {
+                var panel = Ui.Panel(320, 50);
+                box = Ui.TextBox(300);
+                box.Changed += text => Log.Info("text box: \"" + text + "\"");
+                Ui.Add(panel, box, 10, 10);
+                Ui.Add(Hud.Root, panel, 600, 300);
+                return;
             }
             if (Input.Pressed(Keys.F4))
             {

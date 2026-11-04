@@ -67,6 +67,32 @@ public static class Ui
         return new UiTickBox((cao)NewTickBox.Invoke(options, new object[] { value }));
     }
 
+    // A text box (the game's own field, c68, as its split-stack dialog sets one up): click it to type; Text reads it.
+    public static UiTextBox TextBox(int width, int maxLength = 40)
+    {
+        var theme = wj.a();
+        var box = new c68();
+        box.Size = new esj(width, theme.c() ? 25 : 28);
+        var font = DefaultFont == null ? null : DefaultFont.GetValue(null) as string;
+        if (font != null) BoxFont.Invoke(box, new object[] { font });
+        if (!theme.c())
+        {
+            BoxTextureField.SetValue(box, theme.f);                            // the theme's field textures
+            BoxOffsetField.SetValue(box, ThemeOffsetField.GetValue(theme));
+            BoxSizeField.SetValue(box, ThemeSizeField.GetValue(theme));
+        }
+        TextOffset.Invoke(box, new object[] { Activator.CreateInstance(TextOffset.GetParameters()[0].ParameterType, 5, font == null ? 4 : egg.b(font)) });
+        ((t3)box).b(maxLength);
+        var handle = new UiTextBox(box);
+        UiTextBox.Live.Add(handle);
+        return handle;
+    }
+    // c68's fields and methods typed with XNA (Point, esj?): by reflection.
+    static readonly MethodInfo BoxFont = typeof(c68).GetMethod("a", new[] { typeof(string) });
+    static readonly FieldInfo BoxTextureField = typeof(c68).GetField("e"), BoxOffsetField = typeof(c68).GetField("f"), BoxSizeField = typeof(c68).GetField("g"),
+        ThemeOffsetField = typeof(wj).GetField("fg"), ThemeSizeField = typeof(wj).GetField("fh");
+    static readonly MethodInfo TextOffset = typeof(c68).GetMethods().First(m => m.Name == "a" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType.Name == "Point");
+
     // A panel in the game's style: dark, with a border in the interface colour. Holds other elements.
     public static UiPanel Panel(int width, int height) { return new UiPanel(new UiPanelControl { Size = new esj(width, height) }); }
 
@@ -142,6 +168,27 @@ public class UiElement
     public int Height { get { return UnderrailDropdownScroll.H(Control.Size); } }
     // Where it is on screen (interface units).
     public Rectangle Bounds { get { return Ui.Bounds(Control); } }
+}
+
+public sealed class UiTextBox : UiElement
+{
+    internal static readonly List<UiTextBox> Live = new List<UiTextBox>();
+    string last = "";
+    internal UiTextBox(c68 box) : base(box) { }
+    public string Text { get { return Control.Text ?? ""; } set { Control.Text = value ?? ""; last = Text; } }
+    // After the text changed (checked once per update).
+    public event Action<string> Changed;
+    internal static void Poll()
+    {
+        Live.RemoveAll(b => b.Control.Parent == null && b.last == null);
+        foreach (var b in Live.ToList())
+        {
+            var now = b.Text;
+            if (now == b.last) continue;
+            b.last = now;
+            if (b.Changed != null) { try { b.Changed(now); } catch (Exception ex) { Log.Write("ui: a text box handler failed: " + ex.Message); } }
+        }
+    }
 }
 
 public sealed class UiTickBox : UiElement
@@ -246,8 +293,40 @@ public enum MouseButton { Left, Right, Middle }
 public static class Input
 {
     static KeyboardState now, before;
+    static WeakReference lastFocus;     // the last focused control that wasn't a mod's text box
     static MouseState mouseNow, mouseBefore;
-    internal static void Tick() { before = now; now = Keyboard.GetState(); mouseBefore = mouseNow; mouseNow = UiScaleFix.GetMouse(); }
+    internal static void Tick()
+    {
+        before = now; now = Keyboard.GetState(); mouseBefore = mouseNow; mouseNow = UiScaleFix.GetMouse();
+        // A click outside a mod's focused text box takes its focus away (the game's text fields are in modal dialogs; a box
+        // on the HUD otherwise kept the keyboard after a click on the world, and no key reached the game).
+        // Focus goes back to what had it before the box (the game's hotkeys arrive through the focused control: with none,
+        // no key reached the game).
+        var focusService = bpo.GetService<d1a>();
+        var focusedNow = focusService == null ? null : focusService.aa7();
+        var focusedBox = focusedNow == null ? null : UiTextBox.Live.FirstOrDefault(b => b.Control == focusedNow);
+        if (focusedBox == null && focusedNow != null) lastFocus = new WeakReference(focusedNow);
+        if (focusedBox != null && mouseNow.LeftButton == ButtonState.Pressed && mouseBefore.LeftButton != ButtonState.Pressed && !focusedBox.Bounds.Contains(Mouse))
+        {
+            var back = lastFocus == null ? null : lastFocus.Target as euz;
+            focusService.aa4(back != null && back.Parent != null ? back : null);
+            Typing = false;
+        }
+        if (!now.Equals(before)) Typing = FocusedText(Root());     // only when a key changed: a walk over the interface
+    }
+
+    // A text field has the keyboard (a mod's text box, the game's own fields, its console): keys are text, not
+    // shortcuts. Keybind.Pressed/Down are false meanwhile, as the game's own hotkeys are.
+    public static bool Typing { get; private set; }
+
+    static euz Root() { var ui = bpo.GetService<bcm>(); return ui == null ? null : ui.aau(); }
+    static bool FocusedText(euz c)
+    {
+        if (c == null || !c.Visible) return false;
+        if (c is t3 && c.IsFocus) return true;
+        foreach (euz child in c.Controls) if (FocusedText(child)) return true;
+        return false;
+    }
     // The mouse in interface units (the same coordinates as Ui elements: interface scale and insets applied).
     public static Point Mouse { get { return new Point(mouseNow.X, mouseNow.Y); } }
     public static bool MouseDown(MouseButton b) { return Pressed(mouseNow, b); }
@@ -290,6 +369,7 @@ static class UiHooks
     static void Updated(GameTime __0)
     {
         Input.Tick();
+        try { UiTextBox.Poll(); } catch (Exception ex) { Log.Write("ui: " + ex.Message); }
         try { Saves.Tick(); } catch (Exception ex) { Log.Write("saves: " + ex); }
         double dt = __0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds;
         if (GameEvents.Update.Any) GameEvents.Update.Run(h => h(dt));

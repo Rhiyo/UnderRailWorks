@@ -24,8 +24,8 @@ public sealed class Keybind
     // The key the player chose (Keys.None: unbound).
     public Keys Key { get; internal set; }
     // True on the update the key went down (not while typing in a text box: the game's own hotkeys don't fire then either).
-    public bool Pressed { get { return Key != Keys.None && Input.Pressed(Key); } }
-    public bool Down { get { return Key != Keys.None && Input.Down(Key); } }
+    public bool Pressed { get { return Key != Keys.None && !Input.Typing && Input.Pressed(Key); } }
+    public bool Down { get { return Key != Keys.None && !Input.Typing && Input.Down(Key); } }
     internal string SettingKey { get { return "key." + Id; } }
 }
 

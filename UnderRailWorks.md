@@ -253,6 +253,14 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
 - **Merchants**: `World.Characters` (everyone in the zone), `Character.Stock`, `Markup`, `GameEvents.TradeOpened`,
   `Character.MakeMerchant(store)` / `Placement.Store` (placed characters only: the merchant aspect plus the dialog
   aspect the barter screen takes, `aim(..., j7)`; without it the screen crashed), `Item.Value/Weight`.
+- **Text boxes**: `Ui.TextBox(width, maxLength)` -> `UiTextBox` (Text, Changed: checked once per update): the game's own
+  field (c68, set up as its split-stack dialog does). `Input.Typing`: a text field has the keyboard (a focused t3:
+  mod boxes, the game's fields, its console; checked only when a key changed); Keybind.Pressed/Down are false
+  meanwhile, as the game's hotkeys are. A click outside a mod's focused box gives the focus back to what had it before
+  (focus service d1a: aa7 focused, aa4 set): the game's hotkeys arrive through the focused control, and with none (a
+  box on the HUD kept it) no key reached the game. Tested: typing "kkk" doesn't fire the minimap's K; after a click
+  away K and I work. (Test trap: a click on the world at some spots leaves the game without keys in the headless
+  runner; click the bottom HUD edge with focus first.)
 - **Key bindings go through the game's Controls tab** (Nov 2026; every mod key): `Keybinds.Register(mod, id, label,
   defaultKey)` -> `Keybind` (Key, Pressed, Down). The Controls list (ar4) holds Hotkey values and builds a row (cbx)
   per value; mod actions get Hotkey values from 100000 up, appended before the rows are built (prefix on ar4.a(size));
