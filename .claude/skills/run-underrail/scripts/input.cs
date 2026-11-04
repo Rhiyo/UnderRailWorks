@@ -40,6 +40,8 @@ class Input {
                     SetCursorPos(int.Parse(a[++i]), int.Parse(a[++i])); Thread.Sleep(150);     // the game sees the hover first
                     mouse_event(right ? RightDown : LeftDown, 0, 0, 0, IntPtr.Zero); Thread.Sleep(80);
                     mouse_event(right ? RightUp : LeftUp, 0, 0, 0, IntPtr.Zero); Thread.Sleep(150); break; }
+                case "ldown": SetCursorPos(int.Parse(a[++i]), int.Parse(a[++i])); Thread.Sleep(150); mouse_event(LeftDown, 0, 0, 0, IntPtr.Zero); Thread.Sleep(100); break;     // a drag: ldown, move..., lup
+                case "lup": SetCursorPos(int.Parse(a[++i]), int.Parse(a[++i])); Thread.Sleep(150); mouse_event(LeftUp, 0, 0, 0, IntPtr.Zero); Thread.Sleep(150); break;
                 case "wheel": mouse_event(Wheel, 0, 0, 120 * int.Parse(a[++i]), IntPtr.Zero); Thread.Sleep(100); break;
                 case "key": Press(Vk(a[++i])); break;
                 case "down": Down(Vk(a[++i])); break;

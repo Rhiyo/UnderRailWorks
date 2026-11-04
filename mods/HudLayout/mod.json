@@ -1,0 +1,2 @@
+{ "id": "HudLayout", "name": "HUD Layout", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
+  "description": "Arrange the game's HUD: press F12, drag parts where you want them; saved per HUD size." }

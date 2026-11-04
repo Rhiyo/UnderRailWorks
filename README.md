@@ -16,6 +16,7 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   - Difficulty Dial: damage taken and dealt, hit chance and AP as settings.
   - After-Action Report: a summary after each fight, and career totals.
   - Contract Board: a contractor at South Gate Station with generated bounties and deliveries.
+  - HUD Layout: press F12 and drag the game's HUD parts where you want them.
 
 No game code or game files are shipped: the patcher changes the player's own copy, and mods patch it at runtime.
 Every file the game writes (saves, config.dat) stays readable by the stock game.

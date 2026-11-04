@@ -304,6 +304,7 @@ public static class UnderrailDropdownScroll
     internal static int X(object point) { return (int)point.GetType().GetField("X").GetValue(point); }
     internal static int Y(object point) { return (int)point.GetType().GetField("Y").GetValue(point); }
     static object At(euz c) { return AbsoluteMethod.Invoke(c, null); }
+    internal static object LocationOf(euz c) { return LocationProp.GetValue(c, null); }
     internal static void Move(euz c, int x, int y) { LocationProp.SetValue(c, Activator.CreateInstance(LocationProp.PropertyType, x, y), null); }
 
     static int ScreenHeight(euz c)

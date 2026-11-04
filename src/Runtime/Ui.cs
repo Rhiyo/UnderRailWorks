@@ -130,6 +130,9 @@ public class UiElement
     internal static UiElement Of(euz control) { return control == null ? null : Handles.GetValue(control, c => new UiElement(c)); }
 
     public bool Visible { get { return Control.Visible; } set { Control.Visible = value; } }
+    // Its position in its parent (interface units), as Ui.Move sets it.
+    public int X { get { return UnderrailDropdownScroll.X(UnderrailDropdownScroll.LocationOf(Control)); } }
+    public int Y { get { return UnderrailDropdownScroll.Y(UnderrailDropdownScroll.LocationOf(Control)); } }
     public int Width { get { return UnderrailDropdownScroll.W(Control.Size); } }
     public int Height { get { return UnderrailDropdownScroll.H(Control.Size); } }
     // Where it is on screen (interface units).
@@ -233,10 +236,19 @@ public static partial class GameEvents
     public static readonly Hook<Action<double>> Update = new Hook<Action<double>>("Update");
 }
 
+public enum MouseButton { Left, Right, Middle }
+
 public static class Input
 {
     static KeyboardState now, before;
-    internal static void Tick() { before = now; now = Keyboard.GetState(); }
+    static MouseState mouseNow, mouseBefore;
+    internal static void Tick() { before = now; now = Keyboard.GetState(); mouseBefore = mouseNow; mouseNow = UiScaleFix.GetMouse(); }
+    // The mouse in interface units (the same coordinates as Ui elements: interface scale and insets applied).
+    public static Point Mouse { get { return new Point(mouseNow.X, mouseNow.Y); } }
+    public static bool MouseDown(MouseButton b) { return Pressed(mouseNow, b); }
+    public static bool MousePressed(MouseButton b) { return Pressed(mouseNow, b) && !Pressed(mouseBefore, b); }
+    public static bool MouseReleased(MouseButton b) { return !Pressed(mouseNow, b) && Pressed(mouseBefore, b); }
+    static bool Pressed(MouseState m, MouseButton b) { return (b == MouseButton.Left ? m.LeftButton : b == MouseButton.Right ? m.RightButton : m.MiddleButton) == ButtonState.Pressed; }
     public static bool Down(Keys key) { return now.IsKeyDown(key); }
     public static bool Pressed(Keys key) { return now.IsKeyDown(key) && !before.IsKeyDown(key); }
 }

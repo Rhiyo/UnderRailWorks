@@ -267,6 +267,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | DifficultyDial | damage taken/dealt, hit chance, AP as settings | Combat hooks, ModConfig |
 | AfterActionReport | a summary after each fight, career totals | Combat events, Ui panel, Variables |
 | ContractBoard | generated bounties and deliveries as quests from a placed contractor | Placement, dynamic dialogs, Quests, Text, Items, events |
+| HudLayout | F12: drag the game's HUD parts, right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
 | TheStranger, HelloQuest (examples) | a character, a conversation, a quest | the content API |
 Tested together in one save, then a quicksave with a contract active, both placed characters and every mod's
 variables: the stock loader reads it (`check-saves.sh --only`), and after quickload the contract is back.

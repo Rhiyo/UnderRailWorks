@@ -132,6 +132,7 @@ Several commands per call (each call starts a Wine process, ~1 s):
 move X Y            hover (tooltips, Tab-like highlights need the cursor over things)
 click X Y           left click (moves there first, so the game sees the hover)
 rclick X Y          right click
+ldown X Y / lup X Y press / release the left button there (a drag: ldown X Y, move X Y..., lup X Y)
 wheel N             mouse wheel, N notches (+ up / - down); hold Shift for zoom: down 0x10 wheel -2 up 0x10
 key VK              press a key          down VK / up VK    hold until released     hold VK MS
 type TEXT           letters, digits, spaces (for the character name)
