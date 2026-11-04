@@ -396,6 +396,17 @@ check ran (detection 90 vs stealth 16: seen at once) and was overridden; it runs
 of guards, so handlers must be cheap. **Not yet seen in game:** the rate hook (the guards had already detected the
 character before it sneaked, so the game skipped the rate); Difficulty Dial's "how fast enemies notice you" uses it.
 
+## Places that survive resolution changes (Nov 2026)
+
+HUD Layout and Movable Windows 1.0 saved pixel positions per HUD size (`Part@2560x720=x,y`): after a resolution or
+interface-scale change the layout was simply gone (and nothing kept a part on screen on a smaller HUD).
+`Ui.Place(element)` now writes a place relative to the nearest edge or the centre on each axis (`R20,B150`: 20 from
+the right, 150 from the bottom; `C`/`M` for the centre), `Ui.Restore(element, place)` puts it back on any size and
+keeps it inside its parent, `Ui.Place(x, y, w, h, parentW, parentH)` converts old pixel entries, `Ui.KeepInside`
+clamps while dragging. Both mods convert their 1.0 entries on first use. The game rebuilds its HUD after a resolution
+change (new `ci3`), so HudCreated re-applies everything. Tested at 2560x720 and 1600x900 (a 1.0 entry from 1792x720
+converted and kept its place relative to the edges).
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

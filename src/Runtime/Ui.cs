@@ -110,6 +110,72 @@ public static class Ui
     }
     public static void Remove(UiElement element) { if (element != null && element.Control.Parent != null) UnderrailDropdownScroll.Remove(element.Control.Parent, element.Control); }
     public static void Move(UiElement element, int x, int y) { UnderrailDropdownScroll.Move(element.Control, x, y); }
+
+    // --- Places that survive resolution and interface-scale changes ------------------------------------------------
+    // A position saved as pixels is wrong (or off-screen) once the HUD changes size. Place(element) writes where it is
+    // relative to the nearest edge or the centre of its parent, on each axis ("R24,B110": 24 from the right edge,
+    // 110 from the bottom); Restore puts it back at the same distance from the same edge on any size, kept on screen.
+    public static string Place(UiElement element)
+    {
+        var parent = element.Control.Parent;
+        if (parent == null) return element.X + "," + element.Y;
+        int pw = UnderrailDropdownScroll.W(parent.Size), ph = UnderrailDropdownScroll.H(parent.Size);
+        return Axis(element.X, element.Width, pw, 'L', 'C', 'R') + "," + Axis(element.Y, element.Height, ph, 'T', 'M', 'B');
+    }
+
+    // The same for a rectangle in a parent of the given size (e.g. to convert positions saved as pixels).
+    public static string Place(int x, int y, int width, int height, int parentWidth, int parentHeight)
+    {
+        return Axis(x, width, parentWidth, 'L', 'C', 'R') + "," + Axis(y, height, parentHeight, 'T', 'M', 'B');
+    }
+    // Keeps a position for element inside its parent.
+    public static Point KeepInside(UiElement element, int x, int y)
+    {
+        var parent = element.Control.Parent;
+        if (parent == null) return new Point(x, y);
+        return new Point(Clamp(x, element.Width, UnderrailDropdownScroll.W(parent.Size)), Clamp(y, element.Height, UnderrailDropdownScroll.H(parent.Size)));
+    }
+
+    // Moves element to a place from Place (or an old "x,y"). False if the text isn't one.
+    public static bool Restore(UiElement element, string place)
+    {
+        var parent = element.Control.Parent;
+        if (parent == null || string.IsNullOrEmpty(place)) return false;
+        var parts = place.Split(',');
+        if (parts.Length != 2) return false;
+        int pw = UnderrailDropdownScroll.W(parent.Size), ph = UnderrailDropdownScroll.H(parent.Size);
+        int x, y;
+        if (!Axis(parts[0], element.Width, pw, 'L', 'C', 'R', out x) || !Axis(parts[1], element.Height, ph, 'T', 'M', 'B', out y)) return false;
+        Move(element, Clamp(x, element.Width, pw), Clamp(y, element.Height, ph));
+        return true;
+    }
+
+    // Inside the parent when it fits, else its start edge on screen.
+    static int Clamp(int at, int size, int room) { return size >= room ? 0 : Math.Max(0, Math.Min(room - size, at)); }
+
+    static string Axis(int at, int size, int room, char start, char mid, char end)
+    {
+        int centre = at + size / 2;
+        if (centre < room / 3) return start + at.ToString();
+        if (centre > room * 2 / 3) return end + (room - at - size).ToString();
+        return mid + (centre - room / 2).ToString();
+    }
+
+    static bool Axis(string text, int size, int room, char start, char mid, char end, out int at)
+    {
+        at = 0;
+        text = text.Trim();
+        int n;
+        if (text.Length > 1 && !char.IsDigit(text[0]) && text[0] != '-' && int.TryParse(text.Substring(1), out n))
+        {
+            if (text[0] == start) at = n;
+            else if (text[0] == end) at = room - size - n;
+            else if (text[0] == mid) at = room / 2 + n - size / 2;
+            else return false;
+            return true;
+        }
+        return int.TryParse(text, out at);     // an old pixel position
+    }
     public static void Resize(UiElement element, int width, int height) { element.Control.Size = new esj(width, height); }
     public static void Show(UiElement element, bool visible) { element.Visible = visible; }
     public static void SetText(UiElement element, string text) { element.Control.Text = text; }

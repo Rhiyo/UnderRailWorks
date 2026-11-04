@@ -1,7 +1,8 @@
 // HUD Layout: an UnderRailWorks mod. Press the key (default F12) to arrange the game's HUD: frames show its parts;
-// drag one with the left mouse button, right-click one to put it back, Reset all for every part; Done (or the key) to finish. Positions are
-// saved per HUD size in the mod's settings.ini and applied whenever the game builds its HUD. Built from Works' API only
-// (Hud handles, Ui.Custom, Input mouse, Settings).
+// drag one with the left mouse button, right-click one to put it back, Reset all for every part; Done (or the key) to finish. Each part's
+// place is kept relative to the nearest screen edge or the centre (Ui.Place), so a layout survives resolution and
+// interface-scale changes and stays on screen; it is applied whenever the game builds its HUD (also after a resolution
+// change). Built from Works' API only (Hud handles, Ui.Custom, Ui.Place/Restore, Input mouse, Settings).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -69,10 +70,11 @@ public sealed class HudLayout : WorksMod
             }
             if (dragging != null)
             {
-                Ui.Move(dragging.Element, partStart.X + m.X - dragStart.X, partStart.Y + m.Y - dragStart.Y);
+                var to = Ui.KeepInside(dragging.Element, partStart.X + m.X - dragStart.X, partStart.Y + m.Y - dragStart.Y);
+                Ui.Move(dragging.Element, to.X, to.Y);
                 if (Input.MouseReleased(MouseButton.Left))
                 {
-                    Settings.Set(Key(dragging.Name), dragging.Element.X + "," + dragging.Element.Y);
+                    Settings.Set(Key(dragging.Name), Ui.Place(dragging.Element));
                     dragging = null;
                 }
             }
@@ -99,8 +101,33 @@ public sealed class HudLayout : WorksMod
     void Apply(Part p)
     {
         var saved = Settings.Get(Key(p.Name));
-        Point at;
-        if (saved != null && TryParse(saved, out at)) Ui.Move(p.Element, at.X, at.Y);
+        if (string.IsNullOrEmpty(saved)) saved = Legacy(p);
+        if (!string.IsNullOrEmpty(saved)) Ui.Restore(p.Element, saved);
+    }
+
+    // Version 1.0 saved pixels per HUD size ("Part@2560x720=x,y"): use the entry for this size, else the newest
+    // other size's, converted to an edge-relative place (and written in the new form).
+    string Legacy(Part p)
+    {
+        string best = null;
+        foreach (var k in Settings.Keys.Where(k => k.StartsWith(p.Name + "@")))
+        {
+            var v = Settings.Get(k);
+            Point at; int w, h;
+            if (string.IsNullOrEmpty(v) || !TryParse(v, out at) || !Size(k.Substring(p.Name.Length + 1), out w, out h)) continue;
+            var place = Ui.Place(at.X, at.Y, p.Element.Width, p.Element.Height, w, h);
+            best = place;
+            if (w == hud.Width && h == hud.Height) break;
+        }
+        if (best != null) Settings.Set(Key(p.Name), best);
+        return best;
+    }
+
+    static bool Size(string s, out int w, out int h)
+    {
+        w = h = 0;
+        var parts = s.Split('x');
+        return parts.Length == 2 && int.TryParse(parts[0], out w) && int.TryParse(parts[1], out h);
     }
 
     // The Layout button on the HUD (a part of its own, so it can be moved too), while the setting is on.
@@ -116,7 +143,7 @@ public sealed class HudLayout : WorksMod
     // Every part back where it was, and every saved place cleared (all HUD sizes).
     void ResetAll()
     {
-        foreach (var k in Settings.Keys) if (k.Contains("@")) Settings.Set(k, "");
+        foreach (var k in Settings.Keys) if (k.Contains("@") || k.StartsWith("at.")) Settings.Set(k, "");
         foreach (var p in Parts())
         {
             Point o;
@@ -171,7 +198,7 @@ public sealed class HudLayout : WorksMod
         return found;
     }
 
-    string Key(string part) { return part + "@" + hud.Width + "x" + hud.Height; }
+    static string Key(string part) { return "at." + part; }
     static bool TryParse(string s, out Point p)
     {
         p = Point.Zero;
