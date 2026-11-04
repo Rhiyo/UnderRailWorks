@@ -202,6 +202,8 @@ public sealed class UiPanel : UiElement
     internal UiPanel(UiPanelControl panel) : base(panel) { }
     public Color Background { get { return ((UiPanelControl)Control).Background; } set { ((UiPanelControl)Control).Background = value; } }
     public Color Border { get { return ((UiPanelControl)Control).Border; } set { ((UiPanelControl)Control).Border = value; } }
+    // Removes everything added to the panel (to rebuild its contents).
+    public void Clear() { foreach (var child in Control.Controls.ToList()) UnderrailDropdownScroll.Remove(Control, child); }
 }
 
 // What a custom element draws with, during its draw: everything in interface units, through the game's interface batch
