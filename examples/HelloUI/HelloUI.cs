@@ -20,7 +20,7 @@ public sealed class HelloUI : WorksMod
 {
     HelloUIConfig config;
     UiPanel panel;
-    avo label;
+    UiElement label;
     double played;
 
     public override void Load()

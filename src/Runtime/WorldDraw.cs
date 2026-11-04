@@ -52,6 +52,7 @@ public static class WorldDrawHooks
 
     public static void Drawn(a7m view, cp9 context, a2f layer, bool shaderPass)
     {
+        if (!shaderPass) World.LayerDrawn(layer);
         if (WorldDraw.LayerStarting.Any) WorldDraw.LayerStarting.Run(h => h(view, context, layer, shaderPass));
     }
 
@@ -69,6 +70,7 @@ public static class WorldDrawHooks
 
     public static void WorldDone(a7m view, cp9 context)
     {
+        World.WorldDone();
         if (WorldDraw.WorldDone.Any) WorldDraw.WorldDone.Run(h => h(view, context));
     }
 

@@ -73,6 +73,21 @@ public static class Entities
     // A character: a c5x with stats (amc). Walls and props are c5x too.
     public static c5x Character(b0b e) { var c = e as c5x; return c != null && c.GetAspect<amc>() != null ? c : null; }
     public static bool IsPlayer(b0b e) { var c = Character(e); return c != null && c.IsPlayer; }
+    // Its internal name (cae.b; empty for plain scenery such as wall pieces).
+    static readonly FieldInfo NameField = typeof(cae).GetField("b", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+    public static string Name(b0b e) { return e is cae ? NameField.GetValue(e) as string ?? "" : ""; }
+    public static aud AreaOf(b0b e) { return e == null ? null : e.Area; }
+    // Solid objects, measured (Nov 2026, entity dumps in three areas): everything solid has the cd0 aspect ("SEA"; its
+    // subclasses a9g "WEA", e4x "FOSEA", ask "TOSEA"); doors also have cnb ("DEA"); unnamed solids are the wall pieces,
+    // named ones the props (Desk, Shelves, Barrel, Locker...). Characters and non-solid objects: Nothing.
+    public static TileKind Solid(b0b e)
+    {
+        var c = e as c5x;
+        if (c == null || Character(e) != null) return TileKind.Nothing;
+        if (c.GetAspect<cnb>() != null) return TileKind.Door;
+        if (c.GetAspect<cd0>() == null) return TileKind.Nothing;
+        return string.IsNullOrEmpty(Name(e)) ? TileKind.Wall : TileKind.Prop;
+    }
     // How a character stands towards the player (as eg0 decides the Tab outline's colour); None for non-characters.
     public static Attitude AttitudeOf(b0b e)
     {
@@ -162,14 +177,6 @@ public static class Areas
         }
     }
 
-    // The colours the game draws transition tiles in (a23): blue to another area of the zone, red to another zone.
-    public static readonly Color AreaExitColour = new Color(0, 0, 150), ZoneExitColour = new Color(150, 0, 0);
-}
-
-public struct Exit
-{
-    public Rectangle Tiles;
-    public bool ToOtherZone;     // to another map (zone), else another area of this one
 }
 
 // The world view (a7m, a UI control: mv : a7m : dnn).

@@ -77,6 +77,8 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 
 - [x] Minimap (`mods/Minimap`): HUD panel, isometric, walls/props/doors/exits, the player and visible characters in
   their Tab colours; ModConfig settings.
+- [ ] Wrap the drawing API (WorldDraw passes a7m/cp9/a2f) in Works types, so UnderRailFixes can be built without the
+  game too, like Minimap and HelloUI.
 - [ ] Minimap next: click to open a larger map, remember explored tiles per area, other floors (Z) of the same area,
   map markers for quests or containers.
 

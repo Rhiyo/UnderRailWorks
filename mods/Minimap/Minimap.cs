@@ -4,6 +4,7 @@
 // the player as a gold dot and the characters the player can currently see as dots in the colour holding Tab gives
 // them (the game's own outline colours). Characters the game isn't drawing (out of sight, stealthed) are not shown.
 // It is rebuilt a few times a second, not every frame. Settings: Options -> Mods -> Minimap settings.
+// Built from Works' API only (World, Area, Character, Ui.Custom): it compiles without the game, so no scrambled names.
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
@@ -39,29 +40,15 @@ public sealed class Minimap : WorksMod
 {
     internal static bool Relayout;
     MinimapConfig config;
-    euz hud;
+    UiElement hud;
     UiPanel panel;
-    MapView view;
+    readonly MapPicture map = new MapPicture();
     double sinceDraw;
-    b0b player;
-    a7m worldView;
-    readonly HashSet<b0b> seenNow = new HashSet<b0b>();
-    List<b0b> seen = new List<b0b>();
 
     public override void Load()
     {
         config = GetConfig<MinimapConfig>();
         UiEvents.HudCreated.Add(this, root => { hud = root; Build(); });
-        // Who the game draws this frame: the player and the characters in sight.
-        WorldDraw.LayerStarting.Add(this, (worldView, context, layer, shaderPass) =>
-        {
-            if (shaderPass) return;
-            var e = Layers.Entity(layer);
-            var c = e == null ? null : Entities.Character(e);
-            if (c == null) return;     // any of its layers (body, shadow...): it is being drawn
-            if (c.IsPlayer) { player = e; this.worldView = worldView; } else seenNow.Add(e);
-        });
-        WorldDraw.WorldDone.Add(this, (worldView, context) => { seen = new List<b0b>(seenNow); seenNow.Clear(); });
         GameEvents.Update.Add(this, seconds =>
         {
             if (panel == null) return;
@@ -70,13 +57,8 @@ public sealed class Minimap : WorksMod
             sinceDraw += seconds;
             if (!panel.Visible || sinceDraw < 0.25) return;
             sinceDraw = 0;
-            try
-            {
-                bool shroud = worldView != null && WorldViews.Shroud(worldView);
-                view.Render(player, config.ShowCharacters ? seen : null, config.TilesAcross / 2, config.ShowExits, shroud, worldView == null ? 1 : WorldViews.Observer(worldView));
-                if (view.Note != null) { Log.Info(view.Note); view.Note = null; }
-            }
-            catch (Exception ex) { Log.Warn("render failed: " + ex.Message); }
+            map.Update(World.Player, config.ShowCharacters ? World.Visible : null, config.TilesAcross / 2, config.ShowExits);
+            if (map.Note != null) { Log.Info(map.Note); map.Note = null; }
         });
     }
 
@@ -87,13 +69,13 @@ public sealed class Minimap : WorksMod
         int w = config.Size, h = config.Size / 2 + 12;
         panel = Ui.Panel(w, h);
         panel.Background = new Color(8, 8, 8) * (config.Opacity / 100f);
-        view = new MapView { Size = new esj(w - 8, h - 8) };
-        Ui.Add(panel, view, 4, 4);
+        Ui.Add(panel, Ui.Custom(w - 8, h - 8, map.Draw), 4, 4);
+        map.Resize(w - 8, h - 8);
         // Clear of the HUD's own parts (interface units, the same at every interface scale): the portrait and the icon bar
         // at the top, the side bar and the menu buttons in the bottom corners; the bottom edge level with the action bar's.
         bool left = config.Corner == Corner.TopLeft || config.Corner == Corner.BottomLeft, top = config.Corner == Corner.TopRight || config.Corner == Corner.TopLeft;
-        int x = left ? (top ? 12 : 56) : Ui.Width(hud) - w - (top ? 12 : 52);
-        int y = top ? (left ? 145 : 62) : Ui.Height(hud) - h - 12;
+        int x = left ? (top ? 12 : 56) : hud.Width - w - (top ? 12 : 52);
+        int y = top ? (left ? 145 : 62) : hud.Height - h - 12;
         Ui.Add(hud, panel, x, y);
         Ui.Show(panel, config.Show);
         sinceDraw = 1;
@@ -105,100 +87,70 @@ public sealed class Minimap : WorksMod
     }
 }
 
-// The map itself: a texture rebuilt by Render, drawn over the control's area.
-public sealed class MapView : euz
+// The map itself: pixels rebuilt by Update a few times a second, put into a texture and drawn by the custom element.
+sealed class MapPicture
 {
-    Texture2D picture;
-    aud lastArea;
     internal string Note;     // once per area, for the log
-    GraphicsDevice device;
-    Microsoft.Xna.Framework.Color[] pixels;
-    int tw, th;
+    Texture2D picture;
+    Color[] pixels;
+    bool changed;
+    int tw = 16, th = 8;
+    Area lastArea;
 
+    static readonly Color Floor = new Color(70, 74, 70), Wall = new Color(150, 150, 140), Prop = new Color(92, 96, 90),
+        Door = new Color(140, 100, 60), Outline = Color.Black;
 
-    static readonly Microsoft.Xna.Framework.Color Floor = new Microsoft.Xna.Framework.Color(70, 74, 70), Wall = new Microsoft.Xna.Framework.Color(150, 150, 140),
-        AreaExit = Areas.AreaExitColour, ZoneExit = Areas.ZoneExitColour, Outline = Microsoft.Xna.Framework.Color.Black,
-        Furniture = new Microsoft.Xna.Framework.Color(92, 96, 90), Door = new Microsoft.Xna.Framework.Color(140, 100, 60);
+    public void Resize(int width, int height) { tw = Math.Max(16, width); th = Math.Max(8, height); }
 
-    // kind of each tile around the player: 0 nothing (or undiscovered), 1 floor, 2 wall, 3 exit to another area, 4 prop
-    // (furniture, containers), 5 door, 6 exit to another map.
-    static readonly System.Reflection.FieldInfo NameField = typeof(cae).GetField("b", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
-    static string NameOf(c5x c) { return NameField.GetValue(c) as string; }
-    // shroud: hide what the observer hasn't discovered yet (the game's fog of war is on).
-    public void Render(b0b player, IList<b0b> characters, int radius, bool exits, bool shroud, long observer)
+    public void Update(Character player, IList<Character> characters, int radius, bool exits)
     {
-        tw = Math.Max(16, Ui.Width(this)); th = Math.Max(8, Ui.Height(this));
-        if (pixels == null || pixels.Length != tw * th) pixels = new Microsoft.Xna.Framework.Color[tw * th];
+        if (pixels == null || pixels.Length != tw * th) pixels = new Color[tw * th];
         Array.Clear(pixels, 0, pixels.Length);
-        var area = Areas.Of(player);
-        if (area != null)
-        {
-            var at = Entities.MapPosition(player);
-            float cx = at.X + 0.5f, cy = at.Y + 0.5f;
-            int r = radius + radius / 2 + 2, size = 2 * r + 1, ox = (int)cx - r, oy = (int)cy - r;
-            var kind = new byte[size, size];
-            int hidden = 0;
-            int aw = Areas.Width(area), ah = Areas.Height(area);
-            for (int i = 0; i < size; i++)
-                for (int j = 0; j < size; j++)
-                {
-                    int x = ox + i, y = oy + j;
-                    if (x < 0 || y < 0 || x >= aw || y >= ah) continue;
-                    // Undiscovered parts stay dark under the shroud, as in the game: only what the player has seen counts.
-                    byte k = 0;
-                    foreach (var e in Areas.On(Areas.Tile(area, x, y)))
+        changed = true;
+        var area = player == null ? null : player.Area;
+        if (area == null) return;
+        var at = player.Position;
+        float cx = at.X + 0.5f, cy = at.Y + 0.5f;
+        int r = radius + radius / 2 + 2, size = 2 * r + 1, ox = (int)cx - r, oy = (int)cy - r;
+        // What each tile around the player shows (Works applies the shroud: undiscovered tiles are Nothing).
+        var colour = new Color?[size, size];
+        int hidden = 0;
+        for (int i = 0; i < size; i++)
+            for (int j = 0; j < size; j++)
+            {
+                var kind = area.KindAt(ox + i, oy + j);
+                colour[i, j] = kind == TileKind.Floor ? Floor : kind == TileKind.Wall ? Wall : kind == TileKind.Prop ? Prop : kind == TileKind.Door ? Door : (Color?)null;
+                if (kind == TileKind.Nothing && area.KindAt(ox + i, oy + j, false) != TileKind.Nothing) hidden++;
+            }
+        if (area != lastArea) { lastArea = area; Note = "area " + area.Width + "x" + area.Height + ", fog of war " + (World.FogOfWar ? "on: " + hidden + " tiles around the player still under the shroud" : "off"); }
+        // Exits in the game's own colours, only where their tiles have been discovered.
+        if (exits)
+            foreach (var ex in area.Exits)
+                for (int x = ex.Tiles.Left; x < ex.Tiles.Right; x++)
+                    for (int y = ex.Tiles.Top; y < ex.Tiles.Bottom; y++)
                     {
-                        if (shroud && !Entities.Discovered(e, observer)) continue;
-                        if (Entities.IsFloor(e) || Entities.IsGround(e)) { if (k == 0) k = 1; continue; }
-                        var c = e as c5x;
-                        if (c == null || Entities.Character(e) != null) continue;
-                        // Solid objects (the cd0 aspect: walls, furniture, doors...): doors (cnb) have their own colour,
-                        // unnamed ones are the walls (they form the rooms' outlines), named ones are props (desks,
-                        // shelves, barrels) and are shown as floor, slightly lighter.
-                        if (c.GetAspect<cnb>() != null) k = 5;
-                        else if (c.GetAspect<cd0>() != null && k != 5) { if (string.IsNullOrEmpty(NameOf(c))) k = 2; else if (k != 2) k = 4; }
+                        int i = x - ox, j = y - oy;
+                        if (i >= 0 && j >= 0 && i < size && j < size && colour[i, j] != null) colour[i, j] = ex.GameColour;
                     }
-                    kind[i, j] = k;
-                    if (shroud && k == 0) hidden++;
-                }
-            if (area != lastArea) { lastArea = area; Note = "area " + Areas.Width(area) + "x" + Areas.Height(area) + ", shroud " + (shroud ? "on: " + hidden + " of " + size * size + " tiles around the player hidden" : "off"); }
-            // Exits in the game's own colours (blue: another area of this map, red: another map), only on discovered tiles.
-            if (exits)
-                foreach (var ex in Areas.Exits(area))
-                    for (int x = ex.Tiles.Left; x < ex.Tiles.Right; x++)
-                        for (int y = ex.Tiles.Top; y < ex.Tiles.Bottom; y++)
-                        {
-                            int i = x - ox, j = y - oy;
-                            if (i >= 0 && j >= 0 && i < size && j < size && kind[i, j] != 0) kind[i, j] = ex.ToOtherZone ? (byte)6 : (byte)3;
-                        }
-            // Isometric: a map step in X goes right and down on screen, in Y left and down (as the game draws).
-            // Screen offset (u, v) from the centre -> map offset: x - y = u / k, x + y = 2v / k.
-            float k2 = tw / (2f * radius);
-            for (int py = 0; py < th; py++)
-                for (int px = 0; px < tw; px++)
-                {
-                    float u = (px - tw / 2f) / k2, v = 2 * (py - th / 2f) / k2;
-                    int i = (int)Math.Floor(cx + (u + v) / 2) - ox, j = (int)Math.Floor(cy + (v - u) / 2) - oy;
-                    if (i < 0 || j < 0 || i >= size || j >= size) continue;
-                    byte k = kind[i, j];
-                    if (k != 0) pixels[py * tw + px] = k == 1 ? Floor : k == 4 ? Furniture : k == 2 ? Wall : k == 5 ? Door : k == 6 ? ZoneExit : AreaExit;
-                }
-            if (characters != null)
-                foreach (var c in characters)
-                    if (Areas.Of(c) == area) Dot(Entities.MapPosition(c), cx, cy, k2, Entities.OutlineColor(c), 2);
-            Dot(at, cx, cy, k2, Entities.OutlineColor(player), 3);     // the player last, on top (gold, as Tab)
-        }
-        if (picture == null || picture.IsDisposed || picture.Width != tw || picture.Height != th)
-        {
-            picture?.Dispose();
-            if (device == null) return;     // not drawn yet
-            picture = new Texture2D(device, tw, th);
-        }
-        picture.SetData(pixels);
+        // Isometric: a map step in X goes right and down on screen, in Y left and down (as the game draws).
+        // Screen offset (u, v) from the centre -> map offset: x - y = u / k, x + y = 2v / k.
+        float k2 = tw / (2f * radius);
+        for (int py = 0; py < th; py++)
+            for (int px = 0; px < tw; px++)
+            {
+                float u = (px - tw / 2f) / k2, v = 2 * (py - th / 2f) / k2;
+                int i = (int)Math.Floor(cx + (u + v) / 2) - ox, j = (int)Math.Floor(cy + (v - u) / 2) - oy;
+                if (i < 0 || j < 0 || i >= size || j >= size || colour[i, j] == null) continue;
+                pixels[py * tw + px] = colour[i, j].Value;
+            }
+        if (characters != null)
+            foreach (var c in characters)
+                if (c.Area == area) Dot(c.Position, cx, cy, k2, c.OutlineColor, 2);
+        Dot(at, cx, cy, k2, player.OutlineColor, 3);     // the player last, on top (gold, as Tab)
     }
 
     // A round dot with a dark rim at a map position.
-    void Dot(Vector3 map, float cx, float cy, float k2, Microsoft.Xna.Framework.Color colour, int radius)
+    void Dot(Vector3 map, float cx, float cy, float k2, Color colour, int radius)
     {
         float dx = map.X + 0.5f - cx, dy = map.Y + 0.5f - cy;
         int sx = (int)Math.Round(tw / 2f + (dx - dy) * k2), sy = (int)Math.Round(th / 2f + (dx + dy) * k2 / 2);
@@ -213,10 +165,16 @@ public sealed class MapView : euz
             }
     }
 
-    public override void iv(e6d time, cp9 context)
+    public void Draw(UiCanvas canvas)
     {
-        device = DrawContexts.Device(context);
-        if (picture != null && !picture.IsDisposed) Ui.DrawTexture(context, picture, Ui.Bounds(this), Microsoft.Xna.Framework.Color.White);
-        base.iv(time, context);
+        if (pixels == null) return;
+        if (picture == null || picture.IsDisposed || picture.Width != tw || picture.Height != th || picture.GraphicsDevice != canvas.Device)
+        {
+            if (picture != null) picture.Dispose();
+            picture = new Texture2D(canvas.Device, tw, th);
+            changed = true;
+        }
+        if (changed) { picture.SetData(pixels); changed = false; }
+        canvas.DrawTexture(picture, canvas.Bounds, Color.White);
     }
 }

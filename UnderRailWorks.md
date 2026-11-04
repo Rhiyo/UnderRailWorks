@@ -111,8 +111,10 @@ Two separate systems, as tModLoader's ModConfig and its UI toolkit:
 ## The Minimap mod (`mods/Minimap`)
 
 A larger test of the API: a HUD panel (UI toolkit) with a ModConfig (size, tiles across, corner, opacity, characters,
-exits, toggle key), drawn from the game's own data through Works' names (`Areas`: zone, area, tiles, entities, exits;
-`Entities.AttitudeOf` / `OutlineColor`).
+exits, toggle key), drawn from the game's own data through Works' world API (`World`, `Area`, `Character`,
+`Ui.Custom`). Its first version reached past Works with scrambled names (aspect classes, a name field, a subclass of
+the game's control); those became Works' `TileKind` classification, `World.Visible` and `Ui.Custom`, and the mod is
+now built without the game.
 - Isometric like the screen (the game's projection, a7m.vq: screen x from x - y, y from x + y), rebuilt 4 times a
   second into a texture.
 - What the game's data says (measured, not guessed: a grid dump and the entities' names and aspects): everything solid
@@ -260,6 +262,7 @@ That stays coherent because every area follows the same framework rules, taken f
 | Reload | in game, without restarting | **not possible**: .NET Framework / Mono can't unload a DLL; switches apply at the next start |
 | Settings | `ModConfig` classes: fields with attributes, UI generated, JSON | `ModPage` rows + `settings.ini` today; next: a declarative config class (fields + attributes → rows and ini), tModLoader's idea with our readable ini |
 | Game names | the game's real source names | scrambled names, so Works keeps readable accessors (`GameNames.cs`) checked at startup: **every** member Works looks up must resolve, or the log says which (`GameNames.Check`; on its first run it found two 1.x lookups with wrong flags). Harmony on raw game types is the fallback |
+| Mods and game names | mods use tModLoader's API (`Player`, `NPC`, `UIElement`), not Terraria internals | **mods compile against Works and FNA only, never the game exe**: a scrambled name in a mod is a compile error, not a judgement call. Works hands out its own types (`Character`, `Area`, `UiElement`...) with the game's objects inside. A mod that needs something the API lacks is the signal to add it to Works (with a name check and a doc line), never to reach past it. The shipped Minimap and HelloUI are built this way (build.sh); UnderRailFixes still predates the rule (the drawing API passes game types: to wrap) |
 | Shared services | per-mod config, localization, save data (TagCompound) | settings, options UI, logging; save data (sidecar JSON) and localization still to do |
 
 **Each area is a slice**: its patch points, its events (the model above), readable names for its objects, one real
@@ -271,6 +274,14 @@ the extra ones are hidden from the game's pass for the mod to draw), names for l
 the draw context. The real mod: UnderRailFixes (Occluded characters), now with no reflection of its own. The name
 check found a 1.x bug on its first run: `a7m.aq` (the clip state) is static, so 1.x's instance lookup was always
 null and fills/outlines would fail whenever the world's clip doesn't start at 0,0.
+
+**Done: the world, read-only (experimental)** (`World.cs`), found by building the Minimap: `World.Player` (as the
+game finds it: `cnk.aqu().v().b()`), `World.Visible` (the characters the game drew last frame: in sight, not
+stealthed; tracked only once a mod asks), `World.FogOfWar` (the world view's shroud, through `ps.akw()`, so it holds
+before the first frame), `Character` (Position, Area, Attitude, OutlineColor as Tab, Name, IsPlayer), `Area` (Width,
+Height, `KindAt(x, y)` = Nothing / Floor / Wall / Prop / Door with the shroud applied, `Exits` with `GameColour`).
+UI handles: `UiElement`, `UiPanel`, `UiTickBox`, and `Ui.Custom(w, h, canvas => ...)` for elements a mod draws itself
+(`UiCanvas`: Bounds, Device, DrawTexture, Fill, Frame), so mods never subclass the game's controls.
 
 ## Modern .NET (spike, Nov 2026)
 

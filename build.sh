@@ -87,14 +87,15 @@ mkdir -p "$OUT/Mods/UnderRailFixes"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/UnderRailFixes.dll" -r:"$REF" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:"$HARMONY" -r:System.Core.dll "$HERE"/mods/UnderRailFixes/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/UnderRailFixes.dll" "$OUT64/FNA.dll" "$OUT/Mods/UnderRailFixes/UnderRailFixes.dll"
 cp "$HERE/mods/UnderRailFixes/mod.json" "$OUT/Mods/UnderRailFixes/"
-# The Minimap mod, built like UnderRailFixes and shipped in Mods/.
+# The Minimap mod, shipped in Mods/. Built against Works and FNA only, not the game: a mod that uses Works' API can't
+# reach the game's scrambled names (they change between game versions), and any it used would fail to compile here.
 mkdir -p "$OUT/Mods/Minimap"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/Minimap.dll" -r:"$REF" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:"$HARMONY" -r:System.Core.dll "$HERE"/mods/Minimap/*.cs
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/Minimap.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/Minimap/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/Minimap.dll" "$OUT/FNA.dll" "$OUT/Mods/Minimap/Minimap.dll" >/dev/null
 cp "$HERE/mods/Minimap/mod.json" "$OUT/Mods/Minimap/"
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
 mkdir -p "$HERE/build/Mods/HelloUI"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$REF" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:"$HARMONY" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/HelloUI.dll" "$OUT/FNA.dll" "$HERE/build/Mods/HelloUI/HelloUI.dll" >/dev/null
 cp "$HERE/examples/HelloUI/mod.json" "$HERE/build/Mods/HelloUI/"
 
