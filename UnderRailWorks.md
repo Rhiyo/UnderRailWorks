@@ -368,9 +368,21 @@ patch's own lines; `"@"` goes back to that stock line, `"@text"` to another stoc
 written to the dialog files or the save. `Dialogs.StockLines(name)` lists a dialog's NPC lines. Content packs:
 `"dialogPatches"`. Tested: WorksTest (code) and TheProspector (JSON) both added an option to Big Bret's first line;
 the mod line showed, and "@" returned to Bret's stock line with all his options.
-Mapped for later (`scratchpad/specs/loot-locks-stealth.md`, not committed): containers and loot (`c7j`, `ery.mx`,
-`asy.a`), locks and hacking (`d2b.a(amc, LockType, int)`: no dice, skill vs difficulty), pickpocketing (`b87`),
-detection (`bui.a`, `cn8.agf`), traps (`qw.a`, `ds.fr`), crafting (`cwp.a`, `ahu.i`).
+
+## Containers, loot and locks (Nov 2026)
+
+- `World.Containers` (the zone's `c7j` containers), `Container` (Items, Add stock items, Remove, Position, Searched,
+  Lock, `Open()` for the player without walking or the lock).
+- `GameEvents.ContainerOpened(container, opener, firstTime)` (`c7j.mz`), `ItemTaken(container, item, taker)`
+  (`c7j.kl`), `LootGenerated(target)` (around `ery.mx`, which rolls each entity's loot once, at its first deploy:
+  first zone visit or spawn; the loot is saved, so only stock items may be added).
+- `Lock` (Locked, Kind, Difficulty, Pickable, KeyCode, `TryPick(character)`), `Locks.ModifyAttempt` (Bonus or
+  Force), `GameEvents.LockAttempted` (around `d2b.a(amc, LockType, int)`: no dice, skill + tool bonus vs difficulty).
+- Tested: loot rolled for the spawned NPCs; the nearest locker opened with 2 added stacks; a difficulty-30 lock
+  opened with skill 16 + 50. The game's own rules held: picking a guarded locker, and taking from an owned one in
+  view of its protector, both turned a guard hostile.
+- Mapped but not yet in the API (`scratchpad/specs/loot-locks-stealth.md`, not committed): pickpocketing (`b87`),
+  detection (`bui.a`, `cn8.agf`), traps (`qw.a`, `ds.fr`), crafting (`cwp.a`, `ahu.i`), corpse loot (`asy.a`).
 
 ## The test mods (Nov 2026)
 

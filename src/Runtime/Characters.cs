@@ -133,6 +133,24 @@ public static partial class World
         }
     }
 
+    // Every container in the current zone (crates, lockers, corpses...).
+    public static IList<Container> Containers
+    {
+        get
+        {
+            var list = new List<Container>();
+            var zone = Areas.CurrentZone();
+            if (zone == null) return list;
+            foreach (var area in zone.Areas)
+                foreach (var e in area.Entities)
+                {
+                    var c = e is c5x ? ((c5x)e).GetAspect<bim>() as c7j : null;
+                    if (c != null) list.Add(new Container(c));
+                }
+            return list;
+        }
+    }
+
     // The current zone's id, for Placement.Zone (null outside a game).
     public static string ZoneId { get { var game = bpo.GetService<cnk>(); return game == null || game.aqu() == null || game.aqu().c() == null ? null : game.aqu().c().b(); } }
 

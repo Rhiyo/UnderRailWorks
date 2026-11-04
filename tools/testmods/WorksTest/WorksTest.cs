@@ -16,6 +16,11 @@ public sealed class WorksTest : WorksMod
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
         GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));
         GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
+        GameEvents.ContainerOpened.Add(this, (c, who, first) => Log.Info("container opened by " + (who == null ? "?" : who.Name) + (first ? " (first time)" : "") + ": " + string.Join(", ", c.Items.Select(i => i.ToString()))));
+        GameEvents.ItemTaken.Add(this, (c, item, who) => Log.Info("taken " + item + " by " + (who == null ? "?" : who.Name)));
+        GameEvents.LootGenerated.Add(this, t => { Log.Info("loot rolled for " + (t.Character != null ? t.Character.Name : "a container") + ": " + string.Join(", ", t.Added.Select(i => i.ToString()))); if (t.Container != null) t.Add("currency\\StygianCoin", 7); });
+        Locks.ModifyAttempt.Add(this, a => { Log.Info("lock attempt " + a.Kind + " skill " + a.Skill + "+" + a.ToolBonus + " vs " + a.Lock.Difficulty); a.Bonus += 50; });
+        GameEvents.LockAttempted.Add(this, a => Log.Info("lock attempt " + (a.Success ? "opened" : "failed")));
         Dialogs.Patch(this, "characters\\bigbret1", p =>
         {
             p.AddOption("passed all the tests", "[Works] Heard anything odd lately?", "odd");
@@ -50,6 +55,14 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.X)) Log.Info("xp " + World.Player.Experience + " (oddity " + Progression.Oddity + "), level " + World.Player.Level + "; next levels cost " + string.Join(", ", Enumerable.Range(2, 5).Select(l => l + ":" + Progression.XpFor(l))));
             if (Input.Pressed(Keys.B)) { var lines = Dialogs.StockLines("characters\\bigbret1"); Log.Info("bigbret1: " + lines.Count + " lines"); foreach (var l in lines.Take(12)) Log.Info("  | " + l.Replace("\n", " ").Substring(0, Math.Min(90, l.Length))); }
             if (Input.Pressed(Keys.H)) Log.Info("bret dialog with the merchant: " + Dialogs.Start(World.Placed("workstest_merchant"), "characters\\bigbret1"));
+            if (Input.Pressed(Keys.C) && Input.Down(Keys.LeftShift))
+            {
+                var pp = World.Player.Position;
+                var all = World.Containers.OrderBy(c => Microsoft.Xna.Framework.Vector3.Distance(c.Position, pp)).ToList();
+                Log.Info(all.Count + " containers; nearest: " + string.Join("; ", all.Take(4).Select(c => c.Position + " " + c.Items.Count + " items" + (c.Lock != null ? " lock " + c.Lock.Kind + " " + c.Lock.Difficulty + (c.Lock.Locked ? " locked" : "") : ""))));
+                if (Input.Down(Keys.LeftControl)) { var locked = all.FirstOrDefault(c => c.Lock != null && c.Lock.Locked && c.Lock.Difficulty > 0); if (locked != null) Log.Info("pick the lock at " + locked.Position + ": " + locked.Lock.TryPick(World.Player) + ", still locked: " + locked.Lock.Locked); }
+                if (all.Count > 0) { if (all[0].Items.Count == 0) { all[0].Add("currency\\StygianCoin", 3); all[0].Add("consumables\\medicine\\bandage", 2); } Log.Info("open nearest: " + all[0].Open()); }
+            }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
