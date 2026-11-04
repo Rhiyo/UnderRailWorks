@@ -407,6 +407,20 @@ clamps while dragging. Both mods convert their 1.0 entries on first use. The gam
 change (new `ci3`), so HudCreated re-applies everything. Tested at 2560x720 and 1600x900 (a 1.0 entry from 1792x720
 converted and kept its place relative to the edges).
 
+## HUD anchors, grid snapping (Nov 2026)
+
+- `HudAnchor` (nine), `Hud.AnchorOf(part)`: the game's own anchors, read from ci3's layout (portrait top left at
+  10,10; system bar, zone security, alert top right; action, XP and ammo bars and the speed indicator bottom centre;
+  combat panel bottom right; zoom indicator centre; feed and the speed/zoom buttons bottom left).
+- `Hud.AddPart(mod, name, element, anchor, dx, dy)`: mods anchor their parts (offsets inward from the anchored
+  edges); `Hud.At(anchor, element, dx, dy)`; `HudModPart.Anchor`. Minimap, Quest Tracker, Status Board use it.
+- `Ui.Place(element, anchor)`, `Ui.AnchorOfPlace`, `UiCanvas.Text` (the interface font), `Input.Wheel`. `Ui.Place`
+  returns null for an element not on screen (a removed panel), so pixels are never written.
+- HUD Layout: a part keeps its natural anchor unless dropped in the opposite third; the wheel over a part picks the
+  anchor yourself (Auto, then each of the nine); the overlay labels the anchor and draws a line to the screen's
+  anchor point; snapping to a grid counted from the anchor (settings: on/off, size 2-40, default 10 like the game's
+  margins; Shift drags freely). A drag follows a part by name when its mod rebuilds it. Tested in game.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

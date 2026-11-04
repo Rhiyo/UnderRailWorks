@@ -118,9 +118,29 @@ public static class Ui
     public static string Place(UiElement element)
     {
         var parent = element.Control.Parent;
-        if (parent == null) return element.X + "," + element.Y;
+        if (parent == null) return null;     // not on screen (removed): no place to keep
         int pw = UnderrailDropdownScroll.W(parent.Size), ph = UnderrailDropdownScroll.H(parent.Size);
         return Axis(element.X, element.Width, pw, 'L', 'C', 'R') + "," + Axis(element.Y, element.Height, ph, 'T', 'M', 'B');
+    }
+
+    // The place relative to a chosen anchor (instead of the nearest edge).
+    public static string Place(UiElement element, HudAnchor anchor)
+    {
+        var parent = element.Control.Parent;
+        if (parent == null) return null;
+        int pw = parent == null ? 0 : UnderrailDropdownScroll.W(parent.Size), ph = parent == null ? 0 : UnderrailDropdownScroll.H(parent.Size);
+        int col = (int)anchor % 3, row = (int)anchor / 3;
+        string x = col == 0 ? "L" + element.X : col == 2 ? "R" + (pw - element.X - element.Width) : "C" + (element.X + element.Width / 2 - pw / 2);
+        string y = row == 0 ? "T" + element.Y : row == 2 ? "B" + (ph - element.Y - element.Height) : "M" + (element.Y + element.Height / 2 - ph / 2);
+        return x + "," + y;
+    }
+    // The anchor a place string uses.
+    public static HudAnchor AnchorOfPlace(string place)
+    {
+        var p = (place ?? "").Split(',');
+        int col = p.Length < 1 || p[0].Length == 0 ? 0 : p[0][0] == 'R' ? 2 : p[0][0] == 'C' ? 1 : 0;
+        int row = p.Length < 2 || p[1].Length == 0 ? 0 : p[1][0] == 'B' ? 2 : p[1][0] == 'M' ? 1 : 0;
+        return (HudAnchor)(row * 3 + col);
     }
 
     // The same for a rectangle in a parent of the given size (e.g. to convert positions saved as pixels).
@@ -204,7 +224,7 @@ public static class Ui
     // Width of a text in the interface font.
     public static int TextWidth(string text) { var font = DefaultFontFace(); return font == null ? (text ?? "").Length * 7 : (int)Math.Ceiling(font.MeasureString(text ?? "").X); }
 
-    static Microsoft.Xna.Framework.Graphics.SpriteFont DefaultFontFace()
+    internal static Microsoft.Xna.Framework.Graphics.SpriteFont DefaultFontFace()
     {
         var resources = dr3.a();
         var name = DefaultFont == null ? null : DefaultFont.GetValue(null) as string;
@@ -296,6 +316,15 @@ public sealed class UiCanvas
         if (white == null || white.IsDisposed || white.GraphicsDevice != g) { white = new Microsoft.Xna.Framework.Graphics.Texture2D(g, 1, 1); white.SetData(new[] { Color.White }); }
         DrawTexture(white, area, colour);
     }
+
+    // Text in the interface's default font, its top left at (x, y).
+    public void Text(string text, int x, int y, Color colour)
+    {
+        var font = Ui.DefaultFontFace();
+        if (font == null || string.IsNullOrEmpty(text)) return;
+        DrawStringMethod.Invoke(Context.b(), new object[] { font, text, new Vector2(x, y), colour });     // ob.xb: XNA types in its signature
+    }
+    static readonly System.Reflection.MethodInfo DrawStringMethod = typeof(ob).GetMethod("xb");
 
     // A one-unit frame around an area.
     public void Frame(Rectangle r, Color colour)
@@ -397,6 +426,8 @@ public static class Input
     }
     // The mouse in interface units (the same coordinates as Ui elements: interface scale and insets applied).
     public static Point Mouse { get { return new Point(mouseNow.X, mouseNow.Y); } }
+    // Mouse wheel notches turned since the last update (up is positive).
+    public static int Wheel { get { return (mouseNow.ScrollWheelValue - mouseBefore.ScrollWheelValue) / 120; } }
     public static bool MouseDown(MouseButton b) { return Pressed(mouseNow, b); }
     public static bool MousePressed(MouseButton b) { return Pressed(mouseNow, b) && !Pressed(mouseBefore, b); }
     public static bool MouseReleased(MouseButton b) { return !Pressed(mouseNow, b) && Pressed(mouseBefore, b); }

@@ -105,7 +105,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Neural Reallocation: a respec NPC (points refunded to the game's own unspent points).
 - [ ] Workbench Planner: recipes, what can be crafted now (crafting blueprints are code classes: read-only).
 - [ ] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist.
-- [x] HUD Layout: drag the game's HUD parts around, saved per HUD size (Works: Input.Mouse, UiElement.X/Y).
+- [x] HUD Layout: drag the game's HUD parts around, kept relative to an anchor (survives resolution changes) (Works: Input.Mouse, UiElement.X/Y).
 
 - [x] Key bindings for mods in the game's Controls tab (Keybinds); every shipped mod moved to it.
 

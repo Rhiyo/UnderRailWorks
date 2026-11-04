@@ -20,8 +20,38 @@ public enum HudPart
     CombatPanel, SpeedIndicator, ZoomIndicator, SlowDownButton, SpeedUpButton, ZoomOutButton, ZoomInButton,
 }
 
+// Which edge or corner (or the centre) of the HUD a part keeps its distance from when the HUD changes size.
+public enum HudAnchor { TopLeft, Top, TopRight, Left, Center, Right, BottomLeft, Bottom, BottomRight }
+
 public static class Hud
 {
+    // Where the game itself anchors each of its parts (ci3's layout: the portrait at 10,10, the system bar 10 from the
+    // top right, the action bar centred 10 above the bottom, the feed at the left above the XP bar...).
+    public static HudAnchor AnchorOf(HudPart part)
+    {
+        switch (part)
+        {
+            case HudPart.PlayerPortrait: case HudPart.TargetPortrait: return HudAnchor.TopLeft;
+            case HudPart.SystemBar: case HudPart.ZoneSecurity: case HudPart.Alert: return HudAnchor.TopRight;
+            case HudPart.ActionBar: case HudPart.ExperienceBar: case HudPart.AmmoBar: case HudPart.SpeedIndicator: return HudAnchor.Bottom;
+            case HudPart.CombatPanel: return HudAnchor.BottomRight;
+            case HudPart.ZoomIndicator: return HudAnchor.Center;
+            default: return HudAnchor.BottomLeft;     // Feed, the speed and zoom buttons
+        }
+    }
+
+    // Where element would sit at offset (dx, dy) from anchor in the HUD: dx/dy count inwards from the anchored
+    // edges (from the centre, rightwards/downwards, for Top/Bottom/Left/Right/Center's free axis).
+    public static Microsoft.Xna.Framework.Point At(HudAnchor anchor, UiElement element, int dx, int dy)
+    {
+        var root = Root;
+        int w = root == null ? 0 : root.Width, h = root == null ? 0 : root.Height;
+        int col = (int)anchor % 3, row = (int)anchor / 3;
+        int x = col == 0 ? dx : col == 2 ? w - element.Width - dx : (w - element.Width) / 2 + dx;
+        int y = row == 0 ? dy : row == 2 ? h - element.Height - dy : (h - element.Height) / 2 + dy;
+        return new Microsoft.Xna.Framework.Point(x, y);
+    }
+
     // ci3's fields per part (ci3.c(), in this order).
     static readonly string[] Fields = { "m_g", "m_h", "m_i", "m_p", "m_j", "m_k", "m_l", "m_m", "m_n", "m_o", "m_q", "m_r", "m_v", "m_u", "w", "x" };
     // (The decompiler shows a field as m_x when a method is also named x; the real field is x.)
@@ -58,11 +88,18 @@ public static class Hud
 
     // Adds a mod's element to the HUD as a named part (e.g. "Minimap") at its default place, and announces it
     // (PartAdded), so a layout mod can move it where the player put it. Call it again when the element is rebuilt.
-    public static void AddPart(WorksMod mod, string name, UiElement element, int x, int y)
+    public static void AddPart(WorksMod mod, string name, UiElement element, int x, int y) { AddPart(mod, name, element, null, x, y); }
+    // Anchored: (dx, dy) from anchor (see At), so it sits right on any HUD size and layout mods know its anchor.
+    public static void AddPart(WorksMod mod, string name, UiElement element, HudAnchor anchor, int dx, int dy)
+    {
+        var at = At(anchor, element, dx, dy);
+        AddPart(mod, name, element, (HudAnchor?)anchor, at.X, at.Y);
+    }
+    static void AddPart(WorksMod mod, string name, UiElement element, HudAnchor? anchor, int x, int y)
     {
         if (Current == null || element == null) return;
         modParts.RemoveAll(p => p.Name == name || p.Element.Control.Parent == null);
-        var part = new HudModPart { Name = name, Mod = mod == null ? "" : mod.Id, Element = element, DefaultX = x, DefaultY = y };
+        var part = new HudModPart { Name = name, Mod = mod == null ? "" : mod.Id, Element = element, DefaultX = x, DefaultY = y, Anchor = anchor };
         Ui.Add(Root, element, x, y);
         modParts.Add(part);
         if (PartAdded.Any) PartAdded.Run(h => h(part));
@@ -116,6 +153,8 @@ public sealed class HudModPart
     public UiElement Element { get; internal set; }
     public int DefaultX { get; internal set; }      // where the mod put it
     public int DefaultY { get; internal set; }
+    // The anchor the mod gave (null: added at a pixel position).
+    public HudAnchor? Anchor { get; internal set; }
 }
 
 public enum Window { Inventory, CharacterSheet, CombatStats, Crafting, Notes, Oddities, Psi, Map, QuickInvoker, GameMenu, Barter, Container }

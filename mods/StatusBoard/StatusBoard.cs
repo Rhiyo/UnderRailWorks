@@ -78,6 +78,6 @@ public sealed class StatusBoard : WorksMod
             Ui.SetColor(label, lines[i].Value);
             Ui.Add(panel, label, 8, 4 + i * 18);
         }
-        Hud.AddPart(this, "Status Board", panel, (hud.Width - w) / 2, 10);
+        Hud.AddPart(this, "Status Board", panel, HudAnchor.Top, 0, 10);
     }
 }

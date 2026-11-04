@@ -95,7 +95,7 @@ public sealed class QuestTracker : WorksMod
         panel.Background = new Color(8, 8, 8) * (config.Opacity / 100f);
         foreach (var r in rows) Ui.Add(panel, r.Key, 8, r.Value);
         // Below the portrait, left (the HUD's top-left is the portrait and its health bar).
-        Hud.AddPart(this, "Quest Tracker", panel, 12, 145);     // a named HUD part: layout mods can move it
+        Hud.AddPart(this, "Quest Tracker", panel, HudAnchor.TopLeft, 12, 145);     // a named HUD part: layout mods can move it
     }
 
     static string FirstLine(string text) { var t = (text ?? "").Split('.')[0]; return t.Length > 80 ? t.Substring(0, 77) + "..." : t; }

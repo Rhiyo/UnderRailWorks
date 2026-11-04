@@ -81,9 +81,9 @@ public sealed class Minimap : WorksMod
         // Clear of the HUD's own parts (interface units, the same at every interface scale): the portrait and the icon bar
         // at the top, the side bar and the menu buttons in the bottom corners; the bottom edge level with the action bar's.
         bool left = config.Corner == Corner.TopLeft || config.Corner == Corner.BottomLeft, top = config.Corner == Corner.TopRight || config.Corner == Corner.TopLeft;
-        int x = left ? (top ? 12 : 56) : hud.Width - w - (top ? 12 : 52);
-        int y = top ? (left ? 145 : 62) : hud.Height - h - 12;
-        Hud.AddPart(this, "Minimap", panel, x, y);     // a named HUD part: layout mods can move it
+        var anchor = top ? (left ? HudAnchor.TopLeft : HudAnchor.TopRight) : (left ? HudAnchor.BottomLeft : HudAnchor.BottomRight);
+        int dx = top ? 12 : left ? 56 : 52, dy = top ? (left ? 145 : 62) : 12;
+        Hud.AddPart(this, "Minimap", panel, anchor, dx, dy);     // an anchored HUD part: layout mods can move it
         Ui.Show(panel, config.Show);
         sinceDraw = 1;
     }

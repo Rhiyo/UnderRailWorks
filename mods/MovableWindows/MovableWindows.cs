@@ -53,7 +53,8 @@ public sealed class MovableWindows : WorksMod
                 Place(dragging, new Point(windowStart.X + m.X - dragStart.X, windowStart.Y + m.Y - dragStart.Y), hud);
                 if (!Input.MouseDown(MouseButton.Left))
                 {
-                    Settings.Set(Key(dragging), Ui.Place(dragging.Element));
+                    var place = Ui.Place(dragging.Element);
+                    if (place != null) Settings.Set(Key(dragging), place);
                     dragging = null;
                 }
             }
