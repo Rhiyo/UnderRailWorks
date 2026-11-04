@@ -11,6 +11,10 @@ public sealed class WorksTest : WorksMod
     UiTextBox box;
     public override void Load()
     {
+        GameEvents.StatusApplying.Add(this, c => { Log.Info("status applying " + c.Code + " on " + (c.Character == null ? "?" : c.Character.Name)); if (c.Code == "Hidden" && Data.GetBool("noHide")) c.Cancel = true; });
+        GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
+        GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));
+        GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
         GameEvents.Update.Add(this, seconds =>
         {
             var p = World.Player;
@@ -23,6 +27,8 @@ public sealed class WorksTest : WorksMod
         {
             var p = World.Player;
             if (p == null) return;
+            if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
+            if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
             if (Input.Pressed(Keys.U)) Log.Info("trade with the test merchant: " + Trade.Open(World.Placed("workstest_merchant")));
             if (Input.Pressed(Keys.F11)) { p.GiveExperience(5000, "test"); Log.Info("XP now " + p.Experience + ", level " + p.Level + ", skill points " + p.SkillPoints + ", ability points " + p.AbilityPoints); }

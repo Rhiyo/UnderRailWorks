@@ -340,6 +340,11 @@ public static class Input
 // Where the events come from: Harmony patches Works makes on the game (new hooks are Harmony, not the patcher).
 static class UiHooks
 {
+    static void Group(string what, Action install)
+    {
+        try { install(); } catch (Exception ex) { Log.Write("UnderRailWorks: " + what + " hooks failed (mods using them won't see those events): " + ex); }
+    }
+
     internal static void Install()
     {
         var harmony = new HarmonyLib.Harmony("UnderRailWorks.Ui");
@@ -347,11 +352,13 @@ static class UiHooks
         Postfix(harmony, typeof(a8k).GetConstructors(), "MainMenu");
         var update = typeof(ci3).Assembly.GetType("tb").GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(GameTime) }, null);     // tb by name: it derives from XNA's Game (CS0012 here)
         if (update != null) harmony.Patch(update, postfix: new HarmonyLib.HarmonyMethod(typeof(UiHooks).GetMethod("Updated", BindingFlags.Static | BindingFlags.NonPublic)));
-        ContentHooks.Install(harmony);
-        Saves.Install(harmony);
-        HudHooks.Install(harmony);
-        CombatHooks.Install(harmony);
-        Keybinds.Install(harmony);
+        // Each group on its own: one that fails (a game update moved its method) leaves the others working.
+        Group("content", () => ContentHooks.Install(harmony));
+        Group("saves", () => Saves.Install(harmony));
+        Group("HUD", () => HudHooks.Install(harmony));
+        Group("combat", () => CombatHooks.Install(harmony));
+        Group("keybinds", () => Keybinds.Install(harmony));
+        Group("status effects and levels", () => ProgressHooks.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 

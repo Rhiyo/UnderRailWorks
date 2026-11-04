@@ -112,9 +112,10 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 ## API gaps (ranked from the moddable-CRPG research: CDDA, RimWorld, Caves of Qud, ToME, sfall, WeiDU, DOS2 SE)
 
 - [x] JSON content packs (text, quests, dialogs, placements).
-- [ ] Content registry + dump (stock item paths/codes, blueprints, stores, dialogs, zones) for modders.
-- [ ] Per-save mod data (structured, beside or inside the save as plain values).
-- [ ] Status effect events (applied / removed / tick) with a veto; custom status effects (stock stand-in + re-apply).
+- [x] Content index dump (items, blueprints, stores, dialogs, status codes). Zones still to add.
+- [x] Per-save mod data (WorksMod.Data, plain values in the save).
+- [x] Status effect events (applying with a veto, applied, removed). Custom status effects still to do.
+- [x] Level-up event. XP curve / points per level still to do.
 - [ ] New item definitions (clone a stock item, override name/stats; the save holds the stock base).
 - [ ] New feats / abilities; level-up and progression hooks (XP curve, points per level).
 - [ ] Cancellable hooks everywhere with a set order (some combat hooks already modify).

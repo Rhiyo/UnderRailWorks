@@ -324,6 +324,20 @@ the file and skipped.
 Research on what else those games offer, ranked (per-save data, item/status/feat definitions, cancellable hooks,
 equipment, loot, stealth, AI, crafting, dialog patches, a content registry): see TODO.md.
 
+## Status effect events, levels, per-save data, the content index (Nov 2026)
+
+- `GameEvents.StatusApplying` (set `Cancel` to refuse the effect), `StatusApplied`, `StatusRemoved` (removed, expired
+  or replaced): `br5.a(els, ...)` and `br5.c(els)`, which every removal goes through. Tested: Agility Boost applied,
+  expired 15 s later (3 turns out of combat).
+- `GameEvents.LevelledUp(level)`: the character screen in level-up mode (`iw`, `a9m.b`) closed with Accept
+  (`amm.a(cku.a)`, the base class's close-with-result; Harmony must patch it there, not on iw). Tested.
+- `WorksMod.Data`: the mod's own values for the current game, saved with it as plain global variables
+  (`md_<mod>_<key>`), so the stock game loads the save. Tested: quicksave at 2, quickload restores 2.
+- `ContentIndex.Write()`: `UnderRailWorks-content.txt` with every item path = code (name), blueprint, store, dialog
+  and status effect code (about 4,000 lines), for writing content packs and mods.
+- Hook groups now install separately: one that fails (moved by a game update) leaves the others working (a failing
+  group used to stop every group after it).
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

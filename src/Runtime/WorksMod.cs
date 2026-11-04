@@ -16,6 +16,9 @@ public abstract class WorksMod
     // A Harmony instance named after the mod, for patching the game where Works has no hook yet.
     public Harmony Harmony { get; internal set; }
     // The mod's settings.ini in its folder (defaults: SettingsDefaults, written on first start).
+    // This mod's data for the current game (saved with it as plain values).
+    public ModData Data { get { return data ?? (data = new ModData(Id)); } }
+    ModData data;
     public ModSettings Settings { get { return ModSettings.For(Id, SettingsDefaults); } }
     protected virtual string SettingsDefaults { get { return null; } }
 
