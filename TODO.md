@@ -93,6 +93,19 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [ ] A save with a completed mod quest and many placements through `check-saves.sh --only`; the stock game
   re-saving a modded save, then Works loading it.
 
+## More test mods (ranked from research: what popular mods do, what UnderRail players ask for)
+
+- [x] Quest Tracker, Word Gets Around, Difficulty Dial, After-Action Report, Contract Board.
+- [ ] Shot Breakdown: hit chance and damage parts in the tooltip (needs the hit chance's components, not just the total).
+- [ ] Merchant Ledger: remember vendor stock and prices, search them (needs a trade-opened event, store stock read).
+- [ ] Pack Mule: sell tagged junk in one click (needs selling through the barter screen's own transaction).
+- [ ] Stealth Lens: show where enemies would notice you (needs detection rules: research).
+- [ ] Survey Pins: map pins and automatic markers (Minimap: vendors, workbenches, locked containers).
+- [ ] Neural Reallocation: a respec NPC (needs unspent skill/ability points).
+- [ ] Workbench Planner: recipes, what can be crafted now (crafting blueprints are code classes: read-only).
+- [ ] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist.
+- [ ] HUD Layout: drag the game's HUD parts around, saved per resolution (needs mouse input in Works).
+
 ## For modders
 
 - [ ] A mod template / SDK: reference assemblies and a build script.

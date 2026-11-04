@@ -226,9 +226,52 @@ through two example mods. Mods see only Works' types; the game's are inside.
 - **Tested in game** (Nov 2026, test copy, 2560x720): spawn, Talk by clicking, branches by quest state, hidden and
   greyed options, money check/take/give, item reward, quest XP, journal entry, chat lines, quicksave (stock-loadable,
   checked), quickload (quest and stranger back).
-- **Not yet**: wrapping the drawing API (UnderRailFixes still builds against the game); stores, status effects,
-  equipment changes; dialog started/ended events; first-visit flag on zone events; skill checks as conditions
-  (`Condition.Code` with `Character.Skill` works today); new items, maps.
+- **Events added**: ZoneLoaded(zoneId, firstVisit) (first visit = the game's own test, `d6f.a(bfc)`, which copies the
+  map's layer only then), DialogStarted/Ended (`zq.n1/n2`), ItemAdded to the player's bag (`dcw.g`),
+  ExperienceGained (`amc.a(int, string)`).
+- **More**: `Ui.Wrap/TextWidth` (the interface font), `Quests.Info/JournalText` (as the journal formats it, `eb2`),
+  `Character.Say` (speech bubbles, `c0s`; the game also logs them), `Items.Code/Name` (item path -> code, name).
+
+## Combat, HUD, windows, trade, effects (Nov 2026)
+
+Researched from the game's code (specs with file:line evidence), built in `Combat.cs` and `Hud.cs`, tested in game.
+- **Combat** (`crp`, the `d02` service): `TurnStarted`, `TurnEnding`, `RoundEnded`, `ModifyTurnPoints` (AP/MP after
+  the refill, `d4n.a()`), `ModifyHitChance` (the three builders `euf.a` -> `bg3.a`; the game's targeting preview
+  shows the changed value, measured: 0.62 + 30 points = 0.92 on screen), `ModifyIncomingDamage` (prefix of
+  `nw.a(cwt)`, the one damage pipeline every source goes through: parts per damage type, `Scale`, `Cancel` = miss),
+  `AttackResolved` (its postfix: HP lost, killed; a miss returns an outcome with a null damage list), `ByPlayer`
+  from the attacker's uid (`cwt.i.d` vs the player's `efk.Uid`), `Combat.ActionPoints`, `Combat.Log` (the combat
+  feed: `vr` + `bey.a` + `a7v.a`; `Notify.Log` goes to the chat feed, which a fight hides), `Combat.Float`.
+  Character data has no link back to its entity: Works finds it by scanning the zone once, cached.
+- **HUD** (`ci3` builds its parts once, in its constructor; a new `ci3` after loads and resolution changes):
+  `Hud.Get(HudPart)` handles for the portrait, action bar, system bar, combat panel... (move/hide with `Ui`),
+  `Hud.Visible`, `Hud.VisibilityChanged` (the game's F2 toggle resets every part). The decompiler names a field
+  `m_x` when a method is also called `x`: the real field is `x` (found because Hud.Get returned nothing; the startup
+  name check now also checks tables of lookups).
+- **Windows**: `Windows.Open/Close(Window.Inventory | Notes | Map | ...)` (the `ps` methods the HUD buttons call,
+  refused while `ps.alg()`). **Trade.Open(merchant)** (`ps.amw`), **Prices.BuyMarkup / SellFactor** (postfixes of
+  `dvp.aqd`, `b6o.d`). `Character.IsMerchant`.
+- **Status effects**: no registry by code in the game (types obfuscated, the console's lookup fails): Works builds one
+  from the effect types it can construct (127 codes); `StatusEffects.Apply(character, code, turns)` through the
+  game's own `br5.a` (stacking rules intact; tested: Agility Boost, its icon and countdown by the portrait),
+  `character.StatusEffects`, `HasStatusEffect`, `Remove`.
+
+## The test mods (Nov 2026)
+
+Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
+| Mod | What | Exercises |
+|---|---|---|
+| Minimap | the area around you, exits, visible characters | World, Area, Ui.Custom, ModConfig |
+| QuestTracker | active quests on the HUD with journal text, done/failed lines | Quests, Ui.Wrap, events |
+| WordGetsAround | nearby friendly characters remark on your deeds; `AddLine` library API for other mods | Character.Say, Variables, CharacterDied |
+| DifficultyDial | damage taken/dealt, hit chance, AP as settings | Combat hooks, ModConfig |
+| AfterActionReport | a summary after each fight, career totals | Combat events, Ui panel, Variables |
+| ContractBoard | generated bounties and deliveries as quests from a placed contractor | Placement, dynamic dialogs, Quests, Text, Items, events |
+| TheStranger, HelloQuest (examples) | a character, a conversation, a quest | the content API |
+Tested together in one save, then a quicksave with a contract active, both placed characters and every mod's
+variables: the stock loader reads it (`check-saves.sh --only`), and after quickload the contract is back.
+Ideas researched (tModLoader's most popular mods, other RPGs' mods, UnderRail players' complaints): the full list,
+ranked, is in TODO.md.
 
 ## What the modder writes vs what Works does
 

@@ -8,8 +8,14 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   (events, readable names for the game's scrambled classes, settings, an in-game Mods tab) or patch it with
   [Harmony](https://github.com/pardeike/Harmony). Dependencies and load order work like
   [tModLoader](https://github.com/tModLoader/tModLoader)'s.
-- **Mods that ship with it:** UnderRailFixes (Occluded characters: keyhole, fills, outlines) and Minimap (the area
-  around you, exits, and the characters you can see in their Tab outline colours), in `mods/`.
+- **Mods that ship with it** (in `mods/`, each can be switched off in Options -> Mods):
+  - UnderRailFixes: Occluded characters (keyhole, fills, outlines).
+  - Minimap: the area around you, exits, and the characters you can see in their Tab outline colours.
+  - Quest Tracker: your active quests on the HUD.
+  - Word Gets Around: nearby characters comment on what you've done.
+  - Difficulty Dial: damage taken and dealt, hit chance and AP as settings.
+  - After-Action Report: a summary after each fight, and career totals.
+  - Contract Board: a contractor at South Gate Station with generated bounties and deliveries.
 
 No game code or game files are shipped: the patcher changes the player's own copy, and mods patch it at runtime.
 Every file the game writes (saves, config.dat) stays readable by the stock game.
