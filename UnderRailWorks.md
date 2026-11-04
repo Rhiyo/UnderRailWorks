@@ -29,8 +29,8 @@ move into Works: resolution, zoom, UI scale and insets, frame rate, 64-bit mode,
 - **Everything Works writes is readable text**: `.ini` for settings people edit (Works' and each mod's), JSON for
   data Works and mods write (manifests, save sidecars, per-mod data), plain text logs. Open it in a text editor and see what's there. Only the game's own files stay in its binary
   format (gzip'd .NET BinaryFormatter), because the stock game must read them.
-- **Versions:** 2.x is UnderRailWorks and doesn't need to work with 1.x. UnderRailFixes 1.x stays maintained on its
-  own line.
+- **Versions:** UnderRailWorks is its own product, starting at 1.0, and doesn't need to work with UnderRailFixes 1.x
+  (which stays maintained on its own line).
 
 ## Decisions
 
@@ -213,7 +213,7 @@ That stays coherent because every area follows the same framework rules, taken f
 | Hooks | named by kind: `Pre…` (false skips vanilla), `Post…`, `Modify…`, `Can…` | `Hook<T>` (every handler runs) and `ReplaceHook<T>` (the first handler that takes the step replaces the game's; never two drawings) (`Hooks.cs`). Modify/Can kinds added when an area needs them |
 | Hook order | mod load order | mod load order (requirements first) |
 | A hook throws | usually takes the game down | the handler is removed and logged with the mod's name; the game and other mods carry on |
-| Versions | mods built for a tModLoader version | `"works": "2.0"` in mod.json against `WorksApi.Version`: same major, at least that minor. New areas start **experimental**; after that only additions |
+| Versions | mods built for a tModLoader version | `"works": "1.0"` in mod.json against `WorksApi.Version`: same major, at least that minor. New areas start **experimental**; after that only additions |
 | Dependencies | `build.txt`: modReferences, weakReferences, sortAfter/Before | `mod.json`: requires (`Id@1.2`), optional, sortAfter/Before |
 | Reload | in game, without restarting | **not possible**: .NET Framework / Mono can't unload a DLL; switches apply at the next start |
 | Settings | `ModConfig` classes: fields with attributes, UI generated, JSON | `ModPage` rows + `settings.ini` today; next: a declarative config class (fields + attributes → rows and ini), tModLoader's idea with our readable ini |
@@ -328,6 +328,6 @@ biggest risk of going 64-bit only), GOG.
 ## Open questions
 
 - Repo layout: a new `UnderRailWorks` repo, or this one renamed? Where does the UnderRailFixes mod live?
-- Assembly and file names for 2.x (`UnderRailWorks.dll`, the patcher's name), and how to detect and replace a 1.x install.
+- (Settled) Names: `UnderRailWorks.dll`, `UnderRailWorks-Patcher`; Works starts at 1.0.0, the UnderRailFixes mod at 2.0.0; a 1.x install is detected and replaced.
 - The manifest format, and how per-mod settings look in the Mods tab.
 - How Harmony patches behave across game updates, and how mods state which game versions they support.

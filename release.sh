@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Makes a GitHub release of UnderRailWorks from this machine, the same way every time:
-#   ./release.sh 2.0.0 "What changed, in a sentence or a paragraph."
-#   ./release.sh 2.0.0 -F notes.md          (description from a file)
-#   ./release.sh 2.0.0-preview.1 -F notes.md   (a version with a "-" is published as a pre-release)
+#   ./release.sh 1.0.0 "What changed, in a sentence or a paragraph."
+#   ./release.sh 1.0.0 -F notes.md          (description from a file)
+#   ./release.sh 1.0.0-preview.1 -F notes.md   (a version with a "-" is published as a pre-release)
 # It refuses to run unless the tree is clean, on main or a release/* branch, in sync with origin, and the version
 # is new. Then it stamps
 # the version, builds from scratch, runs tools/check-release.sh and tools/savecheck/check-saves.sh --play (every save
@@ -25,7 +25,7 @@ esac
 die() { echo "release: $*" >&2; exit 1; }
 
 # 1. Preconditions.
-[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || die "version must look like 2.0.0 or 2.0.0-preview.1"
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || die "version must look like 1.0.0 or 1.0.0-preview.1"
 # main, or a release/* branch (fixes for an older release line without what's on main since)
 BRANCH="$(git branch --show-current)"
 case "$BRANCH" in main|release/*) ;; *) die "not on main or a release/* branch";; esac

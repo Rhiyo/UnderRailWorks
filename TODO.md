@@ -32,8 +32,9 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Repo layout: its own repo; the UnderRailFixes mod lives in `mods/UnderRailFixes` here.
 - [ ] Cherry-pick the 1.0.9 and 1.0.10 fixes (`cacda0c`, `48a1bfe` on `release/1.0.9`) onto `main`, once the other
   session's work there is committed.
-- [x] Names for 2.x: `UnderRailWorks.dll`, `UnderRailWorks.ini`/`.log` (1.x's `UnderrailFix.ini` read on the first start),
-  `UnderRailWorks-Patcher`, version 2.0.0; a 1.x install is recognised and replaced.
+- [x] Names: `UnderRailWorks.dll`, `UnderRailWorks.ini`/`.log` (1.x's `UnderrailFix.ini` read on the first start),
+  `UnderRailWorks-Patcher`, version 1.0.0 (Works is its own product; the UnderRailFixes mod is 2.0.0, its line's next major
+  version); an UnderRailFixes 1.x install is recognised and replaced.
 
 ## Finish the move to .NET 10
 

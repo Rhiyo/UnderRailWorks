@@ -1,7 +1,7 @@
 // UnderRailWorks: loads mods from Mods\<folder>\ in the game folder (64-bit mode only).
 // Each mod may have a mod.json manifest (readable JSON; everything optional):
 //   { "id": "UnderRailFixes", "name": "UnderRailFixes", "version": "2.0.0", "author": "...", "description": "...",
-//     "works": "2.0", "requires": ["OtherMod@1.2"], "optional": ["SomeMod"], "sortAfter": [], "sortBefore": [] }
+//     "works": "1.0", "requires": ["OtherMod@1.2"], "optional": ["SomeMod"], "sortAfter": [], "sortBefore": [] }
 // works: the Works API version the mod was built for (WorksApi.Version: same major, at least that minor).
 // As tModLoader's build.txt: requires = modReferences (must be present, on and at least that version, and is loaded
 // first), optional = weakReferences (loaded first when present), sortAfter / sortBefore = load order only.

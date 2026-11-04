@@ -16,7 +16,7 @@ Every file the game writes (saves, config.dat) stays readable by the stock game.
 ## Status
 
 **In development, not released yet.** [UnderRailFixes 1.x](https://github.com/Rhiyo/UnderRailFixes) is the released,
-stable version of the fixes. Works started from UnderRailFixes 1.0.8 and is a new major version (2.x): installs, files
+stable version of the fixes. Works is a separate product (starting at 1.0) that grew out of UnderRailFixes 1.0.8: installs, files
 and the API are not compatible with 1.x.
 
 Working today (tested under Proton): the game on .NET 10, the mod loader and Mods tab, mod dependencies, the drawing
@@ -43,7 +43,7 @@ an UnderRailFixes 1.x install and takes over its settings. After a game update, 
 A mod is a folder in `Mods\` with a `mod.json` and a DLL whose main class derives from `WorksMod`:
 
 ```json
-{ "id": "MyMod", "name": "My Mod", "version": "1.0.0", "author": "me", "works": "2.0",
+{ "id": "MyMod", "name": "My Mod", "version": "1.0.0", "author": "me", "works": "1.0",
   "description": "What it does.", "requires": ["UnderRailFixes@2.0"] }
 ```
 

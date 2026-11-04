@@ -32,9 +32,9 @@ public sealed class ModLog
     public void Error(string line) { global::Log.Always("mods: " + id + ": error: " + line); }
 }
 
-// The Works API version mods are checked against ("works": "2.0" in mod.json): same major version, at least that
+// The Works API version mods are checked against ("works": "1.0" in mod.json): same major version, at least that
 // minor. The minor goes up when the API gains something; the major only when something mods use changes or goes.
 public static class WorksApi
 {
-    public static readonly Version Version = new Version(2, 0);
+    public static readonly Version Version = new Version(1, 0);
 }
