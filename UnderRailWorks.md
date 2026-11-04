@@ -321,6 +321,12 @@ Format and the full list: the header of `src/Runtime/ContentPacks.cs`. Example: 
 NPC, a conversation with a hidden and a greyed option, a quest, a reward). Tested in game: the conversation, the
 options' conditions, the quest started and completed, the bandage taken, 25 charons paid. A bad entry is logged with
 the file and skipped.
+**Triggers** (CDDA's effect-on-condition, in small): `{ "on": event, filters, "if": condition, "do": effects,
+"once": true }` for zoneEntered, questChanged, levelUp, itemAdded, equipped, statusApplied, characterDied,
+dialogEnded, combatStarted/Ended, gameLoaded, newGame. Code mods extend the vocabulary with
+`ContentPack.AddCondition` / `AddEffect` (`PackArgs` reads the arguments); packs load after all mods' code so they
+can use them. Tested: status, equip (with a DLL condition) and zone triggers fired; a "once" trigger did not fire
+again after a quicksave and quickload.
 Research on what else those games offer, ranked (per-save data, item/status/feat definitions, cancellable hooks,
 equipment, loot, stealth, AI, crafting, dialog patches, a content registry): see TODO.md.
 

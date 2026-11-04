@@ -111,6 +111,11 @@ public static class ModLoader
             if (failed != null) { mod.Error = "needs " + failed.Name + " (it failed to load)"; Log.Write("mods: " + mod.Id + " not loaded: " + mod.Error); continue; }
             Load(mod, harmonyType);
         }
+        // Content packs (content/*.json), after every mod's code: packs may use conditions and effects a DLL registered.
+        foreach (var mod in order.Where(m => m.Loaded))
+        {
+            try { ContentPacks.Load(mod); } catch (Exception ex) { Log.Write("content: " + mod.Id + ": " + ex.Message); }
+        }
         // PostLoad: after every mod's Load, in the same order.
         foreach (var mod in order.Where(m => m.Loaded && m.Instance != null))
         {
@@ -241,7 +246,6 @@ public static class ModLoader
 
     static void Load(ModInfo mod, Type harmonyType)
     {
-        try { ContentPacks.Load(mod); } catch (Exception ex) { Log.Write("content: " + mod.Id + ": " + ex.Message); }     // content/*.json: data, with or without code
         var dlls = Directory.GetFiles(mod.Folder, "*.dll").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
         if (dlls.Count == 0) { mod.Loaded = true; Log.Write("mods: loaded " + mod.Id + " (no code)"); return; }
         foreach (string dll in dlls)

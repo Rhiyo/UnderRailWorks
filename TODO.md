@@ -123,7 +123,8 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [ ] Containers and loot (events, contents, loot tables).
 - [ ] Stealth / detection / skill-check hooks; AI hooks (target, weapon, flee); crafting recipes.
 - [ ] Area triggers and interactables; patching stock dialogs (insert options, WeiDU-style).
-- [ ] Content packs: stores, item tweaks, triggers, dialog patches; DLL-registered conditions and effects.
+- [x] Content packs: triggers; DLL-registered conditions and effects.
+- [ ] Content packs: stores, item tweaks, dialog patches.
 
 ## For modders
 

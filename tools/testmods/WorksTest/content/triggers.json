@@ -1,0 +1,8 @@
+{
+  "triggers": [
+    { "on": "statusApplied", "status": "agilityBoost", "do": [ { "say": "Light on my feet!" }, { "testLog": "trigger: agility boost" } ] },
+    { "on": "equipped", "item": "jkkTacticalVest", "if": { "testAlways": true }, "do": [ { "log": "The jacket fits well." }, { "testLog": "trigger: vest equipped (custom condition passed)" } ] },
+    { "id": "welcome", "on": "zoneEntered", "zone": "LU-SouthGateStation-N", "once": true, "do": [ { "testLog": "trigger: welcome (once)" } ] },
+    { "on": "levelUp", "level": 2, "if": { "not": { "inCombat": true } }, "do": [ { "testLog": "trigger: level up" } ] }
+  ]
+}

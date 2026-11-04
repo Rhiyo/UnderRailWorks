@@ -15,6 +15,8 @@ public sealed class WorksTest : WorksMod
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
         GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));
         GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
+        ContentPack.AddCondition(this, "testAlways", args => () => args.Bool("testAlways"));
+        ContentPack.AddEffect(this, "testLog", args => { var text = args.Text("testLog"); return () => Log.Info(text); });
         GameEvents.Equipped.Add(this, e => Log.Info("equipped " + e.Item.Name + " on " + e.Character.Name));
         GameEvents.Unequipped.Add(this, e => Log.Info("unequipped " + e.Item.Name + " from " + e.Character.Name));
         GameEvents.Update.Add(this, seconds =>

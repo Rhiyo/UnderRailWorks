@@ -17,13 +17,44 @@
 // Effects: setFlag (+ "to"), setInt + "to", addInt + "by", setString + "to", startQuest, completeQuest, failQuest,
 // give item path + "count", take item code + "count", giveMoney n, takeMoney n, xp n, log text, say text (over the
 // player), effect status code + "turns".
-// Everything goes through Works' API, so packs get the same save rules: placed characters are never saved, quests and
-// variables stay stock-loadable.
+//   "triggers":   [ { "id": "welcome", "on": "zoneEntered", "zone": "LU-SouthGateStation-N", "firstVisit": true,
+//                     "if": { condition }, "do": [ effects ], "once": true } ]
+//   Events and their filters: zoneEntered (zone, firstVisit), questChanged (quest, state), levelUp (level: at least),
+//   itemAdded (item code), equipped (item code), statusApplied (status code; the player's), characterDied (character:
+//   id or name), dialogEnded (dialog), combatStarted, combatEnded, gameLoaded, newGame. "once": only the first time in
+//   each game (kept as a variable in the save).
+// More conditions: equipped item code, status code (the player has it), zone id, inCombat true/false.
+// Code mods add their own for packs: ContentPack.AddCondition(this, "myCheck", args => () => ...) and
+// ContentPack.AddEffect(this, "myEffect", args => () => ...), used as { "myCheck": ..., other args }.
+// Packs load after every mod's code. Everything goes through Works' API, so packs get the same save rules: placed
+// characters are never saved, quests and variables stay stock-loadable.
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+
+// A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
+public sealed class PackArgs
+{
+    internal readonly Dictionary<string, object> Values;
+    internal PackArgs(Dictionary<string, object> values) { Values = values; }
+    public bool Has(string key) { return Values.ContainsKey(key); }
+    public string Text(string key, string fallback = null) { object v; return Values.TryGetValue(key, out v) && v != null ? Convert.ToString(v, CultureInfo.InvariantCulture) : fallback; }
+    public double Number(string key, double fallback = 0) { object v; return Values.TryGetValue(key, out v) && v != null ? (v is double ? (double)v : double.Parse(Convert.ToString(v, CultureInfo.InvariantCulture), CultureInfo.InvariantCulture)) : fallback; }
+    public int Int(string key, int fallback = 0) { return (int)Number(key, fallback); }
+    public bool Bool(string key, bool fallback = false) { object v; if (!Values.TryGetValue(key, out v) || v == null) return fallback; return v is bool ? (bool)v : Text(key) == "1" || string.Equals(Text(key), "true", StringComparison.OrdinalIgnoreCase); }
+}
+
+public static class ContentPack
+{
+    internal static readonly Dictionary<string, Func<PackArgs, Func<bool>>> Conditions = new Dictionary<string, Func<PackArgs, Func<bool>>>(StringComparer.OrdinalIgnoreCase);
+    internal static readonly Dictionary<string, Func<PackArgs, Action>> Effects = new Dictionary<string, Func<PackArgs, Action>>(StringComparer.OrdinalIgnoreCase);
+    // A condition packs can use as { "key": ... }: make reads the arguments once (at load) and returns the check.
+    public static void AddCondition(WorksMod mod, string key, Func<PackArgs, Func<bool>> make) { Conditions[key] = make; Log.Write("content: " + mod.Id + " adds the condition " + key); }
+    // An effect packs can use in "do" lists: make reads the arguments and returns what to do.
+    public static void AddEffect(WorksMod mod, string key, Func<PackArgs, Action> make) { Effects[key] = make; Log.Write("content: " + mod.Id + " adds the effect " + key); }
+}
 
 static class ContentPacks
 {
@@ -49,7 +80,8 @@ static class ContentPacks
                         case "quests": count += Each(kv.Value, where, "quest", LoadQuest); break;
                         case "dialogs": foreach (var d in (kv.Value as Dictionary<string, object>) ?? new Dictionary<string, object>()) { LoadDialog(d.Key, d.Value as Dictionary<string, object>, where); count++; } break;
                         case "placements": count += Each(kv.Value, where, "placement", LoadPlacement); break;
-                        default: Log.Write("content: " + where + ": unknown section \"" + kv.Key + "\" (text, quests, dialogs, placements)"); break;
+                        case "triggers": count += Each(kv.Value, where, "trigger", t => LoadTrigger(mod.Id, t)); break;
+                        default: Log.Write("content: " + where + ": unknown section \"" + kv.Key + "\" (text, quests, dialogs, placements, triggers)"); break;
                     }
                 }
                 catch (Exception ex) { Log.Write("content: " + where + ": " + kv.Key + ": " + ex.Message); }
@@ -138,6 +170,52 @@ static class ContentPacks
         });
     }
 
+    static void LoadTrigger(string mod, Dictionary<string, object> t)
+    {
+        var on = Req(t, "on");
+        var id = Opt(t, "id");
+        bool once = t.ContainsKey("once") && Bool(t["once"]);
+        if (once && id == null) throw new FormatException("a trigger with \"once\" needs an \"id\"");
+        var when = t.ContainsKey("if") ? Cond(t["if"]) : null;
+        var effects = Effects(t);
+        var onceVar = "cp_" + mod + "_" + id;
+        Action fire = () =>
+        {
+            if (once && Variables.Global.Get(onceVar, false)) return;
+            if (when != null && !when.Test()) return;
+            if (once) Variables.Global.Set(onceVar, true);
+            foreach (var e in effects) e.Run();
+        };
+        Func<string, string> f = k => Opt(t, k);
+        Func<string, string, bool> match = (want, got) => want == null || string.Equals(want, got, StringComparison.OrdinalIgnoreCase);
+        switch (on.ToLowerInvariant())
+        {
+            case "zoneentered":
+                bool? first = t.ContainsKey("firstVisit") ? Bool(t["firstVisit"]) : (bool?)null;
+                GameEvents.ZoneLoaded.Add(mod, (zone, firstVisit) => { if (match(f("zone"), zone) && (first == null || first == firstVisit)) fire(); }); break;
+            case "questchanged":
+                GameEvents.QuestChanged.Add(mod, (quest, state) => { if (match(f("quest"), quest) && match(f("state"), state.ToString())) fire(); }); break;
+            case "levelup":
+                int min = Int(t, "level");
+                GameEvents.LevelledUp.Add(mod, level => { if (level >= min) fire(); }); break;
+            case "itemadded":
+                GameEvents.ItemAdded.Add(mod, item => { if (match(f("item"), item.Code)) fire(); }); break;
+            case "equipped":
+                GameEvents.Equipped.Add(mod, e => { if (e.Character.IsPlayer && match(f("item"), e.Item.Code)) fire(); }); break;
+            case "statusapplied":
+                GameEvents.StatusApplied.Add(mod, s => { if (s.Character != null && s.Character.IsPlayer && match(f("status"), s.Code)) fire(); }); break;
+            case "characterdied":
+                GameEvents.CharacterDied.Add(mod, c => { var want = f("character"); if (want == null || string.Equals(want, c.Key, StringComparison.OrdinalIgnoreCase) || string.Equals(want, c.Name, StringComparison.OrdinalIgnoreCase)) fire(); }); break;
+            case "dialogended":
+                GameEvents.DialogEnded.Add(mod, d => { if (match(f("dialog"), d)) fire(); }); break;
+            case "combatstarted": GameEvents.CombatStarted.Add(mod, fire); break;
+            case "combatended": GameEvents.CombatEnded.Add(mod, fire); break;
+            case "gameloaded": GameEvents.GameLoaded.Add(mod, fire); break;
+            case "newgame": GameEvents.NewGame.Add(mod, fire); break;
+            default: throw new FormatException("unknown trigger event \"" + on + "\"");
+        }
+    }
+
     // --- Conditions and effects ------------------------------------------------------------------------------------
 
     static Condition Cond(object o)
@@ -156,6 +234,11 @@ static class ContentPacks
         if (d.ContainsKey("skill")) { var s = Str(d["skill"]); int min = (int)Num(d["min"]); return Condition.Code(() => World.Player != null && World.Player.Skill(s) >= min); }
         if (d.ContainsKey("ability")) { var s = Str(d["ability"]); int min = (int)Num(d["min"]); return Condition.Code(() => World.Player != null && World.Player.Ability(s) >= min); }
         if (d.ContainsKey("level")) { int n = (int)Num(d["level"]); return Condition.Code(() => World.Player != null && World.Player.Level >= n); }
+        if (d.ContainsKey("equipped")) { var code = Str(d["equipped"]); return Condition.Code(() => World.Player != null && World.Player.Equipment.All.Values.Any(i => i.Code == code)); }
+        if (d.ContainsKey("status")) { var code = Str(d["status"]); return Condition.Code(() => World.Player != null && World.Player.HasStatusEffect(code)); }
+        if (d.ContainsKey("zone")) { var zone = Str(d["zone"]); return Condition.Code(() => string.Equals(World.ZoneId, zone, StringComparison.OrdinalIgnoreCase)); }
+        if (d.ContainsKey("inCombat")) { bool want = Bool(d["inCombat"]); return Condition.Code(() => Combat.InCombat == want); }
+        foreach (var kv in ContentPack.Conditions) if (d.ContainsKey(kv.Key)) { var check = kv.Value(new PackArgs(d)); return Condition.Code(check); }
         throw new FormatException("unknown condition: " + string.Join(", ", d.Keys));
     }
 
@@ -183,6 +266,7 @@ static class ContentPacks
         if (d.ContainsKey("log")) return Outcome.Log(Str(d["log"]));
         if (d.ContainsKey("say")) { var t = Str(d["say"]); return Outcome.Code(() => Notify.OverPlayer(t)); }
         if (d.ContainsKey("effect")) { var code = Str(d["effect"]); double turns = d.ContainsKey("turns") ? Num(d["turns"]) : 0; return Outcome.Code(() => StatusEffects.Apply(p(), code, turns)); }
+        foreach (var kv in ContentPack.Effects) if (d.ContainsKey(kv.Key)) { var run = kv.Value(new PackArgs(d)); return Outcome.Code(run); }
         throw new FormatException("unknown effect: " + string.Join(", ", d.Keys));
     }
 

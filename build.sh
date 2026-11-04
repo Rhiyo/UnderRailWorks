@@ -170,6 +170,7 @@ mkdir -p "$HERE/build/Mods/WorksTest"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/WorksTest.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/tools/testmods/WorksTest/WorksTest.cs"
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/WorksTest.dll" "$OUT/FNA.dll" "$HERE/build/Mods/WorksTest/WorksTest.dll" >/dev/null
 cp "$HERE/tools/testmods/WorksTest/mod.json" "$HERE/build/Mods/WorksTest/"
+rm -rf "$HERE/build/Mods/WorksTest/content"; cp -r "$HERE/tools/testmods/WorksTest/content" "$HERE/build/Mods/WorksTest/"
 
 # The .NET 10 launcher (installed as underrail.exe; src/Launcher) and the Windows .NET 10 runtime it runs the game on
 # (Microsoft.NETCore.App + Microsoft.WindowsDesktop.App, from Microsoft's releases, each checked against the SHA-512
