@@ -1,0 +1,2 @@
+{ "id": "MovableWindows", "name": "Movable Windows", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
+  "description": "Drag the game's windows (inventory, notes, crafting, map...) by their title bar; they open where you left them. Right-click a title bar to put it back." }

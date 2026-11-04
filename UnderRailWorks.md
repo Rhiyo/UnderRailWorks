@@ -264,6 +264,10 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
 - **Mod HUD parts**: `Hud.AddPart(mod, name, element, x, y)` puts a mod's element on the HUD as a named part
   (`Hud.ModParts`, `Hud.PartAdded`), so layout mods move mods' panels like the game's; a rebuilt panel is added again
   and the layout re-applies the player's position. The Minimap and the Quest Tracker use it.
+- **Open windows**: the game's windows with a title bar are `a9t` (title label, close button at the right, title height
+  `a9t.i`), built anew as children of the in-game screen each time they open. `Windows.OpenWindows` lists them as
+  `OpenWindow` (Kind: Inventory, Notes, Crafting, Oddities, Psi, Map, CombatStats, Barter, Container; Element;
+  TitleHeight). The character sheet (`iw`) has no title bar of that kind.
 - **Windows**: `Windows.Open/Close(Window.Inventory | Notes | Map | ...)` (the `ps` methods the HUD buttons call,
   refused while `ps.alg()`). **Trade.Open(merchant)** (`ps.amw`), **Prices.BuyMarkup / SellFactor** (postfixes of
   `dvp.aqd`, `b6o.d`). `Character.IsMerchant`.
@@ -299,6 +303,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | VendorDirectory | F6: the zone's merchants, nearest first, Trade from the list (in reach, or anywhere as a setting) | World.Characters, Stock, Trade.Open, TradeOpened |
 | FairTrade | merchants' buy markup and sell price as settings (proven on the barter screen: 750 -> 375 at 50%) | Prices hooks |
 | NeuralReallocation | a placed neurotechnician resets skills or abilities for charons; the points are the game's own unspent points, placed on its level-up screen (tested: 120 refunded + 40 for level 2 = 160 on the screen) | Character skills/abilities/points, dynamic dialog, Inventory |
+| MovableWindows | the game's titled windows dragged by their title bar, reopened where left (a setting), right-click a title to put it back; per HUD size | Windows.OpenWindows, Input mouse, Settings |
 | HudLayout | a Layout button on the HUD (a setting, off by default; movable itself) or a key (none by default): drag the HUD's parts, Reset all, Done (the game's, and mods' named parts: Minimap, Quest Tracker), right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
 | TheStranger, HelloQuest (examples) | a character, a conversation, a quest | the content API |
 Tested together in one save, then a quicksave with a contract active, both placed characters and every mod's

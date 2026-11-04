@@ -86,7 +86,16 @@ public sealed class HudModPart
     public int DefaultY { get; internal set; }
 }
 
-public enum Window { Inventory, CharacterSheet, CombatStats, Crafting, Notes, Oddities, Psi, Map, QuickInvoker, GameMenu }
+public enum Window { Inventory, CharacterSheet, CombatStats, Crafting, Notes, Oddities, Psi, Map, QuickInvoker, GameMenu, Barter, Container }
+
+// An open window of the game with a title bar (a9t: the title, the close button at the right): inventory, notes...
+public sealed class OpenWindow
+{
+    public Window Kind { get; internal set; }
+    public UiElement Element { get; internal set; }
+    // The title bar's height (interface units): the strip at the top, the close button at its right end.
+    public int TitleHeight { get; internal set; }
+}
 
 public static class Windows
 {
@@ -94,11 +103,38 @@ public static class Windows
     static readonly string[,] Methods = { { "alv", "alw" }, { "al3", null }, { "al4", "al5" }, { "al6", "al7" }, { "alx", "aly" }, { "alz", "al0" }, { "al1", "al2" }, { "al8", "al9" }, { "als", "alt" }, { "alq", "alr" } };
     static readonly MethodInfo CharacterSheetClose = typeof(dka).GetMethod("z", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
 
+    // The game's titled windows open now, in drawing order (the last one is on top). Each opening builds a new window
+    // (a child of the in-game screen) at the game's place for it.
+    public static IList<OpenWindow> OpenWindows
+    {
+        get
+        {
+            var list = new List<OpenWindow>();
+            if (Hud.Current == null) return list;
+            foreach (var c in Hud.Current.Controls.Cast<euz>())
+            {
+                var w = c as a9t;
+                Window kind;
+                if (w == null || !c.Visible || !Kinds.TryGetValue(c.GetType(), out kind)) continue;
+                list.Add(new OpenWindow { Kind = kind, Element = UiElement.Of(c), TitleHeight = (int)TitleHeightField.GetValue(w) });
+            }
+            return list;
+        }
+    }
+    // The window classes (the factories in ci3) by kind.
+    static readonly Dictionary<Type, Window> Kinds = new Dictionary<Type, Window>
+    {
+        { typeof(evh), Window.Inventory }, { typeof(dhn), Window.Notes }, { typeof(eed), Window.Crafting }, { typeof(ckj), Window.Oddities },
+        { typeof(ax3), Window.Psi }, { typeof(a5r), Window.Map }, { typeof(dm1), Window.CombatStats }, { typeof(b6o), Window.Barter },
+        { typeof(c15), Window.Container },
+    };
+    static readonly FieldInfo TitleHeightField = typeof(a9t).GetField("i", BindingFlags.Instance | BindingFlags.Public);     // a9t.i: also a method name
+
     // Opens a window as its HUD button would; false while the game is busy with something modal, or without a game.
     public static bool Open(Window w)
     {
         var screen = bpo.GetService<ps>();
-        if (screen == null || !Hud.Exists || screen.alg()) return false;
+        if (screen == null || !Hud.Exists || screen.alg() || (int)w >= Methods.GetLength(0)) return false;     // barter, containers: opened by their own actions
         Call(screen, Methods[(int)w, 0]);
         return true;
     }
@@ -108,6 +144,7 @@ public static class Windows
         var screen = bpo.GetService<ps>();
         if (screen == null || !Hud.Exists) return;
         if (w == Window.CharacterSheet) { if (CharacterSheetClose != null) CharacterSheetClose.Invoke(screen, null); return; }
+        if ((int)w >= Methods.GetLength(0)) return;
         Call(screen, Methods[(int)w, 1]);
     }
 

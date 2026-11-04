@@ -19,6 +19,7 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   - HUD Layout: press F12 and drag the game's HUD parts where you want them.
   - Vendor Directory: F6 lists the zone's merchants with a Trade button (optionally from anywhere in the zone).
   - Fair Trade: what merchants charge and pay, as settings.
+  - Movable Windows: drag the inventory, notes, crafting, map... by their title bar; they open where you left them.
   - Neural Reallocation: a neurotechnician at South Gate Station resets your skills or abilities for charons.
 
 No game code or game files are shipped: the patcher changes the player's own copy, and mods patch it at runtime.
