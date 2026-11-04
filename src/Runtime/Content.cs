@@ -186,11 +186,13 @@ public static class Notify
     }
 
     // Floating text over the player (always shown, like the game's own notices); big = enlarged.
-    public static void OverPlayer(string text, Color? colour = null, bool big = false)
+    public static void OverPlayer(string text, Color? colour = null, bool big = false) { Over(World.Player, text, colour, big); }
+
+    // Floating text over any character.
+    public static void Over(Character who, string text, Color? colour = null, bool big = false)
     {
-        var player = World.Player;
-        if (player == null) return;
-        bmj.a(player.Entity, (c3r)FloatingCtor.Invoke(new object[] { text, colour ?? Default, null, big }));
+        if (who == null) return;
+        bmj.a(who.Entity, (c3r)FloatingCtor.Invoke(new object[] { text, colour ?? Default, null, big }));
     }
 }
 

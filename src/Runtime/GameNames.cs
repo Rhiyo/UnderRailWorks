@@ -239,10 +239,18 @@ static class GameNames
             if (t.ContainsGenericParameters || t.Name.Contains("<")) continue;
             foreach (var f in t.GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public))
             {
-                if (f.Name.Contains("<") || !(typeof(MemberInfo).IsAssignableFrom(f.FieldType) || (typeof(Delegate).IsAssignableFrom(f.FieldType) && f.IsInitOnly))) continue;
+                bool array = f.FieldType.IsArray && typeof(MemberInfo).IsAssignableFrom(f.FieldType.GetElementType());
+                if (f.Name.Contains("<") || !(array || typeof(MemberInfo).IsAssignableFrom(f.FieldType) || (typeof(Delegate).IsAssignableFrom(f.FieldType) && f.IsInitOnly))) continue;
                 object v;
                 try { v = f.GetValue(null); }
                 catch (Exception ex) { missing.Add(t.Name + "." + f.Name + " (" + (ex.InnerException ?? ex).Message + ")"); continue; }
+                if (array && v != null)
+                {
+                    // Tables of lookups (e.g. Hud's part fields): every entry must resolve.
+                    var items = (Array)v;
+                    for (int i = 0; i < items.Length; i++) if (items.GetValue(i) == null) missing.Add(t.Name + "." + f.Name + "[" + i + "]"); else ok++;
+                    continue;
+                }
                 if (v == null) missing.Add(t.Name + "." + f.Name); else ok++;
             }
         }

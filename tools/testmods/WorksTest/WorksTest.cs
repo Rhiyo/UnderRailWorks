@@ -1,5 +1,7 @@
 // Test-only mod (not shipped): keys that set up game state for testing Works in game.
-//   F10: give the player 20 charons (Inventory.AddMoney). Logs every Works event.
+//   F10: give the player 20 charons (Inventory.AddMoney). F12: the stranger turns hostile. F4: hide the portrait,
+//   open the notes. F6: list status effect codes and apply one. Logs every Works event.
+using System.Linq;
 using Microsoft.Xna.Framework.Input;
 
 [assembly: System.Reflection.AssemblyVersion("1.0.0")]
@@ -16,6 +18,33 @@ public sealed class WorksTest : WorksMod
             Log.Info("gave 20 charons: now " + p.Inventory.Money + ", HP " + p.Health + "/" + p.MaxHealth + ", level " + p.Level + ", XP " + p.Experience
                 + ", Strength " + p.Ability("Strength") + ", Persuasion " + p.Skill("Persuasion") + ", feats " + string.Join(",", p.Feats));
         });
+        GameEvents.Update.Add(this, seconds =>
+        {
+            var p = World.Player;
+            if (p == null) return;
+            if (Input.Pressed(Keys.F12))
+            {
+                var s = World.Placed("stranger_npc");
+                if (s != null) { s.Passive = false; s.SetAttitudeToPlayer(Attitude.Hostile); Log.Info("stranger now " + s.AttitudeToPlayer); }
+            }
+            if (Input.Pressed(Keys.F4))
+            {
+                var portrait = Hud.Get(HudPart.PlayerPortrait);
+                if (portrait != null) Ui.Show(portrait, !portrait.Visible);
+                Log.Info("portrait " + (portrait == null ? "missing" : portrait.Visible ? "shown" : "hidden") + ", action bar at " + (Hud.Get(HudPart.ActionBar) == null ? "?" : Hud.Get(HudPart.ActionBar).Bounds.ToString()) + ", notes opened: " + Windows.Open(Window.Notes));
+            }
+            if (Input.Pressed(Keys.F6))
+            {
+                var codes = StatusEffects.Codes;
+                Log.Info(codes.Count + " effect codes: " + string.Join(",", codes.Take(60)));
+                var code = codes.FirstOrDefault(c => c.ToLowerInvariant().Contains("bleed")) ?? codes.FirstOrDefault();
+                if (code != null) Log.Info("apply " + code + ": " + StatusEffects.Apply(p, code, 3) + "; now " + string.Join(", ", p.StatusEffects));
+            }
+        });
+        Combat.TurnStarted.Add(this, c => Log.Info("turn: " + c.Name + " AP " + Combat.ActionPoints(c) + ", round " + Combat.Round));
+        Combat.ModifyHitChance.Add(this, h => { if (h.Attacker != null && h.Attacker.IsPlayer) Log.Info("hit chance " + h.Kind + " " + (h.Target == null ? "?" : h.Target.Name) + ": " + h.Chance.ToString("0.00")); });
+        Combat.ModifyIncomingDamage.Add(this, d => Log.Info("incoming to " + (d.Target == null ? "?" : d.Target.Name) + " from " + d.AttackerName + ": hit " + d.Hit + ", crit " + d.Critical + ", " + string.Join(" + ", d.Parts)));
+        Combat.AttackResolved.Add(this, o => Log.Info("resolved: " + (o.Target == null ? "?" : o.Target.Name) + " lost " + o.HealthLost + (o.Killed ? " (killed)" : "")));
         GameEvents.QuestChanged.Add(this, (id, state) => Log.Info("quest " + id + " -> " + state));
         GameEvents.Saved.Add(this, folder => Log.Info("saved " + folder));
         GameEvents.GameLoaded.Add(this, () => Log.Info("game loaded"));

@@ -103,6 +103,14 @@ mkdir -p "$OUT/Mods/WordGetsAround"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/WordGetsAround.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/WordGetsAround/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/WordGetsAround.dll" "$OUT/FNA.dll" "$OUT/Mods/WordGetsAround/WordGetsAround.dll" >/dev/null
 cp "$HERE/mods/WordGetsAround/mod.json" "$OUT/Mods/WordGetsAround/"
+mkdir -p "$OUT/Mods/DifficultyDial"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/DifficultyDial.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/DifficultyDial/*.cs
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/DifficultyDial.dll" "$OUT/FNA.dll" "$OUT/Mods/DifficultyDial/DifficultyDial.dll" >/dev/null
+cp "$HERE/mods/DifficultyDial/mod.json" "$OUT/Mods/DifficultyDial/"
+mkdir -p "$OUT/Mods/AfterActionReport"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/AfterActionReport.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/AfterActionReport/*.cs
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/AfterActionReport.dll" "$OUT/FNA.dll" "$OUT/Mods/AfterActionReport/AfterActionReport.dll" >/dev/null
+cp "$HERE/mods/AfterActionReport/mod.json" "$OUT/Mods/AfterActionReport/"
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
 mkdir -p "$HERE/build/Mods/HelloUI"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"

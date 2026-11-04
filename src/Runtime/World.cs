@@ -108,6 +108,12 @@ public sealed class Character
     }
     static readonly System.Reflection.MethodInfo SayMethod = typeof(c0s).GetMethods().First(m => m.Name == "a" && m.GetParameters().Length == 4 && m.GetParameters()[0].ParameterType == typeof(string));
 
+    // Its status effects (the game's br5), and the shop it runs (null if it isn't a merchant).
+    internal br5 Effects { get { return Need.StatusEffects; } }
+    public IList<StatusEffect> StatusEffects { get { var b = Need.StatusEffects; return b.d().Select(e => new StatusEffect(e, b)).ToList(); } }
+    public bool HasStatusEffect(string code) { return Need.StatusEffects.d().Any(e => string.Equals(e.Code, code, StringComparison.OrdinalIgnoreCase)); }
+    public bool IsMerchant { get { var c = Entity as c5x; return c != null && c.GetAspect<dvp>() != null; } }
+
     // Its own variables (the game's per-character CustomProperties, saved with it).
     public Variables Variables { get { return variables ?? (variables = new Variables(() => { var c = Entities.Character(Entity); return c == null || c.GetAspect<amc>().aa() == null ? null : c.GetAspect<amc>().aa().CustomProperties; })); } }
     Variables variables;

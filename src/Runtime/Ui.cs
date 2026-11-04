@@ -253,6 +253,8 @@ static class UiHooks
         if (update != null) harmony.Patch(update, postfix: new HarmonyLib.HarmonyMethod(typeof(UiHooks).GetMethod("Updated", BindingFlags.Static | BindingFlags.NonPublic)));
         ContentHooks.Install(harmony);
         Saves.Install(harmony);
+        HudHooks.Install(harmony);
+        CombatHooks.Install(harmony);
         Log.Write("ui: hooks in place");
     }
 
@@ -262,7 +264,7 @@ static class UiHooks
         foreach (var c in ctors) harmony.Patch(c, postfix: method);
     }
 
-    static void Hud(object __instance) { var root = UiElement.Of((euz)__instance); if (UiEvents.HudCreated.Any) UiEvents.HudCreated.Run(h => h(root)); }
+    static void Hud(object __instance) { global::Hud.Created((ci3)__instance); var root = UiElement.Of((euz)__instance); if (UiEvents.HudCreated.Any) UiEvents.HudCreated.Run(h => h(root)); }
     static void MainMenu(object __instance) { var root = UiElement.Of((euz)__instance); if (UiEvents.MainMenuCreated.Any) UiEvents.MainMenuCreated.Run(h => h(root)); }
     internal static void Options(t1 options) { if (UiEvents.OptionsCreated.Any) UiEvents.OptionsCreated.Run(h => h(UiElement.Of(options))); }
 
