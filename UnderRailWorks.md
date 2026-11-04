@@ -118,9 +118,14 @@ exits, toggle key), drawn from the game's own data through Works' names (`Areas`
 - What the game's data says (measured, not guessed: a grid dump and the entities' names and aspects): everything solid
   has the `cd0` aspect ("SEA"); unnamed solids form the walls, named ones are props (desks, shelves, barrels), doors
   have `cnb` ("DEA"); exits are area transitions (`b0j`, "ATT") and zone transitions (`cdo`, "ZTT").
-- The player as a white dot and the characters the player can see as dots in their Tab outline colour (the game's
-  `adi.ae` table): "can see" = the game drew them this frame (from the drawing events), so stealthed or out-of-sight
-  characters stay hidden.
+- The player as a gold dot and the characters the player can see as dots in their Tab outline colour (as eg0 picks it:
+  gold for the player, sandy brown for passive, else the `adi.ae` table): "can see" = the game drew them this frame
+  (from the drawing events), so stealthed or out-of-sight characters stay hidden.
+- Exits in the game's transition colours (a23: blue to another area, red to another zone), only while open.
+- The shroud: with the game's fog of war on (`dnn.h.a == edg.b`), only what the observer (`dnn.c.d`) has discovered
+  (`b0b.b(observer)`) is drawn, as the world view does. Measured: 1,952 of 6,241 tiles hidden in a part-explored area.
+- Placed bottom right by default, beside the action bar (judged from a screenshot at the player's 32:9 screen with
+  30 % side insets: the top right covered the view ahead and an icon).
 - Tested in game: layout against the screen in three places, the player dot, three NPC dots (blue: allies), exits.
 
 ## Saves and mods (copying tModLoader)

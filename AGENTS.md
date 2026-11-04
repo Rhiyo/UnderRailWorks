@@ -243,7 +243,8 @@ update, run the patcher on a copy first: an `Expect` failure names the patch poi
   b unfriendly (orange), c neutral (grey), d friendly (green), e ally (blue) (`adi.ae`); `efk.Passive`.
 - Creature outlines (`eg0`, the method with ldstr "Outline"): built only when the view takes input (`mv.w`, off during
   zone transitions), Character Outlines isn't Never, and (combat + Always in combat) or hovered or Tab / reverse
-  highlight held; colour white for the player/hovered, `adi.ae[attitude]` otherwise. The layer goes into the
+  highlight held; colour (corrected Nov 2026, from eg0): gold for the player's character (data `e3q`), white for the
+  hovered or targeted one, sandy brown for passive ones, `adi.ae[attitude]` otherwise (Works: `Entities.OutlineColor`). The layer goes into the
   creature's `bym` with `bym.a(a2f)`.
 - The world view's zoom: `dnn.y` (a field that shares its name). Unobscuration alpha: `cnk.aq1().b().i()`.
 - Render targets: `by8` caches save and restore the current target and restart the world batch with `iu` (the
