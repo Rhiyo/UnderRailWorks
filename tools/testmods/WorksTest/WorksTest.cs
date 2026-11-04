@@ -57,7 +57,7 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.V)) { var inv = World.Player.Inventory; inv.Add("armor\\jkktacticalvest", 1); var vest = inv.Items.FirstOrDefault(i => i.Code == "jkkTacticalVest"); Log.Info("vest on: " + (vest != null && World.Player.Equipment.Equip(vest))); }
             if (Input.Pressed(Keys.X)) Log.Info("xp " + World.Player.Experience + " (oddity " + Progression.Oddity + "), level " + World.Player.Level + "; next levels cost " + string.Join(", ", Enumerable.Range(2, 5).Select(l => l + ":" + Progression.XpFor(l))));
             if (Input.Pressed(Keys.B)) { var lines = Dialogs.StockLines("characters\\bigbret1"); Log.Info("bigbret1: " + lines.Count + " lines"); foreach (var l in lines.Take(12)) Log.Info("  | " + l.Replace("\n", " ").Substring(0, Math.Min(90, l.Length))); }
-            if (Input.Pressed(Keys.H)) Log.Info("bret dialog with the merchant: " + Dialogs.Start(World.Placed("workstest_merchant"), "characters\\bigbret1"));
+            if (Input.Pressed(Keys.H) && !Input.Down(Keys.LeftControl)) Log.Info("bret dialog with the merchant: " + Dialogs.Start(World.Placed("workstest_merchant"), "characters\\bigbret1"));
             if (Input.Pressed(Keys.C) && Input.Down(Keys.LeftShift))
             {
                 var pp = World.Player.Position;
@@ -68,6 +68,7 @@ public sealed class WorksTest : WorksMod
             }
             if (Input.Pressed(Keys.S) && Input.Down(Keys.LeftControl)) Log.Info("sneak: " + StatusEffects.Apply(World.Player, "stealthMode", 0));
             if (Input.Pressed(Keys.T) && Input.Down(Keys.LeftControl)) Log.Info("pit master: " + Dialogs.Start(World.Placed("pit_master"), "pit/master"));
+            if (Input.Pressed(Keys.H) && Input.Down(Keys.LeftControl)) { var h = World.Hovered; Log.Info("hovered: " + (h == null ? "nothing" : h.Name + " at " + h.Position) + ", mouse " + Input.Mouse); }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }

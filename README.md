@@ -23,6 +23,7 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   - Pacing: XP a level costs, XP earned, extra skill/feat/ability points per level.
   - Watchful Eyes: opening someone else's container tells you who would see you steal (or that no one is).
   - The Pit: a pit master at South Gate Station runs waves of beasts that fight only you; each wave pays out.
+  - Scanner: point at a creature for its level, health, attitude, resistances per damage type and detection.
   - Merchant Ledger: every merchant's stock and prices written down when you trade; L searches them all.
   - Movable Windows: drag the inventory, notes, crafting, map... by their title bar; they open where you left them.
   - Status Board: health, status effects by name with turns left, and AP/MP in combat, on the HUD.

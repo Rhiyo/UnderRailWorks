@@ -475,6 +475,14 @@ icon, the Minimap beside the round button, the Status Board stays at the top.
 HUD Layout's bar: snap on/off and grid size on the bar, dragged by its text (place remembered), hidden while a part
 is being dragged, sized to the game's buttons at every tier. Tested at 3584x1440.
 
+## Hovered character, resistances (Nov 2026)
+
+`World.Hovered` (the world view's `dnn.an2()`, set each frame in `a7m.ag5` from its layer hit test, the thing the
+game outlines white), `Character.Resistances` (`efk.Defense.af()[DamageType]`: `du2.a()` threshold, `du2.c()`
+resistance), `Character.Detection`. **Not tested in game:** in the headless test runner the game never registers a
+hover at all (no outline, a "no action" cursor, `an2()` null at scale 1 and 1.43), so the Scanner mod needs a test in
+real play.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
@@ -494,6 +502,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | Pacing | XP per level, XP earned, extra skill / feat / ability points per level | Progression (ModifyXpNeeded, ModifyExperience, ModifyLevelPoints) |
 | WatchfulEyes | opening a container that isn't yours names who would see a theft; optional: no lock picking in view of a guard | ContainerOpened, Container.Owned / IsOwner / Witnesses, Locks.ModifyAttempt (Force) |
 | ThePit | an arena: pay the pit master, waves of creatures that fight only the player, pay per wave, best run per save, a HUD part | World.Spawn (SpawnSide.PlayerOnly), FreeTilesNear, Despawn, CharacterDied, anchored Hud.AddPart, WorksMod.Data |
+| Scanner | point at a creature: level, health, attitude, threshold/resistance per damage type, detection vs your stealth (always / in combat / while a key is held) | World.Hovered, Character.Resistances / Detection, anchored Hud.AddPart |
 | MerchantLedger | every merchant's stock and prices recorded on trade (plain variables), L opens a search over all of them | TradeOpened, Stock/Markup, Ui.TextBox, Keybinds, Character.Key |
 | StatusBoard | health, status effects in words with turns left, AP/MP and whose turn in combat; a HUD part | StatusEffects, Combat.ActionPoints/MovementPoints (any fighter: crp.ahu), Hud.AddPart |
 | HudLayout | a Layout button on the HUD (a setting, off by default; movable itself) or a key (none by default): drag the HUD's parts, Reset all, Done (the game's, and mods' named parts: Minimap, Quest Tracker), right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
