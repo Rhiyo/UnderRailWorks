@@ -136,6 +136,21 @@ public static partial class World
         }
     }
 
+    // The character under the mouse in the world (null: none, or not a character): the one the game outlines white.
+    // (The world view mv is a dnn; dnn.an2() is what the mouse is over.)
+    public static Character Hovered
+    {
+        get
+        {
+            var view = Hud.Current == null ? null : WorldViewField.GetValue(Hud.Current) as dnn;
+            var e = view == null ? null : view.an2();
+            if (!(e is c5x) || ((c5x)e).GetAspect<amc>() == null) return null;
+            var c = Character.Of(e);
+            return c.IsDead ? null : c;
+        }
+    }
+    static readonly System.Reflection.FieldInfo WorldViewField = typeof(ci3).GetField("m_t", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic) ?? typeof(ci3).GetField("t", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+
     // Every container in the current zone (crates, lockers, corpses...).
     public static IList<Container> Containers
     {

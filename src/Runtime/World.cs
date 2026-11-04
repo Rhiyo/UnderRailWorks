@@ -23,6 +23,8 @@ public enum TileKind
     Door,
 }
 
+public struct Resistance { public int Threshold; public int Percent; }
+
 public struct Exit
 {
     public Rectangle Tiles;      // the transition's tiles (map units)
@@ -71,6 +73,20 @@ public sealed class Character
 
     public float Health { get { return Need.Defense.q().zo(); } set { Need.Defense.q().zp(value); } }
     public float MaxHealth { get { return Need.Defense.q().zm(); } }
+    // Damage threshold (flat, subtracted first) and resistance (percent) per damage type, as combat uses them
+    // (efk.Defense.af()[type]: du2.a() threshold, du2.c() resistance fraction). Keys: Mechanical, Heat, Cold,
+    // Electricity, Acid, Energy, Bio (the names Combat's damage parts use).
+    public IDictionary<string, Resistance> Resistances
+    {
+        get
+        {
+            var result = new Dictionary<string, Resistance>();
+            foreach (var kv in Need.Defense.af()) result[kv.Key.ToString()] = new Resistance { Threshold = kv.Value.a(), Percent = (int)Math.Round(kv.Value.c() * 100) };
+            return result;
+        }
+    }
+    // How well it notices sneaking characters (compared with their Stealth).
+    public int Detection { get { return Need.Detection; } }
 
     // Base abilities by name (Strength, Dexterity, Agility, Constitution, Perception, Will, Intelligence) and skills by
     // name (Guns, Persuasion, Mercantile...): the value with bonuses, and the base value, which can be set.

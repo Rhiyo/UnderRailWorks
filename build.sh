@@ -160,6 +160,10 @@ mkdir -p "$OUT/Mods/ThePit"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/ThePit.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/ThePit/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/ThePit.dll" "$OUT/FNA.dll" "$OUT/Mods/ThePit/ThePit.dll" >/dev/null
 cp "$HERE/mods/ThePit/mod.json" "$OUT/Mods/ThePit/"
+mkdir -p "$OUT/Mods/Scanner"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/Scanner.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/Scanner/*.cs
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/Scanner.dll" "$OUT/FNA.dll" "$OUT/Mods/Scanner/Scanner.dll" >/dev/null
+cp "$HERE/mods/Scanner/mod.json" "$OUT/Mods/Scanner/"
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
 mkdir -p "$HERE/build/Mods/HelloUI"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"

@@ -119,12 +119,59 @@ public static class Hud
     static string flowState;
     const int StackGap = 6;
 
+    // The game's own parts are in the way too: their sizes change with the interface scale (the game has a layout per
+    // size tier), so an offset that clears them at one resolution can cover them at another. Hidden ones count (the
+    // combat panel, the target portrait come and go: a part shouldn't jump when they do).
+    static List<Rectangle> GameObstacles()
+    {
+        var list = new List<Rectangle>();
+        var sb = new System.Text.StringBuilder();
+        foreach (HudPart part in Enum.GetValues(typeof(HudPart)))
+        {
+            var e = Get(part);
+            if (e == null || !e.Visible) continue;
+            var r = Content(e.Control, e.X, e.Y);
+            if (r.Width <= 0 || r.Height <= 0) continue;
+            list.Add(r);
+            sb.Append(part + "=" + r.X + "," + r.Y + " " + r.Width + "x" + r.Height + "; ");
+        }
+        var text = sb.ToString();
+        if (text != lastObstacles) { lastObstacles = text; Log.Write("hud: drawn parts " + (Root == null ? "" : Root.Width + "x" + Root.Height + ": ") + text); }
+        return list;
+    }
+
+    // What a control actually shows: the union of its visible children (recursively), or itself if it has none. The
+    // game's part controls are much larger than what they draw (the portrait's is 737x474 at 3584x1440, the combat
+    // panel's a strip down the whole right edge).
+    static Rectangle Content(euz c, int x, int y)
+    {
+        var kids = c.Controls;
+        if (kids == null || kids.Count == 0) return new Rectangle(x, y, UnderrailDropdownScroll.W(c.Size), UnderrailDropdownScroll.H(c.Size));
+        Rectangle? all = null;
+        foreach (euz k in kids)
+        {
+            if (!k.Visible) continue;
+            var at = UnderrailDropdownScroll.LocationOf(k);
+            var r = Content(k, x + UnderrailDropdownScroll.X(at), y + UnderrailDropdownScroll.Y(at));
+            if (r.Width <= 0 || r.Height <= 0) continue;
+            all = all == null ? r : Rectangle.Union(all.Value, r);
+        }
+        return all ?? new Rectangle(x, y, UnderrailDropdownScroll.W(c.Size), UnderrailDropdownScroll.H(c.Size));     // draws itself (its children are hidden)
+    }
+    static string lastObstacles;
+
     static void Flow(HudAnchor anchor)
     {
         var parts = modParts.Where(p => p.Anchor == anchor && p.Element.Control.Parent != null)
             .OrderBy(p => asked.FindIndex(a => a.Key == p.Name)).ToList();
+        var root = Root;
+        int rw = root == null ? 0 : root.Width, rh = root == null ? 0 : root.Height;
+        int col = (int)anchor % 3;
         bool up = (int)anchor / 3 == 2;
-        var placed = new List<Rectangle>();
+        var placed = GameObstacles();
+        // Other anchors' mod parts where they are now.
+        foreach (var other in modParts.Where(p => p.Anchor != anchor && p.Element.Control.Parent != null && p.Element.Visible))
+            placed.Add(new Rectangle(other.Element.X, other.Element.Y, other.Element.Width, other.Element.Height));
         foreach (var p in parts)
         {
             var e = p.Element;
@@ -132,24 +179,43 @@ public static class Hud
             if (!e.Visible) continue;
             if (moved) { placed.Add(new Rectangle(e.X, e.Y, e.Width, e.Height)); continue; }
             var a = asked.FirstOrDefault(k => k.Key == p.Name).Value;
-            var r = new Rectangle(a.X, a.Y, e.Width, e.Height);
-            for (int guard = 0; guard < 20; guard++)
-            {
-                var hit = placed.Where(q => q.Intersects(r)).ToList();
-                if (hit.Count == 0) break;
-                r.Y = up ? hit.Min(q => q.Top) - StackGap - r.Height : hit.Max(q => q.Bottom) + StackGap;
-            }
+            var r = Clear(new Rectangle(a.X, a.Y, e.Width, e.Height), placed, up, col, rw, rh);
             if (r.X != e.X || r.Y != e.Y) Ui.Move(e, r.X, r.Y);
             p.AutoX = r.X; p.AutoY = r.Y; p.DefaultX = r.X; p.DefaultY = r.Y;
             placed.Add(r);
         }
     }
 
+    // Out of whatever it overlaps, one obstacle at a time: past it along the anchored axis (down for top/middle
+    // anchors, up for bottom ones) or sideways (away from the anchored side; either way for centred ones), whichever
+    // moves it least and stays on screen. E.g. a top-right part goes under the system bar, then left of the combat
+    // panel's strip down the right edge.
+    static Rectangle Clear(Rectangle want, List<Rectangle> taken, bool up, int col, int rw, int rh)
+    {
+        var r = want;
+        for (int guard = 0; guard < 40; guard++)
+        {
+            var hits = taken.Where(q => q.Intersects(r)).ToList();
+            if (hits.Count == 0) return r;
+            var h = hits.OrderByDescending(q => Rectangle.Intersect(q, r).Width * Rectangle.Intersect(q, r).Height).First();
+            var options = new List<Rectangle>();
+            var v = r; v.Y = up ? h.Top - StackGap - r.Height : h.Bottom + StackGap; options.Add(v);
+            if (col != 0) { var left = r; left.X = h.Left - StackGap - r.Width; options.Add(left); }
+            if (col != 2) { var right = r; right.X = h.Right + StackGap; options.Add(right); }
+            var fit = options.Where(o => rw <= 0 || (o.X >= 0 && o.Right <= rw && o.Y >= 0 && o.Bottom <= rh))
+                .OrderBy(o => Math.Abs(o.X - r.X) + Math.Abs(o.Y - r.Y)).ToList();
+            if (fit.Count == 0) return want;     // nowhere clear: where it asked
+            r = fit[0];
+        }
+        return taken.Any(q => q.Intersects(r)) ? want : r;
+    }
+
     // Each frame: re-stack when a part was shown, hidden or resized.
     internal static void FlowTick()
     {
         if (Current == null || modParts.Count == 0) return;
-        var state = string.Join("|", modParts.Where(p => p.Anchor != null).Select(p => p.Name + (p.Element.Visible ? "+" : "-") + p.Element.Width + "x" + p.Element.Height));
+        var state = string.Join("|", modParts.Where(p => p.Anchor != null).Select(p => p.Name + (p.Element.Visible ? "+" : "-") + p.Element.Width + "x" + p.Element.Height))
+            + "#" + string.Join("|", ((HudPart[])Enum.GetValues(typeof(HudPart))).Select(h => { var e = Get(h); return e == null ? "" : (e.Visible ? "+" : "-") + e.X + "," + e.Y; }));     // the game's parts shown, hidden or laid out
         if (state == flowState) return;
         flowState = state;
         foreach (var a in modParts.Where(p => p.Anchor != null).Select(p => p.Anchor.Value).Distinct().ToList()) Flow(a);

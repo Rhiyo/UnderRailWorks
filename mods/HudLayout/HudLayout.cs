@@ -71,15 +71,24 @@ public sealed class HudLayout : WorksMod
             if (overlay == null) return;
             var m = Input.Mouse;
             hovered = PartAt(m);
+            if (movingBar)
+            {
+                var to = Ui.KeepInside(help, barStart.X + m.X - dragStart.X, barStart.Y + m.Y - dragStart.Y);
+                Ui.Move(help, to.X, to.Y);
+                if (!Input.MouseDown(MouseButton.Left)) { movingBar = false; var place = Ui.Place(help); if (place != null) Settings.Set("bar", place); }
+                return;
+            }
+            if (Input.MousePressed(MouseButton.Left) && BarClick(m)) return;
             if (Input.MousePressed(MouseButton.Left) && hovered != null)
             {
                 dragging = hovered; dragStart = m; partStart = new Point(hovered.Element.X, hovered.Element.Y);
+                help.Visible = false;     // out of the way while a part moves
             }
             if (dragging != null)
             {
                 // Mods rebuild their parts (new text, new size): follow the part by name, not the old element.
                 var now = Parts().FirstOrDefault(p => p.Name == dragging.Name);
-                if (now == null) { dragging = null; return; }
+                if (now == null) { dragging = null; if (help != null) help.Visible = true; return; }
                 dragging.Element = now.Element;
                 var to = Ui.KeepInside(dragging.Element, partStart.X + m.X - dragStart.X, partStart.Y + m.Y - dragStart.Y);
                 Ui.Move(dragging.Element, to.X, to.Y);
@@ -88,6 +97,7 @@ public sealed class HudLayout : WorksMod
                 {
                     var place = Ui.Place(dragging.Element, AnchorFor(dragging));
                     if (place != null) Settings.Set(Key(dragging.Name), place);
+                    if (help != null) help.Visible = true;
                     dragging = null;
                 }
             }
@@ -214,28 +224,72 @@ public sealed class HudLayout : WorksMod
         }
     }
 
+    // The bar while arranging: what to do, the snap switch and grid size, Reset all, Done. Drag it by its text; it hides
+    // while a part is being dragged (it would be in the way).
+    UiElement snapBox, gridMinus, gridPlus, resetButton, doneButton;
+    bool movingBar;
+    Point barStart;
+
     void Begin()
     {
         overlay = Ui.Custom(hud.Width, hud.Height, Draw);     // covers the screen: clicks go to it, not the game
         Ui.Add(hud, overlay, 0, 0);
-        var message = "Arranging the HUD: drag a part, wheel over it to change its anchor, right-click to put it back.";
-        var reset = Ui.Button("Reset all", ResetAll);
-        var done = Ui.Button("Done", End);
-        int w = Ui.TextWidth(message) + reset.Width + done.Width + 50;
-        help = Ui.Panel(w, 40);
-        var text = Ui.Label(message, w - reset.Width - done.Width - 40);
+        var message = "Arranging the HUD: drag a part, wheel over it for its anchor, right-click to put it back.";
+        var reset = resetButton = Ui.Button("Reset all", ResetAll);
+        var done = doneButton = Ui.Button("Done", End);
+        const int controls = 190;     // snap switch + grid size
+        int w = Ui.TextWidth(message) + controls + reset.Width + done.Width + 60;
+        int h = Math.Max(40, Math.Max(reset.Height, done.Height) + 10), mid = h / 2;     // the game's buttons grow with the interface tier
+        help = Ui.Panel(w, h);
+        var text = Ui.Label(message, Ui.TextWidth(message) + 4);
         Ui.SetColor(text, new Color(230, 200, 120));
-        Ui.Add(help, text, 10, 9);
-        Ui.Add(help, reset, w - done.Width - reset.Width - 14, 5);     // above the overlay: they get the clicks
-        Ui.Add(help, done, w - done.Width - 8, 5);
-        Ui.Add(hud, help, (hud.Width - w) / 2, hud.Height / 2 - 20);
+        Ui.Add(help, text, 10, mid - 9);
+        int x = 10 + Ui.TextWidth(message) + 16;
+        snapBox = Ui.Custom(86, 22, c => Box(c, config.Snap ? "Snap: on" : "Snap: off", config.Snap));
+        Ui.Add(help, snapBox, x, mid - 11);
+        gridMinus = Ui.Custom(20, 22, c => Box(c, "-", false));
+        Ui.Add(help, gridMinus, x + 92, mid - 11);
+        var size = Ui.Custom(46, 22, c => c.Text(config.Grid.ToString(), c.Bounds.X + (c.Bounds.Width - Ui.TextWidth(config.Grid.ToString())) / 2, c.Bounds.Y + 3, config.Snap ? new Color(230, 200, 120) : new Color(120, 110, 90)));
+        Ui.Add(help, size, x + 114, mid - 11);
+        gridPlus = Ui.Custom(20, 22, c => Box(c, "+", false));
+        Ui.Add(help, gridPlus, x + 162, mid - 11);
+        Ui.Add(help, reset, w - done.Width - reset.Width - 14, mid - reset.Height / 2);     // above the overlay: they get the clicks
+        Ui.Add(help, done, w - done.Width - 8, mid - done.Height / 2);
+        Ui.Add(hud, help, (hud.Width - w) / 2, hud.Height / 2 - h / 2);
+        var at = Settings.Get("bar");
+        if (!string.IsNullOrEmpty(at)) Ui.Restore(help, at);
+    }
+
+    static void Box(UiCanvas c, string label, bool lit)
+    {
+        var r = c.Bounds; bool hot = r.Contains(Input.Mouse);
+        c.Fill(r, hot ? new Color(90, 50, 10) : lit ? new Color(60, 34, 8) : new Color(24, 16, 8));
+        c.Frame(r, new Color(181, 92, 0));
+        c.Text(label, r.X + (r.Width - Ui.TextWidth(label)) / 2, r.Y + 3, new Color(230, 200, 120));
+    }
+
+    // Clicks on the bar: its controls, else the start of moving it. True if the click was the bar's.
+    bool BarClick(Point m)
+    {
+        if (help == null || !help.Visible || !help.Bounds.Contains(m)) return false;
+        if (snapBox.Bounds.Contains(m)) { config.Snap = !config.Snap; Settings.Set("Snap", config.Snap ? "1" : "0"); return true; }
+        if (gridMinus.Bounds.Contains(m) || gridPlus.Bounds.Contains(m))
+        {
+            int step = config.Grid >= 10 ? 2 : 1;
+            config.Grid = Math.Max(2, Math.Min(40, config.Grid + (gridPlus.Bounds.Contains(m) ? step : -step)));
+            Settings.Set("Grid", config.Grid.ToString());
+            return true;
+        }
+        if (resetButton.Bounds.Contains(m) || doneButton.Bounds.Contains(m)) return true;     // the buttons' own clicks
+        movingBar = true; dragStart = m; barStart = new Point(help.X, help.Y);     // (the game's buttons take their own clicks)
+        return true;
     }
 
     void End()
     {
         if (overlay != null) Ui.Remove(overlay);
         if (help != null) Ui.Remove(help);
-        overlay = null; help = null; dragging = null;
+        overlay = null; help = null; dragging = null; movingBar = false;
     }
 
     static readonly string[] AnchorNames = { "top left", "top", "top right", "left", "centre", "right", "bottom left", "bottom", "bottom right" };

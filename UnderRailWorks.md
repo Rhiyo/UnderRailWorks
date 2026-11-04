@@ -461,6 +461,20 @@ converted and kept its place relative to the edges).
   with containers (`Ownership`). Watchful Eyes' "no picking in view of a guard" now covers doors too. Tested: the
   guarded gate locker refused, no fight.
 
+## Mod parts clear of the game's HUD at any size (Nov 2026)
+
+Fixed offsets chosen at one resolution covered the game's parts at another (the game lays its HUD out per size
+tier: at 3584x1440 the HUD is 2509 wide and every part is bigger). Now the game's visible parts are obstacles for
+anchored mod parts: each overlap pushes the part past that obstacle along its anchored axis or sideways, whichever
+moves it least and stays on screen; re-flowed when a game part is shown, hidden or moved. Obstacles are what a part
+draws, not its control: the union of visible child controls (the portrait's control is 737x474, the target
+portrait's covers the top centre while hidden), or the control itself when its children are hidden (zone security
+icon; the combat panel `djx`, an 82-wide strip down the right edge: its round button, and in combat the AP bar).
+Measured at 3584x1440 (logged as "hud: drawn parts"): the Layout button goes under the system bar beside the zone
+icon, the Minimap beside the round button, the Status Board stays at the top.
+HUD Layout's bar: snap on/off and grid size on the bar, dragged by its text (place remembered), hidden while a part
+is being dragged, sized to the game's buttons at every tier. Tested at 3584x1440.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
