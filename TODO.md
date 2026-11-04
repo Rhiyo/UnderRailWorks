@@ -82,6 +82,17 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [ ] Minimap next: click to open a larger map, remember explored tiles per area, other floors (Z) of the same area,
   map markers for quests or containers.
 
+## Content API (Nov 2026: built, see UnderRailWorks.md "The content API")
+
+- [x] World, characters, inventory, placements; variables, quests, text, notifications; dialogs; lifecycle events;
+  saves kept stock-loadable (placements never saved, mod quests as variables, SaveGuard).
+- [ ] Wrap the drawing API in Works types; then build UnderRailFixes without the game.
+- [ ] Stores (merchant stock), status effects, equipment; skill/ability conditions as named helpers.
+- [ ] Dialog started/ended events; zone first-visit flag; combat events tested in game.
+- [ ] New items (the item overlay), new maps.
+- [ ] A save with a completed mod quest and many placements through `check-saves.sh --only`; the stock game
+  re-saving a modded save, then Works loading it.
+
 ## For modders
 
 - [ ] A mod template / SDK: reference assemblies and a build script.

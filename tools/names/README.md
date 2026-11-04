@@ -13,6 +13,6 @@ UnderRail's types and members have scrambled names that change with each game bu
   (base types, signatures and field types in terms of types matched so far, repeated until nothing changes), then
   members by kept name, save name, signature and body (opcodes, strings, framework calls).
 - `test-remap.sh [seeds]`: scrambles a copy of the game (every scrambled name replaced at random, as a new build
-  would) and checks Remap's answers against the scrambler's record. Nov 2026: 162 of 162 right on five seeds. A real
+  would) and checks Remap's answers against the scrambler's record. Nov 2026: 324 of 324 right (after the content API), 162 of 162 before. A real
   update also changes code, which this doesn't simulate: changed members come out UNMATCHED (fix by hand), and
   `GameNames.Check` at startup catches anything else.

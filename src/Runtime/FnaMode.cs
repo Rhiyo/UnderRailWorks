@@ -36,6 +36,7 @@ public static class FnaMode
     // Only " FNA" names of five types would be understood otherwise; key bindings in config.dat are Keys.
     public static void SavedName(Type type, ref string typeName, ref string assembly)
     {
+        SaveGuard.Check(type);
         if (!(Active || CoreCompat.Active) || type == null) return;
         if (assembly == null && typeName == null)
         {

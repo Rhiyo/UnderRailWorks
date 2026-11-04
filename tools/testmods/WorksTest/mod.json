@@ -1,0 +1,2 @@
+{ "id": "WorksTest", "name": "Works test keys", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
+  "description": "Test only: F10 gives 20 charons; logs quest changes, saves and loads." }

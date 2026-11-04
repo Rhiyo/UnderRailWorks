@@ -9,7 +9,7 @@
 # Builds its own game copies in $WORK: the stock game, and the stock game with dist/UnderRailWorks installed (data\
 # symlinked to the Steam copy). Needs a built dist/UnderRailWorks, the .NET 10 SDK ($DOTNET), Proton (found as the
 # run-underrail skill finds it) and its base prefix (~/underrail-test-prefix, made by the skill's setup.sh).
-# Usage: check-saves.sh [--play]
+# Usage: check-saves.sh [--play]     or: check-saves.sh --only <save folder>... (the stock loader on just those)
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
@@ -43,6 +43,17 @@ proton_run() { STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM STEAM_COMPAT_DATA_PATH=$P
 (cd "$NET10" && mcs -nologo -platform:x86 -out:"$WORK/StockCheck.exe" -r:UnderRail.Game.exe "$HERE/StockCheck.cs")
 cp "$WORK/StockCheck.exe" "$STOCK/"
 DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 nice -n 19 "$DOTNET" build -c Release -p:GAME="$NET10" -o "$WORK/roundtrip" "$HERE/RoundTrip" >/dev/null
+
+# --only DIR...: just the stock side for these save folders (e.g. saves a test run made with mods), then stop.
+if [ "${1:-}" = --only ]; then
+    shift; rm -rf "$WORK/only"; mkdir -p "$WORK/only"; for d in "$@"; do cp -r "$d" "$WORK/only/"; done
+    args=(); for a in "$WORK/only/"*/; do args+=("$(win "$a")"); done
+    proton_run "$STOCK/StockCheck.exe" "$(win "$WORK/stock-results.txt")" "${args[@]}"
+    cat "$WORK/stock-results.txt"
+    python3 -I "$HERE/scan_names.py" "$WORK/only/"*/
+    grep -q "^result: .* 0 failed" "$WORK/stock-results.txt" || { echo "SAVE CHECK FAILED" >&2; exit 1; }
+    echo "Save check passed."; exit 0
+fi
 
 # Inputs: the player's saves and config.dat (copies; never written).
 rm -rf "$WORK/orig" "$WORK/rt" "$WORK/played"; mkdir -p "$WORK/orig"

@@ -98,6 +98,21 @@ mkdir -p "$HERE/build/Mods/HelloUI"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/HelloUI.dll" "$OUT/FNA.dll" "$HERE/build/Mods/HelloUI/HelloUI.dll" >/dev/null
 cp "$HERE/examples/HelloUI/mod.json" "$HERE/build/Mods/HelloUI/"
+# HelloQuest (quests, dialogs, variables): built without the game, into build/Mods for testing.
+mkdir -p "$HERE/build/Mods/HelloQuest"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloQuest.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloQuest/HelloQuest.cs"
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/HelloQuest.dll" "$OUT/FNA.dll" "$HERE/build/Mods/HelloQuest/HelloQuest.dll" >/dev/null
+cp "$HERE/examples/HelloQuest/mod.json" "$HERE/build/Mods/HelloQuest/"
+# TheStranger (a placed character, a dialog and a quest): built without the game, into build/Mods for testing.
+mkdir -p "$HERE/build/Mods/TheStranger"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/TheStranger.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/TheStranger/TheStranger.cs"
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/TheStranger.dll" "$OUT/FNA.dll" "$HERE/build/Mods/TheStranger/TheStranger.dll" >/dev/null
+cp "$HERE/examples/TheStranger/mod.json" "$HERE/build/Mods/TheStranger/"
+# WorksTest (test keys, never shipped): into build/Mods.
+mkdir -p "$HERE/build/Mods/WorksTest"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/WorksTest.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/tools/testmods/WorksTest/WorksTest.cs"
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/WorksTest.dll" "$OUT/FNA.dll" "$HERE/build/Mods/WorksTest/WorksTest.dll" >/dev/null
+cp "$HERE/tools/testmods/WorksTest/mod.json" "$HERE/build/Mods/WorksTest/"
 
 # The .NET 10 launcher (installed as underrail.exe; src/Launcher) and the Windows .NET 10 runtime it runs the game on
 # (Microsoft.NETCore.App + Microsoft.WindowsDesktop.App, from Microsoft's releases, each checked against the SHA-512

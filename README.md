@@ -67,7 +67,24 @@ public sealed class MyMod : WorksMod
 }
 ```
 
-`examples/` has small mods; `mods/UnderRailFixes` is a full one. Docs and a mod template are on the TODO list.
+A character, a conversation and a quest (the whole of `examples/TheStranger`, built without the game):
+
+```csharp
+Quests.Define("stranger_debt", "South Gate Station", "A stranger says I owe him 10 charons.", xp: 75);
+Dialogs.Define("stranger/talk", d =>
+{
+    d.Line("start", "You owe me 10 charons.")
+        .Option("Here.", "paid", Condition.Code(() => World.Player.Inventory.Money >= 10),
+                Outcome.Code(() => World.Player.Inventory.TakeMoney(10)), Outcome.CompleteQuest("stranger_debt"))
+        .Option("Later.", Dialog.End, Outcome.StartQuest("stranger_debt"));
+    d.Line("paid", "Pleasure.").Next(Dialog.End);
+});
+World.Place(new Placement { Id = "stranger", Zone = "LU-SouthGateStation-N", Area = "LU-SouthGateStation-N",
+    X = 14, Y = 21, Blueprint = "creatures\\generichumans\\foundryworker", Name = "Stranger", Dialog = "stranger/talk" });
+```
+
+Saves stay loadable by the stock game: placed characters are never saved, mod quests and mod state are kept in plain
+variables. `examples/` has small mods; `mods/UnderRailFixes` is a full one. Docs and a mod template are on the TODO list.
 
 ## Building
 

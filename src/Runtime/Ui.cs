@@ -197,7 +197,7 @@ public static class UiEvents
     public static readonly Hook<Action<UiElement>> OptionsCreated = new Hook<Action<UiElement>>("OptionsCreated");
 }
 
-public static class GameEvents
+public static partial class GameEvents
 {
     // Once per game update; the argument is the time since the last one, in seconds.
     public static readonly Hook<Action<double>> Update = new Hook<Action<double>>("Update");
@@ -221,6 +221,8 @@ static class UiHooks
         Postfix(harmony, typeof(a8k).GetConstructors(), "MainMenu");
         var update = typeof(ci3).Assembly.GetType("tb").GetMethod("Update", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(GameTime) }, null);     // tb by name: it derives from XNA's Game (CS0012 here)
         if (update != null) harmony.Patch(update, postfix: new HarmonyLib.HarmonyMethod(typeof(UiHooks).GetMethod("Updated", BindingFlags.Static | BindingFlags.NonPublic)));
+        ContentHooks.Install(harmony);
+        Saves.Install(harmony);
         Log.Write("ui: hooks in place");
     }
 
@@ -237,6 +239,7 @@ static class UiHooks
     static void Updated(GameTime __0)
     {
         Input.Tick();
+        try { Saves.Tick(); } catch (Exception ex) { Log.Write("saves: " + ex); }
         double dt = __0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds;
         if (GameEvents.Update.Any) GameEvents.Update.Run(h => h(dt));
     }

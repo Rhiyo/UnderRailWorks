@@ -171,6 +171,65 @@ and the same for players):
 - [ ] **To prove:** a mod item survives stock save → mod reinstalled; the game ignores an extra file in a save folder;
       the hook points for "after save", "load screen entry" and "before load".
 
+**Built (Nov 2026): the state in plain variables, mod objects never saved** (`src/Runtime/Saves.cs`). Measured from
+the game's code: a save folder is `global.dat` (the game state `cyt`, written by `d6f.b(folder, transitional)`) plus
+bulk storage, where each visited zone is stored by `bl1.yp` (on every save, and when the player leaves the zone; the
+zone-change autosave runs after that); the stock binder throws on any unknown type. So:
+- **Placed characters are never saved.** A mod declares placements (`World.Place`); Works spawns them when their
+  zone loads (after a save loads: once the player is placed, on the first update) and takes them out right before
+  `bl1.yp` stores the zone, putting them back after a save (and re-applying the placement once the save's own
+  redeploy has run: AutoUpdate blueprints reload their template data on deploy).
+- **Mod quests** are taken out of the quest lists while `global.dat` is written; their state is kept in a global
+  variable per quest (`works_quest_<id>` = `"active|completed|failed,read,index"`) and rebuilt after a load. The
+  stock game sees a string variable, nothing else (the five "fail all active quests" scripts would otherwise hit a
+  null quest definition).
+- **Mods keep their own state in `Variables`** (bool, int, float, string only): saved by the game, ignored by the
+  stock game, and kept even if the stock game re-saves the file.
+- **SaveGuard**: the binder hook (`e6e.av5` -> `FnaMode.SavedName`) refuses any type from Works or a mod: the save
+  fails (the game writes `SaveError-*.txt`) rather than becoming unloadable.
+- Proven: a quicksave with a mod quest active and a placed character: `global.dat` holds only the variable, the
+  stranger is in neither file, and the stock loader (`check-saves.sh --only <folder>`) reads all three files; after
+  quickload the quest is active again and the stranger is back.
+- The sidecar plan above stays for what variables can't hold (large or structured mod data) and the Load Game
+  warning icon; not needed by anything yet.
+
+## The content API (Nov 2026)
+
+Researched per domain from the decompiled code (four specs with file:line evidence), then built and tested in game
+through two example mods. Mods see only Works' types; the game's are inside.
+- **World** (`World.cs`, `Characters.cs`): `World.Player`, `World.Visible`, `World.FogOfWar`, `World.ZoneId`,
+  `World.Place(Placement)` / `World.Placed(id)`; `Area` (Name, Width, Height, `KindAt`, `Exits`); `Character`
+  (Id, Name (settable: the data's and the entity's, the hover label), Level, Faction, Passive, IsDead, Kill, Health,
+  MaxHealth, `Ability`/`SetBaseAbility`, `Skill`/`SetBaseSkill` by name (the game's own stat objects, then `efk.bl()`
+  as its console does), Feats, Experience/GiveExperience (`awq.a`), `AttitudeToPlayer`/`SetAttitudeToPlayer`,
+  `CanTalk`, `Variables`, `Inventory`). Spawning is the game's own helper (`vq.a(blueprint, zone, bt4)`, as its
+  spawnEntity command); a placement's dialog is the game's dialog aspect (`bn5`), added as the game's scripts do.
+- **Inventory**: Count/Has by code, Add by path (the game's GiveItemsJob way: lootable, "Item acquired"), Take by
+  code (RemoveItemFromPlayerAction's way: "Item lost"), Money/AddMoney/TakeMoney (charons, `currency.sc`).
+- **Variables** (`Content.cs`): `Variables.Global` (where all story state lives), `Variables.Zone`,
+  `character.Variables`; primitives only.
+- **Quests**: the game defines quests in code (`b4m`: `ao5.a(group, name, xp, oddityXp, text)`), has no stages (a
+  multi-step quest is several quests), runs them through its quest controller (`ek2`: start, complete with XP, fail).
+  `Quests.Define/Start/Complete/Fail/Advance/State/All/Active...`; the journal shows mod quests under their group.
+- **Text**: `Text.Get("category/key")`, `Text.Set(...)` (a hook at the start of `qv.b`: Works' text first, in every
+  language, in memory only). **Notify**: `Notify.Log` (the chat line), `Notify.OverPlayer` (floating text).
+- **Dialogs** (`Dialogs.cs`): a builder (lines, options with `Condition`s and `Outcome`s, greyed options, branches,
+  Next/End, `$(context.var)` tokens) from which Works builds the game's own dialog model (`azm`: Question = NPC
+  line, Answer = option, junctions) on every opening; Works' conditions and outcomes are nodes of their own (dialog
+  models are never saved). One hook: the start of `dka.amu` (open a dialog by name), which also serves
+  `Dialogs.Override(character, name)`. The game's dialog window, speaker name and portrait, numbered options.
+- **Events** (`GameEvents`): Update, NewGame, GameLoaded, ZoneLoaded(zoneId), Saving/Saved(folder),
+  QuestChanged(id, state), CharacterDied, CombatStarted/Ended (Harmony on `d6f.arf/ari/arp/arg`, `ek2`, `amc`, `crp`).
+- **Examples**: `examples/HelloQuest` (a quest and a conversation with whoever is nearest), `examples/TheStranger` (a
+  new character at South Gate Station, a conversation, a quest paid in charons with an item reward), built without
+  the game. `tools/testmods/WorksTest`: test keys (F10: 20 charons) and event logging.
+- **Tested in game** (Nov 2026, test copy, 2560x720): spawn, Talk by clicking, branches by quest state, hidden and
+  greyed options, money check/take/give, item reward, quest XP, journal entry, chat lines, quicksave (stock-loadable,
+  checked), quickload (quest and stranger back).
+- **Not yet**: wrapping the drawing API (UnderRailFixes still builds against the game); stores, status effects,
+  equipment changes; dialog started/ended events; first-visit flag on zone events; skill checks as conditions
+  (`Condition.Code` with `Character.Skill` works today); new items, maps.
+
 ## What the modder writes vs what Works does
 
 Like tModLoader: Works carries the weight, mods declare what they want. Code (and Harmony) only for new behaviour.

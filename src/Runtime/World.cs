@@ -9,6 +9,7 @@
 //   character.Position, Attitude, OutlineColor (its Tab outline colour), Name, IsPlayer
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 
@@ -40,13 +41,61 @@ public sealed class Character
     internal static Character Of(b0b entity) { return entity == null ? null : Wrappers.GetValue(entity, e => new Character(e)); }
 
     public bool IsPlayer { get { return Entities.IsPlayer(Entity); } }
-    public string Name { get { return Entities.Name(Entity); } }
     // Map position (tiles; fractional while moving).
     public Vector3 Position { get { return Entities.MapPosition(Entity); } }
     public Area Area { get { return Area.Of(Entities.AreaOf(Entity)); } }
     public Attitude Attitude { get { return Entities.AttitudeOf(Entity); } }
     // The colour holding Tab outlines it in (gold for the player, sandy brown if passive, else by attitude).
     public Color OutlineColor { get { return Entities.OutlineColor(Entity); } }
+    // --- Character data (efk), as the game's own console commands read and change it ---------------------------
+    efk Data { get { var c = Entities.Character(Entity); return c == null ? null : c.GetAspect<amc>().aa(); } }
+    efk Need { get { var d = Data; if (d == null) throw new InvalidOperationException("not a character"); return d; } }
+
+    // A character (has character data), not a placed object such as a turret's base or a prop.
+    public bool IsCharacter { get { return Data != null; } }
+    // It can be talked to (has the dialog aspect the game's Talk uses).
+    public bool CanTalk { get { var c = Entity as c5x; return c != null && c.GetAspect<j7>() != null && IsCharacter && !IsDead; } }
+    public string Id { get { return Need.Id; } }
+    public string Name { get { var d = Data; return d == null ? Entities.Name(Entity) : d.LocalizedName ?? d.Name; } set { Need.Name = value; ((c5x)Entity).q(value); } }     // the data's name and the entity's (the hover label)
+    public int Level { get { return Need.Level; } }
+    public string Faction { get { return Need.FactionId; } set { Need.FactionId = value; } }
+    public bool Passive { get { return Need.Passive; } set { Need.Passive = value; } }
+    public bool IsDead { get { var d = Data; return d != null && d.Dead; } }
+    public bool IsInCombat { get { return Need.IsInCombat; } }
+    public void Kill() { Need.a((cwt)null, (cru)null, false); }
+
+    public float Health { get { return Need.Defense.q().zo(); } set { Need.Defense.q().zp(value); } }
+    public float MaxHealth { get { return Need.Defense.q().zm(); } }
+
+    // Base abilities by name (Strength, Dexterity, Agility, Constitution, Perception, Will, Intelligence) and skills by
+    // name (Guns, Persuasion, Mercantile...): the value with bonuses, and the base value, which can be set.
+    public int Ability(string name) { var s = Need.BaseAbilities.a(name); return s == null ? 0 : s.g(); }
+    public int BaseAbility(string name) { var s = Need.BaseAbilities.a(name); return s == null ? 0 : s.f(); }
+    public void SetBaseAbility(string name, int value) { var s = Need.BaseAbilities.a(name); if (s == null) throw new ArgumentException("no ability " + name); s.a(value); Need.bl(); }
+    public int Skill(string name) { var s = Need.Skills.a(name); return s == null ? 0 : s.g(); }
+    public int BaseSkill(string name) { var s = Need.Skills.a(name); return s == null ? 0 : s.f(); }
+    public void SetBaseSkill(string name, int value) { var s = Need.Skills.a(name); if (s == null) throw new ArgumentException("no skill " + name); ((TimelapseVertigo.Rules.Characters.Stat<int>)s).a(value); Need.bl(); }
+    public IList<string> Feats { get { return Need.Feats.Select(f => f.Name).ToList(); } }
+    public bool HasFeat(string name) { return Need.Feats.Any(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)); }
+
+    // The player's XP (0 for others) and the game's way to award it (Intelligence factor, notice, level-up).
+    public int Experience { get { var p = Data as e3q; return p == null ? 0 : p.i(); } }
+    public void GiveExperience(int amount, string reason = null) { if (IsPlayer) awq.a(amount, reason); }
+
+    public Inventory Inventory { get { return inventory ?? (inventory = new Inventory(() => Data)); } }
+    Inventory inventory;
+
+    // Its personal attitude to the player (overrides its faction's), as the game's scripts set it.
+    public Attitude AttitudeToPlayer { get { return Attitude; } }
+    public void SetAttitudeToPlayer(Attitude attitude)
+    {
+        if (attitude == Attitude.None) { Need.c(asp.a); return; }
+        Need.a(asp.a, (h)((int)attitude - 1));
+    }
+
+    // Its own variables (the game's per-character CustomProperties, saved with it).
+    public Variables Variables { get { return variables ?? (variables = new Variables(() => { var c = Entities.Character(Entity); return c == null || c.GetAspect<amc>().aa() == null ? null : c.GetAspect<amc>().aa().CustomProperties; })); } }
+    Variables variables;
 }
 
 public sealed class Area
@@ -56,6 +105,7 @@ public sealed class Area
     static readonly ConditionalWeakTable<aud, Area> Wrappers = new ConditionalWeakTable<aud, Area>();
     internal static Area Of(aud area) { return area == null ? null : Wrappers.GetValue(area, a => new Area(a)); }
 
+    public string Name { get { return Game.y8(); } }
     public int Width { get { return Areas.Width(Game); } }
     public int Height { get { return Areas.Height(Game); } }
 
@@ -84,7 +134,7 @@ public sealed class Area
     public IList<Exit> Exits { get { return new List<Exit>(Areas.Exits(Game)); } }
 }
 
-public static class World
+public static partial class World
 {
     // The player's character, as the game finds it (cnk.aqu(): the player's data au2, its entity).
     public static Character Player

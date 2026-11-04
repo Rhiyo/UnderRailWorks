@@ -1,0 +1,203 @@
+// UnderRailWorks: characters, items and placed characters for mods, in Works' own types. What the game does, measured
+// from its code (UnderRailWorks.md, "Characters and items"):
+// - A character is an entity (c5x) with the character aspect (amc), whose data (efk) holds name, level, faction,
+//   health (Defense), base abilities (bn2), skills (ech), feats (an2), the bag (dcw); the player's (e3q) also XP.
+//   The game edits stats like its console commands do: set the base value, then recalculate (efk.bl()).
+// - Items: definitions in data/Rules/Items/<path>.item (ez2), instances (coh) with stacks; the game checks and takes
+//   items by code (e.g. "currency.sc" = charons) and creates them by path ("currency\\StygianCoin").
+// - Placed characters: the game's spawn helper (vq.a: blueprint, zone, location), as its spawnEntity command.
+//   Works' placements are never saved: Works spawns them whenever their zone loads and takes them out right before
+//   the game stores the zone (Saves.cs), so the stock game never sees them.
+//   World.Place(new Placement { Id = "mymod_stranger", Zone = "...", Area = "...", X = 10, Y = 12,
+//       Blueprint = "creatures\\generichumans\\foundryworker", Name = "Stranger", Dialog = "mymod/stranger",
+//       When = Condition.Not(Condition.Quest("mymod_crate", QuestState.Completed)) });
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using Microsoft.Xna.Framework;
+
+public sealed class Inventory
+{
+    readonly Func<efk> owner;
+    internal Inventory(Func<efk> owner) { this.owner = owner; }
+
+    efk Owner { get { var o = owner(); if (o == null) throw new InvalidOperationException("the character is gone"); return o; } }
+    bool IsPlayer { get { return owner() is e3q; } }
+
+    // Items in the bag (not equipped ones).
+    public IList<Item> Items { get { return Owner.Bag.z2().Select(i => new Item(i)).ToList(); } }
+
+    // How many of an item (by code, e.g. "currency.sc") the character has, bag and (optionally) gear.
+    public int Count(string code, bool includeGear = false) { return Owner.b(code, int.MaxValue, includeGear).Sum(p => p.StackPortion); }
+    public bool Has(string code, int stacks = 1, bool includeGear = false) { return Count(code, includeGear) >= stacks; }
+
+    // Adds stacks of an item, by path ("currency\\StygianCoin", "armor\\gasMask"), as the game's GiveItemsJob does
+    // (for the player: lootable, and the "item received" line). False if the path is unknown.
+    public bool Add(string path, int stacks = 1, bool notify = true)
+    {
+        var item = ez2.a(path);
+        if (item == null) return false;
+        item.Stacks = stacks;
+        if (IsPlayer) { item.Lootable = true; item.Stealable = true; }
+        Owner.Bag.z3(item);
+        if (IsPlayer && notify) a7v.a(new bou(item));
+        return true;
+    }
+
+    // Takes stacks of an item by code (bag first, then gear, as the game's RemoveItemFromPlayerAction). Returns how
+    // many were taken.
+    public int Take(string code, int stacks = 1, bool notify = true)
+    {
+        var taken = Owner.a(code, stacks, true);
+        if (taken == null) return 0;
+        if (IsPlayer && notify) a7v.a(new aub(taken));
+        return taken.Stacks;
+    }
+
+    // Charons (Stygian coins).
+    public int Money { get { return Count(ItemCodes.Charons); } }
+    public void AddMoney(int amount, bool notify = true) { Add("currency\\StygianCoin", amount, notify); }
+    public bool TakeMoney(int amount, bool notify = true) { if (Money < amount) return false; Take(ItemCodes.Charons, amount, notify); return true; }
+}
+
+public static class ItemCodes { public const string Charons = "currency.sc"; }
+
+public sealed class Item
+{
+    internal readonly coh Game;
+    internal Item(coh item) { Game = item; }
+    public string Code { get { return Game.Definition == null ? "" : Game.Definition.a5(); } }
+    public string Name { get { return Game.Definition == null ? "" : Game.Definition.az(); } }
+    public int Stacks { get { return Game.Stacks; } set { Game.Stacks = value; } }
+    public override string ToString() { return Name + (Stacks > 1 ? " x" + Stacks : ""); }
+}
+
+// A character placed by a mod: re-created each time its zone loads, while When holds; never saved.
+public sealed class Placement
+{
+    public string Id;                // unique (prefix with the mod id)
+    public string Zone;              // zone id (World.ZoneId shows the current one)
+    public string Area;              // area name in the zone (Area.Name)
+    public int X, Y;                 // tile
+    public string Blueprint;         // entity blueprint, e.g. "creatures\\generichumans\\foundryworker"
+    public string Name;              // shown name (null: the blueprint's)
+    public string Dialog;            // Works or game dialog Talk opens (null: the blueprint's)
+    public bool Friendly = true;     // neutral and passive towards the player (else as the blueprint's faction)
+    public Condition When;           // present only while this holds (checked when the zone loads)
+    public Action<Character> Setup;  // anything else, after it's placed
+}
+
+public static partial class World
+{
+    static readonly ConstructorInfo LocationCtor = typeof(bt4).GetConstructors().First(c => c.GetParameters().Length == 2 && c.GetParameters()[0].ParameterType == typeof(string));
+    static readonly MethodInfo AddToArea = typeof(aud).GetMethod("a", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(b0b) }, null);
+    static readonly List<Placement> placements = new List<Placement>();
+    // Placed entities currently in the world, by placement id.
+    static readonly Dictionary<string, c5x> placed = new Dictionary<string, c5x>();
+
+    // The current zone's id, for Placement.Zone (null outside a game).
+    public static string ZoneId { get { var game = bpo.GetService<cnk>(); return game == null || game.aqu() == null || game.aqu().c() == null ? null : game.aqu().c().b(); } }
+
+    public static void Place(Placement p)
+    {
+        if (p == null || p.Id == null || p.Zone == null || p.Blueprint == null) throw new ArgumentException("a placement needs Id, Zone and Blueprint");
+        lock (placements) { placements.RemoveAll(x => x.Id == p.Id); placements.Add(p); }
+        if (string.Equals(ZoneId, p.Zone, StringComparison.OrdinalIgnoreCase)) SpawnPlacements(Areas.CurrentZone(), p.Zone);
+    }
+
+    // The character a placement put in the world (null if it isn't there now).
+    public static Character Placed(string id) { c5x e; return placed.TryGetValue(id, out e) && e.Area != null ? Character.Of(e) : null; }
+
+    internal static bool IsPlaced(b0b e) { return e is c5x && placed.ContainsValue((c5x)e); }
+
+    // The zone was loaded (also when loading a save): spawn its placements whose condition holds.
+    internal static void SpawnPlacements(c1a zone, string zoneId)
+    {
+        if (zone == null || zoneId == null) return;
+        foreach (var p in placements.Where(x => string.Equals(x.Zone, zoneId, StringComparison.OrdinalIgnoreCase)).ToList())
+        {
+            c5x existing;
+            if (placed.TryGetValue(p.Id, out existing) && existing.Area != null && existing.Area.Zone == zone) continue;
+            bool wanted;
+            try { wanted = p.When == null || p.When.Test(); } catch (Exception ex) { Log.Write("world: " + p.Id + ": condition failed: " + ex.Message); continue; }
+            if (!wanted) continue;
+            try
+            {
+                var at = (bt4)LocationCtor.Invoke(new object[] { p.Area, new Vector3(p.X, p.Y, 0) });     // bt4(area, Vector3): XNA in its signature
+                var e = vq.a(p.Blueprint, zone, at);
+                if (e == null) { Log.Write("world: " + p.Id + ": no blueprint " + p.Blueprint + " or no area " + p.Area); continue; }
+                placed[p.Id] = e;
+                Apply(p, e);
+                Log.Write("world: placed " + p.Id + " in " + zoneId + "/" + p.Area + " at " + p.X + "," + p.Y);
+            }
+            catch (Exception ex) { Log.Write("world: " + p.Id + ": spawn failed: " + ex); }
+        }
+    }
+
+    // The placement's name, dialog, attitude and setup. Again after Works puts the character back after a save:
+    // deploying it again can reload its data from the blueprint's template (AutoUpdate).
+    static void Apply(Placement p, c5x e)
+    {
+                var c = Character.Of(e);
+                if (c.IsCharacter)
+                {
+                    if (p.Name != null) c.Name = p.Name;
+                    if (p.Dialog != null)
+                    {
+                        // As the game's scripts give a character a dialog (a8): the dialog aspect, then its name. Only on
+                        // placed characters, which are never saved; game characters use Dialogs.Override.
+                        var talk = e.GetAspect<j7>() as bn5;
+                        if (talk == null) { talk = new bn5(e); e.SetAspect((j7)talk); }
+                        talk.b(p.Dialog);
+                    }
+                    if (p.Friendly) { c.Passive = true; c.SetAttitudeToPlayer(Attitude.Neutral); }
+                }
+                if (p.Setup != null) p.Setup(c);
+    }
+
+    // Before the game stores a zone (saving, or leaving it): take the placed entities out. Returns them with their
+    // area, to put back after a save.
+    internal static List<KeyValuePair<c5x, aud>> RemovePlaced(c1a zone)
+    {
+        var removed = new List<KeyValuePair<c5x, aud>>();
+        foreach (var kv in placed.ToList())
+        {
+            var e = kv.Value;
+            var area = e.Area;
+            if (area == null || area.Zone != zone) continue;
+            e.an();     // undeploy and remove from the area, as the game does when it stores a zone
+            removed.Add(new KeyValuePair<c5x, aud>(e, area));
+        }
+        return removed;
+    }
+
+    internal static void PutBack(List<KeyValuePair<c5x, aud>> removed)
+    {
+        foreach (var kv in removed)
+        {
+            try
+            {
+                AddToArea.Invoke(kv.Value, new object[] { kv.Key });
+                var id = placed.First(x => x.Value == kv.Key).Key;
+                var p = placements.FirstOrDefault(x => x.Id == id);
+                if (p != null) Apply(p, kv.Key);
+            } catch (Exception ex) { Log.Write("world: putting back a placed character failed: " + ex.Message); } }
+    }
+
+    // After a save: the game redeploys the zone at its end (d6f.arg's finally), which can reload placed characters'
+    // data from their templates again.
+    internal static void ReapplyAll()
+    {
+        foreach (var kv in placed.ToList())
+        {
+            var p = placements.FirstOrDefault(x => x.Id == kv.Key);
+            if (p != null && kv.Value.Area != null) { try { Apply(p, kv.Value); } catch (Exception ex) { Log.Write("world: " + p.Id + ": " + ex.Message); } }
+        }
+    }
+
+    // A game is loading or starting: the placed entities belong to the game state being replaced.
+    internal static void ForgetAll() { placed.Clear(); }
+
+    internal static void Forget(c1a zone) { foreach (var kv in placed.ToList()) if (kv.Value.Area == null) placed.Remove(kv.Key); }
+}
