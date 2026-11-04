@@ -102,7 +102,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [ ] Pack Mule: sell tagged junk in one click (needs selling through the barter screen's own transaction).
 - [ ] Stealth Lens: show where enemies would notice you (needs detection rules: research).
 - [~] Survey Pins: the Minimap marks merchants; still: pins with notes, workbenches, locked containers.
-- [ ] Neural Reallocation: a respec NPC (needs unspent skill/ability points).
+- [x] Neural Reallocation: a respec NPC (points refunded to the game's own unspent points).
 - [ ] Workbench Planner: recipes, what can be crafted now (crafting blueprints are code classes: read-only).
 - [ ] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist.
 - [x] HUD Layout: drag the game's HUD parts around, saved per HUD size (Works: Input.Mouse, UiElement.X/Y).

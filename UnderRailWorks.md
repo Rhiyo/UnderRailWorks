@@ -248,6 +248,8 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
   `Hud.Visible`, `Hud.VisibilityChanged` (the game's F2 toggle resets every part). The decompiler names a field
   `m_x` when a method is also called `x`: the real field is `x` (found because Hud.Get returned nothing; the startup
   name check now also checks tables of lookups).
+- **Points**: `Character.SkillPoints / AbilityPoints / FeatPoints` (the player's unspent points, `e3q` g/h/j and
+  b/d/f; the game only lets you spend them on its level-up screen), `SkillNames`.
 - **Merchants**: `World.Characters` (everyone in the zone), `Character.Stock`, `Markup`, `GameEvents.TradeOpened`,
   `Character.MakeMerchant(store)` / `Placement.Store` (placed characters only: the merchant aspect plus the dialog
   aspect the barter screen takes, `aim(..., j7)`; without it the screen crashed), `Item.Value/Weight`.
@@ -285,6 +287,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | ContractBoard | generated bounties and deliveries as quests from a placed contractor | Placement, dynamic dialogs, Quests, Text, Items, events |
 | VendorDirectory | F6: the zone's merchants, nearest first, Trade from the list (in reach, or anywhere as a setting) | World.Characters, Stock, Trade.Open, TradeOpened |
 | FairTrade | merchants' buy markup and sell price as settings (proven on the barter screen: 750 -> 375 at 50%) | Prices hooks |
+| NeuralReallocation | a placed neurotechnician resets skills or abilities for charons; the points are the game's own unspent points, placed on its level-up screen (tested: 120 refunded + 40 for level 2 = 160 on the screen) | Character skills/abilities/points, dynamic dialog, Inventory |
 | HudLayout | F12: drag the game's HUD parts, right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
 | TheStranger, HelloQuest (examples) | a character, a conversation, a quest | the content API |
 Tested together in one save, then a quicksave with a contract active, both placed characters and every mod's

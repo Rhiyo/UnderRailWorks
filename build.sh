@@ -128,6 +128,10 @@ mkdir -p "$OUT/Mods/FairTrade"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/FairTrade.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/FairTrade/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/FairTrade.dll" "$OUT/FNA.dll" "$OUT/Mods/FairTrade/FairTrade.dll" >/dev/null
 cp "$HERE/mods/FairTrade/mod.json" "$OUT/Mods/FairTrade/"
+mkdir -p "$OUT/Mods/NeuralReallocation"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/NeuralReallocation.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/NeuralReallocation/*.cs
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/NeuralReallocation.dll" "$OUT/FNA.dll" "$OUT/Mods/NeuralReallocation/NeuralReallocation.dll" >/dev/null
+cp "$HERE/mods/NeuralReallocation/mod.json" "$OUT/Mods/NeuralReallocation/"
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
 mkdir -p "$HERE/build/Mods/HelloUI"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"

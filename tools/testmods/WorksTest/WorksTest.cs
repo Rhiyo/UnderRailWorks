@@ -1,5 +1,5 @@
 // Test-only mod (not shipped): keys that set up game state for testing Works in game.
-//   F10: give the player 20 charons (Inventory.AddMoney). F12: the stranger turns hostile. F4: hide the portrait,
+//   F10: give the player 20 charons (Inventory.AddMoney). F11: 5000 XP. F12: the stranger turns hostile. F4: hide the portrait,
 //   open the notes. F6: list status effect codes and apply one. Logs every Works event.
 using System.Linq;
 using Microsoft.Xna.Framework.Input;
@@ -22,6 +22,7 @@ public sealed class WorksTest : WorksMod
         {
             var p = World.Player;
             if (p == null) return;
+            if (Input.Pressed(Keys.F11)) { p.GiveExperience(5000, "test"); Log.Info("XP now " + p.Experience + ", level " + p.Level + ", skill points " + p.SkillPoints + ", ability points " + p.AbilityPoints); }
             if (Input.Pressed(Keys.F12))
             {
                 var s = World.Placed("stranger_npc");

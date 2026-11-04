@@ -77,6 +77,12 @@ public sealed class Character
     public int Skill(string name) { var s = Need.Skills.a(name); return s == null ? 0 : s.g(); }
     public int BaseSkill(string name) { var s = Need.Skills.a(name); return s == null ? 0 : s.f(); }
     public void SetBaseSkill(string name, int value) { var s = Need.Skills.a(name); if (s == null) throw new ArgumentException("no skill " + name); ((TimelapseVertigo.Rules.Characters.Stat<int>)s).a(value); Need.bl(); }
+    // The names of its skills (as Skill/SetBaseSkill take them).
+    public IList<string> SkillNames { get { return Need.Skills.Select(k => k.Name).ToList(); } }
+    // The player's unspent points (spent on the game's level-up screen): skills, abilities, feats (0 for others).
+    public int SkillPoints { get { var p = Data as e3q; return p == null ? 0 : p.h(); } set { var p = Data as e3q; if (p != null) p.d(Math.Max(0, value)); } }
+    public int AbilityPoints { get { var p = Data as e3q; return p == null ? 0 : p.g(); } set { var p = Data as e3q; if (p != null) p.b(Math.Max(0, value)); } }
+    public int FeatPoints { get { var p = Data as e3q; return p == null ? 0 : p.j(); } set { var p = Data as e3q; if (p != null) p.f(Math.Max(0, value)); } }
     public IList<string> Feats { get { return Need.Feats.Select(f => f.Name).ToList(); } }
     public bool HasFeat(string name) { return Need.Feats.Any(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)); }
 
