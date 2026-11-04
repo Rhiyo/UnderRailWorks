@@ -14,7 +14,19 @@ public sealed class UnderRailFixesMod : WorksMod
     public override void Load()
     {
         log = base.Log;
-        CoveredSettings.Load();
+        bool fresh = !System.IO.File.Exists(System.IO.Path.Combine(Info.Folder, "settings.ini"));
+        CoveredSettings.Config = GetConfig<FixesConfig>();
+        // First start: the player's settings from UnderRailFixes 1.x's UnderrailFix.ini, if there is one.
+        if (fresh)
+        {
+            bool any = false;
+            foreach (string key in new[] { "ShowCovered", "ShowCoveredPlayer", "ShowCoveredHostile", "ShowCoveredOther", "ShowCoveredTransparency", "KeyholeTransparency", "KeyholeSize" })
+            {
+                string v = FixSettings.Raw(key);
+                if (v != null) { Settings.Set(key, v); any = true; }
+            }
+            if (any) { CoveredSettings.Config.Reload(); log.Info("settings taken from UnderrailFix.ini"); }
+        }
         // Outlines for every creature Tab would outline, while the effect is on (Works hides the extra ones; we draw them
         // on the covered part only).
         Outlines.Request(Name, () => ShowCovered.On);
@@ -25,89 +37,54 @@ public sealed class UnderRailFixesMod : WorksMod
         WorldDraw.ShaderPassStarting.Add(this, ShowCovered.BeforePass);
         WorldDraw.ShaderPassDone.Add(this, ShowCovered.AfterPass);
         WorldDraw.InterfaceOffset.Add(this, Keyhole.Into);
-        ModOptions.Register(Name, Page);
         log.Info("occluded characters ready (" + (CoveredSettings.On ? "on" : "off") + ")");
-    }
-
-    static readonly string[] EffectTexts = { "Off", "Keyhole", "Line fill", "Dithered fill", "Fill", "Outline" };
-    static readonly string[] EffectValues = { "off", "keyhole", "lines", "dither", "fill", "outline" };
-
-    static void Page(ModPage page)
-    {
-        page.Subsection("Occluded Characters");
-        page.Toggle("ShowCovered", "Show occluded characters", false);
-        page.Choice("ShowCoveredPlayer", "Player", EffectTexts, EffectValues, "keyhole");
-        page.Choice("ShowCoveredHostile", "Hostile", EffectTexts, EffectValues, "lines");
-        page.Choice("ShowCoveredOther", "Other", EffectTexts, EffectValues, "lines");
-        page.Slider("ShowCoveredTransparency", "Fill transparency", 0, 100, 5, 75);
-        page.Slider("KeyholeTransparency", "Keyhole transparency", 0, 100, 5, 75);
-        page.Slider("KeyholeSize", "Keyhole size", 50, 200, 5, 100);
-        // Back to the defaults (applied with Accept, like everything here; the on/off switch stays).
-        page.Button("Recommended settings", "Reset", p =>
-        {
-            p.Set("ShowCoveredPlayer", "keyhole"); p.Set("ShowCoveredHostile", "lines"); p.Set("ShowCoveredOther", "lines");
-            p.Set("ShowCoveredTransparency", "75"); p.Set("KeyholeTransparency", "75"); p.Set("KeyholeSize", "100");
-        });
     }
 }
 
-enum CoveredEffect { Off, Keyhole, Lines, Dither, Fill, Outline }
+// The settings (Options -> Mods -> UnderRailFixes settings, and Mods\UnderRailFixes\settings.ini).
+public sealed class FixesConfig : ModConfig
+{
+    [Header("Occluded Characters")]
+    [Label("Show occluded characters"), Tooltip("Occluded characters: characters hidden behind scenery are shown where they're hidden. 1 = on.\nFollows the game's Character Outlines option: none with \"Never\".")]
+    public bool ShowCovered = false;
+    [Label("Player"), Tooltip("Effect per kind of character: off, keyhole (a see-through hole in what stands in front), lines,\ndither, fill (the covered part in the colour Tab gives them), outline.")]
+    public CoveredEffect ShowCoveredPlayer = CoveredEffect.Keyhole;
+    [Label("Hostile")] public CoveredEffect ShowCoveredHostile = CoveredEffect.Lines;
+    [Label("Other")] public CoveredEffect ShowCoveredOther = CoveredEffect.Lines;
+    [Label("Fill transparency"), Range(0, 100), Increment(5), Tooltip("How see-through the lines, dots, fill and outline are, in percent (0 = solid).")]
+    public int ShowCoveredTransparency = 75;
+    [Label("Keyhole transparency"), Range(0, 100), Increment(5), Tooltip("How see-through the keyhole is at its centre, in percent.")]
+    public int KeyholeTransparency = 75;
+    [Label("Keyhole size"), Range(50, 200), Increment(5), Tooltip("The keyhole's size, in percent of the default (about the character's height).")]
+    public int KeyholeSize = 100;
+    [Hidden, Tooltip("Testing: 1 = draw the keyhole's front picture in tiles of at most 2048 everywhere.")]
+    public bool KeyholeTiles = false;
+    [Hidden, Tooltip("Debugging: 1 = log the layers in each hole every few seconds; 2 = also save the keyhole's pictures once (keyhole-*.png).")]
+    public int KeyholeDebug = 0;
+}
+
+public enum CoveredEffect
+{
+    Off,
+    Keyhole,
+    [Label("Line fill")] Lines,
+    [Label("Dithered fill")] Dither,
+    Fill,
+    Outline,
+}
 
 static class CoveredSettings
 {
-    const string Defaults = @"; UnderRailFixes (an UnderRailWorks mod) settings. The Mods tab in Options changes these.
-
-; Occluded characters: characters hidden behind scenery are shown where they're hidden. 1 = on.
-ShowCovered=0
-; Effect per kind of character: off, keyhole, lines, dither, fill, outline.
-ShowCoveredPlayer=keyhole
-ShowCoveredHostile=lines
-ShowCoveredOther=lines
-; Transparency of the fills (0-100), the keyhole (0-100), and the keyhole's size in % (50-200).
-ShowCoveredTransparency=75
-KeyholeTransparency=75
-KeyholeSize=100
-";
-    static ModSettings s;
-    static readonly string[] Carried = { "ShowCovered", "ShowCoveredPlayer", "ShowCoveredHostile", "ShowCoveredOther",
-        "ShowCoveredTransparency", "KeyholeTransparency", "KeyholeSize", "KeyholeTiles" };
-
-    internal static void Load()
-    {
-        bool fresh = !System.IO.File.Exists(System.IO.Path.Combine(System.IO.Path.Combine(ModLoader.ModsFolder, UnderRailFixesMod.Name), "settings.ini"));
-        s = ModSettings.For(UnderRailFixesMod.Name, Defaults);
-        // First start: take the player's settings from UnderrailFix.ini (1.x kept them there).
-        if (fresh)
-            foreach (string key in Carried)
-            {
-                string v = FixSettings.Raw(key);
-                if (v != null) s.Set(key, v);
-            }
-    }
-
-    internal static int Changes { get { return s.Changes; } }
-    internal static bool On { get { return s.Bool("ShowCovered", false); } }
-    internal static CoveredEffect Player { get { return Effect("ShowCoveredPlayer", CoveredEffect.Keyhole); } }
-    internal static CoveredEffect Hostile { get { return Effect("ShowCoveredHostile", CoveredEffect.Lines); } }
-    internal static CoveredEffect Other { get { return Effect("ShowCoveredOther", CoveredEffect.Lines); } }
-    internal static int FillTransparency { get { return s.Int("ShowCoveredTransparency", 75, 0, 100); } }
-    internal static int KeyholeTransparency { get { return s.Int("KeyholeTransparency", 75, 0, 100); } }
-    internal static int KeyholeSize { get { return s.Int("KeyholeSize", 100, 25, 300); } }
-    internal static bool KeyholeTiles { get { return s.Get("KeyholeTiles") == "1"; } }
-    internal static bool KeyholeDebug { get { var v = s.Get("KeyholeDebug"); return v == "1" || v == "2"; } }
-    internal static bool KeyholeDumps { get { return s.Get("KeyholeDebug") == "2"; } }
-
-    static CoveredEffect Effect(string key, CoveredEffect fallback)
-    {
-        switch ((s.Get(key) ?? "").Trim().ToLowerInvariant())
-        {
-            case "off": case "0": return CoveredEffect.Off;
-            case "keyhole": return CoveredEffect.Keyhole;
-            case "lines": return CoveredEffect.Lines;
-            case "dither": return CoveredEffect.Dither;
-            case "fill": return CoveredEffect.Fill;
-            case "outline": return CoveredEffect.Outline;
-            default: return fallback;
-        }
-    }
+    internal static FixesConfig Config;
+    internal static int Changes { get { return Config.Changes; } }
+    internal static bool On { get { return Config.ShowCovered; } }
+    internal static CoveredEffect Player { get { return Config.ShowCoveredPlayer; } }
+    internal static CoveredEffect Hostile { get { return Config.ShowCoveredHostile; } }
+    internal static CoveredEffect Other { get { return Config.ShowCoveredOther; } }
+    internal static int FillTransparency { get { return Math.Max(0, Math.Min(100, Config.ShowCoveredTransparency)); } }
+    internal static int KeyholeTransparency { get { return Math.Max(0, Math.Min(100, Config.KeyholeTransparency)); } }
+    internal static int KeyholeSize { get { return Math.Max(25, Math.Min(300, Config.KeyholeSize)); } }
+    internal static bool KeyholeTiles { get { return Config.KeyholeTiles; } }
+    internal static bool KeyholeDebug { get { return Config.KeyholeDebug >= 1; } }
+    internal static bool KeyholeDumps { get { return Config.KeyholeDebug >= 2; } }
 }

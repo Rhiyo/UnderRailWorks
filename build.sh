@@ -87,6 +87,11 @@ mkdir -p "$OUT/Mods/UnderRailFixes"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/UnderRailFixes.dll" -r:"$REF" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:"$HARMONY" -r:System.Core.dll "$HERE"/mods/UnderRailFixes/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/UnderRailFixes.dll" "$OUT64/FNA.dll" "$OUT/Mods/UnderRailFixes/UnderRailFixes.dll"
 cp "$HERE/mods/UnderRailFixes/mod.json" "$OUT/Mods/UnderRailFixes/"
+# HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
+mkdir -p "$HERE/build/Mods/HelloUI"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$REF" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:"$HARMONY" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/HelloUI.dll" "$OUT/FNA.dll" "$HERE/build/Mods/HelloUI/HelloUI.dll" >/dev/null
+cp "$HERE/examples/HelloUI/mod.json" "$HERE/build/Mods/HelloUI/"
 
 # The .NET 10 launcher (installed as underrail.exe; src/Launcher) and the Windows .NET 10 runtime it runs the game on
 # (Microsoft.NETCore.App + Microsoft.WindowsDesktop.App, from Microsoft's releases, each checked against the SHA-512

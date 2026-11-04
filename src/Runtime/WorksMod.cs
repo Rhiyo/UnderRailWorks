@@ -19,6 +19,9 @@ public abstract class WorksMod
     public ModSettings Settings { get { return ModSettings.For(Id, SettingsDefaults); } }
     protected virtual string SettingsDefaults { get { return null; } }
 
+    // The mod's ModConfig class (ModConfig.cs), loaded from settings.ini on first use.
+    public T GetConfig<T>() where T : ModConfig { return ModConfig.Get<T>(Info); }
+
     public virtual void Load() { }
     public virtual void PostLoad() { }
 }

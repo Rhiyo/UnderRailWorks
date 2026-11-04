@@ -96,7 +96,7 @@ public static class UnderrailOptions
     public static void AddTab(t1 options)
     {
         bool fixes = FixSettings.ResolutionFix || FixSettings.UiScaleFix || FixSettings.ZoomFix || FixSettings.FrameRateFix;
-        if (!fixes && ModLoader.Mods.Count == 0) return;
+        if (!fixes && ModLoader.Mods.Count == 0) { UiHooks.Options(options); return; }
         {
             var rows = new Rows();
             BuildTab(options, TabName, page =>
@@ -157,6 +157,7 @@ public static class UnderrailOptions
             Added.Remove(options);
             Added.Add(options, rows);
         }
+        UiHooks.Options(options);
     }
 
     // A tab after the game's own: rows are added by build with t1's own row builders, then the tab scrolls. build

@@ -52,8 +52,11 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 
 - [ ] Port the engine fixes into Works: Harmony where possible; keep in the patcher only the loader hook, the FNA
   retargeting, the 64-bit flags and the SFML/Steam/Galaxy replacements.
-- [ ] Declarative mod settings: a config class with attributes that produces the Mods tab rows and settings.ini
-  (tModLoader's ModConfig, with our readable ini).
+- [x] Declarative mod settings: ModConfig (tModLoader's, with our readable ini); UnderRailFixes uses it.
+- [x] UI toolkit (first version): Ui.* controls, UiEvents (HUD, main menu, options), GameEvents.Update, Input;
+  examples/HelloUI.
+- [ ] UI toolkit, next: mod keys in the game's key-binding screen, draggable panels, tooltips, text input, more
+  attachment points (inventory, dialog, character screen), readable wrappers for dropdowns and sliders outside Options.
 - [ ] Mods' save data: works.json per save, per-mod JSON, data of a missing mod kept, a warning icon on the Load Game
   screen, a backup before saving.
 - [ ] Reload mods without restarting (collectible AssemblyLoadContext, possible on .NET 10).

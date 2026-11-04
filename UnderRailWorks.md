@@ -86,6 +86,28 @@ one shared point covers them all. Most go through the generic `eoq.DeserializeFr
 patching a generic method with Harmony is unreliable, so the plan is one patch per loader. Also: a stock save
 round trip (mod item → stock save → mod back), and mod items that need new code, not just new data.
 
+## Settings and UI for mods (as tModLoader)
+
+Two separate systems, as tModLoader's ModConfig and its UI toolkit:
+
+1. **Settings: `ModConfig`** (`src/Runtime/ModConfig.cs`). The mod declares a class with public fields and attributes
+   (`[Header]`, `[Label]`, `[Tooltip]`, `[Range]`, `[Increment]`, `[ReloadRequired]`, `[Hidden]`; `[Label]` on enum
+   members names the choices). Works finds it, writes `settings.ini` with comments and defaults the first time, builds
+   the Mods tab rows (bool: tick box, enum: dropdown, int: slider) with a Restore defaults button, writes changed values
+   on Accept and calls `OnChanged`. The mod writes no UI code; `GetConfig<T>()` gives it the values. `ModPage` stays for
+   anything a config can't express. UnderRailFixes uses a config class (`FixesConfig`).
+2. **UI toolkit** (`src/Runtime/Ui.cs`). The game's own controls under readable names (`Ui.Label`, `Ui.Button`,
+   `Ui.TickBox`, `Ui.Panel`, `Ui.Add/Remove/Move/Resize/Show/SetText/SetColor`), so mod UI looks like the game's and
+   follows Works' interface scale and insets. The game has no named interface layers like Terraria's; instead mods
+   attach to screens as the game builds them: `UiEvents.HudCreated` (the in-game screen, rebuilt after each load or
+   relayout), `MainMenuCreated`, `OptionsCreated`; `GameEvents.Update(seconds)` each update; `Input.Pressed(Keys.X)`.
+   These hooks are Harmony patches Works makes itself (new hooks are Harmony, not the patcher). Elements are the game's
+   own control types, so a mod can go further with the game's API or Harmony. Example: `examples/HelloUI` (a session
+   clock panel on the HUD, toggled by a key from its config).
+   Tested in game: the panel, its border, the key toggle, the Hide button, both mods' generated settings pages, and a
+   setting changed in the Mods tab applying at once. Not yet: keys in the game's own key-binding screen (the mod's
+   config holds its key for now), dragging panels, tooltips, windows that take keyboard focus.
+
 ## Saves and mods (copying tModLoader)
 
 **What tModLoader does** (read from its source: `WorldIO.cs`, `WorldFileData.tML.cs`, `UIWorldListItem.TML.cs`,

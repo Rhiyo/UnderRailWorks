@@ -48,12 +48,20 @@ A mod is a folder in `Mods\` with a `mod.json` and a DLL whose main class derive
 ```
 
 ```csharp
+public sealed class MyConfig : ModConfig            // settings: Works builds the Mods tab rows and settings.ini
+{
+    [Header("Visuals")]
+    [Label("Show the effect")] public bool ShowEffect = true;
+    [Label("Strength"), Range(0, 100), Increment(5)] public int Strength = 75;
+}
+
 public sealed class MyMod : WorksMod
 {
     public override void Load()
     {
+        var config = GetConfig<MyConfig>();
         WorldDraw.LayerStarting.Add(this, (view, context, layer, shaderPass) => { /* every world layer, in order */ });
-        ModOptions.Register(Id, page => page.Toggle("Enabled", "Enable my mod", true));
+        UiEvents.HudCreated.Add(this, hud => Ui.Add(hud, Ui.Button("Hello", () => Log.Info("clicked")), 20, 200));
     }
 }
 ```

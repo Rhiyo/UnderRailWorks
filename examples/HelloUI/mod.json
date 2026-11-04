@@ -1,0 +1,2 @@
+{ "id": "HelloUI", "name": "Hello UI", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
+  "description": "Example: a session clock panel on the HUD, with its settings from a ModConfig class." }

@@ -89,6 +89,7 @@ public static class ModLoader
         catch (Exception ex) { Log.Write("mods: can't load Harmony: " + ex.Message); foreach (var m in order) m.Error = "Harmony missing"; return; }
         Type harmonyType = harmony.GetType("HarmonyLib.Harmony", true);
         Log.Write("mods: Harmony " + harmony.GetName().Version);
+        try { UiHooks.Install(); } catch (Exception ex) { Log.Always("UnderRailWorks: UI hooks failed: " + ex); }
 
         // A mod's own dependencies sit in its folder (or a required mod's).
         AppDomain.CurrentDomain.AssemblyResolve += (sender, e) =>
@@ -261,6 +262,7 @@ public static class ModLoader
                         mod.Instance = main;
                         main.Load();
                         mod.Loaded = true;
+                        ModConfig.Register(mod, assembly);
                         var patchedBy = main.Harmony.GetPatchedMethods().Select(m => m.DeclaringType.Name + "." + m.Name).ToArray();
                         Log.Write("mods: loaded " + mod.Id + " " + mod.VersionText + " (" + Path.GetFileName(dll) + ", " + type.FullName + ")"
                             + (patchedBy.Length > 0 ? ", patched: " + string.Join(", ", patchedBy) : ""));
