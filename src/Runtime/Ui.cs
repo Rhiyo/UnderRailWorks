@@ -278,7 +278,8 @@ static class UiHooks
 
     static void Hud(object __instance) { global::Hud.Created((ci3)__instance); var root = UiElement.Of((euz)__instance); if (UiEvents.HudCreated.Any) UiEvents.HudCreated.Run(h => h(root)); }
     static void MainMenu(object __instance) { var root = UiElement.Of((euz)__instance); if (UiEvents.MainMenuCreated.Any) UiEvents.MainMenuCreated.Run(h => h(root)); }
-    internal static void Options(t1 options) { if (UiEvents.OptionsCreated.Any) UiEvents.OptionsCreated.Run(h => h(UiElement.Of(options))); }
+    internal static t1 CurrentOptions;
+    internal static void Options(t1 options) { CurrentOptions = options; if (UiEvents.OptionsCreated.Any) UiEvents.OptionsCreated.Run(h => h(UiElement.Of(options))); }
 
     static void Updated(GameTime __0)
     {

@@ -168,7 +168,9 @@ public static class UnderrailOptions
         {
             var page = new cvh();
             page.Text = name;
-            ((dpg)Tabs.GetValue(options)).n().Add(page);
+            var tabControl = (dpg)Tabs.GetValue(options);
+            tabControl.n().Add(page);
+            FitTabs(options, tabControl);
             Page.SetValue(options, page);
             // t1's row builder starts a new column when a row would pass the page's bottom; ours is one column and
             // scrolls instead (TabScroll), so the page is made tall while the rows are added.
@@ -184,6 +186,24 @@ public static class UnderrailOptions
             TabScroll.Attach(options, page, views);
         }
         catch (Exception ex) { Log.Write("options: the " + name + " tab failed: " + ex); }
+    }
+
+    // With a tab added the headers can run past the window's right edge, and the game only passes a click to a control
+    // whose parent contains the point: the part outside couldn't be clicked (measured: the Mods tab only took clicks in
+    // its first few pixels at 2560x720 with insets). Narrow every header so the last one ends inside the window
+    // (dpg.b(size) lays them out again; header i sits at (width - overlap) * i).
+    static readonly MethodInfo TabOverlap = typeof(dpg).GetMethods(BindingFlags.Instance | BindingFlags.Public).First(m => m.Name == "p" && m.DeclaringType == typeof(dpg) && m.ReturnType == typeof(esj));     // dpg.p(): an inherited p() returns XNA's Point
+    static readonly MethodInfo TabSize = typeof(dpg).GetMethod("b", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(esj) }, null);     // dpg.b(esj): another b takes XNA's Point
+    static void FitTabs(t1 options, dpg tabs)
+    {
+        int count = tabs.n().Count;
+        if (count == 0) return;
+        var size = tabs.q(); var overlap = (esj)TabOverlap.Invoke(tabs, null);
+        int w = UnderrailDropdownScroll.W(size), h = UnderrailDropdownScroll.H(size), ov = UnderrailDropdownScroll.W(overlap);
+        int room = UnderrailDropdownScroll.W(tabs.Size) - 2;     // the headers' parent is the tab control: its width is the limit
+        Log.Write("options: tabs " + count + " x " + w + " (overlap " + ov + ") in " + room + (room < (w - ov) * count + ov ? ": narrowed" : ""));
+        int fit = (room - ov) / count + ov;
+        if (fit < w) TabSize.Invoke(tabs, new object[] { new esj(fit, h) });
     }
 
     internal static void HeadingRow(t1 options, string title) { Heading.Invoke(options, new object[] { title }); }

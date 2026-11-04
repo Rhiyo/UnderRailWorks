@@ -1,5 +1,5 @@
 // HUD Layout: an UnderRailWorks mod. Press the key (default F12) to arrange the game's HUD: frames show its parts;
-// drag one with the left mouse button, right-click one to put it back; press the key again to finish. Positions are
+// drag one with the left mouse button, right-click one to put it back; Done (or the key) to finish. Positions are
 // saved per HUD size in the mod's settings.ini and applied whenever the game builds its HUD. Built from Works' API only
 // (Hud handles, Ui.Custom, Input mouse, Settings).
 using System;
@@ -13,11 +13,15 @@ using Microsoft.Xna.Framework.Input;
 public sealed class HudLayoutConfig : ModConfig
 {
     [Header("HUD Layout")]
-    [Label("Key that starts and ends arranging"), Tooltip("While arranging: drag a part with the left mouse button, right-click it to put it back.")]
-    public LayoutKey Key = LayoutKey.F12;
+    [Label("Key that starts and ends arranging"), Tooltip("None: use the Arrange button here (or set a key).")]
+    public LayoutKey Key = LayoutKey.None;
+
+    // Closes Options and the game menu, then arranging starts: drag parts, right-click to put one back, Done to finish.
+    [Label("Arrange the HUD"), Button("Arrange now", NeedsGame = true)]
+    public void Arrange() { HudLayout.Requested = true; }
 }
 
-public enum LayoutKey { F12, F11, F6 }
+public enum LayoutKey { [Label("(none)")] None, F12, F11, F6 }
 
 public sealed class HudLayout : WorksMod
 {
@@ -26,6 +30,8 @@ public sealed class HudLayout : WorksMod
     // One movable part: the game's (by HudPart) or a mod's (by its name).
     sealed class Part { public string Name; public UiElement Element; public Point Original; }
 
+    internal static bool Requested;
+    int startIn = -1;     // frames until arranging starts after the settings button (Options and the menu close first)
     HudLayoutConfig config;
     UiElement hud, overlay;
     UiPanel help;
@@ -51,7 +57,15 @@ public sealed class HudLayout : WorksMod
         GameEvents.Update.Add(this, seconds =>
         {
             if (hud == null) return;
-            if (Input.Pressed(KeyOf(config.Key))) { if (overlay == null) Begin(); else End(); }
+            if (Requested)
+            {
+                Requested = false;
+                Windows.CloseOptions(true);      // as Accept: what else was changed is kept
+                Windows.Close(Window.GameMenu);
+                startIn = 2;                     // the HUD may be rebuilt by the Accept: start on a later frame
+            }
+            if (startIn >= 0 && startIn-- == 0 && overlay == null) Begin();
+            if (config.Key != LayoutKey.None && Input.Pressed(KeyOf(config.Key))) { if (overlay == null) Begin(); else End(); }
             if (overlay == null) return;
             var m = Input.Mouse;
             hovered = PartAt(m);
@@ -99,13 +113,15 @@ public sealed class HudLayout : WorksMod
     {
         overlay = Ui.Custom(hud.Width, hud.Height, Draw);     // covers the screen: clicks go to it, not the game
         Ui.Add(hud, overlay, 0, 0);
-        var message = "Arranging the HUD: drag a part, right-click to put it back, " + config.Key + " to finish.";
-        int w = Ui.TextWidth(message) + 30;
-        help = Ui.Panel(w, 30);
-        var text = Ui.Label(message, w - 20);
+        var message = "Arranging the HUD: drag a part, right-click to put it back." + (config.Key != LayoutKey.None ? " " + config.Key + " or" : "");
+        var done = Ui.Button("Done", End);
+        int w = Ui.TextWidth(message) + done.Width + 40;
+        help = Ui.Panel(w, 40);
+        var text = Ui.Label(message, w - done.Width - 30);
         Ui.SetColor(text, new Color(230, 200, 120));
-        Ui.Add(help, text, 10, 4);
-        Ui.Add(hud, help, (hud.Width - w) / 2, hud.Height / 2 - 15);
+        Ui.Add(help, text, 10, 9);
+        Ui.Add(help, done, w - done.Width - 8, 5);     // above the overlay: it gets the click
+        Ui.Add(hud, help, (hud.Width - w) / 2, hud.Height / 2 - 20);
     }
 
     void End()
@@ -146,5 +162,5 @@ public sealed class HudLayout : WorksMod
         if (parts.Length != 2 || !int.TryParse(parts[0], out x) || !int.TryParse(parts[1], out y)) return false;
         p = new Point(x, y); return true;
     }
-    static Keys KeyOf(LayoutKey k) { return k == LayoutKey.F11 ? Keys.F11 : k == LayoutKey.F6 ? Keys.F6 : Keys.F12; }
+    static Keys KeyOf(LayoutKey k) { return k == LayoutKey.F11 ? Keys.F11 : k == LayoutKey.F6 ? Keys.F6 : k == LayoutKey.F12 ? Keys.F12 : Keys.None; }
 }

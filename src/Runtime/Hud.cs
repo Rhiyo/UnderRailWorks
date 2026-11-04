@@ -111,6 +111,17 @@ public static class Windows
         Call(screen, Methods[(int)w, 1]);
     }
 
+    // Closes the open Options window as its Accept (save: true) or Cancel button would. False if none is open.
+    public static bool CloseOptions(bool save = true)
+    {
+        var options = UiHooks.CurrentOptions;
+        if (options == null || options.Parent == null) return false;
+        (save ? OptionsAccept : OptionsCancel).Invoke(options, new object[] { null, null });
+        return true;
+    }
+    static readonly MethodInfo OptionsAccept = typeof(t1).GetMethod("a", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(object), typeof(b25) }, null),
+        OptionsCancel = typeof(t1).GetMethod("b", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(object), typeof(b25) }, null);
+
     static void Call(ps screen, string name) { typeof(ps).GetMethod(name, Type.EmptyTypes).Invoke(screen, null); }
 }
 

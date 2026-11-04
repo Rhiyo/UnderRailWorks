@@ -253,6 +253,14 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
 - **Merchants**: `World.Characters` (everyone in the zone), `Character.Stock`, `Markup`, `GameEvents.TradeOpened`,
   `Character.MakeMerchant(store)` / `Placement.Store` (placed characters only: the merchant aspect plus the dialog
   aspect the barter screen takes, `aim(..., j7)`; without it the screen crashed), `Item.Value/Weight`.
+- **Settings buttons**: a public method of a ModConfig class with `[Button("text", NeedsGame = true)]` (and `[Label]`)
+  is a button row in the mod's settings; with NeedsGame on the main menu the row says "Load a game first" instead
+  (`ModPage.Note`). `Windows.CloseOptions(save)` closes the Options window as its Accept or Cancel would (`t1.a/b`).
+  HUD Layout's "Arrange now" accepts and closes Options and the game menu, then starts arranging two frames later.
+- **Options tab headers fit the window**: with the Mods tab added the headers ran past the tab control, and the part
+  outside took no clicks (the game passes a click only to a control whose parent contains the point; measured:
+  the Mods tab only answered in its first few pixels at 2560x720 with insets). Works narrows the headers so the last
+  ends inside (`dpg.b(size)`).
 - **Mod HUD parts**: `Hud.AddPart(mod, name, element, x, y)` puts a mod's element on the HUD as a named part
   (`Hud.ModParts`, `Hud.PartAdded`), so layout mods move mods' panels like the game's; a rebuilt panel is added again
   and the layout re-applies the player's position. The Minimap and the Quest Tracker use it.
@@ -291,7 +299,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | VendorDirectory | F6: the zone's merchants, nearest first, Trade from the list (in reach, or anywhere as a setting) | World.Characters, Stock, Trade.Open, TradeOpened |
 | FairTrade | merchants' buy markup and sell price as settings (proven on the barter screen: 750 -> 375 at 50%) | Prices hooks |
 | NeuralReallocation | a placed neurotechnician resets skills or abilities for charons; the points are the game's own unspent points, placed on its level-up screen (tested: 120 refunded + 40 for level 2 = 160 on the screen) | Character skills/abilities/points, dynamic dialog, Inventory |
-| HudLayout | F12: drag the HUD's parts (the game's, and mods' named parts: Minimap, Quest Tracker), right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
+| HudLayout | Options -> Mods -> HUD Layout -> "Arrange now" (or a key, none by default): drag the HUD's parts (the game's, and mods' named parts: Minimap, Quest Tracker), right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
 | TheStranger, HelloQuest (examples) | a character, a conversation, a quest | the content API |
 Tested together in one save, then a quicksave with a contract active, both placed characters and every mod's
 variables: the stock loader reads it (`check-saves.sh --only`), and after quickload the contract is back.

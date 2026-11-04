@@ -98,6 +98,14 @@ public sealed class ModPage
         UnderrailOptions.ControlRow(Options, label, button);
     }
 
+    // A row with text instead of a control (e.g. why a button isn't there).
+    public void Note(string label, string text)
+    {
+        var note = Ui.Label(text, 360);
+        Ui.SetColor(note, new Microsoft.Xna.Framework.Color(160, 160, 150));
+        UnderrailOptions.ControlRow(Options, label, note.Control);
+    }
+
     // Shows a value in a row (not saved until Accept), e.g. for a reset button.
     public void Set(string key, string value)
     {
@@ -107,7 +115,7 @@ public sealed class ModPage
 
     // The mod's own controls: build gets the options window and the page (add rows with the game's builders, or
     // controls of its own). Saving them is up to the mod.
-    public void Custom(Action<t1, cvh> build) { build(Options, Page); }
+    internal void Custom(Action<t1, cvh> build) { build(Options, Page); }
 
     // Accept: the changed values into the mod's settings.ini.
     internal bool Save()
