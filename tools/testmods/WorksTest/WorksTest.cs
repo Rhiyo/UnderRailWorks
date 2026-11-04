@@ -45,6 +45,10 @@ public sealed class WorksTest : WorksMod
         Combat.ModifyHitChance.Add(this, h => { if (h.Attacker != null && h.Attacker.IsPlayer) Log.Info("hit chance " + h.Kind + " " + (h.Target == null ? "?" : h.Target.Name) + ": " + h.Chance.ToString("0.00")); });
         Combat.ModifyIncomingDamage.Add(this, d => Log.Info("incoming to " + (d.Target == null ? "?" : d.Target.Name) + " from " + d.AttackerName + ": hit " + d.Hit + ", crit " + d.Critical + ", " + string.Join(" + ", d.Parts)));
         Combat.AttackResolved.Add(this, o => Log.Info("resolved: " + (o.Target == null ? "?" : o.Target.Name) + " lost " + o.HealthLost + (o.Killed ? " (killed)" : "")));
+        // A test merchant at the north gate (Big Bret's store).
+        World.Place(new Placement { Id = "workstest_merchant", Zone = "LU-SouthGateStation-N", Area = "LU-SouthGateStation-N", X = 16, Y = 23,
+            Blueprint = "creatures\\generichumans\\foundryworker", Name = "Test Merchant", Store = "bigbret" });
+        GameEvents.TradeOpened.Add(this, m => Log.Info("trade with " + (m == null ? "?" : m.Name) + ": " + (m == null ? 0 : m.Stock.Count) + " items, markup " + (m == null ? 0 : m.Markup)));
         GameEvents.QuestChanged.Add(this, (id, state) => Log.Info("quest " + id + " -> " + state));
         GameEvents.Saved.Add(this, folder => Log.Info("saved " + folder));
         GameEvents.GameLoaded.Add(this, () => Log.Info("game loaded"));

@@ -113,6 +113,25 @@ public sealed class Character
     public IList<StatusEffect> StatusEffects { get { var b = Need.StatusEffects; return b.d().Select(e => new StatusEffect(e, b)).ToList(); } }
     public bool HasStatusEffect(string code) { return Need.StatusEffects.d().Any(e => string.Equals(e.Code, code, StringComparison.OrdinalIgnoreCase)); }
     public bool IsMerchant { get { var c = Entity as c5x; return c != null && c.GetAspect<dvp>() != null; } }
+    // Makes a placed character a merchant with one of the game's stores (data/Rules/Stores/<name>.store, e.g.
+    // "bigbret"), as the game's scripts do (die: the merchant aspect, the store name, a restock). Only characters
+    // Works placed (they are never saved); false otherwise.
+    public bool MakeMerchant(string store)
+    {
+        var c = Entity as c5x;
+        if (c == null || !World.IsPlaced(c)) return false;
+        var m = c.GetAspect<dvp>();
+        if (m == null) { m = new dvp(c); c.SetAspect(m); }
+        // The barter screen also takes the merchant's dialog aspect (dka.amw: new aim(..., j7)): every game merchant has one.
+        if (c.GetAspect<j7>() == null) c.SetAspect((j7)new bn5(c));
+        m.b(store);
+        m.aqc();
+        return true;
+    }
+
+    // A merchant's stock (what the barter screen lists on their side), and what they charge the player per item value.
+    public IList<Item> Stock { get { var c = Entity as c5x; var m = c == null ? null : c.GetAspect<dvp>(); return m == null ? new List<Item>() : m.ap7().z2().Select(i => new Item(i)).ToList(); } }
+    public float Markup { get { var c = Entity as c5x; var m = c == null ? null : c.GetAspect<dvp>(); var p = World.Player; var pd = p == null ? null : ((c5x)p.Entity).GetAspect<amc>().aa(); return m == null || pd == null ? 1 : m.aqd(pd); } }
 
     // Its own variables (the game's per-character CustomProperties, saved with it).
     public Variables Variables { get { return variables ?? (variables = new Variables(() => { var c = Entities.Character(Entity); return c == null || c.GetAspect<amc>().aa() == null ? null : c.GetAspect<amc>().aa().CustomProperties; })); } }

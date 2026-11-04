@@ -248,6 +248,9 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
   `Hud.Visible`, `Hud.VisibilityChanged` (the game's F2 toggle resets every part). The decompiler names a field
   `m_x` when a method is also called `x`: the real field is `x` (found because Hud.Get returned nothing; the startup
   name check now also checks tables of lookups).
+- **Merchants**: `World.Characters` (everyone in the zone), `Character.Stock`, `Markup`, `GameEvents.TradeOpened`,
+  `Character.MakeMerchant(store)` / `Placement.Store` (placed characters only: the merchant aspect plus the dialog
+  aspect the barter screen takes, `aim(..., j7)`; without it the screen crashed), `Item.Value/Weight`.
 - **Windows**: `Windows.Open/Close(Window.Inventory | Notes | Map | ...)` (the `ps` methods the HUD buttons call,
   refused while `ps.alg()`). **Trade.Open(merchant)** (`ps.amw`), **Prices.BuyMarkup / SellFactor** (postfixes of
   `dvp.aqd`, `b6o.d`). `Character.IsMerchant`.
@@ -267,6 +270,8 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | DifficultyDial | damage taken/dealt, hit chance, AP as settings | Combat hooks, ModConfig |
 | AfterActionReport | a summary after each fight, career totals | Combat events, Ui panel, Variables |
 | ContractBoard | generated bounties and deliveries as quests from a placed contractor | Placement, dynamic dialogs, Quests, Text, Items, events |
+| VendorDirectory | F6: the zone's merchants, nearest first, Trade from the list (in reach, or anywhere as a setting) | World.Characters, Stock, Trade.Open, TradeOpened |
+| FairTrade | merchants' buy markup and sell price as settings (proven on the barter screen: 750 -> 375 at 50%) | Prices hooks |
 | HudLayout | F12: drag the game's HUD parts, right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
 | TheStranger, HelloQuest (examples) | a character, a conversation, a quest | the content API |
 Tested together in one save, then a quicksave with a contract active, both placed characters and every mod's

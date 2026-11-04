@@ -38,6 +38,8 @@ public static partial class GameEvents
     public static readonly Hook<Action<string>> Saved = new Hook<Action<string>>("Saved");
     // A quest changed state (started, completed, failed): its id and new state.
     public static readonly Hook<Action<string, QuestState>> QuestChanged = new Hook<Action<string, QuestState>>("QuestChanged");
+    // The barter screen opened with a merchant.
+    public static readonly Hook<Action<Character>> TradeOpened = new Hook<Action<Character>>("TradeOpened");
     // A character died.
     public static readonly Hook<Action<Character>> CharacterDied = new Hook<Action<Character>>("CharacterDied");
     // Combat started / ended.
@@ -72,6 +74,8 @@ static class Saves
         harmony.Patch(typeof(dcw).GetMethod("g", any, null, new[] { typeof(coh) }, null), postfix: m("ItemAddedHook"));
         // XP: amc.a(int, string), how the game gives XP (kills, quests, the console).
         harmony.Patch(typeof(amc).GetMethod("a", any, null, new[] { typeof(int), typeof(string) }, null), postfix: m("XpHook"));
+        // Trade: dka.amw(player, merchant) opens barter.
+        harmony.Patch(typeof(dka).GetMethods(any).First(x => x.Name == "amw" && x.GetParameters().Length == 2), postfix: m("TradeHook"));
         // Death: amc.a(cwt attack, bool shattered).
         harmony.Patch(typeof(amc).GetMethod("a", any, null, new[] { typeof(cwt), typeof(bool) }, null), postfix: m("Died"));
         // Combat: crp.ahn (start) / crp.ahr (end); crp.ahg() = in combat.
@@ -220,6 +224,11 @@ static class Saves
     {
         var name = openDialog; openDialog = null;
         if (GameEvents.DialogEnded.Any) GameEvents.DialogEnded.Run(h => h(name));
+    }
+
+    static void TradeHook(bool __result, b0b __1)
+    {
+        if (__result && GameEvents.TradeOpened.Any) { var merchant = Character.Of(__1); GameEvents.TradeOpened.Run(h => h(merchant)); }
     }
 
     static void ItemAddedHook(dcw __instance, coh __0)

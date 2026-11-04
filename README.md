@@ -17,6 +17,8 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   - After-Action Report: a summary after each fight, and career totals.
   - Contract Board: a contractor at South Gate Station with generated bounties and deliveries.
   - HUD Layout: press F12 and drag the game's HUD parts where you want them.
+  - Vendor Directory: F6 lists the zone's merchants with a Trade button (optionally from anywhere in the zone).
+  - Fair Trade: what merchants charge and pay, as settings.
 
 No game code or game files are shipped: the patcher changes the player's own copy, and mods patch it at runtime.
 Every file the game writes (saves, config.dat) stays readable by the stock game.

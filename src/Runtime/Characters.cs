@@ -87,6 +87,10 @@ public sealed class Item
     public string Code { get { return Game.Definition == null ? "" : Game.Definition.a5(); } }
     public string Name { get { return Game.Definition == null ? "" : Game.Definition.az(); } }
     public int Stacks { get { return Game.Stacks; } set { Game.Stacks = value; } }
+    // Base value of one item and of the stack (the game's ItemValue; merchants multiply it by their markup).
+    public int Value { get { return Game.SingleItemValue; } }
+    public int StackValue { get { return Game.ItemValue; } }
+    public double Weight { get { return Game.Weight; } }
     public override string ToString() { return Name + (Stacks > 1 ? " x" + Stacks : ""); }
 }
 
@@ -102,6 +106,7 @@ public sealed class Placement
     public string Dialog;            // Works or game dialog Talk opens (null: the blueprint's)
     public bool Friendly = true;     // neutral and passive towards the player (else as the blueprint's faction)
     public Condition When;           // present only while this holds (checked when the zone loads)
+    public string Store;             // makes it a merchant with this game store (data/Rules/Stores, e.g. "bigbret")
     public Action<Character> Setup;  // anything else, after it's placed
 }
 
@@ -112,6 +117,21 @@ public static partial class World
     static readonly List<Placement> placements = new List<Placement>();
     // Placed entities currently in the world, by placement id.
     static readonly Dictionary<string, c5x> placed = new Dictionary<string, c5x>();
+
+    // Every living character in the current zone (all its areas), the player included.
+    public static IList<Character> Characters
+    {
+        get
+        {
+            var list = new List<Character>();
+            var zone = Areas.CurrentZone();
+            if (zone == null) return list;
+            foreach (var area in zone.Areas)
+                foreach (var e in area.Entities)
+                    if (e is c5x && ((c5x)e).GetAspect<amc>() != null) { var c = Character.Of(e); if (!c.IsDead) list.Add(c); }
+            return list;
+        }
+    }
 
     // The current zone's id, for Placement.Zone (null outside a game).
     public static string ZoneId { get { var game = bpo.GetService<cnk>(); return game == null || game.aqu() == null || game.aqu().c() == null ? null : game.aqu().c().b(); } }
@@ -170,6 +190,7 @@ public static partial class World
                     }
                     if (p.Friendly) { c.Passive = true; c.SetAttitudeToPlayer(Attitude.Neutral); }
                 }
+                if (p.Store != null && !c.IsMerchant) c.MakeMerchant(p.Store);
                 if (p.Setup != null) p.Setup(c);
     }
 
