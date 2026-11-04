@@ -73,6 +73,13 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
   stock game does with a transition to a missing map.
 - [ ] Later: combat, UI, quests.
 
+## Mods
+
+- [x] Minimap (`mods/Minimap`): HUD panel, isometric, walls/props/doors/exits, the player and visible characters in
+  their Tab colours; ModConfig settings.
+- [ ] Minimap next: click to open a larger map, remember explored tiles per area, other floors (Z) of the same area,
+  map markers for quests or containers.
+
 ## For modders
 
 - [ ] A mod template / SDK: reference assemblies and a build script.

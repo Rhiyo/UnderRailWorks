@@ -8,7 +8,8 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   (events, readable names for the game's scrambled classes, settings, an in-game Mods tab) or patch it with
   [Harmony](https://github.com/pardeike/Harmony). Dependencies and load order work like
   [tModLoader](https://github.com/tModLoader/tModLoader)'s.
-- **UnderRailFixes** (Occluded characters: keyhole, fills, outlines) is the first mod, in `mods/UnderRailFixes`.
+- **Mods that ship with it:** UnderRailFixes (Occluded characters: keyhole, fills, outlines) and Minimap (the area
+  around you, exits, and the characters you can see in their Tab outline colours), in `mods/`.
 
 No game code or game files are shipped: the patcher changes the player's own copy, and mods patch it at runtime.
 Every file the game writes (saves, config.dat) stays readable by the stock game.

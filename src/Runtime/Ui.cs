@@ -71,6 +71,19 @@ public static class Ui
     public static void Show(euz element, bool visible) { element.Visible = visible; }
     public static void SetText(euz element, string text) { element.Text = text; }
     public static void SetColor(avo label, Color colour) { ColorProperty.SetValue(label, colour, null); }
+    // Where an element is on screen (interface units), e.g. for drawing in a custom control's iv.
+    public static Rectangle Bounds(euz element)
+    {
+        object at = AbsoluteMethod.Invoke(element, null);
+        return new Rectangle(UnderrailDropdownScroll.X(at), UnderrailDropdownScroll.Y(at), Width(element), Height(element));
+    }
+    static readonly MethodInfo AbsoluteMethod = typeof(euz).GetMethod("at", Type.EmptyTypes);
+    static readonly MethodInfo DrawRectMethod = typeof(ob).GetMethod("xa");
+    // Draws a texture over a rectangle (interface units) with the game's interface batch, from a custom control's iv.
+    public static void DrawTexture(cp9 context, Microsoft.Xna.Framework.Graphics.Texture2D texture, Rectangle area, Color colour)
+    {
+        DrawRectMethod.Invoke(context.b(), new object[] { texture, area, colour });
+    }
     public static int Width(euz element) { return UnderrailDropdownScroll.W(element.Size); }
     public static int Height(euz element) { return UnderrailDropdownScroll.H(element.Size); }
 }

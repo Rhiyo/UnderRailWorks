@@ -73,6 +73,36 @@ public static class Entities
     // A character: a c5x with stats (amc). Walls and props are c5x too.
     public static c5x Character(b0b e) { var c = e as c5x; return c != null && c.GetAspect<amc>() != null ? c : null; }
     public static bool IsPlayer(b0b e) { var c = Character(e); return c != null && c.IsPlayer; }
+    // How a character stands towards the player (as eg0 decides the Tab outline's colour); None for non-characters.
+    public static Attitude AttitudeOf(b0b e)
+    {
+        try
+        {
+            var c = Character(e);
+            if (c == null) return Attitude.None;
+            var who = c.GetAspect<amc>().aa();
+            var game = bpo.GetService<cnk>();
+            var party = game == null ? null : game.aqu();
+            if (who == null || party == null) return Attitude.Neutral;
+            var a = who.a(party.ac(), asp.a);
+            return a == global::h.a ? Attitude.Hostile : a == global::h.b ? Attitude.Unfriendly : a == global::h.d ? Attitude.Friendly : a == global::h.e ? Attitude.Ally : Attitude.Neutral;
+        }
+        catch { return Attitude.Neutral; }
+    }
+
+    // The colour holding Tab outlines a character in: white for the player, else the game's colour for its attitude
+    // (adi.ae: red hostile, orange unfriendly, grey neutral, green friendly, blue ally).
+    static readonly FieldInfo OutlineColours = typeof(adi).GetField("ae", BindingFlags.Static | BindingFlags.Public);
+    public static Color OutlineColor(b0b e)
+    {
+        var c = Character(e);
+        if (c != null && c.IsPlayer) return Color.White;
+        var colours = OutlineColours.GetValue(null) as System.Collections.IDictionary;
+        var a = AttitudeOf(e);
+        object key = a == Attitude.Hostile ? global::h.a : a == Attitude.Unfriendly ? global::h.b : a == Attitude.Friendly ? global::h.d : a == Attitude.Ally ? global::h.e : (object)global::h.c;
+        return colours != null && colours.Contains(key) ? (Color)colours[key] : Color.Gray;
+    }
+
     // Hostile or unfriendly to the player (red and orange outlines), not passive.
     public static bool IsHostile(b0b e)
     {
@@ -87,6 +117,37 @@ public static class Entities
             return attitude == global::h.a || attitude == global::h.b;
         }
         catch { return false; }
+    }
+}
+
+// How a character stands towards the player (the game's own levels, h.a-h.e).
+public enum Attitude { None, Hostile, Unfriendly, Neutral, Friendly, Ally }
+
+// Zones (c1a: a map file) and their areas (aud: one floor of it, a grid of tiles ak1), as the game holds them.
+public static class Areas
+{
+    static readonly PropertyInfo AreaSize = typeof(aud).GetProperty("Size");
+    static readonly PropertyInfo TriggerLocation = typeof(ya).GetProperty("Location"), TriggerSize = typeof(ya).GetProperty("Size");
+
+    // The zone the party is in (null on the main menu).
+    public static c1a CurrentZone() { var game = bpo.GetService<cnk>(); return game == null ? null : game.aqw(); }
+    // The area an entity is on (null if none).
+    public static aud Of(b0b entity) { return entity == null ? null : entity.Area; }
+    public static int Width(aud area) { return UnderrailDropdownScroll.W((esj)AreaSize.GetValue(area, null)); }
+    public static int Height(aud area) { return UnderrailDropdownScroll.H((esj)AreaSize.GetValue(area, null)); }
+    // The tile at x, y (null outside the area) and what stands on it (floor, walls, props, characters, items).
+    public static ak1 Tile(aud area, int x, int y) { return area.b(x, y); }
+    public static IList<b0b> On(ak1 tile) { return tile == null ? (IList<b0b>)new b0b[0] : tile.Entities; }
+    // Exits: area transitions within the zone (b0j, "ATT") and zone transitions to another map (cdo, "ZTT"): their tile
+    // rectangles.
+    public static IEnumerable<Rectangle> Exits(aud area)
+    {
+        foreach (var t in area.Triggers)
+            if (t is b0j || t is cdo)
+            {
+                object at = TriggerLocation.GetValue(t, null), size = TriggerSize.GetValue(t, null);
+                yield return new Rectangle(UnderrailDropdownScroll.X(at), UnderrailDropdownScroll.Y(at), UnderrailDropdownScroll.W((esj)size), UnderrailDropdownScroll.H((esj)size));
+            }
     }
 }
 

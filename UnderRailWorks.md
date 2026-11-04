@@ -108,6 +108,21 @@ Two separate systems, as tModLoader's ModConfig and its UI toolkit:
    setting changed in the Mods tab applying at once. Not yet: keys in the game's own key-binding screen (the mod's
    config holds its key for now), dragging panels, tooltips, windows that take keyboard focus.
 
+## The Minimap mod (`mods/Minimap`)
+
+A larger test of the API: a HUD panel (UI toolkit) with a ModConfig (size, tiles across, corner, opacity, characters,
+exits, toggle key), drawn from the game's own data through Works' names (`Areas`: zone, area, tiles, entities, exits;
+`Entities.AttitudeOf` / `OutlineColor`).
+- Isometric like the screen (the game's projection, a7m.vq: screen x from x - y, y from x + y), rebuilt 4 times a
+  second into a texture.
+- What the game's data says (measured, not guessed: a grid dump and the entities' names and aspects): everything solid
+  has the `cd0` aspect ("SEA"); unnamed solids form the walls, named ones are props (desks, shelves, barrels), doors
+  have `cnb` ("DEA"); exits are area transitions (`b0j`, "ATT") and zone transitions (`cdo`, "ZTT").
+- The player as a white dot and the characters the player can see as dots in their Tab outline colour (the game's
+  `adi.ae` table): "can see" = the game drew them this frame (from the drawing events), so stealthed or out-of-sight
+  characters stay hidden.
+- Tested in game: layout against the screen in three places, the player dot, three NPC dots (blue: allies), exits.
+
 ## Saves and mods (copying tModLoader)
 
 **What tModLoader does** (read from its source: `WorldIO.cs`, `WorldFileData.tML.cs`, `UIWorldListItem.TML.cs`,
