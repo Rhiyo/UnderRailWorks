@@ -1,6 +1,6 @@
 // Status Board: an UnderRailWorks mod. A small HUD panel (top centre; HUD Layout can move it) spells out what the game
 // only shows as icons: your health, your status effects by name with the turns they have left, and in combat your AP
-// and MP and whose turn it is. Built from Works' API only (Character.StatusEffects/Health, Combat, Hud.AddPart).
+// and MP and whose turn it is. It also says over your head when an effect wears off. Built from Works' API only (Character.StatusEffects/Health, Combat, Hud.AddPart).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +13,7 @@ public sealed class StatusBoardConfig : ModConfig
     [Header("Status Board")]
     [Label("Show the board")] public bool Show = true;
     [Label("Only in combat")] public bool CombatOnly = false;
+    [Label("Say when an effect wears off")] public bool AnnounceEnd = true;
     public override void OnChanged() { StatusBoard.Dirty = true; }
 }
 
@@ -29,6 +30,13 @@ public sealed class StatusBoard : WorksMod
     {
         config = GetConfig<StatusBoardConfig>();
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; shown = ""; });
+        GameEvents.StatusRemoved.Add(this, s =>
+        {
+            if (!config.AnnounceEnd || s.Character == null || !s.Character.IsPlayer || string.IsNullOrEmpty(s.Name)) return;
+            Notify.OverPlayer(s.Name + " wore off");
+            Dirty = true;
+        });
+        GameEvents.StatusApplied.Add(this, s => Dirty = true);
         GameEvents.Update.Add(this, seconds =>
         {
             since += seconds;
