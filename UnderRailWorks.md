@@ -253,10 +253,10 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
 - **Merchants**: `World.Characters` (everyone in the zone), `Character.Stock`, `Markup`, `GameEvents.TradeOpened`,
   `Character.MakeMerchant(store)` / `Placement.Store` (placed characters only: the merchant aspect plus the dialog
   aspect the barter screen takes, `aim(..., j7)`; without it the screen crashed), `Item.Value/Weight`.
-- **Settings buttons**: a public method of a ModConfig class with `[Button("text", NeedsGame = true)]` (and `[Label]`)
-  is a button row in the mod's settings; with NeedsGame on the main menu the row says "Load a game first" instead
-  (`ModPage.Note`). `Windows.CloseOptions(save)` closes the Options window as its Accept or Cancel would (`t1.a/b`).
-  HUD Layout's "Arrange now" accepts and closes Options and the game menu, then starts arranging two frames later.
+- **No buttons in mod settings** (decided Nov 2026, tried and removed): a settings page applies on Accept and can be
+  cancelled; a button acts at once, can't be undone with Cancel, and needs a game in some cases (none on the main
+  menu). Actions belong in the mod's own UI (e.g. HUD Layout's Layout button on the HUD). `Windows.CloseOptions(save)`
+  stays (closes Options as Accept/Cancel would).
 - **Options tab headers fit the window**: with the Mods tab added the headers ran past the tab control, and the part
   outside took no clicks (the game passes a click only to a control whose parent contains the point; measured:
   the Mods tab only answered in its first few pixels at 2560x720 with insets). Works narrows the headers so the last
@@ -299,7 +299,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | VendorDirectory | F6: the zone's merchants, nearest first, Trade from the list (in reach, or anywhere as a setting) | World.Characters, Stock, Trade.Open, TradeOpened |
 | FairTrade | merchants' buy markup and sell price as settings (proven on the barter screen: 750 -> 375 at 50%) | Prices hooks |
 | NeuralReallocation | a placed neurotechnician resets skills or abilities for charons; the points are the game's own unspent points, placed on its level-up screen (tested: 120 refunded + 40 for level 2 = 160 on the screen) | Character skills/abilities/points, dynamic dialog, Inventory |
-| HudLayout | Options -> Mods -> HUD Layout -> "Arrange now" (or a key, none by default): drag the HUD's parts (the game's, and mods' named parts: Minimap, Quest Tracker), right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
+| HudLayout | a Layout button on the HUD (a setting, off by default; movable itself) or a key (none by default): drag the HUD's parts, Reset all, Done (the game's, and mods' named parts: Minimap, Quest Tracker), right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
 | TheStranger, HelloQuest (examples) | a character, a conversation, a quest | the content API |
 Tested together in one save, then a quicksave with a contract active, both placed characters and every mod's
 variables: the stock loader reads it (`check-saves.sh --only`), and after quickload the contract is back.

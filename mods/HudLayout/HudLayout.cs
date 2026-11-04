@@ -1,5 +1,5 @@
 // HUD Layout: an UnderRailWorks mod. Press the key (default F12) to arrange the game's HUD: frames show its parts;
-// drag one with the left mouse button, right-click one to put it back; Done (or the key) to finish. Positions are
+// drag one with the left mouse button, right-click one to put it back, Reset all for every part; Done (or the key) to finish. Positions are
 // saved per HUD size in the mod's settings.ini and applied whenever the game builds its HUD. Built from Works' API only
 // (Hud handles, Ui.Custom, Input mouse, Settings).
 using System;
@@ -13,12 +13,12 @@ using Microsoft.Xna.Framework.Input;
 public sealed class HudLayoutConfig : ModConfig
 {
     [Header("HUD Layout")]
-    [Label("Key that starts and ends arranging"), Tooltip("None: use the Arrange button here (or set a key).")]
+    [Label("Show a Layout button on the HUD"), Tooltip("A small button that starts arranging; it can be moved like the rest.")]
+    public bool HudButton = false;
+    [Label("Key that starts and ends arranging")]
     public LayoutKey Key = LayoutKey.None;
 
-    // Closes Options and the game menu, then arranging starts: drag parts, right-click to put one back, Done to finish.
-    [Label("Arrange the HUD"), Button("Arrange now", NeedsGame = true)]
-    public void Arrange() { HudLayout.Requested = true; }
+    public override void OnChanged() { HudLayout.Changed = true; }
 }
 
 public enum LayoutKey { [Label("(none)")] None, F12, F11, F6 }
@@ -30,9 +30,9 @@ public sealed class HudLayout : WorksMod
     // One movable part: the game's (by HudPart) or a mod's (by its name).
     sealed class Part { public string Name; public UiElement Element; public Point Original; }
 
-    internal static bool Requested;
-    int startIn = -1;     // frames until arranging starts after the settings button (Options and the menu close first)
+    internal static bool Changed;
     HudLayoutConfig config;
+    UiElement layoutButton;
     UiElement hud, overlay;
     UiPanel help;
     readonly Dictionary<string, Point> originals = new Dictionary<string, Point>();
@@ -44,8 +44,9 @@ public sealed class HudLayout : WorksMod
         config = GetConfig<HudLayoutConfig>();
         UiEvents.HudCreated.Add(this, root =>
         {
-            hud = root; overlay = null; help = null; dragging = null; originals.Clear();
+            hud = root; overlay = null; help = null; dragging = null; layoutButton = null; originals.Clear();
             foreach (var p in Parts()) { originals[p.Name] = new Point(p.Element.X, p.Element.Y); Apply(p); }
+            ShowButton();
         });
         // A mod's part was added (or rebuilt): where the player put it.
         Hud.PartAdded.Add(this, part =>
@@ -57,14 +58,7 @@ public sealed class HudLayout : WorksMod
         GameEvents.Update.Add(this, seconds =>
         {
             if (hud == null) return;
-            if (Requested)
-            {
-                Requested = false;
-                Windows.CloseOptions(true);      // as Accept: what else was changed is kept
-                Windows.Close(Window.GameMenu);
-                startIn = 2;                     // the HUD may be rebuilt by the Accept: start on a later frame
-            }
-            if (startIn >= 0 && startIn-- == 0 && overlay == null) Begin();
+            if (Changed) { Changed = false; ShowButton(); }
             if (config.Key != LayoutKey.None && Input.Pressed(KeyOf(config.Key))) { if (overlay == null) Begin(); else End(); }
             if (overlay == null) return;
             var m = Input.Mouse;
@@ -109,18 +103,40 @@ public sealed class HudLayout : WorksMod
         if (saved != null && TryParse(saved, out at)) Ui.Move(p.Element, at.X, at.Y);
     }
 
+    // The Layout button on the HUD (a part of its own, so it can be moved too), while the setting is on.
+    void ShowButton()
+    {
+        if (hud == null) return;
+        if (!config.HudButton) { if (layoutButton != null) Ui.Remove(layoutButton); layoutButton = null; return; }
+        if (layoutButton != null) return;
+        layoutButton = Ui.Button("Layout", () => { if (overlay == null) Begin(); });
+        Hud.AddPart(this, "Layout button", layoutButton, hud.Width - layoutButton.Width - 70, 62);
+    }
+
+    void ResetAll()
+    {
+        foreach (var p in Parts())
+        {
+            Point o;
+            if (originals.TryGetValue(p.Name, out o)) Ui.Move(p.Element, o.X, o.Y);
+            Settings.Set(Key(p.Name), "");
+        }
+    }
+
     void Begin()
     {
         overlay = Ui.Custom(hud.Width, hud.Height, Draw);     // covers the screen: clicks go to it, not the game
         Ui.Add(hud, overlay, 0, 0);
-        var message = "Arranging the HUD: drag a part, right-click to put it back." + (config.Key != LayoutKey.None ? " " + config.Key + " or" : "");
+        var message = "Arranging the HUD: drag a part, right-click it to put it back.";
+        var reset = Ui.Button("Reset all", ResetAll);
         var done = Ui.Button("Done", End);
-        int w = Ui.TextWidth(message) + done.Width + 40;
+        int w = Ui.TextWidth(message) + reset.Width + done.Width + 50;
         help = Ui.Panel(w, 40);
-        var text = Ui.Label(message, w - done.Width - 30);
+        var text = Ui.Label(message, w - reset.Width - done.Width - 40);
         Ui.SetColor(text, new Color(230, 200, 120));
         Ui.Add(help, text, 10, 9);
-        Ui.Add(help, done, w - done.Width - 8, 5);     // above the overlay: it gets the click
+        Ui.Add(help, reset, w - done.Width - reset.Width - 14, 5);     // above the overlay: they get the clicks
+        Ui.Add(help, done, w - done.Width - 8, 5);
         Ui.Add(hud, help, (hud.Width - w) / 2, hud.Height / 2 - 20);
     }
 

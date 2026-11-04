@@ -23,15 +23,13 @@ using System.Reflection;
 using System.Text;
 
 [AttributeUsage(AttributeTargets.Field)] public sealed class HeaderAttribute : Attribute { public readonly string Text; public HeaderAttribute(string text) { Text = text; } }
-[AttributeUsage(AttributeTargets.Field | AttributeTargets.Class | AttributeTargets.Method)] public sealed class LabelAttribute : Attribute { public readonly string Text; public LabelAttribute(string text) { Text = text; } }
+[AttributeUsage(AttributeTargets.Field | AttributeTargets.Class)] public sealed class LabelAttribute : Attribute { public readonly string Text; public LabelAttribute(string text) { Text = text; } }
 [AttributeUsage(AttributeTargets.Field)] public sealed class TooltipAttribute : Attribute { public readonly string Text; public TooltipAttribute(string text) { Text = text; } }
 [AttributeUsage(AttributeTargets.Field)] public sealed class RangeAttribute : Attribute { public readonly float Min, Max; public RangeAttribute(float min, float max) { Min = min; Max = max; } }
 [AttributeUsage(AttributeTargets.Field)] public sealed class IncrementAttribute : Attribute { public readonly float Step; public IncrementAttribute(float step) { Step = step; } }
 [AttributeUsage(AttributeTargets.Field)] public sealed class ReloadRequiredAttribute : Attribute { }
 [AttributeUsage(AttributeTargets.Field)] public sealed class HiddenAttribute : Attribute { }
-// A public method of the config class (no parameters) as a button in the mod's settings. NeedsGame: only while a game
-// is loaded (on the main menu the row says so instead).
-[AttributeUsage(AttributeTargets.Method)] public sealed class ButtonAttribute : Attribute { public readonly string Text; public bool NeedsGame; public ButtonAttribute(string text) { Text = text; } }
+
 
 public abstract class ModConfig
 {
@@ -131,14 +129,6 @@ public abstract class ModConfig
             else if (f.FieldType == typeof(int))
                 page.Slider(f.Name, label, (int)(range?.Min ?? 0), (int)(range?.Max ?? 100), Math.Max(1, (int)step), (int)d);
             else continue;     // ini only
-            any = true;
-        }
-        foreach (var m in GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance).Where(x => x.GetParameters().Length == 0 && x.GetCustomAttribute<ButtonAttribute>() != null).OrderBy(x => x.MetadataToken))
-        {
-            var b = m.GetCustomAttribute<ButtonAttribute>();
-            string label = m.GetCustomAttribute<LabelAttribute>()?.Text ?? Spaced(m.Name);
-            if (b.NeedsGame && World.Player == null) page.Note(label, "Load a game first.");
-            else { var method = m; page.Button(label, b.Text, p => method.Invoke(this, null)); }
             any = true;
         }
         if (any)
