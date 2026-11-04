@@ -33,7 +33,7 @@ public sealed class VendorDirectory : WorksMod
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; });
         GameEvents.TradeOpened.Add(this, merchant =>
         {
-            if (merchant != null && Variables.Global.Available) Variables.Global.Set("vd_" + merchant.Id, merchant.Stock.Count);
+            if (merchant != null && Variables.Global.Available) Variables.Global.Set("vd_" + merchant.Key, merchant.Stock.Count);
         });
         GameEvents.ZoneLoaded.Add(this, (zone, first) => Close());
         GameEvents.Update.Add(this, seconds =>
@@ -66,7 +66,7 @@ public sealed class VendorDirectory : WorksMod
         {
             var merchant = m;
             int tiles = (int)Math.Round((m.Position - player.Position).Length());
-            int seen = Variables.Global.Get("vd_" + m.Id, -1);
+            int seen = Variables.Global.Get("vd_" + m.Key, -1);
             var text = m.Name + "  -  " + tiles + " tiles" + (seen >= 0 ? ", " + seen + " items last time" : ", not visited");
             var label = Ui.Label(text, w - 110);
             Ui.SetColor(label, new Color(215, 215, 205));

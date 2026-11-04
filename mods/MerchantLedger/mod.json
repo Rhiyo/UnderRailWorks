@@ -1,0 +1,2 @@
+{ "id": "MerchantLedger", "name": "Merchant Ledger", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
+  "description": "Writes down every merchant's stock and prices when you trade; L searches them all (who sells what, where, for how much)." }

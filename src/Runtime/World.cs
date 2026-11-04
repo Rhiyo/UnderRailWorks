@@ -58,6 +58,9 @@ public sealed class Character
     // It can be talked to (has the dialog aspect the game's Talk uses).
     public bool CanTalk { get { var c = Entity as c5x; return c != null && c.GetAspect<j7>() != null && IsCharacter && !IsDead; } }
     public string Id { get { return Need.Id; } }
+    // A stable key for remembering this character: its id, or its name when it has none (characters spawned from a
+    // blueprint have no template id).
+    public string Key { get { var id = Need.Id; return string.IsNullOrEmpty(id) ? Name : id; } }
     public string Name { get { var d = Data; return d == null ? Entities.Name(Entity) : d.LocalizedName ?? d.Name; } set { Need.Name = value; ((c5x)Entity).q(value); } }     // the data's name and the entity's (the hover label)
     public int Level { get { return Need.Level; } }
     public string Faction { get { return Need.FactionId; } set { Need.FactionId = value; } }

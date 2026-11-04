@@ -325,6 +325,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | FairTrade | merchants' buy markup and sell price as settings (proven on the barter screen: 750 -> 375 at 50%) | Prices hooks |
 | NeuralReallocation | a placed neurotechnician resets skills or abilities for charons; the points are the game's own unspent points, placed on its level-up screen (tested: 120 refunded + 40 for level 2 = 160 on the screen) | Character skills/abilities/points, dynamic dialog, Inventory |
 | MovableWindows | the game's titled windows dragged by their title bar, reopened where left (a setting), right-click a title to put it back; per HUD size | Windows.OpenWindows, Input mouse, Settings |
+| MerchantLedger | every merchant's stock and prices recorded on trade (plain variables), L opens a search over all of them | TradeOpened, Stock/Markup, Ui.TextBox, Keybinds, Character.Key |
 | HudLayout | a Layout button on the HUD (a setting, off by default; movable itself) or a key (none by default): drag the HUD's parts, Reset all, Done (the game's, and mods' named parts: Minimap, Quest Tracker), right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |
 | TheStranger, HelloQuest (examples) | a character, a conversation, a quest | the content API |
 Tested together in one save, then a quicksave with a contract active, both placed characters and every mod's

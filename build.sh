@@ -136,6 +136,10 @@ mkdir -p "$OUT/Mods/MovableWindows"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/MovableWindows.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/MovableWindows/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/MovableWindows.dll" "$OUT/FNA.dll" "$OUT/Mods/MovableWindows/MovableWindows.dll" >/dev/null
 cp "$HERE/mods/MovableWindows/mod.json" "$OUT/Mods/MovableWindows/"
+mkdir -p "$OUT/Mods/MerchantLedger"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/MerchantLedger.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/MerchantLedger/*.cs
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/MerchantLedger.dll" "$OUT/FNA.dll" "$OUT/Mods/MerchantLedger/MerchantLedger.dll" >/dev/null
+cp "$HERE/mods/MerchantLedger/mod.json" "$OUT/Mods/MerchantLedger/"
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
 mkdir -p "$HERE/build/Mods/HelloUI"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"

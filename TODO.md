@@ -98,7 +98,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Quest Tracker, Word Gets Around, Difficulty Dial, After-Action Report, Contract Board.
 - [ ] Shot Breakdown: hit chance and damage parts in the tooltip (needs the hit chance's components, not just the total).
 - [x] Vendor Directory (the zone's merchants, trade from the list) and Fair Trade (price settings).
-- [ ] Merchant Ledger: remember vendor stock and prices across zones, search them (needs text input in the UI).
+- [x] Merchant Ledger: vendor stock and prices remembered across zones, searchable (Ui.TextBox).
 - [ ] Pack Mule: sell tagged junk in one click (needs selling through the barter screen's own transaction).
 - [ ] Stealth Lens: show where enemies would notice you (needs detection rules: research).
 - [~] Survey Pins: the Minimap marks merchants; still: pins with notes, workbenches, locked containers.
