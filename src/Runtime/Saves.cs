@@ -23,8 +23,16 @@ public static partial class GameEvents
     public static readonly Hook<Action> NewGame = new Hook<Action>("NewGame");
     // A save was loaded (the game state, the current zone and the player are there).
     public static readonly Hook<Action> GameLoaded = new Hook<Action>("GameLoaded");
-    // A zone was loaded: entering it, or loading a save; the argument is its id (World.ZoneId).
-    public static readonly Hook<Action<string>> ZoneLoaded = new Hook<Action<string>>("ZoneLoaded");
+    // A zone was loaded (entering it, or loading a save), with the player in it: its id (World.ZoneId) and whether
+    // this is the player's first visit.
+    public static readonly Hook<Action<string, bool>> ZoneLoaded = new Hook<Action<string, bool>>("ZoneLoaded");
+    // A conversation opened (its name, and the character talked to) / closed (its name).
+    public static readonly Hook<Action<string, Character>> DialogStarted = new Hook<Action<string, Character>>("DialogStarted");
+    public static readonly Hook<Action<string>> DialogEnded = new Hook<Action<string>>("DialogEnded");
+    // An item went into the player's bag (any way: loot, trade, reward).
+    public static readonly Hook<Action<Item>> ItemAdded = new Hook<Action<Item>>("ItemAdded");
+    // The player gained XP (before the game's own multipliers for the classic system are known: the amount given).
+    public static readonly Hook<Action<int>> ExperienceGained = new Hook<Action<int>>("ExperienceGained");
     // Before and after the game writes a save; the argument is the save's folder name ("quicksave", "autosave"...).
     public static readonly Hook<Action<string>> Saving = new Hook<Action<string>>("Saving");
     public static readonly Hook<Action<string>> Saved = new Hook<Action<string>>("Saved");
@@ -54,8 +62,16 @@ static class Saves
         harmony.Patch(Game("d6f").GetMethod("ari", any), prefix: m("Loading"), finalizer: m("LoadFinished"));
         harmony.Patch(Game("d6f").GetMethod("arf", any), postfix: m("NewGameCreated"));
         harmony.Patch(Game("d6f").GetMethod("arp", any), postfix: m("ZoneLoadedHook"));
+        harmony.Patch(Game("d6f").GetMethod("a", any, null, new[] { typeof(bfc) }, null), postfix: m("FirstVisitHook"));
         // Quests: ek2.atb / atc / atd (start, complete, fail).
         foreach (var n in new[] { "atb", "atc", "atd" }) harmony.Patch(typeof(ek2).GetMethod(n, any), postfix: m("QuestHook"));
+        // Dialog window: zq.n1(e89) opens, zq.n2 closes.
+        harmony.Patch(typeof(zq).GetMethod("n1", any), postfix: m("DialogOpened"));
+        harmony.Patch(typeof(zq).GetMethod("n2", any), postfix: m("DialogClosed"));
+        // Items: dcw.g(coh), the one notifier for items added to a container.
+        harmony.Patch(typeof(dcw).GetMethod("g", any, null, new[] { typeof(coh) }, null), postfix: m("ItemAddedHook"));
+        // XP: amc.a(int, string), how the game gives XP (kills, quests, the console).
+        harmony.Patch(typeof(amc).GetMethod("a", any, null, new[] { typeof(int), typeof(string) }, null), postfix: m("XpHook"));
         // Death: amc.a(cwt attack, bool shattered).
         harmony.Patch(typeof(amc).GetMethod("a", any, null, new[] { typeof(cwt), typeof(bool) }, null), postfix: m("Died"));
         // Combat: crp.ahn (start) / crp.ahr (end); crp.ahg() = in combat.
@@ -95,6 +111,11 @@ static class Saves
     // event wait for the first update with the zone and the player there.
     static bool zonePending;
 
+    // First visit: arp calls d6f.a(bfc), which copies the map's own layer into the save's storage and returns true
+    // only when the zone has never been stored (the game's own test).
+    static bool firstVisit;
+    static void FirstVisitHook(bool __result) { if (__result) firstVisit = true; }
+
     static void ZoneLoadedHook() { zonePending = true; }
 
     internal static void Tick()
@@ -109,9 +130,10 @@ static class Saves
     {
         var zone = Areas.CurrentZone();
         string id = World.ZoneId;
-        Log.Write("saves: zone loaded: " + id);
+        bool first = firstVisit; firstVisit = false;
+        Log.Write("saves: zone loaded: " + id + (first ? " (first visit)" : ""));
         Run("placing characters", () => World.SpawnPlacements(zone, id));
-        if (GameEvents.ZoneLoaded.Any) GameEvents.ZoneLoaded.Run(h => h(id));
+        if (GameEvents.ZoneLoaded.Any) GameEvents.ZoneLoaded.Run(h => h(id, first));
     }
 
     // --- global.dat: mod quests out while it's written -----------------------------------------------------------
@@ -186,6 +208,34 @@ static class Saves
     }
 
     static void QuestHook(string __0) { if (GameEvents.QuestChanged.Any) { var s = Quests.State(__0); GameEvents.QuestChanged.Run(h => h(__0, s)); } }
+
+    static string openDialog;
+    static void DialogOpened(bool __result, e89 __0)
+    {
+        if (!__result) return;
+        openDialog = __0.d() == null ? null : __0.d().e();
+        if (GameEvents.DialogStarted.Any) { var npc = Character.Of(__0.e()); var name = openDialog; GameEvents.DialogStarted.Run(h => h(name, npc)); }
+    }
+    static void DialogClosed()
+    {
+        var name = openDialog; openDialog = null;
+        if (GameEvents.DialogEnded.Any) GameEvents.DialogEnded.Run(h => h(name));
+    }
+
+    static void ItemAddedHook(dcw __instance, coh __0)
+    {
+        if (!GameEvents.ItemAdded.Any || __0 == null) return;
+        var player = World.Player;
+        if (player == null || !player.IsCharacter || __instance != PlayerBag()) return;
+        var item = new Item(__0);
+        GameEvents.ItemAdded.Run(h => h(item));
+    }
+    static dcw PlayerBag() { var game = bpo.GetService<cnk>(); var p = game == null || game.aqu() == null ? null : game.aqu().v(); return p == null ? null : p.Bag; }
+
+    static void XpHook(amc __instance, int __0)
+    {
+        if (GameEvents.ExperienceGained.Any && __instance.aa() is e3q) GameEvents.ExperienceGained.Run(h => h(__0));
+    }
 
     static void Died(amc __instance) { if (GameEvents.CharacterDied.Any) { var c = Character.Of(__instance.a8()); GameEvents.CharacterDied.Run(h => h(c)); } }
 
