@@ -132,6 +132,14 @@ public abstract class ModConfig
             else continue;     // ini only
             any = true;
         }
+        // The mod's keys: shown here, changed in the Controls tab (one place for every key).
+        var keys = Keybinds.Of(Mod.Id);
+        if (keys.Count > 0)
+        {
+            page.Subsection("Keys (change them in Options -> Controls)");
+            foreach (var k in keys) page.Note(k.Label, Keybinds.Name(k.Key));
+            any = true;
+        }
         if (any)
             page.Button("Default settings", "Reset settings to default", p =>
             {

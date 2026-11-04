@@ -15,14 +15,11 @@ public sealed class HudLayoutConfig : ModConfig
     [Header("HUD Layout")]
     [Label("Show a Layout button on the HUD"), Tooltip("A small button that starts arranging; it can be moved like the rest.")]
     public bool HudButton = false;
-    [Label("Key that starts and ends arranging")]
-    public LayoutKey Key = LayoutKey.None;
 
     public override void OnChanged() { HudLayout.Changed = true; }
 
 }
 
-public enum LayoutKey { [Label("(none)")] None, F12, F11, F6 }
 
 public sealed class HudLayout : WorksMod
 {
@@ -34,6 +31,7 @@ public sealed class HudLayout : WorksMod
     internal static bool Changed;
     HudLayoutConfig config;
     UiElement layoutButton;
+    Keybind arrangeKey;
     UiElement hud, overlay;
     UiPanel help;
     readonly Dictionary<string, Point> originals = new Dictionary<string, Point>();
@@ -43,6 +41,7 @@ public sealed class HudLayout : WorksMod
     public override void Load()
     {
         config = GetConfig<HudLayoutConfig>();
+        arrangeKey = Keybinds.Register(this, "arrange", "Arrange");     // unbound by default (Options -> Controls)
         UiEvents.HudCreated.Add(this, root =>
         {
             hud = root; overlay = null; help = null; dragging = null; layoutButton = null; originals.Clear();
@@ -60,7 +59,7 @@ public sealed class HudLayout : WorksMod
         {
             if (hud == null) return;
             if (Changed) { Changed = false; ShowButton(); }
-            if (config.Key != LayoutKey.None && Input.Pressed(KeyOf(config.Key))) { if (overlay == null) Begin(); else End(); }
+            if (arrangeKey.Pressed) { if (overlay == null) Begin(); else End(); }
             if (overlay == null) return;
             var m = Input.Mouse;
             hovered = PartAt(m);
@@ -181,5 +180,4 @@ public sealed class HudLayout : WorksMod
         if (parts.Length != 2 || !int.TryParse(parts[0], out x) || !int.TryParse(parts[1], out y)) return false;
         p = new Point(x, y); return true;
     }
-    static Keys KeyOf(LayoutKey k) { return k == LayoutKey.F11 ? Keys.F11 : k == LayoutKey.F6 ? Keys.F6 : k == LayoutKey.F12 ? Keys.F12 : Keys.None; }
 }

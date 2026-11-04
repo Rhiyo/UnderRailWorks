@@ -14,16 +14,15 @@ public sealed class AfterActionReportConfig : ModConfig
     [Header("After-Action Report")]
     [Label("Show a report after each fight")] public bool Show = true;
     [Label("Seconds it stays"), Range(3, 60), Increment(1)] public int Seconds = 15;
-    [Label("Key that shows the last report")] public ReportKey Key = ReportKey.F11;
 }
 
-public enum ReportKey { F6, F11, F12 }
 
 public sealed class AfterActionReport : WorksMod
 {
     sealed class Fight { public int Rounds = 1, Dealt, Taken, Hits, Misses, Crits, Kills, Dodged; }
 
     AfterActionReportConfig config;
+    Keybind showKey;
     Fight current, last;
     UiElement hud;
     UiPanel panel;
@@ -32,6 +31,7 @@ public sealed class AfterActionReport : WorksMod
     public override void Load()
     {
         config = GetConfig<AfterActionReportConfig>();
+        showKey = Keybinds.Register(this, "show", "Last report", Keys.F11);
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; });
         GameEvents.CombatStarted.Add(this, () => current = new Fight());
         Combat.RoundEnded.Add(this, r => { if (current != null) current.Rounds = r + 1; });
@@ -58,7 +58,7 @@ public sealed class AfterActionReport : WorksMod
         });
         GameEvents.Update.Add(this, seconds =>
         {
-            if (Input.Pressed(KeyOf(config.Key)) && last != null) ShowReport();
+            if (showKey.Pressed && last != null) ShowReport();
             if (panel == null) return;
             shownFor += seconds;
             if (shownFor > config.Seconds) { Ui.Remove(panel); panel = null; }
@@ -97,5 +97,4 @@ public sealed class AfterActionReport : WorksMod
         shownFor = 0;
     }
 
-    static Keys KeyOf(ReportKey k) { return k == ReportKey.F6 ? Keys.F6 : k == ReportKey.F12 ? Keys.F12 : Keys.F11; }
 }

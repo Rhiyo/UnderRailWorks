@@ -8,8 +8,11 @@ using Microsoft.Xna.Framework.Input;
 
 public sealed class HelloQuest : WorksMod
 {
+    Keybind talkKey;
+
     public override void Load()
     {
+        talkKey = Keybinds.Register(this, "talk", "Talk to nearest", Keys.End);
         Quests.Define("helloquest_favour", "South Gate Station", "Someone asked me for a small favour. Ask them about it again.", xp: 50, oddityXp: 1);
         Dialogs.Define("helloquest/talk", d =>
         {
@@ -29,7 +32,7 @@ public sealed class HelloQuest : WorksMod
         });
         GameEvents.Update.Add(this, seconds =>
         {
-            if (!Input.Pressed(Keys.F11)) return;
+            if (!talkKey.Pressed) return;
             var player = World.Player;
             var npc = player == null ? null : World.Visible.Where(c => c.CanTalk && c.Area == player.Area)
                 .OrderBy(c => (c.Position - player.Position).LengthSquared()).FirstOrDefault();

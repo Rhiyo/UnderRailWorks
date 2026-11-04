@@ -10,15 +10,13 @@ public sealed class HelloUIConfig : ModConfig
     [Header("Session clock")]
     [Label("Show the clock panel"), Tooltip("1 = show the panel when a game is loaded.")]
     public bool ShowClock = true;
-    [Label("Key that shows or hides it")]
-    public ToggleKey Key = ToggleKey.F8;
 }
 
-public enum ToggleKey { F6, F7, F8, F9 }
 
 public sealed class HelloUI : WorksMod
 {
     HelloUIConfig config;
+    Keybind toggleKey;
     UiPanel panel;
     UiElement label;
     double played;
@@ -26,6 +24,7 @@ public sealed class HelloUI : WorksMod
     public override void Load()
     {
         config = GetConfig<HelloUIConfig>();
+        toggleKey = Keybinds.Register(this, "toggle", "Show/hide", Keys.Home);     // rebindable in Options -> Controls
         // The in-game screen is built anew after each load or relayout: add the panel each time.
         UiEvents.HudCreated.Add(this, root =>
         {
@@ -40,7 +39,7 @@ public sealed class HelloUI : WorksMod
         GameEvents.Update.Add(this, seconds =>
         {
             if (panel == null) return;
-            if (Input.Pressed(KeyOf(config.Key))) Ui.Show(panel, !panel.Visible);
+            if (toggleKey.Pressed) Ui.Show(panel, !panel.Visible);
             played += seconds;
             Ui.SetText(label, "This session: " + TimeSpan.FromSeconds(played).ToString(@"hh\:mm\:ss"));
         });
@@ -48,5 +47,4 @@ public sealed class HelloUI : WorksMod
 
     public override void PostLoad() { Log.Info("UnderRailFixes is " + (ModLoader.IsLoaded("UnderRailFixes") ? "here too" : "not loaded")); }
 
-    static Keys KeyOf(ToggleKey k) { return k == ToggleKey.F6 ? Keys.F6 : k == ToggleKey.F7 ? Keys.F7 : k == ToggleKey.F9 ? Keys.F9 : Keys.F8; }
 }

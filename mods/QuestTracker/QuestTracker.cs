@@ -17,17 +17,16 @@ public sealed class QuestTrackerConfig : ModConfig
     [Label("Lines per quest"), Range(1, 6), Tooltip("Longer journal texts are cut after this many lines.")] public int MaxLines = 3;
     [Label("Width"), Range(200, 500), Increment(10)] public int Width = 300;
     [Label("Background opacity"), Range(0, 100), Increment(5)] public int Opacity = 75;
-    [Label("Key that shows or hides it")] public TrackerKey Key = TrackerKey.F8;
 
     public override void OnChanged() { QuestTracker.Dirty = true; }
 }
 
-public enum TrackerKey { F6, F8, F11, F12 }
 
 public sealed class QuestTracker : WorksMod
 {
     internal static bool Dirty;
     QuestTrackerConfig config;
+    Keybind toggleKey;
     UiElement hud;
     UiPanel panel;
     bool hidden;
@@ -39,6 +38,7 @@ public sealed class QuestTracker : WorksMod
     public override void Load()
     {
         config = GetConfig<QuestTrackerConfig>();
+        toggleKey = Keybinds.Register(this, "toggle", "Show/hide", Keys.F8);
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; shown = ""; Dirty = true; });
         GameEvents.QuestChanged.Add(this, (id, state) =>
         {
@@ -51,7 +51,7 @@ public sealed class QuestTracker : WorksMod
         GameEvents.Update.Add(this, seconds =>
         {
             if (hud == null) return;
-            if (Input.Pressed(KeyOf(config.Key))) { hidden = !hidden; Dirty = true; }
+            if (toggleKey.Pressed) { hidden = !hidden; Dirty = true; }
             sinceCheck += seconds;
             if (!Dirty && sinceCheck < 2) return;     // journal texts can change with variables: a slow check too
             sinceCheck = 0;
@@ -100,5 +100,4 @@ public sealed class QuestTracker : WorksMod
 
     static string FirstLine(string text) { var t = (text ?? "").Split('.')[0]; return t.Length > 80 ? t.Substring(0, 77) + "..." : t; }
 
-    static Keys KeyOf(TrackerKey k) { return k == TrackerKey.F6 ? Keys.F6 : k == TrackerKey.F11 ? Keys.F11 : k == TrackerKey.F12 ? Keys.F12 : Keys.F8; }
 }

@@ -107,6 +107,8 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [ ] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist.
 - [x] HUD Layout: drag the game's HUD parts around, saved per HUD size (Works: Input.Mouse, UiElement.X/Y).
 
+- [x] Key bindings for mods in the game's Controls tab (Keybinds); every shipped mod moved to it.
+
 ## For modders
 
 - [ ] A mod template / SDK: reference assemblies and a build script.

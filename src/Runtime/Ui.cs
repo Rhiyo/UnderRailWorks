@@ -272,6 +272,7 @@ static class UiHooks
         Saves.Install(harmony);
         HudHooks.Install(harmony);
         CombatHooks.Install(harmony);
+        Keybinds.Install(harmony);
         Log.Write("ui: hooks in place");
     }
 

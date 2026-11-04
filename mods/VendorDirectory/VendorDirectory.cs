@@ -13,16 +13,15 @@ using Microsoft.Xna.Framework.Input;
 public sealed class VendorDirectoryConfig : ModConfig
 {
     [Header("Vendor Directory")]
-    [Label("Key that shows the list")] public DirectoryKey Key = DirectoryKey.F6;
     [Label("Trade from anywhere in the zone"), Tooltip("Off: the Trade button only works within reach of the merchant.")] public bool Remote = false;
     [Label("Reach (tiles)"), Range(2, 20)] public int Reach = 6;
 }
 
-public enum DirectoryKey { F6, F11, F12 }
 
 public sealed class VendorDirectory : WorksMod
 {
     VendorDirectoryConfig config;
+    Keybind listKey;
     UiElement hud;
     UiPanel panel;
     double sinceRefresh;
@@ -30,6 +29,7 @@ public sealed class VendorDirectory : WorksMod
     public override void Load()
     {
         config = GetConfig<VendorDirectoryConfig>();
+        listKey = Keybinds.Register(this, "list", "Vendor list", Keys.F6);
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; });
         GameEvents.TradeOpened.Add(this, merchant =>
         {
@@ -39,7 +39,7 @@ public sealed class VendorDirectory : WorksMod
         GameEvents.Update.Add(this, seconds =>
         {
             if (hud == null) return;
-            if (Input.Pressed(KeyOf(config.Key))) { if (panel == null) Show(); else Close(); }
+            if (listKey.Pressed) { if (panel == null) Show(); else Close(); }
             sinceRefresh += seconds;
             if (panel != null && sinceRefresh > 1) Show();     // distances change as the player walks
         });
@@ -78,5 +78,4 @@ public sealed class VendorDirectory : WorksMod
         Ui.Add(hud, panel, (hud.Width - w) / 2, 90);
     }
 
-    static Keys KeyOf(DirectoryKey k) { return k == DirectoryKey.F11 ? Keys.F11 : k == DirectoryKey.F12 ? Keys.F12 : Keys.F6; }
 }

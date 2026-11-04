@@ -31,18 +31,17 @@ public sealed class MinimapConfig : ModConfig
     public bool ShowMerchants = true;
     [Label("Show exits"), Tooltip("Exits in the game's transition colours: blue to another area of this map, red to another map.")]
     public bool ShowExits = true;
-    [Label("Key that shows or hides it")] public ToggleKey Key = ToggleKey.F7;
 
     public override void OnChanged() { Minimap.Relayout = true; }
 }
 
 public enum Corner { [Label("Top right")] TopRight, [Label("Bottom right")] BottomRight, [Label("Top left")] TopLeft, [Label("Bottom left")] BottomLeft }
-public enum ToggleKey { F6, F7, F8, F9, M }
 
 public sealed class Minimap : WorksMod
 {
     internal static bool Relayout;
     MinimapConfig config;
+    Keybind toggleKey;
     UiElement hud;
     UiPanel panel;
     readonly MapPicture map = new MapPicture();
@@ -54,12 +53,13 @@ public sealed class Minimap : WorksMod
     public override void Load()
     {
         config = GetConfig<MinimapConfig>();
+        toggleKey = Keybinds.Register(this, "toggle", "Show/hide", Keys.F7);
         UiEvents.HudCreated.Add(this, root => { hud = root; Build(); });
         GameEvents.Update.Add(this, seconds =>
         {
             if (panel == null) return;
             if (Relayout) { Relayout = false; Build(); return; }
-            if (Input.Pressed(KeyOf(config.Key))) Ui.Show(panel, !panel.Visible);
+            if (toggleKey.Pressed) Ui.Show(panel, !panel.Visible);
             sinceDraw += seconds;
             if (!panel.Visible || sinceDraw < 0.25) return;
             sinceDraw = 0;
@@ -88,10 +88,6 @@ public sealed class Minimap : WorksMod
         sinceDraw = 1;
     }
 
-    static Keys KeyOf(ToggleKey k)
-    {
-        switch (k) { case ToggleKey.F6: return Keys.F6; case ToggleKey.F8: return Keys.F8; case ToggleKey.F9: return Keys.F9; case ToggleKey.M: return Keys.M; default: return Keys.F7; }
-    }
 }
 
 // The map itself: pixels rebuilt by Update a few times a second, put into a texture and drawn by the custom element.

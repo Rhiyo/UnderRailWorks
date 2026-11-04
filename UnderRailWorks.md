@@ -253,6 +253,15 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
 - **Merchants**: `World.Characters` (everyone in the zone), `Character.Stock`, `Markup`, `GameEvents.TradeOpened`,
   `Character.MakeMerchant(store)` / `Placement.Store` (placed characters only: the merchant aspect plus the dialog
   aspect the barter screen takes, `aim(..., j7)`; without it the screen crashed), `Item.Value/Weight`.
+- **Key bindings go through the game's Controls tab** (Nov 2026; every mod key): `Keybinds.Register(mod, id, label,
+  defaultKey)` -> `Keybind` (Key, Pressed, Down). The Controls list (ar4) holds Hotkey values and builds a row (cbx)
+  per value; mod actions get Hotkey values from 100000 up, appended before the rows are built (prefix on ar4.a(size));
+  Works answers their label (d1o.c, "Minimap: Show/hide") and key (d1o.a), and saves them on Accept in the mod's
+  settings.ini (key.<id>; prefix on cbx.a(settings)), so config.dat never holds a mod's key. The game's own capture
+  row and its conflict question work for them as for its own. A mod's settings page lists its keys ("change them in
+  Options -> Controls"); the log notes two mods with the same default. Tested: rows shown, K captured, saved in the
+  mod's file, K then toggles the minimap. (Trap: an enum default value on a public parameter, Keys defaultKey =
+  Keys.None, made the build's retargeting resolve XNA: overloads instead.)
 - **No buttons in mod settings** (decided Nov 2026, tried and removed): a settings page applies on Accept and can be
   cancelled; a button acts at once, can't be undone with Cancel, and needs a game in some cases (none on the main
   menu). Actions belong in the mod's own UI (e.g. HUD Layout's Layout button on the HUD). `Windows.CloseOptions(save)`

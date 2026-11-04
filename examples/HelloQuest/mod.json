@@ -1,2 +1,2 @@
 { "id": "HelloQuest", "name": "Hello Quest", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
-  "description": "Example: a quest and a conversation (F11 talks to the nearest visible character)." }
+  "description": "Example: a quest and a conversation (End talks to the nearest visible character)." }

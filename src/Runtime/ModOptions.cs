@@ -98,6 +98,14 @@ public sealed class ModPage
         UnderrailOptions.ControlRow(Options, label, button);
     }
 
+    // A row with text instead of a control.
+    internal void Note(string label, string text)
+    {
+        var note = Ui.Label(text, 360);
+        Ui.SetColor(note, new Microsoft.Xna.Framework.Color(160, 160, 150));
+        UnderrailOptions.ControlRow(Options, label, note.Control);
+    }
+
     // Shows a value in a row (not saved until Accept), e.g. for a reset button.
     public void Set(string key, string value)
     {
