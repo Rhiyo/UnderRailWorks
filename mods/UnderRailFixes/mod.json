@@ -1,0 +1,8 @@
+{
+  "id": "UnderRailFixes",
+  "name": "UnderRailFixes",
+  "version": "2.0.0",
+  "author": "Rhiyo",
+  "works": "2.0",
+  "description": "Occluded characters: shows characters hidden behind scenery (keyhole, fills, outline)."
+}

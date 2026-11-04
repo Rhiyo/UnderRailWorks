@@ -1,0 +1,18 @@
+# Build output (build.sh); releases are built from source, not committed.
+build/
+dist/
+# Never commit decompiled game code or the game's files.
+*.exe
+*.dll
+*.xnb
+# Fetched by build.sh / tools/fetch-fna.sh (NVorbis, FNA), not committed.
+lib/
+# Local tool state.
+.serena/
+# Claude Code worktrees (local only).
+.claude/worktrees/
+# .NET build output (src/Launcher, tools/savecheck/RoundTrip).
+bin/
+obj/
+# Debug pictures from KeyholeDebug=2.
+keyhole-*.png
