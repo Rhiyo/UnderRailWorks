@@ -101,7 +101,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [ ] Merchant Ledger: remember vendor stock and prices across zones, search them (needs text input in the UI).
 - [ ] Pack Mule: sell tagged junk in one click (needs selling through the barter screen's own transaction).
 - [ ] Stealth Lens: show where enemies would notice you (needs detection rules: research).
-- [ ] Survey Pins: map pins and automatic markers (Minimap: vendors, workbenches, locked containers).
+- [~] Survey Pins: the Minimap marks merchants; still: pins with notes, workbenches, locked containers.
 - [ ] Neural Reallocation: a respec NPC (needs unspent skill/ability points).
 - [ ] Workbench Planner: recipes, what can be crafted now (crafting blueprints are code classes: read-only).
 - [ ] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist.

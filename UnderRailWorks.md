@@ -277,7 +277,7 @@ of the same build differ by 10), lines 0.6 px, fill 2.4 px, a scene without effe
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
 | Mod | What | Exercises |
 |---|---|---|
-| Minimap | the area around you, exits, visible characters | World, Area, Ui.Custom, ModConfig |
+| Minimap | the area around you, exits, visible characters, merchants (gold squares) | World, Area, Ui.Custom, ModConfig, World.Characters |
 | QuestTracker | active quests on the HUD with journal text, done/failed lines | Quests, Ui.Wrap, events |
 | WordGetsAround | nearby friendly characters remark on your deeds; `AddLine` library API for other mods | Character.Say, Variables, CharacterDied |
 | DifficultyDial | damage taken/dealt, hit chance, AP as settings | Combat hooks, ModConfig |

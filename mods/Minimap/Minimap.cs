@@ -7,6 +7,7 @@
 // Built from Works' API only (World, Area, Character, Ui.Custom): it compiles without the game, so no scrambled names.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -26,6 +27,8 @@ public sealed class MinimapConfig : ModConfig
     [Label("Background opacity"), Range(0, 100), Increment(5)] public int Opacity = 85;
     [Label("Show characters"), Tooltip("Characters the player can currently see, as dots in their Tab outline colour.")]
     public bool ShowCharacters = true;
+    [Label("Show merchants"), Tooltip("Every merchant in the area as a small square (seen or not, as long as their spot is discovered).")]
+    public bool ShowMerchants = true;
     [Label("Show exits"), Tooltip("Exits in the game's transition colours: blue to another area of this map, red to another map.")]
     public bool ShowExits = true;
     [Label("Key that shows or hides it")] public ToggleKey Key = ToggleKey.F7;
@@ -44,6 +47,9 @@ public sealed class Minimap : WorksMod
     UiPanel panel;
     readonly MapPicture map = new MapPicture();
     double sinceDraw;
+    List<Character> merchants = new List<Character>();
+    string merchantsFor;
+    int sinceMerchants;
 
     public override void Load()
     {
@@ -57,7 +63,8 @@ public sealed class Minimap : WorksMod
             sinceDraw += seconds;
             if (!panel.Visible || sinceDraw < 0.25) return;
             sinceDraw = 0;
-            map.Update(World.Player, config.ShowCharacters ? World.Visible : null, config.TilesAcross / 2, config.ShowExits);
+            if (config.ShowMerchants && (merchantsFor == null || sinceMerchants++ > 20)) { merchants = World.Characters.Where(c => c.IsMerchant && !c.IsPlayer).ToList(); merchantsFor = World.ZoneId; sinceMerchants = 0; }
+            map.Update(World.Player, config.ShowCharacters ? World.Visible : null, config.TilesAcross / 2, config.ShowExits, config.ShowMerchants ? merchants : null);
             if (map.Note != null) { Log.Info(map.Note); map.Note = null; }
         });
     }
@@ -102,7 +109,7 @@ sealed class MapPicture
 
     public void Resize(int width, int height) { tw = Math.Max(16, width); th = Math.Max(8, height); }
 
-    public void Update(Character player, IList<Character> characters, int radius, bool exits)
+    public void Update(Character player, IList<Character> characters, int radius, bool exits, IList<Character> merchants = null)
     {
         if (pixels == null || pixels.Length != tw * th) pixels = new Color[tw * th];
         Array.Clear(pixels, 0, pixels.Length);
@@ -146,7 +153,30 @@ sealed class MapPicture
         if (characters != null)
             foreach (var c in characters)
                 if (c.Area == area) Dot(c.Position, cx, cy, k2, c.OutlineColor, 2);
+        // Merchants: a square in gold-brown over their dot, where the map around them is discovered.
+        if (merchants != null)
+            foreach (var m in merchants)
+            {
+                if (m.Area != area) continue;
+                int mi = (int)m.Position.X - ox, mj = (int)m.Position.Y - oy;
+                if (mi < 0 || mj < 0 || mi >= size || mj >= size || colour[mi, mj] == null) continue;
+                Square(m.Position, cx, cy, k2, Merchant);
+            }
         Dot(at, cx, cy, k2, player.OutlineColor, 3);     // the player last, on top (gold, as Tab)
+    }
+
+    static readonly Color Merchant = new Color(225, 175, 60);
+    void Square(Vector3 map, float cx, float cy, float k2, Color colour)
+    {
+        float dx = map.X + 0.5f - cx, dy = map.Y + 0.5f - cy;
+        int sx = (int)Math.Round(tw / 2f + (dx - dy) * k2), sy = (int)Math.Round(th / 2f + (dx + dy) * k2 / 2);
+        for (int y = -4; y <= 4; y++)
+            for (int x = -4; x <= 4; x++)
+            {
+                int px = sx + x, py = sy + y;
+                if (px < 0 || py < 0 || px >= tw || py >= th) continue;
+                pixels[py * tw + px] = Math.Abs(x) == 4 || Math.Abs(y) == 4 ? Outline : colour;
+            }
     }
 
     // A round dot with a dark rim at a map position.
