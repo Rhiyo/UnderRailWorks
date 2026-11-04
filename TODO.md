@@ -121,7 +121,8 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [ ] Cancellable hooks everywhere with a set order (some combat hooks already modify).
 - [x] Equipment (slots, equip/unequip, events). A veto still to do.
 - [x] Containers, loot, locks (events, contents, loot rolled, lock attempts).
-- [ ] Stealth / detection / skill-check hooks; AI hooks (target, weapon, flee); crafting recipes.
+- [x] Stealth detection hooks (rate untested in game: test sneaking up on hostiles unseen).
+- [ ] Pickpocketing, traps, crafting events (mapped in scratchpad/specs/loot-locks-stealth.md); AI hooks.
 - [ ] Area triggers and interactables.
 - [x] Content packs: triggers; DLL-registered conditions and effects.
 - [x] Patching stock dialogs (Dialogs.Patch, content packs' dialogPatches).

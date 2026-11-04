@@ -365,6 +365,7 @@ static class UiHooks
         Group("progression", () => ProgressionHooks.Install(harmony));
         Group("dialog patches", () => Dialogs.InstallPatches(harmony));
         Group("containers, loot and locks", () => ContainerHooks.Install(harmony));
+        Group("stealth", () => StealthHooks.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 

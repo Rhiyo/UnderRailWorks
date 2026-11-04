@@ -387,6 +387,15 @@ the mod line showed, and "@" returned to Bret's stock line with all his options.
 - Mapped but not yet in the API (`scratchpad/specs/loot-locks-stealth.md`, not committed): pickpocketing (`b87`),
   detection (`bui.a`, `cn8.agf`), traps (`qw.a`, `ds.fr`), crafting (`cwp.a`, `ahu.i`), corpse loot (`asy.a`).
 
+## Stealth (Nov 2026)
+
+`Stealth.ModifyDetection` (postfix on `bui.a(target, detection, stealth, distance, sight, angle, light,
+darkvision)`: awareness gained per scan step) and `Stealth.ModifyInstant` (`bui.a(detection, stealth)`: "seen at
+once"). Sneaking is the status effect `stealthMode` (its `df` state sets `SpecialStates.g`). Tested: the instant
+check ran (detection 90 vs stealth 16: seen at once) and was overridden; it runs about 300 times a second near a group
+of guards, so handlers must be cheap. **Not yet seen in game:** the rate hook (the guards had already detected the
+character before it sneaked, so the game skipped the rate); Difficulty Dial's "how fast enemies notice you" uses it.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

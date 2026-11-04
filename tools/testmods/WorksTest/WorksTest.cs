@@ -10,12 +10,15 @@ using Microsoft.Xna.Framework.Input;
 public sealed class WorksTest : WorksMod
 {
     UiTextBox box;
+    int detections, instants;
     public override void Load()
     {
         GameEvents.StatusApplying.Add(this, c => { Log.Info("status applying " + c.Code + " on " + (c.Character == null ? "?" : c.Character.Name)); if (c.Code == "Hidden" && Data.GetBool("noHide")) c.Cancel = true; });
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
         GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));
         GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
+        Stealth.ModifyInstant.Add(this, d => { if (++instants % 20 == 1) Log.Info("instant check: detection " + d.ObserverDetection + " vs stealth " + d.TargetStealth + ": " + d.Instant + " (overridden to false)"); d.Instant = false; });
+        Stealth.ModifyDetection.Add(this, d => { if (++detections % 20 == 1) Log.Info("detection of " + (d.Target == null ? "?" : d.Target.Name) + ": detection " + d.ObserverDetection + " vs stealth " + d.TargetStealth + ", " + d.Distance.ToString("0.0") + "/" + d.SightRange.ToString("0") + " tiles, angle " + d.Angle.ToString("0") + ", light " + d.Light.ToString("0.00") + ", rate " + d.Rate.ToString("0.000")); });
         GameEvents.ContainerOpened.Add(this, (c, who, first) => Log.Info("container opened by " + (who == null ? "?" : who.Name) + (first ? " (first time)" : "") + ": " + string.Join(", ", c.Items.Select(i => i.ToString()))));
         GameEvents.ItemTaken.Add(this, (c, item, who) => Log.Info("taken " + item + " by " + (who == null ? "?" : who.Name)));
         GameEvents.LootGenerated.Add(this, t => { Log.Info("loot rolled for " + (t.Character != null ? t.Character.Name : "a container") + ": " + string.Join(", ", t.Added.Select(i => i.ToString()))); if (t.Container != null) t.Add("currency\\StygianCoin", 7); });
@@ -63,6 +66,7 @@ public sealed class WorksTest : WorksMod
                 if (Input.Down(Keys.LeftControl)) { var locked = all.FirstOrDefault(c => c.Lock != null && c.Lock.Locked && c.Lock.Difficulty > 0); if (locked != null) Log.Info("pick the lock at " + locked.Position + ": " + locked.Lock.TryPick(World.Player) + ", still locked: " + locked.Lock.Locked); }
                 if (all.Count > 0) { if (all[0].Items.Count == 0) { all[0].Add("currency\\StygianCoin", 3); all[0].Add("consumables\\medicine\\bandage", 2); } Log.Info("open nearest: " + all[0].Open()); }
             }
+            if (Input.Pressed(Keys.S) && Input.Down(Keys.LeftControl)) Log.Info("sneak: " + StatusEffects.Apply(World.Player, "stealthMode", 0));
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
