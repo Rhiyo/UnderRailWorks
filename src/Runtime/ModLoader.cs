@@ -241,6 +241,7 @@ public static class ModLoader
 
     static void Load(ModInfo mod, Type harmonyType)
     {
+        try { ContentPacks.Load(mod); } catch (Exception ex) { Log.Write("content: " + mod.Id + ": " + ex.Message); }     // content/*.json: data, with or without code
         var dlls = Directory.GetFiles(mod.Folder, "*.dll").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
         if (dlls.Count == 0) { mod.Loaded = true; Log.Write("mods: loaded " + mod.Id + " (no code)"); return; }
         foreach (string dll in dlls)

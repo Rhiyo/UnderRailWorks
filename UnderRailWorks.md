@@ -310,6 +310,20 @@ DrawContexts) are internal to Works now. UnderRailFixes was ported (mechanical) 
 Proven pixel for pixel against the build before (old vs new, same save, 2560x720): keyhole 7 px apart (two shots
 of the same build differ by 10), lines 0.6 px, fill 2.4 px, a scene without effects 0.
 
+## Content packs: mods as data (Nov 2026)
+
+Most mods in the most moddable comparable games are data, not code (Cataclysm DDA's JSON, RimWorld's XML Defs, Caves of
+Qud's blueprints, WeiDU's dialog patches). A Works mod may hold `content/*.json` (with or without a DLL):
+`text`, `quests`, `dialogs` (nodes with text, options, branches, `if` / `enabledIf` conditions, `do` effects) and
+`placements`. Conditions and effects are small objects (`{ "money": 10 }`, `{ "skill": "Biology", "min": 10 }`,
+`{ "takeMoney": 10 }`, `{ "startQuest": "id" }`...), all mapped onto the C# API, so packs follow the same save rules.
+Format and the full list: the header of `src/Runtime/ContentPacks.cs`. Example: `examples/TheProspector` (no code: an
+NPC, a conversation with a hidden and a greyed option, a quest, a reward). Tested in game: the conversation, the
+options' conditions, the quest started and completed, the bandage taken, 25 charons paid. A bad entry is logged with
+the file and skipped.
+Research on what else those games offer, ranked (per-save data, item/status/feat definitions, cancellable hooks,
+equipment, loot, stealth, AI, crafting, dialog patches, a content registry): see TODO.md.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

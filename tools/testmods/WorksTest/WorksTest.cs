@@ -1,5 +1,5 @@
 // Test-only mod (not shipped): keys that set up game state for testing Works in game.
-//   F10: give the player 20 charons (Inventory.AddMoney). F11: 5000 XP. U: trade with the test merchant. F12: the stranger turns hostile. F4: hide the portrait,
+//   F10: give the player 20 charons (Inventory.AddMoney). F11: 5000 XP. U: trade with the test merchant. J: talk to the prospector (content pack test). F12: the stranger turns hostile. F4: hide the portrait,
 //   open the notes. F6: list status effect codes and apply one. Logs every Works event.
 using System.Linq;
 using Microsoft.Xna.Framework.Input;
@@ -23,6 +23,7 @@ public sealed class WorksTest : WorksMod
         {
             var p = World.Player;
             if (p == null) return;
+            if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
             if (Input.Pressed(Keys.U)) Log.Info("trade with the test merchant: " + Trade.Open(World.Placed("workstest_merchant")));
             if (Input.Pressed(Keys.F11)) { p.GiveExperience(5000, "test"); Log.Info("XP now " + p.Experience + ", level " + p.Level + ", skill points " + p.SkillPoints + ", ability points " + p.AbilityPoints); }
             if (Input.Pressed(Keys.F12))

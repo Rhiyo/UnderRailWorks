@@ -1,0 +1,38 @@
+{
+  "quests": [
+    { "id": "prospector_bandage", "group": "South Gate Station",
+      "text": "An old prospector at the north gate cut his hand on a rusty pipe. He asked me for a bandage.", "xp": 40, "oddityXp": 1 }
+  ],
+  "dialogs": {
+    "prospector/talk": {
+      "start": "entry",
+      "nodes": {
+        "entry": { "branch": [
+          { "if": { "quest": "prospector_bandage", "is": "completed" }, "goto": "after" },
+          { "if": { "quest": "prospector_bandage", "is": "active" }, "goto": "waiting" },
+          { "goto": "hello" } ] },
+        "hello": { "text": "Careful where you step, friend. These pipes bite. Got me good, see? You wouldn't have a bandage on you?",
+          "options": [
+            { "text": "Here, take one.", "goto": "thanks", "if": { "has": "med.bandage" },
+              "do": [ { "startQuest": "prospector_bandage" }, { "take": "med.bandage" }, { "completeQuest": "prospector_bandage" }, { "giveMoney": 25 } ] },
+            { "text": "[Biology 10] Let me look at it first.", "goto": "look", "enabledIf": { "skill": "Biology", "min": 10 } },
+            { "text": "I'll keep an eye out.", "goto": "later", "do": [ { "startQuest": "prospector_bandage" } ] },
+            { "text": "Not my problem.", "goto": null } ] },
+        "look": { "text": "Clean cut, you say? Well, that's a relief. A bandage would still do me good.", "next": "hello",
+          "do": [ { "setFlag": "prospector_looked" } ] },
+        "later": { "text": "Much obliged. I'll be here. Not like I can dig with one hand.", "next": null },
+        "waiting": { "text": "Found a bandage yet?",
+          "options": [
+            { "text": "Here you go.", "goto": "thanks", "if": { "has": "med.bandage" },
+              "do": [ { "take": "med.bandage" }, { "completeQuest": "prospector_bandage" }, { "giveMoney": 25 } ] },
+            { "text": "Not yet.", "goto": null } ] },
+        "thanks": { "text": "Bless you. Here, 25 charons. Found 'em in a vent, they spend all the same.", "next": null },
+        "after": { "text": "Hand's healing nicely. Back to digging soon.", "next": null }
+      }
+    }
+  },
+  "placements": [
+    { "id": "prospector_npc", "zone": "LU-SouthGateStation-N", "area": "LU-SouthGateStation-N", "x": 13, "y": 24,
+      "blueprint": "creatures\\generichumans\\foundryworker", "name": "Old Prospector", "dialog": "prospector/talk" }
+  ]
+}

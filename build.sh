@@ -159,6 +159,8 @@ mkdir -p "$HERE/build/Mods/TheStranger"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/TheStranger.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/TheStranger/TheStranger.cs"
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/TheStranger.dll" "$OUT/FNA.dll" "$HERE/build/Mods/TheStranger/TheStranger.dll" >/dev/null
 cp "$HERE/examples/TheStranger/mod.json" "$HERE/build/Mods/TheStranger/"
+# TheProspector: a content pack (JSON only, no code), into build/Mods for testing.
+rm -rf "$HERE/build/Mods/TheProspector"; cp -r "$HERE/examples/TheProspector" "$HERE/build/Mods/TheProspector"
 # WorksTest (test keys, never shipped): into build/Mods.
 mkdir -p "$HERE/build/Mods/WorksTest"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/WorksTest.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/tools/testmods/WorksTest/WorksTest.cs"
