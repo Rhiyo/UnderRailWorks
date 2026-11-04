@@ -119,7 +119,8 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [ ] New item definitions (clone a stock item, override name/stats; the save holds the stock base).
 - [ ] New feats / abilities; level-up and progression hooks (XP curve, points per level).
 - [ ] Cancellable hooks everywhere with a set order (some combat hooks already modify).
-- [ ] Equipment (equip/unequip, veto), containers and loot (events, contents, loot tables).
+- [x] Equipment (slots, equip/unequip, events). A veto still to do.
+- [ ] Containers and loot (events, contents, loot tables).
 - [ ] Stealth / detection / skill-check hooks; AI hooks (target, weapon, flee); crafting recipes.
 - [ ] Area triggers and interactables; patching stock dialogs (insert options, WeiDU-style).
 - [ ] Content packs: stores, item tweaks, triggers, dialog patches; DLL-registered conditions and effects.

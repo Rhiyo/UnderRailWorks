@@ -338,6 +338,14 @@ equipment, loot, stealth, AI, crafting, dialog patches, a content registry): see
 - Hook groups now install separately: one that fails (moved by a game update) leaves the others working (a failing
   group used to stop every group after it).
 
+## Equipment (Nov 2026)
+
+`Character.Equipment`: `[EquipSlot]` (Helmet, Armor, Belt, Boots, Shield, PrimaryWeapon, SecondaryWeapon), `All`,
+`QuickSlots`, `Equip(item[, secondary])` (from the bag, the game's `bn.a` with Primary/Secondary: `None` equips
+nothing), `Unequip(slot)` (into the bag). `GameEvents.Equipped` / `Unequipped` for every slot change of any character
+on the map (acd's private notifiers: `a(coh)` gets the **old** item, `b(coh)` the new one, because `c1.b()` is the
+old value). Tested: armour off and on twice, events in order, the bag consistent.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

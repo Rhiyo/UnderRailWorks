@@ -94,6 +94,10 @@ public sealed class Character
     public void GiveExperience(int amount, string reason = null) { if (IsPlayer) awq.a(amount, reason); }
 
     public Inventory Inventory { get { return inventory ?? (inventory = new Inventory(() => Data)); } }
+    // What it wears and wields; equip and unequip.
+    public Equipment Equipment { get { return equipment ?? (equipment = new Equipment(() => Data)); } }
+    Equipment equipment;
+    internal bool HasGear(acd gear) { var d = Data; return d != null && ReferenceEquals(d.Gear, gear); }
     Inventory inventory;
 
     // Its personal attitude to the player (overrides its faction's), as the game's scripts set it.

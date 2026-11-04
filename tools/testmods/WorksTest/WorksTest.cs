@@ -15,6 +15,8 @@ public sealed class WorksTest : WorksMod
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
         GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));
         GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
+        GameEvents.Equipped.Add(this, e => Log.Info("equipped " + e.Item.Name + " on " + e.Character.Name));
+        GameEvents.Unequipped.Add(this, e => Log.Info("unequipped " + e.Item.Name + " from " + e.Character.Name));
         GameEvents.Update.Add(this, seconds =>
         {
             var p = World.Player;
@@ -27,6 +29,13 @@ public sealed class WorksTest : WorksMod
         {
             var p = World.Player;
             if (p == null) return;
+            if (Input.Pressed(Keys.N))
+            {
+                var eq = World.Player.Equipment;
+                Log.Info("gear: " + string.Join(", ", eq.All.Select(kv => kv.Key + "=" + kv.Value.Name)) + "; quick: " + string.Join(", ", eq.QuickSlots.Select(i => i == null ? "-" : i.Name)));
+                var armor = eq.Unequip(EquipSlot.Armor);
+                Log.Info("took off " + (armor == null ? "nothing" : armor.Name) + "; put back: " + (armor != null && eq.Equip(World.Player.Inventory.Items.First(i => i.Code == armor.Code))));
+            }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
