@@ -63,6 +63,23 @@ public sealed class Inventory
 
 public static class ItemCodes { public const string Charons = "currency.sc"; }
 
+// Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medicine\\bandage"): the code the game
+// counts and takes items by, and the shown name.
+public static class Items
+{
+    public static bool Exists(string path) { return Definition(path) != null; }
+    public static string Code(string path) { var d = Definition(path); return d == null ? null : d.a5(); }
+    public static string Name(string path) { var d = Definition(path); return d == null ? null : d.az(); }
+    static readonly Dictionary<string, bk3> cache = new Dictionary<string, bk3>(StringComparer.OrdinalIgnoreCase);
+    static bk3 Definition(string path)
+    {
+        bk3 d;
+        if (path == null) return null;
+        if (!cache.TryGetValue(path, out d)) { try { d = ez2.b(path, false); } catch { d = null; } cache[path] = d; }
+        return d;
+    }
+}
+
 public sealed class Item
 {
     internal readonly coh Game;
