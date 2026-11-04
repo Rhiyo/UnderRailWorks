@@ -82,9 +82,10 @@ cp "$HERE/lib/fna/FNA.dll" "$OUT64/"
 cp "$HERE"/lib/fna/x64/*.dll "$OUT64/x64/"
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna "$HERE/build/xna/UnderRailWorks.dll" "$OUT64/FNA.dll" "$OUT/UnderRailWorks.dll"
 
-# The UnderRailFixes mod (Occluded characters): compiled like the runtime, then pointed at our FNA.
+# The UnderRailFixes mod (Occluded characters): built against Works and FNA only, like every shipped mod, then
+# pointed at our FNA.
 mkdir -p "$OUT/Mods/UnderRailFixes"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/UnderRailFixes.dll" -r:"$REF" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:"$HARMONY" -r:System.Core.dll "$HERE"/mods/UnderRailFixes/*.cs
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/UnderRailFixes.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/UnderRailFixes/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/UnderRailFixes.dll" "$OUT64/FNA.dll" "$OUT/Mods/UnderRailFixes/UnderRailFixes.dll"
 cp "$HERE/mods/UnderRailFixes/mod.json" "$OUT/Mods/UnderRailFixes/"
 # The Minimap mod, shipped in Mods/. Built against Works and FNA only, not the game: a mod that uses Works' API can't

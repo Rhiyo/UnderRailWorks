@@ -13,25 +13,26 @@ public static class WorldDraw
     public delegate bool OffsetHandler(out Vector2 from);
 
     // Start of a7m.a(cp9, a2f, bool shaderPass, bkx): each layer the world pass draws, in drawing order (back to front).
-    public static readonly Hook<Action<a7m, cp9, a2f, bool>> LayerStarting = new Hook<Action<a7m, cp9, a2f, bool>>("LayerStarting");
+    public static readonly Hook<Action<WorldView, DrawContext, Layer, bool>> LayerStarting = new Hook<Action<WorldView, DrawContext, Layer, bool>>("LayerStarting");
     // The layer is drawn (a2f.f3): return true to draw it yourself instead.
-    public static readonly ReplaceHook<Func<a2f, cp9, bkx, bool>> DrawLayer = new ReplaceHook<Func<a2f, cp9, bkx, bool>>("DrawLayer");
+    public static readonly ReplaceHook<Func<Layer, DrawContext, LayerView, bool>> DrawLayer = new ReplaceHook<Func<Layer, DrawContext, LayerView, bool>>("DrawLayer");
     // A tile's extras after its floor (a7m.b(cp9, ak1): tile grid, transition tiles...): return true to draw them yourself
     // (TileExtrasStep draws them the game's way).
-    public static readonly ReplaceHook<Func<a7m, cp9, ak1, bool>> DrawTileExtras = new ReplaceHook<Func<a7m, cp9, ak1, bool>>("DrawTileExtras");
+    public static readonly ReplaceHook<Func<WorldView, DrawContext, MapTile, bool>> DrawTileExtras = new ReplaceHook<Func<WorldView, DrawContext, MapTile, bool>>("DrawTileExtras");
     // The world pass is done, right before the screen is set as the target again.
-    public static readonly Hook<Action<a7m, cp9>> WorldDone = new Hook<Action<a7m, cp9>>("WorldDone");
+    public static readonly Hook<Action<WorldView, DrawContext>> WorldDone = new Hook<Action<WorldView, DrawContext>>("WorldDone");
     // Start / end of the pass for layers with their own shader (a7m.b(cp9): outlines). Outline layers are in
-    // WorldViews.ShaderLayers(view)["Outline"]; outlines built only for mods are already taken out (Outlines.Hidden).
-    public static readonly Hook<Action<a7m>> ShaderPassStarting = new Hook<Action<a7m>>("ShaderPassStarting");
-    public static readonly Hook<Action<a7m, cp9>> ShaderPassDone = new Hook<Action<a7m, cp9>>("ShaderPassDone");
+    // view.ShaderLayers["Outline"]; outlines built only for mods are already taken out (Outlines.IsHidden).
+    public static readonly Hook<Action<WorldView>> ShaderPassStarting = new Hook<Action<WorldView>>("ShaderPassStarting");
+    public static readonly Hook<Action<WorldView, DrawContext>> ShaderPassDone = new Hook<Action<WorldView, DrawContext>>("ShaderPassDone");
     // The interface is being drawn into an off-screen picture placed at from (screen pixels): the first handler that
     // returns true sets it, and UiScaleFix maps drawing by it.
     public static readonly ReplaceHook<OffsetHandler> InterfaceOffset = new ReplaceHook<OffsetHandler>("InterfaceOffset");
 
     // The game's own tile-extras step.
-    public static readonly Action<a7m, cp9, ak1> TileExtrasStep = (Action<a7m, cp9, ak1>)Delegate.CreateDelegate(typeof(Action<a7m, cp9, ak1>),
+    internal static readonly Action<a7m, cp9, ak1> GameTileExtras = (Action<a7m, cp9, ak1>)Delegate.CreateDelegate(typeof(Action<a7m, cp9, ak1>),
         typeof(a7m).GetMethod("b", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(cp9), typeof(ak1) }, null));
+    public static void TileExtrasStep(WorldView view, DrawContext context, MapTile tile) { GameTileExtras(view.Game, context.Game, tile.Game); }
 
     internal static bool Offset(out Vector2 from)
     {
@@ -53,36 +54,36 @@ public static class WorldDrawHooks
     public static void Drawn(a7m view, cp9 context, a2f layer, bool shaderPass)
     {
         if (!shaderPass) World.LayerDrawn(layer);
-        if (WorldDraw.LayerStarting.Any) WorldDraw.LayerStarting.Run(h => h(view, context, layer, shaderPass));
+        if (WorldDraw.LayerStarting.Any) { var v = new WorldView(view); var c = new DrawContext(context); var l = new Layer(layer); WorldDraw.LayerStarting.Run(h => h(v, c, l, shaderPass)); }
     }
 
     public static void DrawLayer(a2f layer, cp9 context, bkx view)
     {
-        if (WorldDraw.DrawLayer.Any && WorldDraw.DrawLayer.Run(h => h(layer, context, view))) return;
+        if (WorldDraw.DrawLayer.Any) { var l = new Layer(layer); var c = new DrawContext(context); var v = new LayerView(view); if (WorldDraw.DrawLayer.Run(h => h(l, c, v))) return; }
         layer.f3(context, view);
     }
 
     public static void TileExtras(a7m view, cp9 context, ak1 tile)
     {
-        if (WorldDraw.DrawTileExtras.Any && WorldDraw.DrawTileExtras.Run(h => h(view, context, tile))) return;
-        WorldDraw.TileExtrasStep(view, context, tile);
+        if (WorldDraw.DrawTileExtras.Any) { var v = new WorldView(view); var c = new DrawContext(context); var t = new MapTile(tile); if (WorldDraw.DrawTileExtras.Run(h => h(v, c, t))) return; }
+        WorldDraw.GameTileExtras(view, context, tile);
     }
 
     public static void WorldDone(a7m view, cp9 context)
     {
         World.WorldDone();
-        if (WorldDraw.WorldDone.Any) WorldDraw.WorldDone.Run(h => h(view, context));
+        if (WorldDraw.WorldDone.Any) { var v = new WorldView(view); var c = new DrawContext(context); WorldDraw.WorldDone.Run(h => h(v, c)); }
     }
 
     public static void BeforePass(a7m view)
     {
         Outlines.BeforePass(view);
-        if (WorldDraw.ShaderPassStarting.Any) WorldDraw.ShaderPassStarting.Run(h => h(view));
+        if (WorldDraw.ShaderPassStarting.Any) { var v = new WorldView(view); WorldDraw.ShaderPassStarting.Run(h => h(v)); }
     }
 
     public static void AfterPass(a7m view, cp9 context)
     {
-        if (WorldDraw.ShaderPassDone.Any) WorldDraw.ShaderPassDone.Run(h => h(view, context));
+        if (WorldDraw.ShaderPassDone.Any) { var v = new WorldView(view); var c = new DrawContext(context); WorldDraw.ShaderPassDone.Run(h => h(v, c)); }
         Outlines.AfterPass(view);
     }
 }
@@ -100,6 +101,12 @@ public static class Outlines
         return false;
     }
 
+    // The game's Character Outlines option is "Never" (no outlines at all, as with Tab).
+    public static bool GameOff
+    {
+        get { var game = bpo.GetService<cnk>(); return game != null && game.aq1().b().k() == TimelapseVertigo.Common.Settings.OutlinesOption.Never; }
+    }
+
     // wanted: checked each frame (e.g. "my effect is on").
     public static void Request(string mod, Func<bool> wanted) { Requests.Add(wanted); }
 
@@ -108,16 +115,20 @@ public static class Outlines
     static readonly object Mark = new object();
 
     // Built only because a mod asked: the game doesn't draw it.
-    public static bool IsHidden(a2f outline) { object m; return outline != null && HiddenSet.TryGetValue(outline, out m); }
+    public static bool IsHidden(Layer outline) { return IsHidden(outline.Game); }
+    internal static bool IsHidden(a2f outline) { object m; return outline != null && HiddenSet.TryGetValue(outline, out m); }
     // The layer set (bym, new every frame) got an outline this frame: Tab would outline this creature.
-    public static bool Has(bym layers) { object m; return layers != null && HasSet.TryGetValue(layers, out m); }
+    public static bool Has(LayerSet layers) { return Has(layers.Game); }
+    internal static bool Has(bym layers) { object m; return layers != null && HasSet.TryGetValue(layers, out m); }
 
     // This frame's outlines in the game's pass order, with whether each is hidden (taken out of the pass); valid from
     // ShaderPassStarting to ShaderPassDone.
-    public static IList<KeyValuePair<a2f, bool>> All(a7m view)
+    public static IList<KeyValuePair<Layer, bool>> All(WorldView view)
     {
         List<KeyValuePair<a2f, bool>> list;
-        return Frames.TryGetValue(view, out list) ? list : (IList<KeyValuePair<a2f, bool>>)new KeyValuePair<a2f, bool>[0];
+        var result = new List<KeyValuePair<Layer, bool>>();
+        if (Frames.TryGetValue(view.Game, out list)) foreach (var kv in list) result.Add(new KeyValuePair<Layer, bool>(new Layer(kv.Key), kv.Value));
+        return result;
     }
     static readonly ConditionalWeakTable<a7m, List<KeyValuePair<a2f, bool>>> Frames = new ConditionalWeakTable<a7m, List<KeyValuePair<a2f, bool>>>();
 

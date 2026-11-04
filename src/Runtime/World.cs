@@ -41,6 +41,8 @@ public sealed class Character
     internal static Character Of(b0b entity) { return entity == null ? null : Wrappers.GetValue(entity, e => new Character(e)); }
 
     public bool IsPlayer { get { return Entities.IsPlayer(Entity); } }
+    // Hostile or unfriendly to the player, not passive (red and orange outlines).
+    public bool IsHostile { get { return Entities.IsHostile(Entity); } }
     // Map position (tiles; fractional while moving).
     public Vector3 Position { get { return Entities.MapPosition(Entity); } }
     public Area Area { get { return Area.Of(Entities.AreaOf(Entity)); } }

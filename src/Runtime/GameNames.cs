@@ -9,12 +9,12 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 // One sprite layer of the world pass (a2f): a creature's body, a wall piece, a floor tile, a shadow...
-public static class Layers
+static class Layers
 {
     const BindingFlags Any = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     internal static readonly FieldInfo BoundsField = typeof(a2f).GetField("m"), SourceField = typeof(a2f).GetField("c"),
         TintField = typeof(a2f).GetField("e"), RotationField = typeof(a2f).GetField("i"), FlipField = typeof(a2f).GetField("k"),
-        IdField = typeof(a2f).GetField("a");     // these share names with methods, hence reflection
+        IdField = typeof(a2f).GetField("a"), ShownField = typeof(a2f).GetField("b");     // these share names with methods, hence reflection
 
     // Where it is drawn (layout units; UiScaleFix.ToPixels gives screen pixels).
     public static Rectangle Bounds(a2f layer) { return (Rectangle)BoundsField.GetValue(layer); }
@@ -60,7 +60,7 @@ public static class Layers
 }
 
 // Things on the map (b0b): walls, props, creatures (c5x), floor tiles.
-public static class Entities
+static class Entities
 {
     static readonly FieldInfo FloorField = typeof(b0b).GetField("f"), GroundField = typeof(b0b).GetField("g"), MapField = typeof(b0b).GetField("d"),
         ScaleXField = typeof(b0b).GetField("ac"), ScaleYField = typeof(b0b).GetField("ad");
@@ -146,7 +146,7 @@ public static class Entities
 public enum Attitude { None, Hostile, Unfriendly, Neutral, Friendly, Ally }
 
 // Zones (c1a: a map file) and their areas (aud: one floor of it, a grid of tiles ak1), as the game holds them.
-public static class Areas
+static class Areas
 {
     static readonly PropertyInfo AreaSize = typeof(aud).GetProperty("Size");
     static readonly PropertyInfo TriggerLocation = typeof(ya).GetProperty("Location"), TriggerSize = typeof(ya).GetProperty("Size");
@@ -180,7 +180,7 @@ public static class Areas
 }
 
 // The world view (a7m, a UI control: mv : a7m : dnn).
-public static class WorldViews
+static class WorldViews
 {
     const BindingFlags Any = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     static readonly FieldInfo ZoomField = typeof(dnn).GetField("y"), ShaderField = typeof(a7m).GetField("x", Any), ClipField = typeof(a7m).GetField("aq", BindingFlags.Static | BindingFlags.NonPublic);     // static
@@ -204,7 +204,7 @@ public static class WorldViews
 }
 
 // The game's draw context (cp9) and its batches (ob).
-public static class DrawContexts
+static class DrawContexts
 {
     static readonly FieldInfo DeviceField = typeof(cp9).GetField("c"), ResourcesField = typeof(cp9).GetField("a");
     static readonly MethodInfo EndMethod = typeof(cp9).GetMethod("a", Type.EmptyTypes), ResumeMethod = typeof(cp9).GetMethod("a", new[] { typeof(RasterizerState) }),

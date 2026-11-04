@@ -259,6 +259,19 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
   game's own `br5.a` (stacking rules intact; tested: Agility Boost, its icon and countdown by the portrait),
   `character.StatusEffects`, `HasStatusEffect`, `Remove`.
 
+## The drawing API in Works types (Nov 2026)
+
+`DrawApi.cs`: struct handles around the game's objects (no allocations: the world pass runs them for every layer of
+every frame): `WorldView` (a7m: Zoom, Clip, ShaderLayers, BeginWorldBatch), `DrawContext` (cp9: Device, EndBatch,
+ResumeBatch, Batch), `GameBatch` (ob: Begin, End), `LayerShader` (cmk: Find, Effect, SetParameters), `Layer` (a2f:
+Bounds, Source, Tint/SetTint, Id, Owner, Entity, IsFlat, Drawable, ShaderName/ShaderParameter, Draw, DrawAsGame,
+IsPlainSprite), `LayerSet` (bym: Entity, HasOutline), `MapObject` (b0b: MapPosition, IsFlat, Character), `MapTile`,
+`LayerView`. Equality is the game object's identity, `Key` gives it for identity tables, `IsNull` replaces null
+checks. WorldDraw's events and Outlines take these; the game-typed helpers (Layers, Entities, Areas, WorldViews,
+DrawContexts) are internal to Works now. UnderRailFixes was ported (mechanical) and is built without the game.
+Proven pixel for pixel against the build before (old vs new, same save, 2560x720): keyhole 7 px apart (two shots
+of the same build differ by 10), lines 0.6 px, fill 2.4 px, a scene without effects 0.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
@@ -371,7 +384,7 @@ That stays coherent because every area follows the same framework rules, taken f
 | Reload | in game, without restarting | **not possible**: .NET Framework / Mono can't unload a DLL; switches apply at the next start |
 | Settings | `ModConfig` classes: fields with attributes, UI generated, JSON | `ModPage` rows + `settings.ini` today; next: a declarative config class (fields + attributes → rows and ini), tModLoader's idea with our readable ini |
 | Game names | the game's real source names | scrambled names, so Works keeps readable accessors (`GameNames.cs`) checked at startup: **every** member Works looks up must resolve, or the log says which (`GameNames.Check`; on its first run it found two 1.x lookups with wrong flags). Harmony on raw game types is the fallback |
-| Mods and game names | mods use tModLoader's API (`Player`, `NPC`, `UIElement`), not Terraria internals | **mods compile against Works and FNA only, never the game exe**: a scrambled name in a mod is a compile error, not a judgement call. Works hands out its own types (`Character`, `Area`, `UiElement`...) with the game's objects inside. A mod that needs something the API lacks is the signal to add it to Works (with a name check and a doc line), never to reach past it. The shipped Minimap and HelloUI are built this way (build.sh); UnderRailFixes still predates the rule (the drawing API passes game types: to wrap) |
+| Mods and game names | mods use tModLoader's API (`Player`, `NPC`, `UIElement`), not Terraria internals | **mods compile against Works and FNA only, never the game exe**: a scrambled name in a mod is a compile error, not a judgement call. Works hands out its own types (`Character`, `Area`, `UiElement`...) with the game's objects inside. A mod that needs something the API lacks is the signal to add it to Works (with a name check and a doc line), never to reach past it. Every shipped mod is built this way (build.sh), UnderRailFixes included since the drawing API was wrapped (Nov 2026) |
 | Shared services | per-mod config, localization, save data (TagCompound) | settings, options UI, logging; save data (sidecar JSON) and localization still to do |
 
 **Each area is a slice**: its patch points, its events (the model above), readable names for its objects, one real

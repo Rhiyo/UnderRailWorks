@@ -86,7 +86,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 
 - [x] World, characters, inventory, placements; variables, quests, text, notifications; dialogs; lifecycle events;
   saves kept stock-loadable (placements never saved, mod quests as variables, SaveGuard).
-- [ ] Wrap the drawing API in Works types; then build UnderRailFixes without the game.
+- [x] Wrap the drawing API in Works types; UnderRailFixes built without the game (pixel-identical).
 - [ ] Stores (merchant stock), status effects, equipment; skill/ability conditions as named helpers.
 - [ ] Dialog started/ended events; zone first-visit flag; combat events tested in game.
 - [ ] New items (the item overlay), new maps.

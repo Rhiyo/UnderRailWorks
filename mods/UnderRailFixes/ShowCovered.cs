@@ -3,9 +3,9 @@
 // fill, Dithered fill, Fill or Outline. It follows the game's Tab outlines: the characters holding Tab would outline,
 // in the same colours, and nothing with Character Outlines "Never".
 //
-// How the frame is drawn (a7m): world layers are drawn back to front through a7m.a(cp9, a2f, bool, bkx), so whatever
+// How the frame is drawn (WorldView): world layers are drawn back to front through WorldView.a(DrawContext, Layer, bool, LayerView), so whatever
 // is drawn after a creature is in front of it; layers with their own shader (the outline, u = "Outline") are kept
-// aside and drawn after the world in a7m.b(cp9), which is why outlines show through walls.
+// aside and drawn after the world in WorldView.b(DrawContext), which is why outlines show through walls.
 // - eg0 creates the outline layer when Tab (or the reverse-highlight key) is held: the reverse-highlight check is
 //   patched (Reverse) so it's created anyway, and the layer is marked (Add).
 // - Drawn records the world layers in drawing order.
@@ -68,20 +68,20 @@ static class ShowCovered
 
     // Tab would outline this creature (Works' Outlines; the keyhole takes the same characters: stats alone also took
     // explosive barrels and other destructible props).
-    internal static bool HasOutline(bym owner) { return Outlines.Has(owner); }
+    internal static bool HasOutline(LayerSet owner) { return Outlines.Has(owner); }
 
-    // --- a7m: the world pass and the shader pass --------------------------------------------------------------------
+    // --- WorldView: the world pass and the shader pass --------------------------------------------------------------------
 
-    sealed class View { public readonly List<a2f> Drawn = new List<a2f>(), Masked = new List<a2f>(); }
-    static readonly ConditionalWeakTable<a7m, View> Views = new ConditionalWeakTable<a7m, View>();
+    sealed class View { public readonly List<Layer> Drawn = new List<Layer>(), Masked = new List<Layer>(); }
+    static readonly ConditionalWeakTable<object, View> Views = new ConditionalWeakTable<object, View>();     // by view.Key
 
-    // Start of a7m.a(cp9, a2f, bool shaderPass, bkx): every layer the world pass draws, in order.
+    // Start of WorldView.a(DrawContext, Layer, bool shaderPass, LayerView): every layer the world pass draws, in order.
     [ThreadStatic] static bool keyholeLayer;     // the layer about to be drawn (DrawLayer) is the world pass's, with keyholes on
-    internal static void Drawn(a7m view, cp9 context, a2f layer, bool shaderPass)
+    internal static void Drawn(WorldView view, DrawContext context, Layer layer, bool shaderPass)
     {
         keyholeLayer = false;
-        if (shaderPass || !On || layer == null) return;
-        var state = Views.GetOrCreateValue(view);
+        if (shaderPass || !On || layer.IsNull) return;
+        var state = Views.GetOrCreateValue(view.Key);
         if (state.Drawn.Count == 0) Keyhole.Start(view, context);
         state.Drawn.Add(layer);
         if (!anyKeyhole || OutlinesOff()) return;
@@ -89,9 +89,9 @@ static class ShowCovered
         catch (Exception ex) { Failed("keyhole", ex); Keyhole.Abort(true); }
     }
 
-    // a7m.a's a2f.f3(cp9, bkx) call: the layer is drawn, by the game, or by the keyhole when it's in front of a keyhole.
+    // WorldView.a's Layer.f3(DrawContext, LayerView) call: the layer is drawn, by the game, or by the keyhole when it's in front of a keyhole.
     // True: the keyhole drew it (Works skips the game's draw).
-    internal static bool DrawLayer(a2f layer, cp9 context, bkx view)
+    internal static bool DrawLayer(Layer layer, DrawContext context, LayerView view)
     {
         if (keyholeLayer)
         {
@@ -102,9 +102,9 @@ static class ShowCovered
         return false;
     }
 
-    // a7m.b(cp9, ak1): what a7m draws over a tile right after its floor, not as layers (the tile grid when that option is
+    // WorldView.b(DrawContext, MapTile): what WorldView draws over a tile right after its floor, not as layers (the tile grid when that option is
     // on, the cgr tile renderers such as the red of transition tiles). The keyhole sends it where it sent that floor.
-    internal static bool TileExtras(a7m view, cp9 context, ak1 tile)
+    internal static bool TileExtras(WorldView view, DrawContext context, MapTile tile)
     {
         if (On && anyKeyhole)
         {
@@ -114,8 +114,8 @@ static class ShowCovered
         return false;
     }
 
-    // a7m's world pass, after its loop, right before it sets the screen as the target again.
-    internal static void WorldDone(a7m view, cp9 context)
+    // WorldView's world pass, after its loop, right before it sets the screen as the target again.
+    internal static void WorldDone(WorldView view, DrawContext context)
     {
         try { Keyhole.Done(); }
         catch (Exception ex) { Failed("keyhole", ex); }     // Done puts the screen back itself
@@ -125,39 +125,39 @@ static class ShowCovered
     static readonly System.Diagnostics.Stopwatch PassClock = System.Diagnostics.Stopwatch.StartNew();
     static long passLast;
 
-    // Start of a7m.b(cp9): the outlines to draw on the covered part. Works has already taken the outlines built only for
+    // Start of WorldView.b(DrawContext): the outlines to draw on the covered part. Works has already taken the outlines built only for
     // us (hidden) out of the game's pass: those are drawn on the covered part with the creature's effect, or not at
     // all. The game's own outlines (Tab, hovering, Always in combat) stay in its pass; with a fill, the covered part is
     // still filled, drawn after that pass so it's above the outline.
-    internal static void BeforePass(a7m view)
+    internal static void BeforePass(WorldView view)
     {
-        var state = Views.GetOrCreateValue(view);
+        var state = Views.GetOrCreateValue(view.Key);
         state.Masked.Clear();
         if (CoveredSettings.KeyholeDebug && PassClock.ElapsedMilliseconds - passLast > 5000)
         {
             passLast = PassClock.ElapsedMilliseconds;
-            var all = WorldViews.ShaderLayers(view);
+            var all = view.ShaderLayers;
             if (all != null)
                 foreach (var kv in all)
                 {
-                    var sample = kv.Value.Count > 0 ? kv.Value[0] : null;
-                    UnderRailFixesMod.Note("shader pass: \"" + kv.Key + "\" x" + kv.Value.Count + (sample == null ? "" : " e.g. entity " + (Layers.Entity(sample) == null ? "-" : Layers.Entity(sample).GetType().Name) + " id " + (Layers.Id(sample) ?? "-") + " at " + Layers.Bounds(sample)));
+                    var sample = kv.Value.Count > 0 ? kv.Value[0] : default(Layer);
+                    UnderRailFixesMod.Note("shader pass: \"" + kv.Key + "\" x" + kv.Value.Count + (sample.IsNull ? "" : " e.g. entity " + (sample.Entity.IsNull ? "-" : sample.Entity.Key.GetType().Name) + " id " + (sample.Id ?? "-") + " at " + sample.Bounds));
                 }
         }
         if (!On) return;
         foreach (var o in Outlines.All(view))
         {
-            var effect = EffectFor(o.Key.n);
+            var effect = EffectFor(o.Key.Owner);
             bool drawn = effect != CoveredEffect.Off && effect != CoveredEffect.Keyhole;
             if (drawn && (o.Value || effect != CoveredEffect.Outline)) state.Masked.Add(o.Key);
         }
     }
 
-    // End of a7m.b(cp9).
-    internal static void AfterPass(a7m view, cp9 context)
+    // End of WorldView.b(DrawContext).
+    internal static void AfterPass(WorldView view, DrawContext context)
     {
         View state;
-        if (!Views.TryGetValue(view, out state)) return;
+        if (!Views.TryGetValue(view.Key, out state)) return;
         try { if (state.Masked.Count > 0 && On) Draw(view, context, state); }
         catch (Exception ex) { Failed("drawing", ex); }
         finally { state.Drawn.Clear(); state.Masked.Clear(); Effects.Clear(); Characters.Clear(); outlinesOff = null; }
@@ -165,24 +165,24 @@ static class ShowCovered
 
     // --- Who is who, once per frame -------------------------------------------------------------------------------
 
-    // Characters: c5x with stats (amc); walls and props are c5x too. They never count as cover.
-    static readonly Dictionary<bym, c5x> Characters = new Dictionary<bym, c5x>();
-    internal static c5x Character(bym owner)
+    // Characters (walls and props are entities too). They never count as cover.
+    static readonly Dictionary<LayerSet, Character> Characters = new Dictionary<LayerSet, Character>();
+    internal static Character Character(LayerSet owner)
     {
-        if (owner == null) return null;
-        c5x c;
+        if (owner.IsNull) return null;
+        Character c;
         if (Characters.TryGetValue(owner, out c)) return c;
-        c = owner.b == null ? null : Entities.Character(owner.b);
+        c = owner.Entity.IsNull ? null : owner.Entity.Character;
         Characters[owner] = c;
         return c;
     }
 
     // The effect chosen for a creature: the player's; hostile (the game's hostile and unfriendly attitude towards the
     // player, as eg0 colours outlines: red, orange); or other (everyone else, passive ones too).
-    static readonly Dictionary<bym, CoveredEffect> Effects = new Dictionary<bym, CoveredEffect>();
-    internal static CoveredEffect EffectFor(bym owner)
+    static readonly Dictionary<LayerSet, CoveredEffect> Effects = new Dictionary<LayerSet, CoveredEffect>();
+    internal static CoveredEffect EffectFor(LayerSet owner)
     {
-        if (owner == null) return CoveredEffect.Off;
+        if (owner.IsNull) return CoveredEffect.Off;
         CoveredEffect e;
         if (Effects.TryGetValue(owner, out e)) return e;
         Refresh();
@@ -192,14 +192,14 @@ static class ShowCovered
         return e;
     }
 
-    static bool Hostile(c5x character) { return Entities.IsHostile(character); }
+    static bool Hostile(Character character) { return character.IsHostile; }
 
     // Character Outlines "Never": no outlines, so nothing (the keyhole included), as with Tab.
     static bool? outlinesOff;
     static bool OutlinesOff()
     {
         if (outlinesOff.HasValue) return outlinesOff.Value;
-        try { var game = bpo.GetService<cnk>(); outlinesOff = game != null && game.aq1().b().k() == TimelapseVertigo.Common.Settings.OutlinesOption.Never; }
+        try { outlinesOff = Outlines.GameOff; }
         catch { outlinesOff = false; }
         return outlinesOff.Value;
     }
@@ -247,39 +247,39 @@ static class ShowCovered
         b.End();
     }
 
-    internal static Rectangle PlacedOf(a2f layer) { return Layers.Bounds(layer); }
-    internal static string IdOf(a2f layer) { return Layers.Id(layer); }
+    internal static Rectangle PlacedOf(Layer layer) { return layer.Bounds; }
+    internal static string IdOf(Layer layer) { return layer.Id; }
 
     // Floor and ground: many floor tiles around a character are drawn after it. Never cover.
-    internal static bool Flat(a2f layer) { return Layers.IsFlat(layer); }
+    internal static bool Flat(Layer layer) { return layer.IsFlat; }
 
     // The game's batches, begun and ended through us, so an error can close whichever is open.
-    static ob gameOpen;
+    static GameBatch? gameOpen;
     static bool ownOpen;
-    static void BeginGame(ob game, SpriteSortMode sort, RasterizerState rasterizer, Effect effect)
+    static void BeginGame(GameBatch game, SpriteSortMode sort, RasterizerState rasterizer, Effect effect)
     {
-        DrawContexts.Begin(game, sort, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, rasterizer, effect);
+        game.Begin(sort, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, rasterizer, effect);
         gameOpen = game;
     }
-    static void EndGame() { var g = gameOpen; gameOpen = null; g?.an(); }
+    static void EndGame() { var g = gameOpen; gameOpen = null; if (g != null) g.Value.End(); }
     static void BeginOwn(BlendState blend, SamplerState sampler, RasterizerState rasterizer = null)
     {
         batch.Begin(SpriteSortMode.Immediate, blend, sampler, DepthStencilState.None, rasterizer ?? RasterizerState.CullNone);
         ownOpen = true;
     }
     static void EndOwn() { ownOpen = false; batch.End(); }
-    internal static void BeginBatch(ob game, SpriteSortMode sort, RasterizerState rasterizer) { BeginGame(game, sort, rasterizer, null); }
+    internal static void BeginBatch(GameBatch game, SpriteSortMode sort, RasterizerState rasterizer) { BeginGame(game, sort, rasterizer, null); }
 
     // After an error: whichever batch we left open is closed.
     internal static void CloseOpen()
     {
         if (ownOpen) { ownOpen = false; try { batch.End(); } catch { } }
-        if (gameOpen != null) { var g = gameOpen; gameOpen = null; try { g.an(); } catch { } }
+        if (gameOpen != null) { var g = gameOpen; gameOpen = null; try { g.Value.End(); } catch { } }
     }
 
-    static void Draw(a7m view, cp9 context, View state)
+    static void Draw(WorldView view, DrawContext context, View state)
     {
-        var g = DrawContexts.Device(context);
+        var g = context.Device;
         if (!Fits(g)) return;
         int w = g.PresentationParameters.BackBufferWidth, h = g.PresentationParameters.BackBufferHeight;
         var screen = new Rectangle(0, 0, w, h);
@@ -291,15 +291,15 @@ static class ShowCovered
         for (int i = 0; i < drawn.Count; i++)
         {
             var layer = drawn[i];
-            if (layer.d == null || !layer.b) continue;
+            if (!layer.Drawable) continue;
             placed[i] = PlacedOf(layer);
-            cover[i] = !Flat(layer) && Character(layer.n) == null;
+            cover[i] = !Flat(layer) && Character(layer.Owner) == null;
         }
-        var work = new List<KeyValuePair<a2f, List<a2f>>>();
+        var work = new List<KeyValuePair<Layer, List<Layer>>>();
         foreach (var o in state.Masked)
         {
             var covering = Covering(o, drawn, placed, cover);
-            if (covering.Count > 0) work.Add(new KeyValuePair<a2f, List<a2f>>(o, covering));
+            if (covering.Count > 0) work.Add(new KeyValuePair<Layer, List<Layer>>(o, covering));
         }
         if (work.Count == 0) return;
 
@@ -308,19 +308,19 @@ static class ShowCovered
         var targets = g.GetRenderTargets();
         var viewport = g.Viewport;
         var scissor = g.ScissorRectangle;
-        bool clipped = scissor.X != 0 || scissor.Y != 0;     // as a7m.b decides
-        var clipState = clipped ? WorldViews.Clip(view) : null;
+        bool clipped = scissor.X != 0 || scissor.Y != 0;     // as WorldView.b decides
+        var clipState = clipped ? view.Clip : null;
 
-        DrawContexts.EndBatch(context);     // end whichever batch is active, as a7m.b does before its own drawing
+        context.EndBatch();     // end whichever batch is active, as WorldView.b does before its own drawing
         try
         {
-            ob game = context.b();
-            cmk shader = b6l.a("Outline");
-            var effect = shader == null ? null : DrawContexts.ShaderEffect(shader, context, view);
-            int cell = Math.Max(1, (int)Math.Round(WorldViews.Zoom(view) * UiScaleFix.Scale));
+            GameBatch game = context.Batch;
+            LayerShader shader = LayerShader.Find("Outline");
+            var effect = shader.IsNull ? null : shader.Effect(context, view);
+            int cell = Math.Max(1, (int)Math.Round(view.Zoom * UiScaleFix.Scale));
             foreach (var item in work)
             {
-                var chosen = EffectFor(item.Key.n);
+                var chosen = EffectFor(item.Key.Owner);
                 bool lines = chosen == CoveredEffect.Lines, dots = chosen == CoveredEffect.Dither;
                 bool fill = lines || dots || chosen == CoveredEffect.Fill;
                 // Everything below stays within the creature's own area.
@@ -343,10 +343,10 @@ static class ShowCovered
                 {
                     BeginGame(game, SpriteSortMode.Deferred, RasterizerState.CullNone, null);
                     foreach (var layer in drawn)
-                        if (layer.n == item.Key.n && layer.d != null && layer.b && !NotBody(IdOf(layer))) Silhouette(context, layer);
+                        if (layer.Owner == item.Key.Owner && layer.Drawable && !NotBody(IdOf(layer))) Silhouette(context, layer);
                     EndGame();
                     object colour;
-                    var c = item.Key.v != null && item.Key.v.TryGetValue("OutlineColor", out colour) && colour is Color ? (Color)colour : Color.White;
+                    var c = (colour = item.Key.ShaderParameter("OutlineColor")) is Color ? (Color)colour : Color.White;
                     BeginOwn(Recolour, SamplerState.PointClamp);
                     batch.Draw(White, area, c);
                     EndOwn();
@@ -354,8 +354,8 @@ static class ShowCovered
                 else
                 {
                     BeginGame(game, SpriteSortMode.Immediate, RasterizerState.CullNone, effect);
-                    DrawContexts.ShaderParameters(shader, effect, item.Key, view);
-                    item.Key.f3(context, view);
+                    shader.SetParameters(effect, item.Key, view);
+                    item.Key.DrawAsGame(context, view);
                     EndGame();
                 }
 
@@ -385,7 +385,7 @@ static class ShowCovered
             if (targets.Length == 0) g.SetRenderTarget(null); else g.SetRenderTargets(targets);
             g.Viewport = viewport;
             g.ScissorRectangle = scissor;
-            DrawContexts.ResumeBatch(context, clipState);     // as a7m.b ends: the normal batch again
+            context.ResumeBatch(clipState);     // as WorldView.b ends: the normal batch again
         }
     }
 
@@ -432,26 +432,26 @@ static class ShowCovered
     internal static bool NotBody(string id) { return id == "marker" || id == "shield" || id == "SHD"; }
 
     // The scenery drawn after the creature's last layer that overlaps its outline.
-    static List<a2f> Covering(a2f outlineLayer, List<a2f> drawn, Rectangle[] placed, bool[] cover)
+    static List<Layer> Covering(Layer outlineLayer, List<Layer> drawn, Rectangle[] placed, bool[] cover)
     {
-        var result = new List<a2f>();
-        var owner = outlineLayer.n;
-        if (owner == null) return result;
+        var result = new List<Layer>();
+        var owner = outlineLayer.Owner;
+        if (owner.IsNull) return result;
         int last = -1;
-        for (int i = 0; i < drawn.Count; i++) if (drawn[i].n == owner) last = i;
+        for (int i = 0; i < drawn.Count; i++) if (drawn[i].Owner == owner) last = i;
         if (last < 0) return result;
         var area = PlacedOf(outlineLayer);
         area.Inflate(8, 8);
         for (int i = last + 1; i < drawn.Count; i++)
-            if (cover[i] && drawn[i].n != owner && placed[i].Intersects(area)) result.Add(drawn[i]);
+            if (cover[i] && drawn[i].Owner != owner && placed[i].Intersects(area)) result.Add(drawn[i]);
         return result;
     }
 
-    // A layer's shape in white (its own transparency kept), through the game's own draw path, as a2f.f3 draws it.
-    internal static void Silhouette(cp9 context, a2f layer)
+    // A layer's shape in white (its own transparency kept), through the game's own draw path, as Layer.f3 draws it.
+    internal static void Silhouette(DrawContext context, Layer layer)
     {
-        var tint = Layers.Tint(layer);
-        Layers.Draw(layer, context, Color.White * ((tint?.A ?? 255) / 255f));
+        var tint = layer.Tint;
+        layer.Draw(context, Color.White * ((tint?.A ?? 255) / 255f));
     }
 }
 
@@ -465,9 +465,9 @@ static class ShowCovered
 // - Split: from the first layer after such a target, or earlier, from the first standing layer in front of last frame's
 //   hole (InFront: a walking character is drawn on the tile it walks to, after the wall piece on the square it's leaving),
 //   the world pass continues into a front picture instead of the screen (the game's world batch, restarted there with
-//   a7m.iu as by8 does, so lighting and shaders are unchanged). One screen-sized render target, or on Microsoft XNA
+//   WorldView.iu as by8 does, so lighting and shaders are unchanged). One screen-sized render target, or on Microsoft XNA
 //   above 2048 (Reach) a grid of tiles of at most 2048 a side (KeyholeTiles=1 forces that anywhere, for testing): each
-//   layer goes into every tile it reaches (ShowCovered.DrawLayer, and TileExtras for a7m's per-tile extras), the first
+//   layer goes into every tile it reaches (ShowCovered.DrawLayer, and TileExtras for WorldView's per-tile extras), the first
 //   time by the game's call, again from its sprite as drawn (chf.avw without avv: a character's composite, by8, isn't
 //   rebuilt). UiScaleFix maps the drawing into the bound target (Into).
 // - Floor drawn after the split near last frame's holes goes onto the screen as the game draws it (AlsoOnScreen), with
@@ -486,15 +486,15 @@ static class ShowCovered
 // ShowCovered.Draw erases the other effects there.
 static class Keyhole
 {
-    sealed class Target { public bym Owner; public Rectangle Body; public bool HasBody; public int Last; }
+    sealed class Target { public LayerSet Owner; public Rectangle Body; public bool HasBody; public int Last; }
     // A layer drawn after the split. Kind: 0 not drawn, 1 floor or ground, 2 standing scenery, 3 anything else.
-    sealed class Drawn { public a2f Layer; public Rectangle Placed, Pixels; public byte Kind; public int Index; public Color? Tint; }
+    sealed class Drawn { public Layer Layer; public Rectangle Placed, Pixels; public byte Kind; public int Index; public Color? Tint; }
     sealed class Front { public Rectangle Area; public RenderTarget2D Target; }
     // Last frame's hole, for the early split: its circle and the target's map depth.
     struct LastHole { public Rectangle Circle; public Vector2 Map; }
 
     // This pass.
-    static a7m pass; static cp9 passContext;
+    static WorldView pass; static DrawContext passContext;
     static readonly List<Target> Targets = new List<Target>();
     static Target open;                        // the target whose layers are being drawn
     static int index;                          // layers seen this pass
@@ -506,7 +506,7 @@ static class Keyhole
     static Front bound;                        // the tile the world pass draws into now
     static RenderTarget2D intoTarget; static Vector2 intoAt;     // the target UiScaleFix maps into, and its place on screen
     static RenderTargetBinding[] screen; static Viewport screenViewport; static Rectangle screenScissor;
-    // Across frames, keyed by entity (a creature's bym is new every frame).
+    // Across frames, keyed by entity (a creature's LayerSet is new every frame).
     static HashSet<object> covered = new HashSet<object>(), coveredNow = new HashSet<object>();
     static Dictionary<object, float> strength = new Dictionary<object, float>(), strengthNow = new Dictionary<object, float>();
     static List<LastHole> lastHoles = new List<LastHole>(), holesNow = new List<LastHole>();
@@ -537,26 +537,26 @@ static class Keyhole
     // The circles cut this frame (screen pixels), for ShowCovered.Draw to erase the covered effects there.
     internal static readonly List<Rectangle> Holes = new List<Rectangle>();
 
-    static GraphicsDevice G { get { return DrawContexts.Device(passContext); } }
+    static GraphicsDevice G { get { return passContext.Device; } }
     static Rectangle ScreenRect { get { var g = G; return new Rectangle(0, 0, g.PresentationParameters.BackBufferWidth, g.PresentationParameters.BackBufferHeight); } }
-    static object Who(bym owner) { return (object)owner.b ?? owner; }
-    static float Strength(bym owner) { float v; return strength.TryGetValue(Who(owner), out v) ? v : 0f; }
-    static bool IsTarget(bym owner) { return owner != null && ShowCovered.HasOutline(owner) && ShowCovered.EffectFor(owner) == CoveredEffect.Keyhole; }
+    static object Who(LayerSet owner) { return owner.Entity.Key ?? owner.Key; }
+    static float Strength(LayerSet owner) { float v; return strength.TryGetValue(Who(owner), out v) ? v : 0f; }
+    static bool IsTarget(LayerSet owner) { return !owner.IsNull && ShowCovered.HasOutline(owner) && ShowCovered.EffectFor(owner) == CoveredEffect.Keyhole; }
 
     // Standing in front of others: not flat, not a character, not a shadow or marker.
-    static bool Standing(a2f layer)
+    static bool Standing(Layer layer)
     {
-        return !ShowCovered.Flat(layer) && ShowCovered.Character(layer.n) == null && !ShowCovered.NotBody(Layers.Id(layer));
+        return !ShowCovered.Flat(layer) && ShowCovered.Character(layer.Owner) == null && !ShowCovered.NotBody(layer.Id);
     }
 
     // Map position (b0b.d). In this view a square is nearer the camera the larger its X and Y; by map position, not by
     // the sprite's bottom edge: walls are stacked pieces, and an upper piece's sprite ends higher on screen though it
     // stands on the same square.
-    static Vector2 Map(bym owner)
+    static Vector2 Map(LayerSet owner)
     {
-        var e = owner == null ? null : owner.b;
-        if (e == null) return new Vector2(float.NaN);
-        var d = Entities.MapPosition(e);
+        var e = owner.IsNull ? default(MapObject) : owner.Entity;
+        if (e.IsNull) return new Vector2(float.NaN);
+        var d = e.MapPosition;
         return new Vector2(d.X, d.Y);
     }
 
@@ -564,10 +564,10 @@ static class Keyhole
     // both axes (at least the target's square in X and in Y: X + Y alone also took pieces diagonally beside it, along a
     // wall running south-west to north-east). The target's own square counts (Floor): a walking character between
     // squares is drawn after the wall piece on the square it's leaving, which stands in front of it.
-    static bool InFront(a2f layer, Rectangle pixels, Rectangle circle, Vector2 at)
+    static bool InFront(Layer layer, Rectangle pixels, Rectangle circle, Vector2 at)
     {
         if (!pixels.Intersects(circle) || float.IsNaN(at.X)) return false;
-        var own = Map(layer.n);
+        var own = Map(layer.Owner);
         if (float.IsNaN(own.X)) return false;
         return own.X > (float)Math.Floor(at.X) - 0.01f && own.Y > (float)Math.Floor(at.Y) - 0.01f;
     }
@@ -577,7 +577,7 @@ static class Keyhole
     internal static bool Into(out Vector2 from)
     {
         from = intoAt;
-        if (intoTarget == null || passContext == null) return false;
+        if (intoTarget == null || passContext.IsNull) return false;
         var targets = G.GetRenderTargets();
         return targets.Length > 0 && targets[0].RenderTarget == intoTarget;
     }
@@ -594,7 +594,7 @@ static class Keyhole
     // --- The world pass ---------------------------------------------------------------------------------------------
 
     // First layer of a world pass.
-    internal static void Start(a7m view, cp9 context)
+    internal static void Start(WorldView view, DrawContext context)
     {
         pass = view; passContext = context;
         capturePass = SaveScreenshot.Capturing(G);
@@ -605,10 +605,10 @@ static class Keyhole
     }
 
     // Every world layer, in drawing order (ShowCovered.Drawn), before it's drawn.
-    internal static void Layer(a2f layer)
+    internal static void Layer(Layer layer)
     {
         int i = index++;
-        var owner = layer.n;
+        var owner = layer.Owner;
         if (open != null && open.Owner == owner) { Grow(open, layer, i); return; }
         if (open != null)
         {
@@ -627,19 +627,19 @@ static class Keyhole
         Split();
     }
 
-    static bool InFrontOfLastHole(a2f layer)
+    static bool InFrontOfLastHole(Layer layer)
     {
-        if (lastHoles.Count == 0 || layer.d == null || !layer.b || layer.u != null || !Standing(layer)) return false;
-        var pixels = UiScaleFix.ToPixels(Layers.Bounds(layer));
+        if (lastHoles.Count == 0 || !layer.Drawable || layer.ShaderName != null || !Standing(layer)) return false;
+        var pixels = UiScaleFix.ToPixels(layer.Bounds);
         foreach (var h in lastHoles) if (InFront(layer, pixels, h.Circle, h.Map)) return true;
         return false;
     }
 
-    static void Grow(Target t, a2f layer, int i)
+    static void Grow(Target t, Layer layer, int i)
     {
         t.Last = i;
-        if (ShowCovered.NotBody(Layers.Id(layer))) return;     // the body only: not the shadow or markers
-        var r = Layers.Bounds(layer);
+        if (ShowCovered.NotBody(layer.Id)) return;     // the body only: not the shadow or markers
+        var r = layer.Bounds;
         t.Body = t.HasBody ? Rectangle.Union(t.Body, r) : r;
         t.HasBody = true;
     }
@@ -667,7 +667,7 @@ static class Keyhole
                 Tiles[n].Target = Sized(g, Tiles[n].Target, area.Width, area.Height, false);
             }
         while (Tiles.Count > n) { Tiles[Tiles.Count - 1].Target?.Dispose(); Tiles.RemoveAt(Tiles.Count - 1); }
-        DrawContexts.EndBatch(passContext);
+        passContext.EndBatch();
         screen = g.GetRenderTargets(); screenViewport = g.Viewport; screenScissor = g.ScissorRectangle;
         foreach (var t in Tiles) { g.Textures[0] = null; g.SetRenderTarget(t.Target); g.Clear(Color.Transparent); }
         split = true;
@@ -678,7 +678,7 @@ static class Keyhole
     static void BindTile(Front t, bool restart)
     {
         var g = G;
-        if (restart) DrawContexts.EndBatch(passContext);
+        if (restart) passContext.EndBatch();
         g.Textures[0] = null;     // XNA refuses a target still bound as a texture
         g.SetRenderTarget(t.Target);
         var clip = new Rectangle(screenScissor.X - t.Area.X, screenScissor.Y - t.Area.Y, screenScissor.Width, screenScissor.Height);
@@ -700,7 +700,7 @@ static class Keyhole
     static void WorldBatch(DepthStencilState depth) { WorldBatch(depth, BlendState.AlphaBlend); }
     static void WorldBatch(DepthStencilState depth, BlendState blend)
     {
-        WorldViews.BeginWorldBatch(pass, passContext, SpriteSortMode.Deferred, blend, SamplerState.PointClamp, depth, Clipped);
+        pass.BeginWorldBatch(passContext, SpriteSortMode.Deferred, blend, SamplerState.PointClamp, depth, Clipped);
     }
 
     // Draws into every front tile the area reaches with the Cut blend (the drawing's alpha clears the front), then the world
@@ -711,11 +711,11 @@ static class Keyhole
         foreach (var t in Tiles)
         {
             if (Tiles.Count > 1 && !t.Area.Intersects(pixels)) continue;
-            DrawContexts.EndBatch(passContext);
+            passContext.EndBatch();
             if (bound != t) BindTile(t, false);
             WorldBatch(DepthStencilState.Default, Cut);
             try { draw(first); first = false; }
-            finally { DrawContexts.EndBatch(passContext); WorldBatch(DepthStencilState.Default); }
+            finally { passContext.EndBatch(); WorldBatch(DepthStencilState.Default); }
         }
         if (first) draw(true);     // reaches no tile: as the game would
     }
@@ -738,20 +738,20 @@ static class Keyhole
     static void AlsoOnScreen(Action draw)
     {
         var was = bound;
-        DrawContexts.EndBatch(passContext);
+        passContext.EndBatch();
         ToScreen();
         WorldBatch(DepthStencilState.None);
         try { draw(); }
-        finally { DrawContexts.EndBatch(passContext); BindTile(was ?? Tiles[0], false); WorldBatch(DepthStencilState.Default); }
+        finally { passContext.EndBatch(); BindTile(was ?? Tiles[0], false); WorldBatch(DepthStencilState.Default); }
     }
 
     // ShowCovered.DrawLayer: notes covered targets; after the split, draws the layer into every front tile it reaches
     // (true: drawn here).
-    internal static bool Draw(a2f layer, cp9 context, bkx view)
+    internal static bool Draw(Layer layer, DrawContext context, LayerView view)
     {
-        bool drawable = layer.d != null && layer.b;
-        var placed = drawable ? Layers.Bounds(layer) : Rectangle.Empty;
-        if (!capturePass && drawable && Targets.Count > 0 && (open == null || open.Owner != layer.n) && layer.u == null)
+        bool drawable = layer.Drawable;
+        var placed = drawable ? layer.Bounds : Rectangle.Empty;
+        if (!capturePass && drawable && Targets.Count > 0 && (open == null || open.Owner != layer.Owner) && layer.ShaderName == null)
         {
             bool standing = false, checkedStanding = false;
             foreach (var t in Targets)
@@ -768,43 +768,42 @@ static class Keyhole
         pixels.Inflate(2, 2);
         bool floor = drawable && ShowCovered.Flat(layer);
         byte kind = !drawable ? (byte)0 : floor ? (byte)1 : Standing(layer) ? (byte)2 : (byte)3;
-        After.Add(new Drawn { Layer = layer, Placed = placed, Pixels = pixels, Kind = kind, Index = index - 1, Tint = drawable ? Layers.Tint(layer) : null });
+        After.Add(new Drawn { Layer = layer, Placed = placed, Pixels = pixels, Kind = kind, Index = index - 1, Tint = drawable ? layer.Tint : null });
         if (floor)
         {
-            floorJustDrawn = layer.u == null && NearHole(pixels);
+            floorJustDrawn = layer.ShaderName == null && NearHole(pixels);
             if (floorJustDrawn)
             {
                 // Onto the screen as drawn; in the front picture it only clears what's under it (Cut: front x (1 - its
                 // alpha)). Drawn normally there too, a partly see-through floor counted twice once the front went over
                 // the screen.
-                AlsoOnScreen(() => layer.f3(context, view));
-                EraseInFront(pixels, byGame => { if (byGame) layer.f3(context, view); else Again(layer, context); });
+                AlsoOnScreen(() => layer.DrawAsGame(context, view));
+                EraseInFront(pixels, byGame => { if (byGame) layer.DrawAsGame(context, view); else Again(layer, context); });
                 return true;
             }
         }
 
-        if (!drawable || Tiles.Count == 1) { layer.f3(context, view); return true; }
+        if (!drawable || Tiles.Count == 1) { layer.DrawAsGame(context, view); return true; }
         bool first = true;
         foreach (var t in Tiles)
         {
             if (!t.Area.Intersects(pixels)) continue;
             if (bound != t) BindTile(t, true);
-            if (first) { layer.f3(context, view); first = false; }
+            if (first) { layer.DrawAsGame(context, view); first = false; }
             else Again(layer, context);
         }
-        if (first) layer.f3(context, view);
+        if (first) layer.DrawAsGame(context, view);
         return true;
     }
 
     // A layer drawn again, from its sprite as drawn: chf.avw without avv.
-    static void Again(a2f layer, cp9 context)
+    static void Again(Layer layer, DrawContext context)
     {
-        var entity = layer.n == null ? null : layer.n.b;
-        Layers.Draw(layer, context, Layers.Tint(layer) ?? Color.White);
+        layer.Draw(context, layer.Tint ?? Color.White);
     }
 
-    // ShowCovered.TileExtras: what a7m draws over a tile right after its floor goes where that floor went (true: drawn here).
-    internal static bool Tile(a7m view, cp9 context, ak1 tile)
+    // ShowCovered.TileExtras: what WorldView draws over a tile right after its floor goes where that floor went (true: drawn here).
+    internal static bool Tile(WorldView view, DrawContext context, MapTile tile)
     {
         if (!split) return false;
         // After a floor that went onto the screen: only there (its front copy is an eraser; drawn into the front as well,
@@ -829,7 +828,7 @@ static class Keyhole
         return true;
     }
 
-    // a7m's world pass, after its loop (the world batch has been ended), right before it sets the screen again.
+    // WorldView's world pass, after its loop (the world batch has been ended), right before it sets the screen again.
     internal static void Done()
     {
         open = null;
@@ -895,26 +894,26 @@ static class Keyhole
             Rectangle round, circle = Circle(t, out round);
             if (circle.Width <= 0 || circle.Height <= 0) continue;
             var at = Map(t.Owner);
-            var cover = new List<a2f>();
+            var cover = new List<Layer>();
             var rest = new List<Drawn>();
             bool covered = false;
             foreach (var d in After)
             {
                 if (d.Kind == 0 || d.Kind == 1 || !d.Pixels.Intersects(circle)) continue;     // floor: on the screen
                 bool after = d.Index > t.Last;
-                bool c = d.Kind == 2 && d.Layer.n != t.Owner && (after || InFront(d.Layer, d.Pixels, circle, at));
+                bool c = d.Kind == 2 && d.Layer.Owner != t.Owner && (after || InFront(d.Layer, d.Pixels, circle, at));
                 // Only what's drawn after the target opens a hole: a piece on its own row beside it (InFront) overlaps its
                 // sprite while walking along the front of a wall, and opened a hole there.
                 if (c) { cover.Add(d.Layer); if (after && d.Placed.Intersects(t.Body)) covered = true; }
                 else rest.Add(d);
                 if (debugNow)
                 {
-                    var own = Map(d.Layer.n);
-                    var tex = d.Layer.d == null ? "-" : d.Layer.d.GetType().Name;
+                    var own = Map(d.Layer.Owner);
+                    var tex = d.Layer.SpriteKind;
                     UnderRailFixesMod.Note("keyhole layer " + d.Index + " (target last " + t.Last + ") kind " + d.Kind + " " + (c ? "CUT" : "kept")
                         + " map " + own.X.ToString("0.##") + "," + own.Y.ToString("0.##") + " (target " + at.X.ToString("0.##") + "," + at.Y.ToString("0.##") + ")"
-                        + " id " + (Layers.Id(d.Layer) ?? "-") + " tex " + tex + " px " + d.Pixels + " entity " + (Layers.Entity(d.Layer) == null ? "-" : Layers.Entity(d.Layer).GetType().Name)
-                        + (d.Layer.n == t.Owner ? " (target's own)" : ""));
+                        + " id " + (d.Layer.Id ?? "-") + " tex " + tex + " px " + d.Pixels + " entity " + (d.Layer.Entity.IsNull ? "-" : d.Layer.Entity.Key.GetType().Name)
+                        + (d.Layer.Owner == t.Owner ? " (target's own)" : ""));
                 }
             }
             if (debugNow) UnderRailFixesMod.Note("keyhole circle " + circle + " cover " + cover.Count + " rest " + rest.Count);
@@ -952,7 +951,7 @@ static class Keyhole
     internal static void Abort(bool midPass)
     {
         if (!split) { Reset(); return; }
-        try { DrawContexts.EndBatch(passContext); } catch { }
+        try { passContext.EndBatch(); } catch { }
         try { ToScreen(); } catch { }
         if (midPass) { try { WorldBatch(DepthStencilState.Default); } catch { } }
         Reset();
@@ -976,14 +975,14 @@ static class Keyhole
         AlphaSourceBlend = Blend.Zero, AlphaDestinationBlend = Blend.SourceAlpha,
     };
 
-    static void Cut1(GraphicsDevice g, List<Drawn> rest, List<a2f> cover, Rectangle round, Rectangle circle)
+    static void Cut1(GraphicsDevice g, List<Drawn> rest, List<Layer> cover, Rectangle round, Rectangle circle)
     {
         behind = Sized(g, behind, circle.Width, circle.Height, true);
         mask = Sized(g, mask, circle.Width, circle.Height, true);
         var size = new Rectangle(0, 0, circle.Width, circle.Height);
         var local = new Rectangle(round.X - circle.X, round.Y - circle.Y, round.Width, round.Height);
 
-        // Behind: the rest, in order, with the tint each was drawn with (a7m fades layers flagged a2f.q after drawing
+        // Behind: the rest, in order, with the tint each was drawn with (WorldView fades layers flagged Layer.q after drawing
         // them, for its own second pass).
         Into(behind, circle);
         g.Clear(Color.Transparent);
@@ -992,12 +991,12 @@ static class Keyhole
             WorldBatch(DepthStencilState.Default);
             foreach (var d in rest)
             {
-                var drawnTint = Layers.Tint(d.Layer);
-                Layers.SetTint(d.Layer, d.Tint);
-                try { if (d.Layer.d is e4m) d.Layer.f3(passContext, pass); else Again(d.Layer, passContext); }     // characters: no by8 rebuild
-                finally { Layers.SetTint(d.Layer, drawnTint); }
+                var drawnTint = d.Layer.Tint;
+                d.Layer.SetTint(d.Tint);
+                try { if (d.Layer.IsPlainSprite) d.Layer.DrawAsGame(passContext, pass); else Again(d.Layer, passContext); }     // characters: no by8 rebuild
+                finally { d.Layer.SetTint(drawnTint); }
             }
-            DrawContexts.EndBatch(passContext);
+            passContext.EndBatch();
         }
 
         // Mask: the cover's silhouettes, four times (a sprite's soft edge pixels, alpha a, count as almost fully covered:
@@ -1010,7 +1009,7 @@ static class Keyhole
         WorldBatch(DepthStencilState.None);
         for (int n = 0; n < 4; n++)
             foreach (var layer in cover) ShowCovered.Silhouette(passContext, layer);
-        DrawContexts.EndBatch(passContext);
+        passContext.EndBatch();
         g.ScissorRectangle = size;
         batch.Begin(SpriteSortMode.Immediate, Multiply, SamplerState.LinearClamp, DepthStencilState.None, RasterizerState.CullNone);
         batch.Draw(Hole(g), local, Color.White * holeAlpha);
