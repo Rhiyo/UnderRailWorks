@@ -363,6 +363,7 @@ static class UiHooks
         Group("status effects and levels", () => ProgressHooks.Install(harmony));
         Group("equipment", () => EquipmentHooks.Install(harmony));
         Group("progression", () => ProgressionHooks.Install(harmony));
+        Group("dialog patches", () => Dialogs.InstallPatches(harmony));
         Log.Write("ui: hooks in place");
     }
 

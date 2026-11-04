@@ -34,5 +34,15 @@
   "placements": [
     { "id": "prospector_npc", "zone": "LU-SouthGateStation-N", "area": "LU-SouthGateStation-N", "x": 13, "y": 24,
       "blueprint": "creatures\\generichumans\\foundryworker", "name": "Old Prospector", "dialog": "prospector/talk" }
-  ]
+  ],
+  "dialogPatches": {
+    "characters\\bigbret1": {
+      "add": [ { "at": "passed all the tests", "text": "Who's the old man at the north gate?", "goto": "prospector",
+                 "if": { "quest": "prospector_bandage", "is": "notstarted" } } ],
+      "nodes": {
+        "prospector": { "text": "Old prospector. Digs in the vents for scrap. Cut himself last week, I hear. Could use a hand.",
+          "options": [ { "text": "I'll look in on him.", "goto": "@", "do": [ { "setFlag": "prospector_heard" } ] } ] }
+      }
+    }
+  }
 }

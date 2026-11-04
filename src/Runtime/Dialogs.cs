@@ -135,7 +135,7 @@ public sealed class DialogBuilder
     }
 }
 
-public static class Dialogs
+public static partial class Dialogs
 {
     static readonly Dictionary<string, Action<DialogBuilder>> defined = new Dictionary<string, Action<DialogBuilder>>(StringComparer.OrdinalIgnoreCase);
     static readonly ConditionalWeakTable<b0b, string> overrides = new ConditionalWeakTable<b0b, string>();
@@ -211,15 +211,45 @@ public static class Dialogs
         var npc = new ax8(npcId); var player = new ax8(playerId);
         model.a().Add(player); model.a().Add(npc);
         model.b(b.CanCancel);
-        var made = new Dictionary<string, d55>();
-        int index = 0;
-        Func<string, d55> node = null;
-        node = id =>
+        var start = new a31("Start Element");
+        start.PossibleNextSteps.Add(new NodeMaker(b, npc, player, null).Node(b.StartId));
+        model.a(start);
+        return model;
+    }
+
+    // Turns a builder's lines and branches into the game's nodes. external resolves ids the builder doesn't have
+    // (a patch's "@..." references to the stock dialog's lines).
+    internal sealed class NodeMaker
+    {
+        readonly DialogBuilder b;
+        readonly ax8 npc, player;
+        readonly Func<string, d55> external;
+        readonly Dictionary<string, d55> made = new Dictionary<string, d55>();
+        int index;
+        internal NodeMaker(DialogBuilder b, ax8 npc, ax8 player, Func<string, d55> external) { this.b = b; this.npc = npc; this.player = player; this.external = external; }
+
+        internal atr Option(DialogOption o)
+        {
+            var a = new atr("a" + (index++) + " (" + Guid.NewGuid() + ")");
+            a.b(o.Text);
+            if (o.When != null) a.CausingCondition = new WorksCondition(o.When);
+            if (o.EnabledWhen != null) a.a(new WorksCondition(Condition.Not(o.EnabledWhen)));     // the game's "disabled when"
+            if (o.Effects != null) foreach (var e in o.Effects) a.e().Add(new WorksAction(e));
+            if (o.GoTo != null) a.PossibleNextSteps.Add(Node(o.GoTo));
+            return a;
+        }
+
+        internal d55 Node(string id)
         {
             d55 n;
             if (made.TryGetValue(id, out n)) return n;
             object def;
-            if (!b.Nodes.TryGetValue(id, out def)) throw new ArgumentException("no dialog node named " + id);
+            if (!b.Nodes.TryGetValue(id, out def))
+            {
+                n = external == null ? null : external(id);
+                if (n == null) throw new ArgumentException("no dialog node named " + id);
+                return n;
+            }
             var line = def as DialogLine;
             if (line != null)
             {
@@ -227,17 +257,8 @@ public static class Dialogs
                 q.b(line.Text);
                 made[id] = q;     // before its options: they may lead back to it
                 foreach (var e in line.Effects) q.e().Add(new WorksAction(e));
-                foreach (var o in line.Options)
-                {
-                    var a = new atr("a" + (index++) + " (" + Guid.NewGuid() + ")");
-                    a.b(o.Text);
-                    if (o.When != null) a.CausingCondition = new WorksCondition(o.When);
-                    if (o.EnabledWhen != null) a.a(new WorksCondition(Condition.Not(o.EnabledWhen)));     // the game's "disabled when"
-                    if (o.Effects != null) foreach (var e in o.Effects) a.e().Add(new WorksAction(e));
-                    if (o.GoTo != null) a.PossibleNextSteps.Add(node(o.GoTo));
-                    q.PossibleAnswers.Add(a);
-                }
-                if (line.HasNext && line.NextId != null) q.PossibleNextSteps.Add(node(line.NextId));
+                foreach (var o in line.Options) q.PossibleAnswers.Add(Option(o));
+                if (line.HasNext && line.NextId != null) q.PossibleNextSteps.Add(Node(line.NextId));
                 return q;
             }
             var branch = (DialogBranch)def;
@@ -248,15 +269,11 @@ public static class Dialogs
                 // A junction per case carries the condition, so a line reached from several places isn't gated.
                 var gate = new a31("case (" + Guid.NewGuid() + ")");
                 if (c.Key != null) gate.CausingCondition = new WorksCondition(c.Key);
-                if (c.Value != null) gate.PossibleNextSteps.Add(node(c.Value));
+                if (c.Value != null) gate.PossibleNextSteps.Add(Node(c.Value));
                 j.PossibleNextSteps.Add(gate);
             }
             return j;
-        };
-        var start = new a31("Start Element");
-        start.PossibleNextSteps.Add(node(b.StartId));
-        model.a(start);
-        return model;
+        }
     }
 }
 

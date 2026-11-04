@@ -359,6 +359,19 @@ deduction on level-up both use it), `ModifyLevelPoints` (around e3q's private `a
 `b()` and untouched), `ModifyExperience` (prefix on `e3q.c(amount)`), `XpFor(level)`, `Oddity`. Tested: level 2
 gave 40 + 10 skill points and an extra feat; the Oddity costs 4, 6, 8, 9, 12 became 2, 3, 4, 4, 6 at 50 %.
 
+## Patching the game's conversations (Nov 2026)
+
+`Dialogs.Patch(mod, "characters\\bigbret1", p => { p.AddOption(atLineText, text, goTo, when, effects); p.Line(...) })`
+(WeiDU's EXTEND, in small): options on every stock NPC line whose English text contains `atLineText`, leading into the
+patch's own lines; `"@"` goes back to that stock line, `"@text"` to another stock line. Applied in a postfix on
+`aji.a(model, name)` (the loader `bmz.y3` reads the file fresh every time, then aji fills in the texts), so nothing is
+written to the dialog files or the save. `Dialogs.StockLines(name)` lists a dialog's NPC lines. Content packs:
+`"dialogPatches"`. Tested: WorksTest (code) and TheProspector (JSON) both added an option to Big Bret's first line;
+the mod line showed, and "@" returned to Bret's stock line with all his options.
+Mapped for later (`scratchpad/specs/loot-locks-stealth.md`, not committed): containers and loot (`c7j`, `ery.mx`,
+`asy.a`), locks and hacking (`d2b.a(amc, LockType, int)`: no dice, skill vs difficulty), pickpocketing (`b87`),
+detection (`bui.a`, `cn8.agf`), traps (`qw.a`, `ds.fr`), crafting (`cwp.a`, `ahu.i`).
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

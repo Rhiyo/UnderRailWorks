@@ -122,9 +122,10 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Equipment (slots, equip/unequip, events). A veto still to do.
 - [ ] Containers and loot (events, contents, loot tables).
 - [ ] Stealth / detection / skill-check hooks; AI hooks (target, weapon, flee); crafting recipes.
-- [ ] Area triggers and interactables; patching stock dialogs (insert options, WeiDU-style).
+- [ ] Area triggers and interactables.
 - [x] Content packs: triggers; DLL-registered conditions and effects.
-- [ ] Content packs: stores, item tweaks, dialog patches.
+- [x] Patching stock dialogs (Dialogs.Patch, content packs' dialogPatches).
+- [ ] Content packs: stores, item tweaks.
 
 ## For modders
 

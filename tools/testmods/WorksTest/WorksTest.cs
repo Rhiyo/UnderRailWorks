@@ -1,3 +1,4 @@
+using System;
 // Test-only mod (not shipped): keys that set up game state for testing Works in game.
 //   F10: give the player 20 charons (Inventory.AddMoney). F11: 5000 XP. U: trade with the test merchant. J: talk to the prospector (content pack test). F12: the stranger turns hostile. F4: hide the portrait,
 //   open the notes. F6: list status effect codes and apply one. Logs every Works event.
@@ -15,6 +16,13 @@ public sealed class WorksTest : WorksMod
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
         GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));
         GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
+        Dialogs.Patch(this, "characters\\bigbret1", p =>
+        {
+            p.AddOption("passed all the tests", "[Works] Heard anything odd lately?", "odd");
+            p.Line("odd", "Odd? Some fella swears a mod framework rewired this whole station.", Outcome.SetFlag("wt_patch_seen"))
+                .Option("Interesting. Anyway...", "@")
+                .Option("Bye.", Dialog.End);
+        });
         ContentPack.AddCondition(this, "testAlways", args => () => args.Bool("testAlways"));
         ContentPack.AddEffect(this, "testLog", args => { var text = args.Text("testLog"); return () => Log.Info(text); });
         GameEvents.Equipped.Add(this, e => Log.Info("equipped " + e.Item.Name + " on " + e.Character.Name));
@@ -40,6 +48,8 @@ public sealed class WorksTest : WorksMod
             }
             if (Input.Pressed(Keys.V)) { var inv = World.Player.Inventory; inv.Add("armor\\jkktacticalvest", 1); var vest = inv.Items.FirstOrDefault(i => i.Code == "jkkTacticalVest"); Log.Info("vest on: " + (vest != null && World.Player.Equipment.Equip(vest))); }
             if (Input.Pressed(Keys.X)) Log.Info("xp " + World.Player.Experience + " (oddity " + Progression.Oddity + "), level " + World.Player.Level + "; next levels cost " + string.Join(", ", Enumerable.Range(2, 5).Select(l => l + ":" + Progression.XpFor(l))));
+            if (Input.Pressed(Keys.B)) { var lines = Dialogs.StockLines("characters\\bigbret1"); Log.Info("bigbret1: " + lines.Count + " lines"); foreach (var l in lines.Take(12)) Log.Info("  | " + l.Replace("\n", " ").Substring(0, Math.Min(90, l.Length))); }
+            if (Input.Pressed(Keys.H)) Log.Info("bret dialog with the merchant: " + Dialogs.Start(World.Placed("workstest_merchant"), "characters\\bigbret1"));
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }

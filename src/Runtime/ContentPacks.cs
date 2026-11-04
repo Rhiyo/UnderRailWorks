@@ -17,6 +17,9 @@
 // Effects: setFlag (+ "to"), setInt + "to", addInt + "by", setString + "to", startQuest, completeQuest, failQuest,
 // give item path + "count", take item code + "count", giveMoney n, takeMoney n, xp n, log text, say text (over the
 // player), effect status code + "turns".
+//   "dialogPatches": { "characters\\bigbret1": { "add": [ { "at": "passed all the tests", "text": "Heard anything odd?",
+//                     "goto": "odd", "if": {..}, "do": [..] } ], "nodes": { "odd": { "text": "...", "options": [
+//                     { "text": "Anyway...", "goto": "@" } ] } } } }   ("@": back to the stock line; "@text": a stock line)
 //   "triggers":   [ { "id": "welcome", "on": "zoneEntered", "zone": "LU-SouthGateStation-N", "firstVisit": true,
 //                     "if": { condition }, "do": [ effects ], "once": true } ]
 //   Events and their filters: zoneEntered (zone, firstVisit), questChanged (quest, state), levelUp (level: at least),
@@ -80,8 +83,9 @@ static class ContentPacks
                         case "quests": count += Each(kv.Value, where, "quest", LoadQuest); break;
                         case "dialogs": foreach (var d in (kv.Value as Dictionary<string, object>) ?? new Dictionary<string, object>()) { LoadDialog(d.Key, d.Value as Dictionary<string, object>, where); count++; } break;
                         case "placements": count += Each(kv.Value, where, "placement", LoadPlacement); break;
+                        case "dialogpatches": foreach (var d in (kv.Value as Dictionary<string, object>) ?? new Dictionary<string, object>()) { LoadDialogPatch(mod.Id, d.Key, d.Value as Dictionary<string, object>); count++; } break;
                         case "triggers": count += Each(kv.Value, where, "trigger", t => LoadTrigger(mod.Id, t)); break;
-                        default: Log.Write("content: " + where + ": unknown section \"" + kv.Key + "\" (text, quests, dialogs, placements, triggers)"); break;
+                        default: Log.Write("content: " + where + ": unknown section \"" + kv.Key + "\" (text, quests, dialogs, dialogPatches, placements, triggers)"); break;
                     }
                 }
                 catch (Exception ex) { Log.Write("content: " + where + ": " + kv.Key + ": " + ex.Message); }
@@ -142,31 +146,56 @@ static class ContentPacks
         Dialogs.Define(name, b =>
         {
             b.Cancellable(cancellable);
-            foreach (var kv in nodes)
-            {
-                var n = kv.Value as Dictionary<string, object>;
-                if (n == null) continue;
-                if (n.ContainsKey("branch"))
-                {
-                    var br = b.Branch(kv.Key);
-                    foreach (var c in (n["branch"] as List<object>) ?? new List<object>())
-                    {
-                        var cd = (Dictionary<string, object>)c;
-                        if (cd.ContainsKey("if")) br.If(Cond(cd["if"]), Opt(cd, "goto")); else br.Else(Opt(cd, "goto"));
-                    }
-                    continue;
-                }
-                var line = b.Line(kv.Key, Str(n.ContainsKey("text") ? n["text"] : ""), Effects(n));
-                foreach (var o in (n.ContainsKey("options") ? n["options"] as List<object> : null) ?? new List<object>())
-                {
-                    var od = (Dictionary<string, object>)o;
-                    var go = od.ContainsKey("goto") ? Opt(od, "goto") : Dialog.End;
-                    if (od.ContainsKey("enabledIf")) line.OptionGreyed(Req(od, "text"), go, Cond(od["enabledIf"]), Effects(od));
-                    else line.Option(Req(od, "text"), go, od.ContainsKey("if") ? Cond(od["if"]) : null, Effects(od));
-                }
-                if (n.ContainsKey("next")) line.Next(Opt(n, "next"));
-            }
+            AddNodes(b, nodes);
             if (start != null) b.Start(start);
+        });
+    }
+
+    static void AddNodes(DialogBuilder b, Dictionary<string, object> nodes)
+    {
+        foreach (var kv in nodes)
+        {
+            var n = kv.Value as Dictionary<string, object>;
+            if (n == null) continue;
+            if (n.ContainsKey("branch"))
+            {
+                var br = b.Branch(kv.Key);
+                foreach (var c in (n["branch"] as List<object>) ?? new List<object>())
+                {
+                    var cd = (Dictionary<string, object>)c;
+                    if (cd.ContainsKey("if")) br.If(Cond(cd["if"]), Opt(cd, "goto")); else br.Else(Opt(cd, "goto"));
+                }
+                continue;
+            }
+            var line = b.Line(kv.Key, Str(n.ContainsKey("text") ? n["text"] : ""), Effects(n));
+            foreach (var o in (n.ContainsKey("options") ? n["options"] as List<object> : null) ?? new List<object>())
+            {
+                var od = (Dictionary<string, object>)o;
+                var go = od.ContainsKey("goto") ? Opt(od, "goto") : Dialog.End;
+                if (od.ContainsKey("enabledIf")) line.OptionGreyed(Req(od, "text"), go, Cond(od["enabledIf"]), Effects(od));
+                else line.Option(Req(od, "text"), go, od.ContainsKey("if") ? Cond(od["if"]) : null, Effects(od));
+            }
+            if (n.ContainsKey("next")) line.Next(Opt(n, "next"));
+        }
+    }
+
+    // "dialogPatches": { "characters\\abram": { "add": [ { "at": "line text", "text": "...", "goto": "node" or "@",
+    //   "if" / "enabledIf": condition, "do": [effects] } ], "nodes": { lines and branches, as in dialogs } } }
+    static void LoadDialogPatch(string mod, string dialog, Dictionary<string, object> d)
+    {
+        if (d == null || !d.ContainsKey("add")) throw new FormatException("a dialog patch needs \"add\"");
+        var adds = ((List<object>)d["add"]).Cast<Dictionary<string, object>>().ToList();
+        foreach (var a in adds) { Req(a, "at"); Req(a, "text"); }
+        var nodes = d.ContainsKey("nodes") ? d["nodes"] as Dictionary<string, object> : null;
+        Dialogs.Patch(mod, dialog, p =>
+        {
+            if (nodes != null) AddNodes(p.Builder, nodes);
+            foreach (var a in adds)
+            {
+                var go = a.ContainsKey("goto") ? Opt(a, "goto") : Dialog.End;
+                if (a.ContainsKey("enabledIf")) p.AddOptionGreyed(Opt(a, "at"), Opt(a, "text"), go, Cond(a["enabledIf"]), Effects(a));
+                else p.AddOption(Opt(a, "at"), Opt(a, "text"), go, a.ContainsKey("if") ? Cond(a["if"]) : null, Effects(a));
+            }
         });
     }
 
