@@ -93,6 +93,16 @@ mkdir -p "$OUT/Mods/Minimap"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/Minimap.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/Minimap/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/Minimap.dll" "$OUT/FNA.dll" "$OUT/Mods/Minimap/Minimap.dll" >/dev/null
 cp "$HERE/mods/Minimap/mod.json" "$OUT/Mods/Minimap/"
+# Quest Tracker, shipped in Mods/, built like the Minimap (Works and FNA only).
+mkdir -p "$OUT/Mods/QuestTracker"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/QuestTracker.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/QuestTracker/*.cs
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/QuestTracker.dll" "$OUT/FNA.dll" "$OUT/Mods/QuestTracker/QuestTracker.dll" >/dev/null
+cp "$HERE/mods/QuestTracker/mod.json" "$OUT/Mods/QuestTracker/"
+# Word Gets Around, shipped in Mods/ (Works and FNA only).
+mkdir -p "$OUT/Mods/WordGetsAround"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/WordGetsAround.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/WordGetsAround/*.cs
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/WordGetsAround.dll" "$OUT/FNA.dll" "$OUT/Mods/WordGetsAround/WordGetsAround.dll" >/dev/null
+cp "$HERE/mods/WordGetsAround/mod.json" "$OUT/Mods/WordGetsAround/"
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
 mkdir -p "$HERE/build/Mods/HelloUI"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"

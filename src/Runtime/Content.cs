@@ -122,6 +122,23 @@ public static class Quests
     public static IList<string> Completed { get { return Ids(l => l.a()); } }
     public static IList<string> Failed { get { return Ids(l => l.b()); } }
 
+    // One quest's definition (null if unknown).
+    public static QuestInfo Info(string id)
+    {
+        var q = ao5.a(id);
+        return q == null ? null : new QuestInfo { Id = q.Name, Group = q.Group, Text = Text.Get("quests/" + q.Name), Xp = q.ClassicExperience, OddityXp = q.OddityExperience, FromMod = IsModQuest(q.Name) };
+    }
+
+    // A quest's journal text as the journal shows it (erf: the knowledge text, then $(...) and gender tokens
+    // filled in by eb2 with the game's context).
+    public static string JournalText(string id)
+    {
+        var text = Text.Get("quests/" + id);
+        var game = bpo.GetService<cnk>();
+        if (string.IsNullOrEmpty(text) || game == null || game.aqu() == null) return text ?? "";
+        try { return eb2.a(game.aqu().e(), new Ouroboros.Common.Data.PropertyCollection(), text); } catch { return text; }
+    }
+
     // Every quest the game knows (stock and mods').
     public static IList<QuestInfo> All
     {

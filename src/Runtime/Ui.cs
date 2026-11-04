@@ -16,6 +16,7 @@
 // Elements are Works' handles (UiElement and subclasses), never the game's controls: a mod compiles without the game.
 // Positions and sizes are in interface units (Works scales them to pixels).
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -83,6 +84,35 @@ public static class Ui
     public static void SetText(UiElement element, string text) { element.Control.Text = text; }
     // A label's text colour.
     public static void SetColor(UiElement label, Color colour) { if (label.Control is avo) ColorProperty.SetValue(label.Control, colour, null); }
+
+    // Splits text into lines that fit a width (interface units) in the game's interface font (Ui.Label's), at spaces.
+    public static IList<string> Wrap(string text, int width)
+    {
+        var lines = new List<string>();
+        var font = DefaultFontFace();
+        foreach (var paragraph in (text ?? "").Replace("\r", "").Split('\n'))
+        {
+            var line = "";
+            foreach (var word in paragraph.Split(' '))
+            {
+                var next = line.Length == 0 ? word : line + " " + word;
+                if (line.Length > 0 && (font == null ? next.Length * 7 : font.MeasureString(next).X) > width) { lines.Add(line); line = word; }
+                else line = next;
+            }
+            lines.Add(line);
+        }
+        return lines;
+    }
+
+    // Width of a text in the interface font.
+    public static int TextWidth(string text) { var font = DefaultFontFace(); return font == null ? (text ?? "").Length * 7 : (int)Math.Ceiling(font.MeasureString(text ?? "").X); }
+
+    static Microsoft.Xna.Framework.Graphics.SpriteFont DefaultFontFace()
+    {
+        var resources = dr3.a();
+        var name = DefaultFont == null ? null : DefaultFont.GetValue(null) as string;
+        try { return resources == null || name == null ? null : resources.GetResource<Microsoft.Xna.Framework.Graphics.SpriteFont>(name); } catch { return null; }
+    }
 
     internal static Rectangle Bounds(euz control)
     {

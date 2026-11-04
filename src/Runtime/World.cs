@@ -93,6 +93,21 @@ public sealed class Character
         Need.a(asp.a, (h)((int)attitude - 1));
     }
 
+    // Says a line over its head, as the game's barks do (c0s: floating speech; the game also puts it in the chat log
+    // when the player can see the speaker). interrupt: replace what it is saying now. False if it can't speak (no
+    // speech aspect: only characters Works placed get one added, game characters keep theirs as saved).
+    public bool Say(string text, bool interrupt = true)
+    {
+        var c = Entity as c5x;
+        if (c == null) return false;
+        var speech = c.GetAspect<c0s>();
+        if (speech == null && World.IsPlaced(c)) { speech = new c0s(c); c.SetAspect(speech); }
+        if (speech == null) return false;
+        SayMethod.Invoke(speech, new object[] { text, interrupt, null, null });
+        return true;
+    }
+    static readonly System.Reflection.MethodInfo SayMethod = typeof(c0s).GetMethods().First(m => m.Name == "a" && m.GetParameters().Length == 4 && m.GetParameters()[0].ParameterType == typeof(string));
+
     // Its own variables (the game's per-character CustomProperties, saved with it).
     public Variables Variables { get { return variables ?? (variables = new Variables(() => { var c = Entities.Character(Entity); return c == null || c.GetAspect<amc>().aa() == null ? null : c.GetAspect<amc>().aa().CustomProperties; })); } }
     Variables variables;
