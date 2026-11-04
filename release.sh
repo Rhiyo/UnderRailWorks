@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# Makes a GitHub release of UnderRailFixes from this machine, the same way every time:
-#   ./release.sh 1.2.0 "What changed, in a sentence or a paragraph."
-#   ./release.sh 1.2.0 -F notes.md          (description from a file)
+# Makes a GitHub release of UnderRailWorks from this machine, the same way every time:
+#   ./release.sh 2.0.0 "What changed, in a sentence or a paragraph."
+#   ./release.sh 2.0.0 -F notes.md          (description from a file)
+#   ./release.sh 2.0.0-preview.1 -F notes.md   (a version with a "-" is published as a pre-release)
 # It refuses to run unless the tree is clean, on main or a release/* branch, in sync with origin, and the version
 # is new. Then it stamps
-# the version, builds from scratch, runs tools/check-release.sh, packages the zip with the licence notices, writes
+# the version, builds from scratch, runs tools/check-release.sh and tools/savecheck/check-saves.sh --play (every save
+# written by the build must load in the stock game), packages the zip with the licence notices, writes
 # the release notes (your description + game version read from the exe + install steps + checksum), tags, pushes
 # and publishes with gh. Any failure stops it before anything is pushed.
 set -euo pipefail
@@ -12,7 +14,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 cd "$HERE"
 GAME="${GAME:-$HOME/.local/share/Steam/steamapps/common/Underrail}"
 CECIL_DIR=/usr/lib/mono/gac/Mono.Cecil/0.11.1.0__0738eb9f132ed756
-REPO=Rhiyo/UnderRailFixes
+REPO=Rhiyo/UnderRailWorks
 
 VERSION="${1:-}"; shift || true
 case "${1:-}" in
@@ -23,7 +25,7 @@ esac
 die() { echo "release: $*" >&2; exit 1; }
 
 # 1. Preconditions.
-[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "version must look like 1.2.3"
+[[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || die "version must look like 2.0.0 or 2.0.0-preview.1"
 # main, or a release/* branch (fixes for an older release line without what's on main since)
 BRANCH="$(git branch --show-current)"
 case "$BRANCH" in main|release/*) ;; *) die "not on main or a release/* branch";; esac
@@ -49,6 +51,7 @@ grep -q "Value = \"$VERSION\"" "$VFILE" || die "couldn't set the version in $VFI
 # 3-4. Build from scratch and check.
 ./build.sh
 tools/check-release.sh
+tools/savecheck/check-saves.sh --play
 
 # 5. Package.
 ORIG="$GAME/underrail.exe"; [ -f "$GAME/underrail.exe.backup" ] && ORIG="$GAME/underrail.exe.backup"
@@ -56,8 +59,7 @@ mcs -nologo -out:"$WORK/GameVersion.exe" -r:"$CECIL_DIR/Mono.Cecil.dll" -r:Syste
 GAME_VERSION="$(MONO_PATH="$CECIL_DIR" mono "$WORK/GameVersion.exe" "$ORIG")" || die "couldn't read the game version"
 STEAM_BUILD="$(grep -oP '"buildid"\s+"\K[0-9]+' "$GAME/../../appmanifest_250520.acf" 2>/dev/null || echo unknown)"
 
-# One download: the patcher installs the 64-bit mode, or with --32bit the 32-bit one.
-NAME="UnderRailFixes-$VERSION"
+NAME="UnderRailWorks-$VERSION"
 notice() {     # <title> <url> <licence file>
     echo "=== $1 ==="; echo "$2"; echo; cat "$3"; echo
 }
@@ -65,6 +67,8 @@ notices() {
     notice "Mono.Cecil (Mono.Cecil.dll, and inside the Linux patcher)" https://github.com/jbevain/cecil src/Release/cecil.txt
     notice "Mono runtime and class libraries (inside the Linux patcher: linux/*.bin, linux/libmono-native.so)" https://github.com/mono/mono src/Release/mono.txt
     notice "NVorbis 0.8.6 (NVorbis.dll)" https://github.com/NVorbis/NVorbis src/Release/nvorbis.txt
+    notice "Harmony 2.4.3 (0Harmony.dll)" https://github.com/pardeike/Harmony src/Release/harmony.txt
+    notice ".NET 10 runtime (dotnet/, the launcher's apphost and System.Runtime.Serialization.Formatters.dll; its own third-party notices are in dotnet/ThirdPartyNotices.txt)" https://github.com/dotnet/runtime dist/UnderRailWorks/dotnet/LICENSE.txt
     notice "FNA (FNA.dll)" https://github.com/FNA-XNA/FNA lib/fna/licenses/FNA.txt
     notice "FNA: LzxDecoder (inside FNA.dll)" https://github.com/FNA-XNA/FNA lib/fna/licenses/FNA-lzxdecoder.txt
     notice "FNA: MonoXNA code (inside FNA.dll)" https://github.com/FNA-XNA/FNA lib/fna/licenses/FNA-monoxna.txt
@@ -83,11 +87,11 @@ package() {     # <dist folder> <name> <notices function>
     local pkg="$WORK/$2"
     cp -r "$1" "$pkg"
     cp LICENSE "$pkg/LICENSE.txt"
-    { echo "UnderRailFixes includes the following third-party software."; echo; "$3"; } > "$pkg/THIRD-PARTY-NOTICES.txt"
+    { echo "UnderRailWorks includes the following third-party software."; echo; "$3"; } > "$pkg/THIRD-PARTY-NOTICES.txt"
     rm -f "dist/release/$2.zip"
     (cd "$WORK" && zip -qr -y "$HERE/dist/release/$2.zip" "$2")
 }
-package dist/UnderrailFix "$NAME" notices
+package dist/UnderRailWorks "$NAME" notices
 ZIP="dist/release/$NAME.zip"
 SHA="$(sha256sum "$ZIP" | cut -d' ' -f1)"
 
@@ -102,10 +106,10 @@ $DESCRIPTION
 
 ### Install
 1. Close the game, extract \`$NAME.zip\` and copy the contents of \`$NAME\` into the UnderRail folder.
-2. Windows: run \`UnderrailFix-Patcher.exe\`. Linux / Steam Deck: run \`./underrailfix-patcher\`.
-3. Start the game; settings are in **Options -> Fixes** and \`UnderrailFix.ini\`.
+2. Windows: run \`UnderRailWorks-Patcher.exe\`. Linux / Steam Deck: run \`./underrailworks-patcher\`.
+3. Start the game from Steam as usual. Settings: **Options -> Mods** and \`UnderRailWorks.ini\`; mods go in the \`Mods\` folder.
 
-The patcher installs the 64-bit mode (FNA instead of Microsoft XNA). For the 32-bit mode (the game's own engine), run \`UnderrailFix-Patcher-32bit.bat\` on Windows or \`./underrailfix-patcher --32bit\` on Linux. After a game update, run the patcher again. To uninstall, run it with \`--uninstall\`. Details in the [README](https://github.com/$REPO#readme).
+The game then runs 64-bit on .NET 10 (included, in \`dotnet\`) and FNA. It replaces an UnderRailFixes 1.x install and takes over its settings. Saves stay compatible with the unmodded game. After a game update, run the patcher again. To uninstall, run it with \`--uninstall\` (or Steam's "Verify integrity of game files"). Details in the [README](https://github.com/$REPO#readme).
 
 SHA-256 \`$NAME.zip\`: \`$SHA\`
 EOF
@@ -113,7 +117,8 @@ EOF
 # 7. Commit the version (if it changed), tag, push, publish.
 if [ -n "$(git status --porcelain -- "$VFILE")" ]; then git commit -q -m "Release v$VERSION" -- "$VFILE"; fi
 committed=1
-git tag -a "v$VERSION" -m "UnderRailFixes $VERSION (UnderRail $GAME_VERSION)"
+git tag -a "v$VERSION" -m "UnderRailWorks $VERSION (UnderRail $GAME_VERSION)"
 git push -q origin "$BRANCH" "v$VERSION"
-gh release create "v$VERSION" "$ZIP" --repo "$REPO" --title "UnderRailFixes $VERSION" --notes-file "$NOTES"
+PRE=""; case "$VERSION" in *-*) PRE=--prerelease;; esac
+gh release create "v$VERSION" "$ZIP" --repo "$REPO" --title "UnderRailWorks $VERSION" --notes-file "$NOTES" $PRE
 echo "Released v$VERSION: https://github.com/$REPO/releases/tag/v$VERSION"

@@ -1,9 +1,11 @@
-// Build step: UnderrailFix.dll is compiled against FNA (Wine Mono's WineMono.FNA). This points each of its XNA type
+// Build step: the runtime (UnderRailWorks.dll) is compiled against FNA (Wine Mono's WineMono.FNA). This points each of its XNA type
 // references at the XNA 4.0 assembly the game references that type from, so the DLL binds the way underrail.exe
 // does: through Wine Mono's XNA facades on Linux, or to Microsoft XNA on Windows.
-// Usage: mono Retarget.exe <UnderrailFix.dll> <underrail.exe>
-// Experimental 64-bit: mono Retarget.exe --fna <UnderrailFix.dll> <FNA.dll> <UnderrailFix64.dll> writes the copy the
-// 64-bit patch uses: assembly UnderrailFix64, every XNA type reference pointed at FNA (which has them all, same names).
+// Usage: mono Retarget.exe <runtime.dll> <underrail.exe>
+// mono Retarget.exe --fna <runtime.dll> <FNA.dll> <UnderRailWorks.dll> writes the runtime the game uses: assembly named
+// after the output file, every XNA type reference pointed at FNA (which has them all, same names).
+// mono Retarget.exe --fna-mod <mod.dll> <FNA.dll> <out.dll>: a mod likewise (its name kept; a reference to the 1.x
+// runtime names UnderrailFix / UnderrailFix64 becomes UnderRailWorks).
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -50,8 +52,8 @@ static class Retarget
         return 0;
     }
 
-    // A mod compiled like the runtime (against WineMono.FNA and UnderrailFix.dll): its XNA references pointed at our
-    // FNA and its runtime reference at UnderrailFix64 (mods run in the 64-bit mode only). Its own name is kept.
+    // A mod compiled like the runtime (against WineMono.FNA and the runtime): its XNA references pointed at our
+    // FNA (mods run in the 64-bit mode only). Its own name is kept.
     static int ModToFna(string input, string fnaPath, string output)
     {
         var fna = AssemblyNameReference.Parse(ModuleDefinition.ReadModule(fnaPath).Assembly.FullName);
@@ -62,9 +64,9 @@ static class Retarget
         foreach (var t in module.GetTypeReferences())
             if (t.Scope is AssemblyNameReference a && (a.Name.StartsWith("Microsoft.Xna.Framework") || a.Name.StartsWith("WineMono.FNA"))) t.Scope = reference;
         foreach (var r in module.AssemblyReferences.Where(r => r.Name.StartsWith("Microsoft.Xna.Framework") || r.Name.StartsWith("WineMono.FNA")).ToList()) module.AssemblyReferences.Remove(r);
-        foreach (var r in module.AssemblyReferences.Where(r => r.Name == "UnderrailFix")) r.Name = "UnderrailFix64";
+        foreach (var r in module.AssemblyReferences.Where(r => r.Name == "UnderrailFix" || r.Name == "UnderrailFix64")) r.Name = "UnderRailWorks";
         asm.Write(output);
-        Console.WriteLine(Path.GetFileName(output) + ": XNA references -> " + fna.FullName + ", runtime -> UnderrailFix64");
+        Console.WriteLine(Path.GetFileName(output) + ": XNA references -> " + fna.FullName);
         return 0;
     }
 
@@ -72,7 +74,7 @@ static class Retarget
     {
         var fna = AssemblyNameReference.Parse(ModuleDefinition.ReadModule(fnaPath).Assembly.FullName);
         var asm = AssemblyDefinition.ReadAssembly(new MemoryStream(File.ReadAllBytes(input)));
-        asm.Name.Name = "UnderrailFix64";
+        asm.Name.Name = Path.GetFileNameWithoutExtension(output);
         asm.MainModule.Name = Path.GetFileName(output);
         var module = asm.MainModule;
         var reference = new AssemblyNameReference(fna.Name, fna.Version) { PublicKeyToken = fna.PublicKeyToken, Culture = fna.Culture };

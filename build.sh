@@ -1,16 +1,18 @@
 #!/usr/bin/env bash
-# Builds the UnderrailFix release into dist/:
-#   UnderrailFix.dll               runtime fixes, loaded by the patched game (all platforms)
-#   UnderrailFix-Patcher.exe       Windows patcher (.NET Framework 4, built into Windows) + Mono.Cecil.dll
-#   underrailfix-patcher           Linux patcher (single binary with the Mono runtime bundled)
-#   UnderrailFix64.dll, FNA.dll, x64/, NVorbis.dll, UnderrailSteamHost.exe   the 64-bit mode (the patcher's default;
-#                                  --32bit installs the 32-bit mode, which uses only UnderrailFix.dll)
+# Builds UnderRailWorks into dist/UnderRailWorks/:
+#   UnderRailWorks.dll             the runtime (engine fixes, mod loader, API), loaded by the patched game
+#   UnderRailLauncher.*, dotnet/   the .NET 10 launcher (installed as underrail.exe) and the Windows .NET 10 runtime
+#   FNA.dll, x64/, NVorbis.dll, UnderrailSteamHost.exe, 0Harmony.dll   the 64-bit game's libraries
+#   Mods/UnderRailFixes/           the UnderRailFixes mod (Occluded characters)
+#   UnderRailWorks-Patcher.exe     Windows patcher (.NET Framework 4) + Mono.Cecil.dll
+#   underrailworks-patcher         Linux patcher (single binary with the Mono runtime bundled)
 # ./build.sh install   also patches the local Steam copy.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 GAME="$HOME/.local/share/Steam/steamapps/common/Underrail"
 CECIL=/usr/lib/mono/gac/Mono.Cecil/0.11.1.0__0738eb9f132ed756/Mono.Cecil.dll
-OUT="$HERE/dist/UnderrailFix"
+OUT="$HERE/dist/UnderRailWorks"
+DOTNET="${DOTNET:-$HOME/.dotnet10/dotnet}"     # the .NET 10 SDK (for the launcher)
 rm -rf "$HERE/dist" && mkdir -p "$OUT" "$HERE/build"
 
 # Compile the runtime against the stock game exe (the backup when the local copy is already patched).
@@ -31,30 +33,35 @@ if [ ! -f "$NVORBIS" ]; then
     cp "$HERE/build/nvorbis/lib/net35/NVorbis.dll" "$NVORBIS"
 fi
 echo "$NVORBIS_SHA  $NVORBIS" | sha256sum -c --quiet - || { echo "NVorbis.dll doesn't match the expected hash" >&2; rm -f "$NVORBIS"; exit 1; }
-# Harmony 2.3.6 (MIT): runtime method patching for mods (UnderRailWorks proof of concept, ModLoader.cs). Same fetch as NVorbis.
-HARMONY="$HERE/lib/0Harmony.dll"
-HARMONY_SHA=e605ac76a9139ddc09a0cecd8a32cbb296a58ea4aae424f6af5d3a29eeb30aec
-if [ ! -f "$HARMONY" ]; then
-    mkdir -p "$HERE/lib" "$HERE/build/harmony"
-    curl -fsSL https://www.nuget.org/api/v2/package/Lib.Harmony/2.3.6 -o "$HERE/build/harmony/pkg.zip"
-    unzip -qo "$HERE/build/harmony/pkg.zip" lib/net452/0Harmony.dll -d "$HERE/build/harmony"
-    cp "$HERE/build/harmony/lib/net452/0Harmony.dll" "$HARMONY"
+# Harmony 2.4.3 (MIT): runtime method patching for mods (ModLoader.cs, CoreCompat.cs). Its .NET Framework build to
+# compile against, its .NET 10 build to ship. Same fetch as NVorbis.
+HARMONY_PKG="$HERE/lib/harmony-2.4.3.nupkg"
+HARMONY_SHA=f07af11a0d62447e7e1b6e3fcf1e28fc75d9f8d1abf2d6ee79aabcdc4db43e88
+if [ ! -f "$HARMONY_PKG" ]; then
+    mkdir -p "$HERE/lib"
+    curl -fsSL https://www.nuget.org/api/v2/package/Lib.Harmony/2.4.3 -o "$HARMONY_PKG"
 fi
-echo "$HARMONY_SHA  $HARMONY" | sha256sum -c --quiet - || { echo "0Harmony.dll doesn't match the expected hash" >&2; rm -f "$HARMONY"; exit 1; }
+echo "$HARMONY_SHA  $HARMONY_PKG" | sha256sum -c --quiet - || { echo "Lib.Harmony 2.4.3 doesn't match the expected hash" >&2; rm -f "$HARMONY_PKG"; exit 1; }
+mkdir -p "$HERE/build/harmony"
+unzip -qo "$HARMONY_PKG" lib/net452/0Harmony.dll lib/net10.0/0Harmony.dll -d "$HERE/build/harmony"
+HARMONY="$HERE/build/harmony/lib/net452/0Harmony.dll"
 # The game's SFML.Net bindings, for the 32-bit music path (the backup when the local copy was patched for 64-bit).
 SFML=""
 for lib in sfmlnet-audio-2 sfmlnet-window-2; do
     f="$GAME/$lib.dll"; [ -f "$f.backup" ] && f="$f.backup"; SFML="$SFML -r:$f"
 done
-mcs -nologo -optimize+ -target:library -out:"$OUT/UnderrailFix.dll" -r:"$REF" -r:"$FNA" -r:"$NVORBIS" -r:"$HARMONY" $SFML -r:System.Core.dll -r:System.Drawing.dll -r:System.Windows.Forms.dll -r:System.Configuration.dll "$HERE"/src/Runtime/*.cs
-cp "$OUT/UnderrailFix.dll" "$HERE/build/UnderrailFix.fna.dll"     # before Retarget: what mods compile against
+# The runtime: compiled against the game and Wine Mono's FNA (build/fna, what mods compile against), its XNA references
+# pointed at the game's XNA assemblies (build/xna), then at our FNA as UnderRailWorks.dll (below).
+mkdir -p "$HERE/build/fna" "$HERE/build/xna"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/fna/UnderRailWorks.dll" -r:"$REF" -r:"$FNA" -r:"$NVORBIS" -r:"$HARMONY" $SFML -r:System.Core.dll -r:System.Drawing.dll -r:System.Windows.Forms.dll -r:System.Configuration.dll "$HERE"/src/Runtime/*.cs
+cp "$HERE/build/fna/UnderRailWorks.dll" "$HERE/build/xna/UnderRailWorks.dll"
 mcs -nologo -out:"$HERE/build/Retarget.exe" -r:"$CECIL" -r:System.Core.dll "$HERE/src/Build/Retarget.cs"
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" "$OUT/UnderrailFix.dll" "$REF"
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" "$HERE/build/xna/UnderRailWorks.dll" "$REF"
 cp "$CECIL" "$OUT/"
 
-# Mods: Harmony next to the game, the example mod in Mods/ (built against the stock exe and Harmony only, so it runs
-# in both modes). BrokenMod (throws on load) is built into build/ for testing only.
-cp "$HARMONY" "$OUT/"
+# Harmony next to the game (its .NET 10 build). The examples (HelloWorks, HelloItems, BrokenMod: throws on load) are
+# built into build/Mods for testing, not shipped.
+cp "$HERE/build/harmony/lib/net10.0/0Harmony.dll" "$OUT/"
 mkdir -p "$HERE/build/Mods/HelloWorks" "$HERE/build/Mods/BrokenMod"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/Mods/HelloWorks/HelloWorks.dll" -r:"$REF" -r:"$HARMONY" "$HERE/examples/HelloWorks/HelloWorks.cs"
 # HelloItems (the item overlay spike) also into build/ only: its item file is made from the player's own game data.
@@ -73,13 +80,35 @@ mcs -nologo -optimize+ -platform:x86 -out:"$OUT64/UnderrailSteamHost.exe" -r:"$G
 [ -f "$HERE/lib/fna/FNA.dll" ] || "$HERE/tools/fetch-fna.sh"
 cp "$HERE/lib/fna/FNA.dll" "$OUT64/"
 cp "$HERE"/lib/fna/x64/*.dll "$OUT64/x64/"
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna "$OUT/UnderrailFix.dll" "$OUT64/FNA.dll" "$OUT64/UnderrailFix64.dll"
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna "$HERE/build/xna/UnderRailWorks.dll" "$OUT64/FNA.dll" "$OUT/UnderRailWorks.dll"
 
-# The UnderRailFixes mod (Occluded characters): compiled like the runtime, then pointed at our FNA and UnderrailFix64.
+# The UnderRailFixes mod (Occluded characters): compiled like the runtime, then pointed at our FNA.
 mkdir -p "$OUT/Mods/UnderRailFixes"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/UnderRailFixes.dll" -r:"$REF" -r:"$FNA" -r:"$HERE/build/UnderrailFix.fna.dll" -r:"$HARMONY" -r:System.Core.dll "$HERE"/mods/UnderRailFixes/*.cs
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/UnderRailFixes.dll" -r:"$REF" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:"$HARMONY" -r:System.Core.dll "$HERE"/mods/UnderRailFixes/*.cs
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/UnderRailFixes.dll" "$OUT64/FNA.dll" "$OUT/Mods/UnderRailFixes/UnderRailFixes.dll"
 cp "$HERE/mods/UnderRailFixes/mod.json" "$OUT/Mods/UnderRailFixes/"
+
+# The .NET 10 launcher (installed as underrail.exe; src/Launcher) and the Windows .NET 10 runtime it runs the game on
+# (Microsoft.NETCore.App + Microsoft.WindowsDesktop.App, from Microsoft's releases, each checked against the SHA-512
+# Microsoft publishes), in dotnet/.
+DOTNET_VER=10.0.14
+DOTNET_WIN="$HERE/lib/dotnet-win-$DOTNET_VER"
+if [ ! -f "$DOTNET_WIN/dotnet.exe" ]; then
+    rm -rf "$HERE/build/dotnet-zip" "$DOTNET_WIN"; mkdir -p "$HERE/build/dotnet-zip" "$DOTNET_WIN"
+    for p in "Runtime/$DOTNET_VER/dotnet-runtime-$DOTNET_VER-win-x64.zip a176095f1db69b42c81acc60940744078d6bf2d2ac643e418342aa9c81889f4bd13e42f4621b131f9e77e4bc781ad46e375956219df9a4f979031d2a5a8d93cd" \
+             "WindowsDesktop/$DOTNET_VER/windowsdesktop-runtime-$DOTNET_VER-win-x64.zip 3214913702264452ac4b283b6fb2f6c14ab748cea36c7561608245c4a7d8cc10436a160032038865d039a016eab4975f65f1ae906de7615953fbec760f764ac4"; do
+        set -- $p
+        zip="$HERE/build/dotnet-zip/$(basename "$1")"
+        curl -fsSL -o "$zip" "https://builds.dotnet.microsoft.com/dotnet/$1"
+        echo "$2  $zip" | sha512sum -c --quiet - || { echo "$(basename "$zip") doesn't match the expected hash" >&2; exit 1; }
+        unzip -qo "$zip" -d "$DOTNET_WIN"
+    done
+fi
+rm -rf "$OUT/dotnet"; cp -r "$DOTNET_WIN" "$OUT/dotnet"
+DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 "$DOTNET" publish "$HERE/src/Launcher" -c Release -o "$HERE/build/launcher" >/dev/null
+for f in UnderRailLauncher.exe UnderRailLauncher.dll UnderRailLauncher.runtimeconfig.json UnderRailLauncher.deps.json System.Runtime.Serialization.Formatters.dll; do
+    cp "$HERE/build/launcher/$f" "$OUT/"
+done
 
 # The Linux patcher bundles a Mono runtime: the Mono project's own Ubuntu 20.04 build of Mono 6.12 (baseline x86-64,
 # glibc 2.29, so it runs on Ubuntu 20.04+, Debian 11+, SteamOS...), never the build machine's: that may need a newer
@@ -115,7 +144,7 @@ patchers() {     # <dist folder> <Windows exe name> <Linux name> [mcs flags]
     cp "$MONO_GENERIC/libmono-native.so" "$dir/linux/libmono-native.so"
     cat > "$dir/$name" <<SH
 #!/bin/sh
-# Linux patcher for UnderRailFixes. Usage: ./$name [game folder] [--32bit] [--uninstall]
+# Linux patcher for UnderRailWorks. Usage: ./$name [game folder] [--uninstall]
 here="\$(cd "\$(dirname "\$0")" && pwd)"
 # No folder given: the folder this script is in (it's meant to be copied into the Underrail folder).
 case " \$* " in *" /"*|*" ."*|*" ~"*) ;; *) [ -f "\$here/underrail.exe" ] && set -- "\$here" "\$@" ;; esac
@@ -126,13 +155,10 @@ SH
     chmod +x "$dir/$name" "$dir/linux/$name.bin"
     cp "$HERE/README.md" "$dir/"
 }
-patchers "$OUT" UnderrailFix-Patcher.exe underrailfix-patcher
-# Windows: a double-click way to the 32-bit mode.
-printf '@echo off\r\nrem Installs UnderRailFixes in the 32-bit mode (the game'"'"'s own Microsoft XNA) instead of the default 64-bit mode.\r\n"%%~dp0UnderrailFix-Patcher.exe" "%%~dp0." --32bit\r\npause\r\n' > "$OUT/UnderrailFix-Patcher-32bit.bat"
+patchers "$OUT" UnderRailWorks-Patcher.exe underrailworks-patcher
 echo "Built $OUT"
 
 if [ "${1:-}" = install ]; then
     if pgrep -ix 'underrail.exe' >/dev/null; then echo "Close Underrail first." >&2; exit 1; fi
-    cp "$OUT/UnderrailFix.dll" "$GAME/"
-    "$OUT/underrailfix-patcher" "$GAME"
+    "$OUT/underrailworks-patcher" "$GAME"
 fi

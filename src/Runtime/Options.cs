@@ -349,7 +349,7 @@ public static class UnderrailOptions
             WriteSlider(rows.ZoomMax, "ZoomMax", FixSettings.ZoomMax);
             if (Write(rows.MaxFps, "MaxFps", CurrentFps())) FrameRate.Reapply();     // applies at once
         }
-        catch (Exception ex) { Log.Write("saving UnderrailFix options failed: " + ex); }
+        catch (Exception ex) { Log.Write("saving UnderRailWorks options failed: " + ex); }
     }
 
     static bool Write(aw9 combo, string key, FixChoice current)
@@ -376,7 +376,7 @@ public static class UnderrailOptions
             Log.Write("options: interface laid out again");
             if (confirm != null) { var previous = confirm; confirm = null; Ask(previous); }
         }
-        catch (Exception ex) { Log.Write("applying UnderrailFix options failed: " + ex); }
+        catch (Exception ex) { Log.Write("applying UnderRailWorks options failed: " + ex); }
     }
 
     // The game's own "keep the new video settings?" countdown dialog (bnr.a); running out of time picks Revert.

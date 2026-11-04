@@ -23,6 +23,21 @@ Working today (tested under Proton): the game on .NET 10, the mod loader and Mod
 API and the UnderRailFixes mod, save compatibility with the stock game (`tools/savecheck`). See `TODO.md` for what's
 left and `UnderRailWorks.md` for the design.
 
+## Installing (once released)
+
+1. Close the game, extract the release zip and copy its contents into the UnderRail folder.
+2. Windows: run `UnderRailWorks-Patcher.exe`. Linux / Steam Deck: run `./underrailworks-patcher`.
+3. Start the game from Steam as usual. Settings: **Options -> Mods** and `UnderRailWorks.ini`; mods go in `Mods`.
+
+The patcher backs up `underrail.exe` as `underrail.exe.backup`, writes the patched game as `UnderRail.Game.exe` and
+puts a small .NET 10 launcher in `underrail.exe`'s place (the runtime is in `dotnet`, nothing to install). It replaces
+an UnderRailFixes 1.x install and takes over its settings. After a game update, run the patcher again.
+
+**Uninstall:** run the patcher with `--uninstall` (or Steam's "Verify integrity of game files"), then delete
+`UnderRailWorks*`, `underrailworks-patcher`, `UnderRailLauncher*`, `FNA.dll`, `NVorbis.dll`, `0Harmony.dll`,
+`System.Runtime.Serialization.Formatters.dll`, `UnderrailSteamHost.exe`, `Mono.Cecil.dll`, `README.md`, `LICENSE.txt`,
+`THIRD-PARTY-NOTICES.txt`, `linux`, `x64` and, if you don't want them any more, `Mods` and `UnderRailWorks.ini`.
+
 ## For modders
 
 A mod is a folder in `Mods\` with a `mod.json` and a DLL whose main class derives from `WorksMod`:
@@ -47,8 +62,10 @@ public sealed class MyMod : WorksMod
 
 ## Building
 
-Linux, with Mono (`mcs`, `mkbundle`), Mono.Cecil 0.11, the .NET 10 SDK, a Steam copy of UnderRail and any Proton.
-See `AGENTS.md`.
+Linux, with Mono (`mcs`, `mkbundle`), Mono.Cecil 0.11, the .NET 10 SDK (`DOTNET`, default `~/.dotnet10/dotnet`), a
+Steam copy of UnderRail and any Proton. `./build.sh` builds `dist/UnderRailWorks` (fetching FNA, Harmony and the Windows
+.NET runtime with pinned hashes); `tools/check-release.sh` checks the patchers and `tools/savecheck/check-saves.sh
+--play` save compatibility with the stock game; `./release.sh X.Y.Z` does all of it and publishes. See `AGENTS.md`.
 
 ## Licence
 

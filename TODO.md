@@ -18,10 +18,12 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
   only showed in objects .NET 10 created itself.
 - [ ] **config.dat written in game on .NET 10** (changing options, key bindings), then loaded by the stock game in game,
   not only offline.
-- [ ] **Saves from Steam's real launch** (inside Steam's runtime container), not only headless test runs.
+- [ ] **Saves from Steam's real launch** (inside Steam's runtime container), not only headless test runs. (The game
+  itself was played from Steam on .NET 10 in Nov 2026; its autosaves were part of the checked set.)
 - [ ] **Real Windows**: .NET 10 on Windows writing saves, the stock game on Windows (Microsoft .NET Framework, XNA)
   loading them. Wine Mono stands in for .NET Framework in the check today.
-- [ ] **Run check-saves.sh from release.sh**, so no .NET 10 release can ship without it.
+- [x] **Run check-saves.sh from release.sh** (with --play), so no release can ship without it. It builds its own game
+  copies from dist/.
 - [ ] **Mods' save data** (works.json and per-mod JSON, when built): the stock game must still load saves that have them.
 
 ## Housekeeping
@@ -30,17 +32,20 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Repo layout: its own repo; the UnderRailFixes mod lives in `mods/UnderRailFixes` here.
 - [ ] Cherry-pick the 1.0.9 and 1.0.10 fixes (`cacda0c`, `48a1bfe` on `release/1.0.9`) onto `main`, once the other
   session's work there is committed.
-- [ ] Names for 2.x: `UnderRailWorks.dll` instead of `UnderrailFix64.dll`, the patcher's name, the version label (it still
-  says UnderrailFix 1.0.8), and recognising and replacing a 1.x install.
+- [x] Names for 2.x: `UnderRailWorks.dll`, `UnderRailWorks.ini`/`.log` (1.x's `UnderrailFix.ini` read on the first start),
+  `UnderRailWorks-Patcher`, version 2.0.0; a 1.x install is recognised and replaced.
 
 ## Finish the move to .NET 10
 
-- [ ] build.sh: publish the launcher, fetch the Windows runtime and Harmony 2.4.3 with pinned hashes.
-- [ ] The patcher installs and uninstalls the new layout (game -> UnderRail.Game.exe, launcher as underrail.exe,
-  dotnet\); today it is done by hand. Running the old patcher on a .NET 10 install must fail safely.
+- [x] build.sh: publishes the launcher, fetches the Windows runtime (SHA-512) and Harmony 2.4.3 (SHA-256).
+- [x] The patcher installs and uninstalls the new layout (game -> UnderRail.Game.exe, launcher as underrail.exe,
+  dotnet\), over a stock game, an existing install, a game update or a 1.x install; tools/check-release.sh tests all
+  of it. (Running the 1.x patcher on a Works install: it reads the launcher as a broken exe and stops.)
 - [ ] Untested on .NET 10: Steam achievements through the helper, GOG Galaxy, clipboard, the dev console, long sessions.
 - [ ] Performance: frame times on .NET 10 against Wine Mono in the same scenes.
 - [ ] Download size: the runtime is 76 MB zipped; check what can be trimmed.
+- [ ] underrail.exe (the launcher) shows .NET's default icon in Explorer: copy the icon resource from the player's own
+  underrail.exe into it at install time (we can't ship the game's art). The game window's icon is already right.
 
 ## Foundations
 

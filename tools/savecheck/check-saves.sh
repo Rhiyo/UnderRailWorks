@@ -6,23 +6,43 @@
 #      itself; the StringEqualityComparer bug only showed there), 4 games at a time;
 #   3. every file from 1 and 2 loaded by the stock game's loader on Proton's Wine Mono (StockCheck), and scanned for
 #      modern names (System.Private.CoreLib, .NET 10 versions, StringEqualityComparer).
-# Needs: ~/underrail-works-stock (stock game, data symlinked), ~/underrail-net10 (the .NET 10 build installed),
-# ~/.dotnet10 (SDK) and ~/.dotnet10-win (Windows runtime), the run-underrail skill. Usage: check-saves.sh [--play]
+# Builds its own game copies in $WORK: the stock game, and the stock game with dist/UnderRailWorks installed (data\
+# symlinked to the Steam copy). Needs a built dist/UnderRailWorks, the .NET 10 SDK ($DOTNET), Proton (found as the
+# run-underrail skill finds it) and its base prefix (~/underrail-test-prefix, made by the skill's setup.sh).
+# Usage: check-saves.sh [--play]
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-SKILL=~/underrail/.claude/skills/run-underrail/scripts
-STOCK=~/underrail-works-stock NET10=~/underrail-net10
+REPO="$(cd "$HERE/../.." && pwd)"
+SKILL="$REPO/.claude/skills/run-underrail/scripts"
+DIST="$REPO/dist/UnderRailWorks"
+DOTNET="${DOTNET:-$HOME/.dotnet10/dotnet}"
+GAME="${GAME:-$HOME/.local/share/Steam/steamapps/common/Underrail}"
 SAVES="$HOME/.local/share/Steam/steamapps/compatdata/250520/pfx/drive_c/users/steamuser/Documents/My Games/Underrail"
 WORK="${WORK:-$HOME/.cache/underrail-test/savecheck}"; PFX="$WORK/prefix"
 . "$SKILL/common.sh" >/dev/null 2>&1
 mkdir -p "$WORK"; [ -d "$PFX/pfx" ] || cp -a ~/underrail-test-prefix "$PFX"
+[ -d "$DIST" ] || { echo "no $DIST: run ./build.sh first" >&2; exit 1; }
+
+# The game copies: stock, and with the build installed.
+STOCK="$WORK/stock" NET10="$WORK/net10"
+ORIG="$GAME/underrail.exe"; [ -f "$GAME/underrail.exe.backup" ] && ORIG="$GAME/underrail.exe.backup"
+for c in "$STOCK" "$NET10"; do
+    rm -rf "$c"; mkdir -p "$c"; cp "$ORIG" "$c/underrail.exe"
+    for f in "$GAME"/*.dll; do case "$(basename "$f")" in UnderrailFix*.dll|UnderRailWorks.dll|UnderRailLauncher.dll|0Harmony.dll|System.Runtime.Serialization.Formatters.dll|Mono.Cecil.dll|FNA.dll|NVorbis.dll) ;; *) cp "$f" "$c/";; esac; done
+    for f in "$GAME"/sfmlnet-*.dll.backup; do [ -f "$f" ] && cp "$f" "$c/$(basename "$f" .backup)"; done
+    cp "$GAME/steam_appid.txt" "$c/" 2>/dev/null || true
+    ln -s "$GAME/data" "$c/data"
+done
+cp -r "$DIST"/. "$NET10/"
+"$NET10/underrailworks-patcher" "$NET10" >/dev/null
+printf '[UnderRailWorks]\nSettingsVersion=3\nUiInsetX=0\nUiInsetY=0\nLog=1\n' > "$NET10/UnderRailWorks.ini"     # playsave.sh's click positions: no insets
 win() { echo "Z:$(echo "$1" | tr / '\\')"; }
 proton_run() { STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM STEAM_COMPAT_DATA_PATH=$PFX WINEDEBUG=-all timeout 900 nice -n 19 python3 "$PROTON" run "$@" >/dev/null 2>&1 || true; }
 
 # Tools.
 (cd "$NET10" && mcs -nologo -platform:x86 -out:"$WORK/StockCheck.exe" -r:UnderRail.Game.exe "$HERE/StockCheck.cs")
 cp "$WORK/StockCheck.exe" "$STOCK/"
-DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 nice -n 19 ~/.dotnet10/dotnet build -c Release -p:GAME="$NET10" -o "$WORK/roundtrip" "$HERE/RoundTrip" >/dev/null
+DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 nice -n 19 "$DOTNET" build -c Release -p:GAME="$NET10" -o "$WORK/roundtrip" "$HERE/RoundTrip" >/dev/null
 
 # Inputs: the player's saves and config.dat (copies; never written).
 rm -rf "$WORK/orig" "$WORK/rt" "$WORK/played"; mkdir -p "$WORK/orig"
@@ -30,7 +50,7 @@ cp -r "$SAVES/Saves/"*/ "$WORK/orig/"; cp "$SAVES/config.dat" "$WORK/orig/"
 
 echo "== 1. round trip on .NET 10"
 args=(); for a in "$WORK/orig/"*; do args+=("$(win "$a")"); done
-proton_run "$HOME/.dotnet10-win/dotnet.exe" "$(win "$WORK/roundtrip/RoundTrip.dll")" "$(win "$NET10")" "$(win "$WORK/rt")" "${args[@]}"
+proton_run "$NET10/dotnet/dotnet.exe" "$(win "$WORK/roundtrip/RoundTrip.dll")" "$(win "$NET10")" "$(win "$WORK/rt")" "${args[@]}"
 grep -v "^OK\|fnalibs" "$WORK/rt/results.txt"
 
 checked=("$WORK/rt/"*/ "$WORK/rt/config.dat")
@@ -38,7 +58,7 @@ if [ "${1:-}" = --play ]; then
     echo "== 2. saves made by the .NET 10 game"
     names=(); for d in "$WORK/orig/"*/; do names+=("$(basename "$d")"); done
     for ((i = 0; i < ${#names[@]}; i += 4)); do
-        for ((j = i; j < i + 4 && j < ${#names[@]}; j++)); do RUN=play$j "$HERE/playsave.sh" "${names[j]}" "$WORK/played" & sleep 3; done; wait
+        for ((j = i; j < i + 4 && j < ${#names[@]}; j++)); do RUN=play$j TEST_GAME="$NET10" SKILL="$SKILL" "$HERE/playsave.sh" "${names[j]}" "$WORK/played" & sleep 3; done; wait
     done
     checked+=("$WORK/played/"*/)
 fi
@@ -48,3 +68,5 @@ args=(); for a in "${checked[@]}"; do args+=("$(win "$a")"); done
 proton_run "$STOCK/StockCheck.exe" "$(win "$WORK/stock-results.txt")" "${args[@]}"
 grep -v "^OK" "$WORK/stock-results.txt"
 python3 -I "$HERE/scan_names.py" "${checked[@]}"
+grep -q "^result: .* 0 failed" "$WORK/stock-results.txt" && ! grep -q "^FAIL" "$WORK/rt/results.txt" || { echo "SAVE CHECK FAILED" >&2; exit 1; }
+echo "Save check passed."

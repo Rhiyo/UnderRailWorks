@@ -8,14 +8,14 @@ public static class FixStartup
     // patched = the FixVersion the patcher installed with this exe.
     public static void Run(string patched)
     {
-        Log.Write("UnderrailFix " + FixVersion.Value);
+        Log.Write("UnderRailWorks " + FixVersion.Value + " (.NET " + Environment.Version + ")");
         if (patched != FixVersion.Value)
         {
             // Another version's hooks may not exist in this DLL; stop with a clear message instead of a crash later.
-            string message = "UnderrailFix.dll is version " + FixVersion.Value + ", but underrail.exe was patched by version " + patched
-                + ".\n\nRun the UnderrailFix patcher again to update the patch.";
+            string message = "UnderRailWorks.dll is version " + FixVersion.Value + ", but the game was patched by version " + patched
+                + ".\n\nRun the UnderRailWorks patcher again to update the patch.";
             Log.Always(message.Replace("\n\n", " "));
-            try { MessageBox(IntPtr.Zero, message, "UnderrailFix", 0x10); } catch { }
+            try { MessageBox(IntPtr.Zero, message, "UnderRailWorks", 0x10); } catch { }
             Environment.Exit(1);
         }
         try { FnaMode.Startup(); }

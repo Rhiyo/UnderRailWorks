@@ -1,4 +1,7 @@
-// UnderrailFix.ini next to the game. Read once at launch; Width/Height are written back when the in-game menu changes them.
+// UnderRailWorks.ini next to the game: the engine fixes' settings (mods keep theirs in Mods\<mod>\settings.ini). Read
+// once at launch; Width/Height are written back when the in-game menu changes them. First start after UnderRailFixes 1.x:
+// the values are taken from its UnderrailFix.ini (which is left as it is; Raw also reads its other keys, e.g. for the
+// UnderRailFixes mod's Occluded characters settings).
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -6,7 +9,7 @@ using System.Linq;
 
 public static class FixSettings
 {
-    public const string FileName = "UnderrailFix.ini";
+    public const string FileName = "UnderRailWorks.ini", LegacyFileName = "UnderrailFix.ini";
     public const int DefaultZoomMin = 75, DefaultZoom = 150, DefaultZoomMax = 200;
 
     // Bump when a setting's meaning changes, and list it in Reset: older files get those keys reset to the new
@@ -18,8 +21,9 @@ public static class FixSettings
     };
 
     const string Default =
-@"; UnderrailFix settings. Changes apply on the next launch.
-[UnderrailFix]
+@"; UnderRailWorks settings (the engine fixes). Changes apply on the next launch; most can also be changed in game,
+; Options -> Mods -> Engine fixes. Mods keep their own settings in Mods\<mod>\settings.ini.
+[UnderRailWorks]
 SettingsVersion=3
 
 ; 1 = resolution list built from the modes the monitor reports, long dropdowns scroll, and the resolution is
@@ -68,27 +72,6 @@ UiInsetY=0
 ; 1 = show the whole image, as large as fits, never stretched. Either way they ignore the insets.
 BackgroundFit=0
 
-; 1 = the gameplay fixes below; 0 = the game's own behaviour for all of them (and no Gameplay section in
-; Options -> Fixes).
-GameplayFixes=1
-
-; Occluded characters. With GameplayFixes=1: 1 = characters behind walls or other scenery are shown where they're hidden, as chosen
-; below for the player, hostile characters (hostile and unfriendly) and every other character. Follows the game's
-; Character Outlines option: none with ""Never"". Off by default.
-ShowCovered=0
-; For each: off; keyhole = a round see-through hole in whatever stands in front of them (as Neverwinter Nights: EE's
-; keyholing); lines = the covered part in the colour holding Tab gives them, as horizontal lines; dither = the same as
-; spaced-out dots; fill = the same, solid; outline = the outline holding Tab draws, on the covered part.
-ShowCoveredPlayer=keyhole
-ShowCoveredHostile=lines
-ShowCoveredOther=lines
-; How see-through the lines, dots, fill and outline are, in percent (0 = solid, 100 = invisible).
-ShowCoveredTransparency=75
-; How see-through the keyhole is at its centre, in percent, and its size in percent of the default (about the
-; character's height).
-KeyholeTransparency=75
-KeyholeSize=100
-
 ; Windows only: 1 = tell Windows the game handles high-DPI screens itself, so display scaling (e.g. 150% or 200%
 ; in Windows' display settings) doesn't stretch it or hide part of the resolution. 0 = Windows' default behaviour.
 DpiAware=1
@@ -106,13 +89,31 @@ FrameRateFix=0
 ; refresh rate (the smoothest); a cap that divides it evenly (e.g. 120 or 60 on 240 Hz) paces best.
 MaxFps=0
 
-; 1 = write UnderrailFix.log in the game folder (what the fixes decided and any errors), e.g. for a bug report.
+; 1 = write UnderRailWorks.log in the game folder (what the fixes decided and any errors), e.g. for a bug report.
 Log=0
 ";
 
     static Dictionary<string, string> values;
 
     public static string Path => System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, FileName);
+
+    // UnderRailFixes 1.x's UnderrailFix.ini, if there is one (read only).
+    static Dictionary<string, string> legacy;
+    static Dictionary<string, string> Legacy
+    {
+        get
+        {
+            if (legacy != null) return legacy;
+            legacy = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                string old = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, LegacyFileName);
+                if (File.Exists(old)) legacy = Parse(File.ReadAllLines(old));
+            }
+            catch { }
+            return legacy;
+        }
+    }
 
     static Dictionary<string, string> Values
     {
@@ -123,6 +124,7 @@ Log=0
             try
             {
                 if (File.Exists(Path)) values = Parse(File.ReadAllLines(Path));
+                else if (Legacy.Count > 0) { values = new Dictionary<string, string>(Legacy, StringComparer.OrdinalIgnoreCase); Log.Write("settings: taken from " + LegacyFileName); }
                 var defaults = Parse(Default.Split('\n'));
                 int version;
                 if (!values.ContainsKey("SettingsVersion") || !int.TryParse(values["SettingsVersion"], out version)) version = 1;
@@ -190,33 +192,7 @@ Log=0
     public static string UiInsetX => Get("UiInsetX");
     public static string UiInsetY => Get("UiInsetY");
     public static bool DpiAware => Flag("DpiAware");
-    public static bool GameplayFixes => Flag("GameplayFixes");
-    public static bool ShowCovered => GameplayFixes && Get("ShowCovered") == "1";     // off unless set
-    public enum CoveredEffect { Off, Keyhole, Lines, Dither, Fill, Outline }
-    public static CoveredEffect CoveredPlayer => Effect("ShowCoveredPlayer", CoveredEffect.Keyhole);
-    public static CoveredEffect CoveredHostile => Effect("ShowCoveredHostile", CoveredEffect.Lines);
-    public static CoveredEffect CoveredOther => Effect("ShowCoveredOther", CoveredEffect.Lines);
-    public static bool AnyKeyhole => CoveredPlayer == CoveredEffect.Keyhole || CoveredHostile == CoveredEffect.Keyhole || CoveredOther == CoveredEffect.Keyhole;
-    static CoveredEffect Effect(string key, CoveredEffect fallback)
-    {
-        switch ((Get(key) ?? "").Trim().ToLowerInvariant())
-        {
-            case "off": case "0": return CoveredEffect.Off;
-            case "keyhole": return CoveredEffect.Keyhole;
-            case "lines": return CoveredEffect.Lines;
-            case "dither": return CoveredEffect.Dither;
-            case "fill": return CoveredEffect.Fill;
-            case "outline": return CoveredEffect.Outline;
-            default: return fallback;
-        }
-    }
     static int Percent(string key, int fallback, int min, int max) { int n; return int.TryParse((Get(key) ?? "").TrimEnd('%', ' '), out n) ? Math.Max(min, Math.Min(max, n)) : fallback; }
-    public static int KeyholeTransparency => Percent("KeyholeTransparency", 75, 0, 100);
-    public static int KeyholeSize => Percent("KeyholeSize", 100, 25, 300);
-    // Not in the ini or the Fixes tab: 1 = draw the keyhole's front picture in tiles of at most 2048 even where one
-    // picture works (for testing the tiled path that Microsoft XNA needs above 2048).
-    public static bool KeyholeTiles => Get("KeyholeTiles") == "1";
-    public static int ShowCoveredTransparency => Percent("ShowCoveredTransparency", 75, 0, 100);
     public static bool WindowIcon => Flag("WindowIcon");
     public static bool FrameRateFix { get { string v = Get("FrameRateFix"); return v == "1" || string.Equals(v, "on", StringComparison.OrdinalIgnoreCase) || string.Equals(v, "true", StringComparison.OrdinalIgnoreCase); } }     // off unless set (not tested thoroughly)
     public static int MaxFps => Number("MaxFps") ?? 0;
@@ -231,13 +207,13 @@ Log=0
     }
 
     // The value as written in the file (null if missing), e.g. to put it back after a revert.
-    public static string Raw(string key) { return Get(key); }
+    public static string Raw(string key) { string v; return Get(key) ?? (Legacy.TryGetValue(key, out v) ? v : null); }
 
     // From the in-game options: changes the value now (settings read every frame, like the zoom limits, follow at once)
     // and in the file.
     public static void SetValue(string key, string value) { Set(key, value); }
 
-    // Bumped on every change, so code reading settings per frame can keep its own copy (ShowCovered).
+    // Bumped on every change, so code reading settings per frame can keep its own copy.
     public static int Changes { get; private set; }
 
     static void Set(string key, string value)
@@ -319,7 +295,7 @@ public static class Log
         {
             try
             {
-                string path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UnderrailFix.log");
+                string path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "UnderRailWorks.log");
                 if (!started) { File.WriteAllText(path, ""); started = true; }
                 File.AppendAllText(path, DateTime.Now.ToString("HH:mm:ss ") + line + Environment.NewLine);
             }

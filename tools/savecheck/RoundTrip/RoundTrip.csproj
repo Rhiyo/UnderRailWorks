@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Save compatibility check, the .NET 10 side: loads saves and config.dat with the game's own loader on .NET 10 (the
        patched 64-bit game + Works runtime, as the .NET 10 build runs) and writes them back with the game's serializer.
-       GAME: a folder with the patched game (UnderRail.Game.exe), UnderrailFix64.dll, FNA.dll and 0Harmony.dll. -->
+       GAME: a folder with the patched game (UnderRail.Game.exe), UnderRailWorks.dll, FNA.dll and 0Harmony.dll. -->
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
@@ -15,9 +15,9 @@
     <NoWarn>SYSLIB0011;SYSLIB0050;SYSLIB0051;MSB3277;CS1701;CS1702</NoWarn>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="System.Runtime.Serialization.Formatters" Version="10.0.*" />
+    <PackageReference Include="System.Runtime.Serialization.Formatters" Version="10.0.14" />
     <Reference Include="underrail"><HintPath>$(GAME)/UnderRail.Game.exe</HintPath><Private>false</Private></Reference>
-    <Reference Include="UnderrailFix64"><HintPath>$(GAME)/UnderrailFix64.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnderRailWorks"><HintPath>$(GAME)/UnderRailWorks.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="FNA"><HintPath>$(GAME)/FNA.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 </Project>

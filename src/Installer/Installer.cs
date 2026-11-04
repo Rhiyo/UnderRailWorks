@@ -1,10 +1,19 @@
-// UnderRailFixes patcher: backs up underrail.exe and patches it in place to call UnderrailFix.dll.
-//   UnderrailFix-Patcher [game folder]               install the 64-bit mode (or update an existing install)
-//   UnderrailFix-Patcher [game folder] --32bit       install the 32-bit mode (the game's own Microsoft XNA; see Patch64)
-//   UnderrailFix-Patcher [game folder] --uninstall   restore the original exe
+// UnderRailWorks patcher: backs up underrail.exe, writes the patched game as UnderRail.Game.exe and puts the .NET 10
+// launcher in its place as underrail.exe (Steam starts the game as before, no launch options).
+//   UnderRailWorks-Patcher [game folder]               install (or update an existing install, or replace 1.x)
+//   UnderRailWorks-Patcher [game folder] --uninstall   restore the original game
 // The game folder defaults to the folder the patcher is in, then the current folder.
 //
-// Patches (each fix is switched on/off at runtime by UnderrailFix.ini, so changing it never needs a re-patch):
+// The game folder after installing:
+//   underrail.exe            the launcher (src/Launcher): runs UnderRail.Game.exe on .NET 10 from dotnet\
+//   underrail.exe.backup     the original game, what every install patches from and --uninstall puts back
+//   UnderRail.Game.exe       the patched game: 64-bit, on our FNA.dll, calling UnderRailWorks.dll
+//   UnderRailWorks.dll, FNA.dll, x64\, NVorbis.dll, UnderrailSteamHost.exe, 0Harmony.dll, dotnet\, Mods\
+//   sfmlnet-*.dll            the game's, with the 32-bit flag cleared (originals kept as .backup)
+// UnderRailFixes 1.x (underrail.exe patched in place to call UnderrailFix.dll / UnderrailFix64.dll) is recognised and
+// replaced; its settings file UnderrailFix.ini is read by UnderRailWorks on its first start.
+//
+// Patches (each fix is switched on/off at runtime by UnderRailWorks.ini, so changing it never needs a re-patch):
 //   cnt (video settings) resolution default/load/save -> ResolutionStore.Default/Load/Save
 //   efw.a() / efw.a(key) -> UnderrailDisplayModes.List/Get (monitor modes, nearest-size fallback)
 //   egd.ToString -> UnderrailDisplayModes.Label
@@ -12,13 +21,14 @@
 //   dka.b zoom limits ud(1f) / uf(2f), uf(3f) -> UnderrailDisplayModes.MinZoom / MaxZoom
 //   t1 (Options): end of t1.h -> UnderrailOptions.AddTab, end of t1.d (Accept) -> Save; end of d6f.a(ls) -> Applied
 //   the Game subclass's constructor (enu, created first in Main) -> FrameRate.Apply, WindowIcon.Apply
-//   Main -> FixStartup.Run(version) (DLL version check, DPI awareness on Windows)
+//   Main -> FixStartup.Run(version) (DLL version check, DPI awareness on Windows, mods)
 //   UI scale: tb.k0/k4 screen size, SpriteBatch.Begin, the world batch's MatrixTransform, ScissorRectangle,
 //   Mouse.GetState, bso.abb cursor warp and the loading screen's size reads -> UiScaleFix (UiScale.cs)
 //   insets: ci3 sizing / shaking the world view, daj.iz (in-game surface mouse bounds), a7m.b floor position, d0p full-screen dim, czo.a menu backgrounds, bg1.iv picture rectangle -> UiScaleFix.FullScreen / WorldLocation(Get) / InScreen / FloorOrigin / DimRect
-//   eg0 creature outline (reverse-highlight check, layer add), a7m layer draw / shader pass -> ShowCovered
+//   eg0 creature outline (reverse-highlight check, layer add), a7m layer draw / shader pass -> WorldDrawHooks
 //   tb.Draw save screenshot: 1080p picture of the screen's centre -> SaveScreenshot.Limit / Target / Taken
 //   b5r zoom label, mv SHIFT+wheel and ci3 zoom-button steps -> UnderrailDisplayModes.ShownZoom / ZoomStep
+//   the 64-bit mode (Patch64): XNA -> FNA, SFML music, Steam and GOG calls, the WinForms window
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -28,23 +38,25 @@ using Mono.Cecil.Cil;
 
 static class Patcher
 {
-    const string Exe = "underrail.exe", Backup = "underrail.exe.backup", Runtime = "UnderrailFix.dll", Runtime64 = "UnderrailFix64.dll";
+    const string Exe = "underrail.exe", Backup = "underrail.exe.backup", Game = "UnderRail.Game.exe", Runtime = "UnderRailWorks.dll";
+    const string LauncherExe = "UnderRailLauncher.exe";
+    static readonly string[] OldRuntimes = { "UnderrailFix", "UnderrailFix64", "UnderRailWorks" };
 
     static int Main(string[] args)
     {
         bool uninstall = args.Any(a => a == "--uninstall" || a == "-u");
-        x64 = !args.Any(a => a == "--32bit" || a == "--32");
         string dir = args.FirstOrDefault(a => !a.StartsWith("-")) ?? FindGame();
         int code;
         try
         {
             if (dir == null || !File.Exists(Path.Combine(dir, Exe)))
                 throw new Exception("Couldn't find " + Exe + ". Put the patcher in the UnderRail folder, or pass the folder as an argument.");
+            if (args.Any(a => a == "--32bit" || a == "--32")) throw new Exception("UnderRailWorks only has the 64-bit mode; for a 32-bit install use UnderRailFixes 1.x.");
             code = uninstall ? Uninstall(dir) : Install(dir);
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Error: " + (Environment.GetEnvironmentVariable("UNDERRAILFIX_DEBUG") == "1" ? ex.ToString() : ex.Message));
+            Console.WriteLine("Error: " + (Environment.GetEnvironmentVariable("UNDERRAILWORKS_DEBUG") == "1" ? ex.ToString() : ex.Message));
             code = 1;
         }
         if (args.Length == 0 && !Console.IsInputRedirected)
@@ -67,121 +79,133 @@ static class Patcher
         return (string)fix.GetType("FixVersion").Fields.Single(f => f.Name == "Value").Constant;
     }
 
-    static bool IsPatched(string path)
+    enum Kind { Stock, Patched, Launcher }
+
+    // What a file named underrail.exe is: the original game, a game patched by 1.x or Works, or our launcher (a native
+    // program, no .NET metadata).
+    static Kind KindOf(string path)
     {
-        using (var m = ModuleDefinition.ReadModule(path))
-            return m.AssemblyReferences.Any(r => r.Name == "UnderrailFix" || r.Name == "UnderrailFix64");
+        try
+        {
+            using (var m = ModuleDefinition.ReadModule(path))
+                return m.AssemblyReferences.Any(r => OldRuntimes.Contains(r.Name)) ? Kind.Patched : Kind.Stock;
+        }
+        catch (BadImageFormatException) { return Kind.Launcher; }
     }
 
-    // 64-bit mode (the default; --32bit installs the 32-bit mode instead): run as
-    // a 64-bit process on our FNA.dll instead of XNA (Microsoft XNA is 32-bit only), on Windows and under Proton. underrail.exe and a copy of the runtime (UnderrailFix64.dll) are
-    // pointed at FNA (FnaMode.cs; the copy is made by the build, src/Build/Retarget.cs --fna); SFML music and the Steam calls go to managed replacements (Music.cs, SteamBridge.cs);
-    // the 32-bit flags are cleared on underrail.exe and the game's sfmlnet-*.dll (those get .backup copies too).
-    // FNA's native libraries go to x64\ (a 32-bit FNA under Wine Mono would pick them up from the game folder itself).
-    static bool x64;
+    // The 64-bit mode: a 64-bit process on our FNA.dll instead of XNA (Microsoft XNA is 32-bit only), on Windows and under
+    // Proton. The game is pointed at FNA (ToFna) and at UnderRailWorks.dll (made by the build, src/Build/Retarget.cs --fna);
+    // SFML music and the Steam calls go to managed replacements (Music.cs, SteamBridge.cs); the 32-bit flags are cleared on
+    // the game and its sfmlnet-*.dll (those get .backup copies). FNA's native libraries go to x64\.
     static readonly string[] SfmlNet = { "sfmlnet-audio-2.dll", "sfmlnet-window-2.dll" };
-    static readonly string[] Extras = { Runtime64, "NVorbis.dll", "UnderrailSteamHost.exe", "FNA.dll",
-        Path.Combine("x64", "FNA3D.dll"), Path.Combine("x64", "FAudio.dll"), Path.Combine("x64", "SDL3.dll") };
+    static readonly string[] Files = { Runtime, "NVorbis.dll", "UnderrailSteamHost.exe", "FNA.dll", "0Harmony.dll",
+        Path.Combine("x64", "FNA3D.dll"), Path.Combine("x64", "FAudio.dll"), Path.Combine("x64", "SDL3.dll"),
+        LauncherExe, "UnderRailLauncher.dll", "UnderRailLauncher.runtimeconfig.json", "UnderRailLauncher.deps.json",
+        "System.Runtime.Serialization.Formatters.dll" };
+    static readonly string[] Folders = { "dotnet", "Mods" };     // copied whole (Mods: the mods that ship with Works)
 
     static int Install(string dir)
     {
-        string exe = Path.Combine(dir, Exe), backup = Path.Combine(dir, Backup), runtime = Path.Combine(dir, Runtime);
-        // The patcher normally sits next to its own copy of the runtime; install/refresh it in the game folder.
+        string exe = Path.Combine(dir, Exe), backup = Path.Combine(dir, Backup), game = Path.Combine(dir, Game);
         string here = AppDomain.CurrentDomain.BaseDirectory;     // on Linux the patcher binary is in linux/
-        string bundled = new[] { here, Path.Combine(here, "..") }.Select(d => Path.Combine(d, Runtime)).FirstOrDefault(File.Exists) ?? Path.Combine(here, Runtime);
-        if (File.Exists(bundled) && !string.Equals(Path.GetFullPath(bundled), Path.GetFullPath(runtime), StringComparison.OrdinalIgnoreCase))
-            File.Copy(bundled, runtime, true);
-        if (!File.Exists(runtime)) throw new Exception(Runtime + " is missing; copy it next to " + Exe + ".");
+        Func<string, string> bundled = name => new[] { here, Path.Combine(here, ".."), dir }.Select(d => Path.Combine(d, name)).FirstOrDefault(p => File.Exists(p) || Directory.Exists(p));
 
-        string source;
-        if (IsPatched(exe))
+        // The source: the original game. underrail.exe is it on a first install, or after Steam put it back (an update or
+        // "Verify files"): then it becomes the backup. Otherwise (our launcher, or a game patched by 1.x) the backup is.
+        var kind = KindOf(exe);
+        if (kind == Kind.Stock)
         {
-            // Already patched: redo it from the backup, e.g. after updating UnderrailFix.dll.
-            if (!File.Exists(backup) || IsPatched(backup)) throw new Exception(Exe + " is already patched and there is no original backup to patch from.");
-            source = backup;
-            Console.WriteLine("Updating the existing patch from " + Backup + ".");
-        }
-        else
-        {
-            // A stock exe: the first install, or the game was updated / verified since. Keep this one as the backup.
             File.Copy(exe, backup, true);
-            source = backup;
             Console.WriteLine("Backed up the original as " + Backup + ".");
         }
-
-        // Harmony, for mods in Mods\ (both modes; UnderRailWorks proof of concept).
-        string harmony = new[] { here, Path.Combine(here, "..") }.Select(d => Path.Combine(d, "0Harmony.dll")).FirstOrDefault(File.Exists);
-        if (harmony != null && !string.Equals(Path.GetFullPath(harmony), Path.GetFullPath(Path.Combine(dir, "0Harmony.dll")), StringComparison.OrdinalIgnoreCase))
-            File.Copy(harmony, Path.Combine(dir, "0Harmony.dll"), true);
-
-        string runtime64 = Path.Combine(dir, Runtime64);
-        byte[] patched;
-        if (x64)
-        {
-            foreach (string extra in Extras)
-            {
-                string from = new[] { here, Path.Combine(here, ".."), dir }.Select(d => Path.Combine(d, extra)).FirstOrDefault(File.Exists);
-                if (from == null) throw new Exception(extra + " is missing: copy all of UnderRailFixes' files into the game folder (or install the 32-bit mode with --32bit).");
-                string to = Path.Combine(dir, extra);
-                Directory.CreateDirectory(Path.GetDirectoryName(to));
-                if (!string.Equals(Path.GetFullPath(from), Path.GetFullPath(to), StringComparison.OrdinalIgnoreCase)) File.Copy(from, to, true);
-            }
-            patched = Patch(source, runtime64);
-            foreach (string lib in SfmlNet)
-            {
-                string path = Path.Combine(dir, lib), libBackup = path + ".backup";
-                if (!File.Exists(libBackup)) File.Copy(path, libBackup);
-                byte[] b = File.ReadAllBytes(libBackup);
-                ClearClr32Bit(b);
-                File.WriteAllBytes(path, b);
-            }
-            Console.WriteLine("64-bit mode: FNA instead of XNA, SFML music and Steam calls redirected. For the 32-bit mode, run the patcher with --32bit.");
-        }
         else
         {
-            patched = Patch(source, runtime);
-            Remove64(dir);
-            Console.WriteLine("32-bit mode: the game's own Microsoft XNA (FNA under Proton).");
+            if (!File.Exists(backup) || KindOf(backup) != Kind.Stock) throw new Exception(Exe + " isn't the original game and there is no original " + Backup + " to patch from. Use Steam's \"Verify integrity of game files\", then run the patcher again.");
+            Console.WriteLine(kind == Kind.Patched ? "Replacing the UnderRailFixes 1.x patch, from " + Backup + "." : "Updating the existing install, from " + Backup + ".");
         }
-        string temp = exe + ".new";
-        File.WriteAllBytes(temp, patched);
-        File.Copy(temp, exe, true);
-        File.Delete(temp);
+
+        // Our files next to the game (the patcher normally sits among them, in the game folder already).
+        foreach (string name in Files)
+        {
+            string from = bundled(name);
+            if (from == null) throw new Exception(name + " is missing: copy all of UnderRailWorks' files into the game folder.");
+            string to = Path.Combine(dir, name);
+            Directory.CreateDirectory(Path.GetDirectoryName(to));
+            if (!Same(from, to)) File.Copy(from, to, true);
+        }
+        foreach (string folder in Folders)
+        {
+            string from = bundled(folder);
+            if (from == null) { if (folder == "dotnet") throw new Exception("dotnet\\ is missing: copy all of UnderRailWorks' files into the game folder."); continue; }
+            if (!Same(from, Path.Combine(dir, folder))) CopyTree(from, Path.Combine(dir, folder));
+        }
+
+        // The patched game, then the launcher in underrail.exe's place.
+        byte[] patched = Patch(backup, Path.Combine(dir, Runtime));
+        WriteSafely(game, patched);
+        foreach (string lib in SfmlNet)
+        {
+            string path = Path.Combine(dir, lib), libBackup = path + ".backup";
+            if (!File.Exists(libBackup)) File.Copy(path, libBackup);
+            byte[] b = File.ReadAllBytes(libBackup);
+            ClearClr32Bit(b);
+            File.WriteAllBytes(path, b);
+        }
+        WriteSafely(exe, File.ReadAllBytes(Path.Combine(dir, LauncherExe)));
+        foreach (string old in new[] { "UnderrailFix.dll", "UnderrailFix64.dll" })     // 1.x's runtime, unused now
+            if (File.Exists(Path.Combine(dir, old))) { File.Delete(Path.Combine(dir, old)); Console.WriteLine("Removed 1.x's " + old + "."); }
+
         string version;
-        using (var m = ModuleDefinition.ReadModule(runtime)) version = Version(m);
-        Console.WriteLine("Patched " + Exe + " with UnderrailFix " + version + ". Settings: UnderrailFix.ini (created on the next launch).");
-        Console.WriteLine("To undo: run the patcher with --uninstall, or copy " + Backup + " back over " + Exe + ".");
+        using (var m = ModuleDefinition.ReadModule(Path.Combine(dir, Runtime))) version = Version(m);
+        Console.WriteLine("Installed UnderRailWorks " + version + ": the game runs 64-bit on .NET 10 (dotnet\\) and FNA.");
+        Console.WriteLine("Settings: UnderRailWorks.ini (created on the next launch); mods: the Mods folder and Options -> Mods in game.");
+        Console.WriteLine("To undo: run the patcher with --uninstall, or Steam's \"Verify integrity of game files\".");
         return 0;
     }
 
     static int Uninstall(string dir)
     {
         string exe = Path.Combine(dir, Exe), backup = Path.Combine(dir, Backup);
-        if (!IsPatched(exe))
+        if (KindOf(exe) == Kind.Stock)
         {
-            // Steam (an update or "Verify files") already put the original back; the old backup is out of date.
-            if (File.Exists(backup)) { File.Delete(backup); Console.WriteLine(Exe + " is already the original; removed the outdated " + Backup + "."); }
-            else Console.WriteLine(Exe + " isn't patched; nothing to do.");
-            Console.WriteLine("You can now delete UnderrailFix.dll, UnderrailFix.ini and UnderrailFix.log.");
-            return 0;
+            // Steam (an update or "Verify files") already put the original back.
+            if (File.Exists(backup)) File.Delete(backup);
+            Console.WriteLine(Exe + " is already the original.");
         }
-        if (!File.Exists(backup)) throw new Exception("No " + Backup + " to restore. Use Steam's \"Verify integrity of game files\" (or reinstall) instead.");
-        Remove64(dir);
-        File.Copy(backup, exe, true);
-        File.Delete(backup);
-        Console.WriteLine("Restored the original " + Exe + ". You can now delete UnderrailFix.dll, UnderrailFix.ini and UnderrailFix.log.");
-        return 0;
-    }
-
-    // Undoes the 64-bit-only changes: the game's sfmlnet DLLs back to the originals. The 64-bit files (UnderrailFix64.dll,
-    // FNA.dll, NVorbis.dll, UnderrailSteamHost.exe, x64\) are unused then and stay, so the 64-bit patcher can run again.
-    static void Remove64(string dir)
-    {
+        else
+        {
+            if (!File.Exists(backup) || KindOf(backup) != Kind.Stock) throw new Exception("No original " + Backup + " to restore. Use Steam's \"Verify integrity of game files\" (or reinstall) instead.");
+            File.Copy(backup, exe, true);
+            File.Delete(backup);
+            Console.WriteLine("Restored the original " + Exe + ".");
+        }
         foreach (string lib in SfmlNet)
         {
             string libBackup = Path.Combine(dir, lib + ".backup");
             if (File.Exists(libBackup)) { File.Copy(libBackup, Path.Combine(dir, lib), true); File.Delete(libBackup); }
         }
+        foreach (string f in new[] { Game, LauncherExe }) if (File.Exists(Path.Combine(dir, f))) File.Delete(Path.Combine(dir, f));
+        if (Directory.Exists(Path.Combine(dir, "dotnet"))) Directory.Delete(Path.Combine(dir, "dotnet"), true);
+        Console.WriteLine("You can now delete UnderRailWorks' other files (see README.md). Mods\\, UnderRailWorks.ini and saves are kept.");
+        return 0;
+    }
+
+    static bool Same(string a, string b) { return string.Equals(Path.GetFullPath(a).TrimEnd('/', '\\'), Path.GetFullPath(b).TrimEnd('/', '\\'), StringComparison.OrdinalIgnoreCase); }
+
+    static void CopyTree(string from, string to)
+    {
+        Directory.CreateDirectory(to);
+        foreach (string f in Directory.GetFiles(from)) File.Copy(f, Path.Combine(to, Path.GetFileName(f)), true);
+        foreach (string d in Directory.GetDirectories(from)) CopyTree(d, Path.Combine(to, Path.GetFileName(d)));
+    }
+
+    // Via a temporary file, so a failed write never leaves half a file.
+    static void WriteSafely(string path, byte[] data)
+    {
+        string temp = path + ".new";
+        File.WriteAllBytes(temp, data);
+        File.Copy(temp, path, true);
+        File.Delete(temp);
     }
 
     // Every type reference into an XNA 4.0 assembly now refers to the same type in FNA (FNA has all of XNA's types,
@@ -482,7 +506,7 @@ static class Patcher
         Expect("Mouse.GetState calls", mice, 7);
         Expect("world batch projections", transforms, 1);
 
-        if (x64) Patch64(module, hook, fix);
+        Patch64(module, hook, fix);
 
         var ms = new MemoryStream();
         asm.Write(ms);
