@@ -40,6 +40,7 @@ public abstract class ModConfig
     // After Accept wrote new values.
     public virtual void OnChanged() { }
 
+
     ModSettings settings;
     ModConfig defaults;
 
@@ -132,8 +133,9 @@ public abstract class ModConfig
             any = true;
         }
         if (any)
-            page.Button("Default settings", "Restore defaults", p =>
+            page.Button("Default settings", "Reset settings to default", p =>
             {
+                p.MarkChanged();     // the mod hears of it on Accept even if every value was a default already
                 foreach (var f in Fields())
                     if (f.GetCustomAttribute<HiddenAttribute>() == null) p.Set(f.Name, Format(f.GetValue(defaults)));
             });
@@ -150,6 +152,7 @@ public abstract class ModConfig
         }
         Changes++;
         try { OnChanged(); } catch (Exception ex) { Log.Write("mods: " + Mod.Id + ": OnChanged failed: " + ex); }
+
     }
 
     static string Spaced(string name)

@@ -19,6 +19,7 @@ public sealed class HudLayoutConfig : ModConfig
     public LayoutKey Key = LayoutKey.None;
 
     public override void OnChanged() { HudLayout.Changed = true; }
+
 }
 
 public enum LayoutKey { [Label("(none)")] None, F12, F11, F6 }
@@ -113,8 +114,10 @@ public sealed class HudLayout : WorksMod
         Hud.AddPart(this, "Layout button", layoutButton, hud.Width - layoutButton.Width - 70, 62);
     }
 
+    // Every part back where it was, and every saved place cleared (all HUD sizes).
     void ResetAll()
     {
+        foreach (var k in Settings.Keys) if (k.Contains("@")) Settings.Set(k, "");
         foreach (var p in Parts())
         {
             Point o;

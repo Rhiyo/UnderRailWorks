@@ -109,6 +109,11 @@ public sealed class ModPage
     // controls of its own). Saving them is up to the mod.
     internal void Custom(Action<t1, cvh> build) { build(Options, Page); }
 
+    // Counts as changed on Accept even if no row's value differs (Restore defaults on values that were defaults already:
+    // the mod still hears of it).
+    internal bool Touched;
+    public void MarkChanged() { Touched = true; }
+
     // Accept: the changed values into the mod's settings.ini.
     internal bool Save()
     {
@@ -226,7 +231,12 @@ public static class ModOptions
         bool unmet = mod.Requires.Any(d => Describe(d, true) != null);
         if (mod.Enabled && mod.Error != null && !(unmet && mod.Error.StartsWith("needs "))) Text(options, page, "   " + Capital(mod.Error), Bad);
         if (!string.IsNullOrEmpty(mod.Description))
-            foreach (var line in mod.Description.Split('\n')) Text(options, page, "   " + line.Trim());
+        {
+            // Wrapped to the page (a long description was cut at the page's edge).
+            int width = UnderrailDropdownScroll.W(page.Size) - 2 * UnderrailOptions.Left(options) - 80;
+            foreach (var line in mod.Description.Split('\n'))
+                foreach (var part in Ui.Wrap(line.Trim(), width)) Text(options, page, "   " + part);
+        }
         if (mod.Requires.Count > 0)
             Text(options, page, "   Requires: " + string.Join(", ", mod.Requires.Select(d => Describe(d, false)).ToArray()), unmet && mod.Enabled ? Bad : Quiet);
         if (mod.Optional.Count > 0) Text(options, page, "   Works with: " + string.Join(", ", mod.Optional.Select(d => Describe(d, false)).ToArray()), Quiet);
@@ -313,7 +323,7 @@ public static class ModOptions
             try
             {
                 Entry entry;
-                if (p.Value.Save() && Pages.TryGetValue(p.Key, out entry) && entry.Changed != null) entry.Changed();
+                if ((p.Value.Save() | p.Value.Touched) && Pages.TryGetValue(p.Key, out entry) && entry.Changed != null) entry.Changed();
             }
             catch (Exception ex) { Log.Write("mods: " + p.Key + ": saving options failed: " + ex); }
         }

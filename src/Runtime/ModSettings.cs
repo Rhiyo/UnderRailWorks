@@ -48,6 +48,8 @@ public sealed class ModSettings
     }
 
     public string Get(string key) { string v; return values.TryGetValue(key, out v) ? v : null; }
+    // Every key in the file (e.g. to clear a mod's own saved entries).
+    public IList<string> Keys { get { return values.Keys.ToList(); } }
 
     public bool Bool(string key, bool fallback)
     {
