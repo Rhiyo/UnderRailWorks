@@ -2,6 +2,7 @@
 // your action points per turn. Every value is a setting (Options -> Mods -> Difficulty Dial settings) and applies at
 // once; nothing is written to saves. Built from Works' combat API only.
 using System;
+using UnderRailWorks;
 
 [assembly: System.Reflection.AssemblyVersion("1.0.0")]
 

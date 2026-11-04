@@ -9,6 +9,10 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 // A dropdown entry: what it shows and what it writes to the ini.
 public sealed class FixChoice
@@ -568,4 +572,5 @@ static class TabScroll
         lastWheel = now;
         s.Bar.e(Math.Max(0, Math.Min(s.Content - s.Room, s.Offset - Math.Sign(e.c()) * Step * 2)));     // Scrolled moves the rows
     }
+}
 }

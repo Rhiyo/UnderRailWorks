@@ -10,6 +10,10 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class SaveScreenshot
 {
@@ -53,4 +57,5 @@ public static class SaveScreenshot
 
     // tb.Draw stores the rendered target as the screenshot (tb.x).
     public static Texture2D Taken(Texture2D picture) { shot = null; return picture; }
+}
 }

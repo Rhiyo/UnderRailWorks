@@ -19,6 +19,10 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class UiScaleFix
 {
@@ -309,4 +313,5 @@ public static class UiScaleFix
         double x = m.X * a.K + a.Left, y = m.Y * a.K + a.Top;
         return x >= 0 && y >= 0 && x < (screenW > 0 ? screenW : int.MaxValue) && y < (screenH > 0 ? screenH : int.MaxValue);
     }
+}
 }

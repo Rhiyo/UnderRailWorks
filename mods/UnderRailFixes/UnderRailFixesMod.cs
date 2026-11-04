@@ -2,6 +2,7 @@
 // its settings in Mods\UnderRailFixes\settings.ini and its rows in the Mods tab.
 using System;
 using Microsoft.Xna.Framework;
+using UnderRailWorks;
 
 [assembly: System.Reflection.AssemblyVersion("2.0.0")]
 
@@ -22,7 +23,7 @@ public sealed class UnderRailFixesMod : WorksMod
             bool any = false;
             foreach (string key in new[] { "ShowCovered", "ShowCoveredPlayer", "ShowCoveredHostile", "ShowCoveredOther", "ShowCoveredTransparency", "KeyholeTransparency", "KeyholeSize" })
             {
-                string v = FixSettings.Raw(key);
+                string v = WorksSettings.Get(key);
                 if (v != null) { Settings.Set(key, v); any = true; }
             }
             if (any) { CoveredSettings.Config.Reload(); log.Info("settings taken from UnderrailFix.ini"); }

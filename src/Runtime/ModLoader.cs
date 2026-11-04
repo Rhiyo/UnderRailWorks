@@ -15,11 +15,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class ModDependency
 {
-    public string Id;
-    public Version Min;     // null: any version
+    public string Id { get; set; }
+    public Version Min { get; set; }     // null: any version
     public override string ToString() { return Min == null ? Id : Id + " " + Min + "+"; }
     internal static ModDependency Parse(string text)
     {
@@ -32,12 +36,21 @@ public sealed class ModDependency
 
 public sealed class ModInfo
 {
-    public string Id, Name, Folder, Author, Description, Error;
-    public Version Version, Works;
-    public WorksMod Instance;
-    public bool Enabled, Loaded;
-    public List<ModDependency> Requires = new List<ModDependency>(), Optional = new List<ModDependency>();
-    public List<string> SortAfter = new List<string>(), SortBefore = new List<string>();
+    public string Id { get; set; }
+    public string Name { get; set; }
+    public string Folder { get; set; }
+    public string Author { get; set; }
+    public string Description { get; set; }
+    public string Error { get; set; }
+    public Version Version { get; set; }
+    public Version Works { get; set; }
+    public WorksMod Instance { get; set; }
+    public bool Enabled { get; set; }
+    public bool Loaded { get; set; }
+    public List<ModDependency> Requires { get; set; } = new List<ModDependency>();
+    public List<ModDependency> Optional { get; set; } = new List<ModDependency>();
+    public List<string> SortAfter { get; set; } = new List<string>();
+    public List<string> SortBefore { get; set; } = new List<string>();
 
     internal static Version ParseVersion(string s)
     {
@@ -46,7 +59,7 @@ public sealed class ModInfo
         if (s.Length > 0 && s.IndexOf('.') < 0) s += ".0";
         return Version.TryParse(s, out v) ? v : null;
     }
-    public string VersionText { get { return Version == null ? "" : Version.Revision > 0 ? Version.ToString() : Version.Build >= 0 ? Version.ToString(3) : Version.ToString(2); } }
+    public string VersionText { get { System.Version v = Version; return v == null ? "" : v.Revision > 0 ? v.ToString() : v.Build >= 0 ? v.ToString(3) : v.ToString(2); } }
 }
 
 public static class ModLoader
@@ -159,7 +172,8 @@ public static class ModLoader
         {
             changed = false;
             foreach (var m in all.Where(m => m.Enabled && m.Error == null && m.Works != null))
-                if (m.Works.Major != WorksApi.Version.Major || m.Works > WorksApi.Version)
+                if (m.Works.Major != WorksApi.Version.Major || m.Works > WorksApi.Version
+                    || (WorksApi.Version.Major == 0 && m.Works.Minor != WorksApi.Version.Minor))     // 0.x (preview): each minor may break
                 {
                     m.Error = "built for UnderRailWorks API " + m.Works.ToString(2) + " (this is " + WorksApi.Version.ToString(2) + ")";
                     changed = true;
@@ -300,4 +314,5 @@ public static class ModLoader
         }
         if (!mod.Loaded && mod.Error == null) mod.Error = "no WorksMod class in its DLL";
     }
+}
 }

@@ -36,6 +36,10 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 // A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
 public sealed class PackArgs
@@ -306,4 +310,5 @@ static class ContentPacks
     static string Opt(Dictionary<string, object> d, string k) { object v; return d.TryGetValue(k, out v) ? Str(v) : null; }
     static string Req(Dictionary<string, object> d, string k) { var v = Opt(d, k); if (string.IsNullOrEmpty(v)) throw new FormatException("missing \"" + k + "\""); return v; }
     static int Int(Dictionary<string, object> d, string k) { object v; return d.TryGetValue(k, out v) ? (int)Num(v) : 0; }
+}
 }

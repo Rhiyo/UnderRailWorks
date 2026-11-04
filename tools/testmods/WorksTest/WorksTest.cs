@@ -4,6 +4,7 @@ using System;
 //   open the notes. F6: list status effect codes and apply one. Logs every Works event.
 using System.Linq;
 using Microsoft.Xna.Framework.Input;
+using UnderRailWorks;
 
 [assembly: System.Reflection.AssemblyVersion("1.0.0")]
 

@@ -3,6 +3,7 @@
 // grows. Built from Works' API only (Progression). Points and XP are plain numbers in the save: turning the mod off
 // keeps what you have, and the save loads in the stock game.
 using System;
+using UnderRailWorks;
 
 [assembly: System.Reflection.AssemblyVersion("1.0.0")]
 

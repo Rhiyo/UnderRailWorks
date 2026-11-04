@@ -16,6 +16,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Xna.Framework;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class Inventory
 {
@@ -99,17 +103,18 @@ public enum SpawnSide { Neutral, Hostile, PlayerOnly }
 // A character placed by a mod: re-created each time its zone loads, while When holds; never saved.
 public sealed class Placement
 {
-    public string Id;                // unique (prefix with the mod id)
-    public string Zone;              // zone id (World.ZoneId shows the current one)
-    public string Area;              // area name in the zone (Area.Name)
-    public int X, Y;                 // tile
-    public string Blueprint;         // entity blueprint, e.g. "creatures\\generichumans\\foundryworker"
-    public string Name;              // shown name (null: the blueprint's)
-    public string Dialog;            // Works or game dialog Talk opens (null: the blueprint's)
-    public bool Friendly = true;     // neutral and passive towards the player (else as the blueprint's faction)
-    public Condition When;           // present only while this holds (checked when the zone loads)
-    public string Store;             // makes it a merchant with this game store (data/Rules/Stores, e.g. "bigbret")
-    public Action<Character> Setup;  // anything else, after it's placed
+    public string Id { get; set; }                // unique (prefix with the mod id)
+    public string Zone { get; set; }              // zone id (World.ZoneId shows the current one)
+    public string Area { get; set; }              // area name in the zone (Area.Name)
+    public int X { get; set; }
+    public int Y { get; set; }                 // tile (X, Y)
+    public string Blueprint { get; set; }         // entity blueprint, e.g. "creatures\\generichumans\\foundryworker"
+    public string Name { get; set; }              // shown name (null: the blueprint's)
+    public string Dialog { get; set; }            // Works or game dialog Talk opens (null: the blueprint's)
+    public bool Friendly { get; set; } = true;     // neutral and passive towards the player (else as the blueprint's faction)
+    public Condition When { get; set; }           // present only while this holds (checked when the zone loads)
+    public string Store { get; set; }             // makes it a merchant with this game store (data/Rules/Stores, e.g. "bigbret")
+    public Action<Character> Setup { get; set; }  // anything else, after it's placed
     internal bool Temporary;         // World.Spawn: once only, forgotten when the zone goes
 }
 
@@ -333,4 +338,5 @@ public static partial class World
         foreach (var kv in placed.ToList()) if (kv.Value.Area == null) placed.Remove(kv.Key);
         lock (placements) placements.RemoveAll(p => p.Temporary && !placed.ContainsKey(p.Id));     // spawns don't follow the player out
     }
+}
 }

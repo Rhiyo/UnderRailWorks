@@ -14,6 +14,10 @@ using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using Microsoft.Xna.Framework;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class FnaMode
 {
@@ -183,4 +187,5 @@ public static class FnaWindow
     [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)] [return: MarshalAs(UnmanagedType.I1)] static extern bool SDL_SetWindowPosition(IntPtr window, int x, int y);
     [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)] static extern uint SDL_GetWindowProperties(IntPtr window);
     [DllImport("SDL3", CallingConvention = CallingConvention.Cdecl)] static extern IntPtr SDL_GetPointerProperty(uint props, string name, IntPtr fallback);
+}
 }

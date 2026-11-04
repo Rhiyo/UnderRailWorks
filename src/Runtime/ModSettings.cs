@@ -5,6 +5,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class ModSettings
 {
@@ -84,4 +88,5 @@ public sealed class ModSettings
         }
         catch (Exception ex) { Log.Write("mods: " + Mod + ": could not write settings: " + ex.Message); }
     }
+}
 }

@@ -22,6 +22,10 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public static partial class Ui
 {
@@ -476,10 +480,10 @@ static class UiHooks
         foreach (var c in ctors) harmony.Patch(c, postfix: method);
     }
 
-    static void Hud(object __instance) { global::Hud.Created((ci3)__instance); var root = UiElement.Of((euz)__instance); if (UiEvents.HudCreated.Any) UiEvents.HudCreated.Run(h => h(root)); }
+    static void Hud(object __instance) { UnderRailWorks.Hud.Created((ci3)__instance); var root = UiElement.Of((euz)__instance); if (UiEvents.HudCreated.Any) UiEvents.HudCreated.Run(h => h(root)); }
     static void MainMenu(object __instance)
     {
-        if (global::Hud.Exists) { global::Hud.Gone(); if (UiEvents.HudDestroyed.Any) UiEvents.HudDestroyed.Run(h => h()); }     // back to the main menu: no HUD
+        if (UnderRailWorks.Hud.Exists) { UnderRailWorks.Hud.Gone(); if (UiEvents.HudDestroyed.Any) UiEvents.HudDestroyed.Run(h => h()); }     // back to the main menu: no HUD
         var root = UiElement.Of((euz)__instance);
         if (UiEvents.MainMenuCreated.Any) UiEvents.MainMenuCreated.Run(h => h(root));
     }
@@ -490,10 +494,11 @@ static class UiHooks
     {
         Input.Tick();
         UiWindows.Tick();
-        global::Hud.FlowTick();
+        UnderRailWorks.Hud.FlowTick();
         try { UiTextBox.Poll(); } catch (Exception ex) { Log.Write("ui: " + ex.Message); }
         try { Saves.Tick(); } catch (Exception ex) { Log.Write("saves: " + ex); }
         double dt = __0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds;
         if (GameEvents.Update.Any) GameEvents.Update.Run(h => h(dt));
     }
+}
 }

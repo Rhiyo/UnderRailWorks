@@ -30,6 +30,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using UnderRailWorks;
 
 static class ShowCovered
 {
@@ -62,7 +63,7 @@ static class ShowCovered
     static readonly bool Xna = typeof(GraphicsDevice).Assembly.GetName().Name == "Microsoft.Xna.Framework.Graphics";
     internal static bool Fits(GraphicsDevice g)
     {
-        if (SaveScreenshot.Capturing(g)) return false;     // its picture isn't screen-sized; the keyhole still shows
+        if (Interface.CapturingSaveScreenshot(g)) return false;     // its picture isn't screen-sized; the keyhole still shows
         return !Xna || (g.PresentationParameters.BackBufferWidth <= 2048 && g.PresentationParameters.BackBufferHeight <= 2048);
     }
 
@@ -317,7 +318,7 @@ static class ShowCovered
             GameBatch game = context.Batch;
             LayerShader shader = LayerShader.Find("Outline");
             var effect = shader.IsNull ? null : shader.Effect(context, view);
-            int cell = Math.Max(1, (int)Math.Round(view.Zoom * UiScaleFix.Scale));
+            int cell = Math.Max(1, (int)Math.Round(view.Zoom * Interface.Scale));
             foreach (var item in work)
             {
                 var chosen = EffectFor(item.Key.Owner);
@@ -326,7 +327,7 @@ static class ShowCovered
                 // Everything below stays within the creature's own area.
                 var around = PlacedOf(item.Key);
                 around.Inflate(8, 8);
-                var area = Rectangle.Intersect(UiScaleFix.ToPixels(around), screen);
+                var area = Rectangle.Intersect(Interface.ToPixels(around), screen);
                 if (area.Width <= 0 || area.Height <= 0) continue;
 
                 // 1. Coverage: the scenery drawn after the creature, over it.
@@ -584,7 +585,7 @@ static class Keyhole
 
     static Rectangle Circle(Target t, out Rectangle round)
     {
-        var p = UiScaleFix.ToPixels(t.Body);
+        var p = Interface.ToPixels(t.Body);
         int radius = Math.Max(16, (int)(p.Height * 0.85f * CoveredSettings.KeyholeSize / 100f));
         radius = Math.Min(radius, MaxTile / 2);
         round = new Rectangle(p.Center.X - radius, p.Center.Y - radius, radius * 2, radius * 2);
@@ -597,7 +598,7 @@ static class Keyhole
     internal static void Start(WorldView view, DrawContext context)
     {
         pass = view; passContext = context;
-        capturePass = SaveScreenshot.Capturing(G);
+        capturePass = Interface.CapturingSaveScreenshot(G);
         Targets.Clear(); After.Clear(); Holes.Clear();
         if (!capturePass) coveredNow.Clear();
         open = null; index = 0; split = false; splitNext = false; bound = null; intoTarget = null;
@@ -623,14 +624,14 @@ static class Keyhole
             return;
         }
         if (split || (!splitNext && !InFrontOfLastHole(layer))) return;
-        if (SaveScreenshot.Capturing(G)) return;     // the save picture: no keyhole (its mapping is the picture's)
+        if (Interface.CapturingSaveScreenshot(G)) return;     // the save picture: no keyhole (its mapping is the picture's)
         Split();
     }
 
     static bool InFrontOfLastHole(Layer layer)
     {
         if (lastHoles.Count == 0 || !layer.Drawable || layer.ShaderName != null || !Standing(layer)) return false;
-        var pixels = UiScaleFix.ToPixels(layer.Bounds);
+        var pixels = Interface.ToPixels(layer.Bounds);
         foreach (var h in lastHoles) if (InFront(layer, pixels, h.Circle, h.Map)) return true;
         return false;
     }
@@ -655,7 +656,7 @@ static class Keyhole
         if (nx * ny != loggedTiles)
         {
             loggedTiles = nx * ny;
-            Log.Write($"keyhole: front picture in {nx * ny} tile(s) of {tw}x{th}" + (tiled ? (Xna ? " (Microsoft XNA above 2048)" : " (KeyholeTiles=1)") : ""));
+            UnderRailFixesMod.Note($"keyhole: front picture in {nx * ny} tile(s) of {tw}x{th}" + (tiled ? (Xna ? " (Microsoft XNA above 2048)" : " (KeyholeTiles=1)") : ""));
         }
         int n = 0;
         for (int y = 0; y < ny; y++)
@@ -764,7 +765,7 @@ static class Keyhole
         }
         if (!split) return false;
 
-        var pixels = UiScaleFix.ToPixels(placed);
+        var pixels = Interface.ToPixels(placed);
         pixels.Inflate(2, 2);
         bool floor = drawable && ShowCovered.Flat(layer);
         byte kind = !drawable ? (byte)0 : floor ? (byte)1 : Standing(layer) ? (byte)2 : (byte)3;

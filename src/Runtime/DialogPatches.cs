@@ -14,6 +14,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class DialogPatch
 {
@@ -128,4 +132,5 @@ public static partial class Dialogs
         harmony.Patch(typeof(aji).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(azm), typeof(string) }, null),
             postfix: new HarmonyLib.HarmonyMethod(typeof(Dialogs).GetMethod("Patched", BindingFlags.Static | BindingFlags.NonPublic)));
     }
+}
 }

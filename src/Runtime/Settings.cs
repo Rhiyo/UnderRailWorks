@@ -6,6 +6,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class FixSettings
 {
@@ -302,4 +306,5 @@ public static class Log
             catch { }
         }
     }
+}
 }

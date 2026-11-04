@@ -62,11 +62,17 @@ an UnderRailFixes 1.x install and takes over its settings. After a game update, 
 A mod is a folder in `Mods\` with a `mod.json` and a DLL whose main class derives from `WorksMod`:
 
 ```json
-{ "id": "MyMod", "name": "My Mod", "version": "1.0.0", "author": "me", "works": "1.0",
+{ "id": "MyMod", "name": "My Mod", "version": "1.0.0", "author": "me", "works": "0.9",
   "description": "What it does.", "requires": ["UnderRailFixes@2.0"] }
 ```
 
+The API is in the `UnderRailWorks` namespace and is a **preview (0.9)**: a mod declares the API version it was built
+for, and until 1.0 a new minor version may change what mods use (they must be rebuilt). `UnderRailWorks.Internal` is
+Works' own plumbing, not API: don't use it.
+
 ```csharp
+using UnderRailWorks;
+
 public sealed class MyConfig : ModConfig            // settings: Works builds the Mods tab rows and settings.ini
 {
     [Header("Visuals")]

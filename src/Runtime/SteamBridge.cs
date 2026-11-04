@@ -7,6 +7,10 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class SteamBridge
 {
@@ -83,4 +87,5 @@ public static class SteamBridge
     [DllImport("SteamHelper.dll", CallingConvention = CallingConvention.Cdecl)] static extern bool SteamHelper_IsOnSteamDeck();
     [DllImport("SteamHelper.dll", CallingConvention = CallingConvention.Cdecl)] static extern bool SteamHelper_IsRunningOnWine();
     [DllImport("SteamHelper.dll", CallingConvention = CallingConvention.Cdecl)] static extern bool SteamHelper_ShowKeyboard(int a, int b, int c, int d);
+}
 }

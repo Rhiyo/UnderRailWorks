@@ -1,2 +1,2 @@
-{ "id": "ContractBoard", "name": "Contract Board", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
+{ "id": "ContractBoard", "name": "Contract Board", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
   "description": "A contractor at South Gate Station offers generated bounties and deliveries as quests, paid in charons." }

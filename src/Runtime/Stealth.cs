@@ -7,6 +7,10 @@
 //   Stealth.ModifyDetection.Add(this, d => { if (d.Target.IsPlayer) d.Rate *= 0.5; });     // half as quick to notice
 using System;
 using System.Reflection;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class Detection
 {
@@ -22,7 +26,7 @@ public sealed class Detection
     public double Light { get; internal set; }
     public bool Darkvision { get; internal set; }
     // Awareness gained per scan step (negative: losing track). Change it.
-    public double Rate;
+    public double Rate { get; set; }
 }
 
 public sealed class InstantDetection
@@ -30,7 +34,7 @@ public sealed class InstantDetection
     public int ObserverDetection { get; internal set; }
     public int TargetStealth { get; internal set; }
     // The game's verdict: the stealth is hopeless against this observer. Change it.
-    public bool Instant;
+    public bool Instant { get; set; }
 }
 
 public static class Stealth
@@ -68,4 +72,5 @@ static class StealthHooks
         Stealth.ModifyInstant.Run(h => h(d));
         __result = d.Instant;
     }
+}
 }

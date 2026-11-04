@@ -10,6 +10,10 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class StatusChange
 {
@@ -17,7 +21,7 @@ public sealed class StatusChange
     public string Code { get; internal set; }
     public string Name { get; internal set; }
     // On StatusEffects.Applying: true stops the effect (it isn't applied).
-    public bool Cancel;
+    public bool Cancel { get; set; }
 }
 
 public static partial class GameEvents
@@ -136,4 +140,5 @@ public static class ContentIndex
         Log.Write("content index: " + file);
         return file;
     }
+}
 }

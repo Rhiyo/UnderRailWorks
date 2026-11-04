@@ -227,7 +227,7 @@ static class Patcher
         var asm = AssemblyDefinition.ReadAssembly(new MemoryStream(original), new ReaderParameters { AssemblyResolver = resolver });
         var module = asm.MainModule;
         var fix = ModuleDefinition.ReadModule(runtime, new ReaderParameters { AssemblyResolver = resolver });
-        Func<string, string, MethodReference> hook = (type, name) => module.ImportReference(fix.GetType(type).Methods.Single(m => m.Name == name));
+        Func<string, string, MethodReference> hook = (type, name) => module.ImportReference(RuntimeType(fix, type).Methods.Single(m => m.Name == name));
 
         // Video settings: the resolution read from / written to config.dat passes through ResolutionStore.
         var cnt = module.GetType("cnt");
@@ -561,7 +561,7 @@ static class Patcher
         var galaxy = module.GetType("enu").Methods.Where(m => m.HasBody).SelectMany(m => m.Body.Instructions
             .Where(i => i.OpCode == OpCodes.Newobj && ((MethodReference)i.Operand).DeclaringType.Name == "axn")).ToList();
         Expect("Galaxy manager", galaxy.Count, 1);
-        foreach (var i in galaxy) i.Operand = module.ImportReference(fix.GetType("GalaxyBridge").Methods.Single(m => m.IsConstructor && !m.IsStatic));
+        foreach (var i in galaxy) i.Operand = module.ImportReference(RuntimeType(fix, "GalaxyBridge").Methods.Single(m => m.IsConstructor && !m.IsStatic));
 
         // tb uses the game window as a WinForms Form: (Form)Control.FromHandle(Window.Handle), then Form members. The
         // handle read is dropped and the GameWindow goes to FnaWindow.Form; the Form members to FnaWindow.
@@ -682,6 +682,13 @@ static class Patcher
     static int Coff(byte[] pe) { return BitConverter.ToInt32(pe, 0x3C) + 4 + 18; }
 
     // Calls hook(this) just before every return of type.name(), the instance void method without parameters.
+    // The runtime's types the patch calls: Works' plumbing is in UnderRailWorks.Internal (FixStartup and FixVersion
+    // stay global: older patched exes call FixStartup.Run by that name).
+    static TypeDefinition RuntimeType(ModuleDefinition fix, string name)
+    {
+        return fix.GetType(name) ?? fix.GetType("UnderRailWorks.Internal." + name) ?? fix.GetType("UnderRailWorks." + name);
+    }
+
     static void AppendCall(TypeDefinition type, string name, MethodReference hook)
     {
         var method = type.Methods.Single(m => m.Name == name && m.Parameters.Count == 0 && m.ReturnType.MetadataType == MetadataType.Void && !m.IsStatic);

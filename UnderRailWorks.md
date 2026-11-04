@@ -483,6 +483,31 @@ resistance), `Character.Detection`. **Not tested in game:** in the headless test
 hover at all (no outline, a "no action" cursor, `an2()` null at scale 1 and 1.43), so the Scanner mod needs a test in
 real play.
 
+## API packaging; what Works writes into saves (Nov 2026)
+
+- Namespaces: the API is `UnderRailWorks`; plumbing the patched exe calls (UiScaleFix, FnaMode, SteamBridge, the
+  display modes, the options tab, WorldDrawHooks...) is `UnderRailWorks.Internal` (the patcher finds those types in
+  either place). `FixStartup` and `FixVersion` stay in the global namespace for good: exes patched by an older
+  version call `FixStartup.Run` by that name and get its "patch again" message instead of a crash.
+- Public data on API types are properties, not fields (a field can't become a property later without breaking
+  every mod built against it). Mods' own `ModConfig` settings stay fields (they are the mod's, read by attribute).
+- `Interface.Scale` / `ToPixels` / `CapturingSaveScreenshot` and `WorksSettings.Get` replace the internals the
+  UnderRailFixes mod used.
+- `WorksApi.Version` is 0.9: while 0.x a mod must declare the same minor ("works": "0.9").
+
+**What Works and its mods write into saves (a promise: these names and formats stay, so saves keep their mod data):**
+all are the game's own global variables with plain values, which the stock game keeps and ignores.
+
+| Variable | Written by | Value |
+|---|---|---|
+| `md_<modId>_<key>` | `WorksMod.Data` | string / int / bool |
+| `works_quest_<questId>` | `Quests` (a mod quest's state; the quest itself is taken out of the save) | string "active\|completed\|failed,read,index" |
+| `cp_<modId>_<triggerId>` | content packs' `"once"` triggers | bool |
+| any name a mod passes to `Variables.Global` / `Zone` / a character | mods | string / int / bool / float |
+
+Placed and spawned characters are never in a save (taken out around saving); mod dialogs, dialog patches, keybinds,
+HUD parts and windows are never saved; mod settings live in `Mods/<mod>/settings.ini`, mods on/off in `mods.ini`.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
@@ -599,7 +624,7 @@ That stays coherent because every area follows the same framework rules, taken f
 | Hooks | named by kind: `Pre…` (false skips vanilla), `Post…`, `Modify…`, `Can…` | `Hook<T>` (every handler runs) and `ReplaceHook<T>` (the first handler that takes the step replaces the game's; never two drawings) (`Hooks.cs`). Modify/Can kinds added when an area needs them |
 | Hook order | mod load order | mod load order (requirements first) |
 | A hook throws | usually takes the game down | the handler is removed and logged with the mod's name; the game and other mods carry on |
-| Versions | mods built for a tModLoader version | `"works": "1.0"` in mod.json against `WorksApi.Version`: same major, at least that minor. New areas start **experimental**; after that only additions |
+| Versions | mods built for a tModLoader version | `"works": "0.9"` in mod.json against `WorksApi.Version`: while 0.x the same minor; from 1.0 the same major, at least that minor. New areas start **experimental**; after that only additions |
 | Dependencies | `build.txt`: modReferences, weakReferences, sortAfter/Before | `mod.json`: requires (`Id@1.2`), optional, sortAfter/Before |
 | Reload | in game, without restarting | **not possible**: .NET Framework / Mono can't unload a DLL; switches apply at the next start |
 | Settings | `ModConfig` classes: fields with attributes, UI generated, JSON | `ModPage` rows + `settings.ini` today; next: a declarative config class (fields + attributes → rows and ini), tModLoader's idea with our readable ini |

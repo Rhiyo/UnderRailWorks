@@ -9,6 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class UiWindow : UiPanel
 {
@@ -123,4 +127,5 @@ static class UiWindows
 
     // The HUD went away: its windows with it.
     internal static void HudGone() { foreach (var w in Open.ToList()) w.Close(); Open.Clear(); dragging = null; }
+}
 }

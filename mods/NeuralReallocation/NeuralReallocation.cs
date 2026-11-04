@@ -4,6 +4,7 @@
 // API only (World.Place, Dialogs, Character skills/abilities/points, Inventory).
 using System;
 using System.Linq;
+using UnderRailWorks;
 
 [assembly: System.Reflection.AssemblyVersion("1.0.0")]
 

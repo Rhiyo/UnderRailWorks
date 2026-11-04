@@ -2,6 +2,7 @@
 // game's) and what they pay you for your goods (% of the game's). Applied when a barter window opens; nothing is
 // saved. Built from Works' API only (Prices hooks).
 using System;
+using UnderRailWorks;
 
 [assembly: System.Reflection.AssemblyVersion("1.0.0")]
 

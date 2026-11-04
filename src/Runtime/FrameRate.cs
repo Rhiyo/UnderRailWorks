@@ -6,6 +6,10 @@
 // instead would run faster - a MaxFps=30 test shows it as half speed.
 using System;
 using Microsoft.Xna.Framework;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class FrameRate
 {
@@ -28,4 +32,5 @@ public static class FrameRate
         }
         catch (Exception ex) { Log.Write("frame rate: " + ex.Message); }
     }
+}
 }

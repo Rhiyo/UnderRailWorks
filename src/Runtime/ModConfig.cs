@@ -21,6 +21,10 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 [AttributeUsage(AttributeTargets.Field)] public sealed class HeaderAttribute : Attribute { public readonly string Text; public HeaderAttribute(string text) { Text = text; } }
 [AttributeUsage(AttributeTargets.Field | AttributeTargets.Class)] public sealed class LabelAttribute : Attribute { public readonly string Text; public LabelAttribute(string text) { Text = text; } }
@@ -204,4 +208,5 @@ public abstract class ModConfig
         ModOptions.Register(mod.Id, page => { foreach (var c in configs) c.Build(page); }, () => { foreach (var c in configs) c.Reload(); });
         Log.Write("mods: " + mod.Id + ": settings from " + string.Join(", ", configs.Select(c => c.GetType().Name).ToArray()));
     }
+}
 }

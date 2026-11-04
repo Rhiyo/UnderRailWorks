@@ -2,6 +2,8 @@
 // Run(string) is the one hook every version of the patch calls, so its signature must never change.
 using System;
 using System.Runtime.InteropServices;
+using UnderRailWorks;
+using UnderRailWorks.Internal;
 
 public static class FixStartup
 {

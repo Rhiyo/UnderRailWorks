@@ -6,6 +6,10 @@
 // UnderRail.Game.exe (or underrail.exe.backup), loaded as data.
 using System;
 using System.Runtime.InteropServices;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class WindowIcon
 {
@@ -41,4 +45,5 @@ public static class WindowIcon
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] static extern IntPtr LoadLibraryEx(string path, IntPtr file, uint flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr LoadImage(IntPtr instance, IntPtr name, int type, int cx, int cy, int flags);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr SendMessage(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam);
+}
 }

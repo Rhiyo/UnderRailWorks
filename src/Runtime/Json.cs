@@ -4,6 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class Json
 {
@@ -94,4 +98,5 @@ public static class Json
             }
         }
     }
+}
 }

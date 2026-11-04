@@ -19,6 +19,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Ouroboros.Common.Data;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 // A condition on game state, for options, branches and lines.
 public sealed class Condition
@@ -299,4 +303,5 @@ sealed class WorksAction : esc
         catch (Exception ex) { Log.Write("dialogs: an effect failed: " + ex.Message); }
         return 1;
     }
+}
 }

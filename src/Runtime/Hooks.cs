@@ -7,6 +7,10 @@
 // exception through). With no handlers, the game runs as stock.
 using System;
 using System.Collections.Generic;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public abstract class HookBase<T> where T : class
 {
@@ -68,4 +72,5 @@ public sealed class ReplaceHook<T> : HookBase<T> where T : class
 {
     internal ReplaceHook(string name) : base(name) { }
     internal bool Run(Func<T, bool> call) { return Each(call); }
+}
 }

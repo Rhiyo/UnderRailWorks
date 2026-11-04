@@ -7,6 +7,10 @@ using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 // One sprite layer of the world pass (a2f): a creature's body, a wall piece, a floor tile, a shadow...
 static class Layers
@@ -257,4 +261,5 @@ static class GameNames
         if (missing.Count > 0) Log.Always("UnderRailWorks: game members not found in this game version: " + string.Join(", ", missing.ToArray()));
         else Log.Write("mods: " + ok + " game members checked");
     }
+}
 }

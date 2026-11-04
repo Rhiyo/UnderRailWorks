@@ -1,2 +1,2 @@
-{ "id": "QuestTracker", "name": "Quest Tracker", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
+{ "id": "QuestTracker", "name": "Quest Tracker", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
   "description": "Your active quests on the HUD, with their journal text; a chat line when one is done or failed." }

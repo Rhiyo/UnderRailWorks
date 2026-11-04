@@ -11,6 +11,10 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text.RegularExpressions;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class CoreCompat
 {
@@ -149,4 +153,5 @@ public static class FrameworkNames
             return a == null ? m.Value : m.Groups[1].Value + ", " + a;
         });
     }
+}
 }

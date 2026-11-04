@@ -16,11 +16,15 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class DamagePart
 {
-    public string Type;      // the game's damage type name: Mechanical, Heat, Cold, Electricity, Acid, Bio, Energy, Psionic...
-    public int Amount;
+    public string Type { get; set; }      // the game's damage type name: Mechanical, Heat, Cold, Electricity, Acid, Bio, Energy, Psionic...
+    public int Amount { get; set; }
     public override string ToString() { return Amount + " " + Type; }
 }
 
@@ -33,7 +37,7 @@ public sealed class IncomingDamage
     public bool Critical { get; internal set; }
     public IList<DamagePart> Parts { get; internal set; }
     // Turns the attack into a miss.
-    public bool Cancel;
+    public bool Cancel { get; set; }
     public void Scale(float factor) { foreach (var p in Parts) p.Amount = Math.Max(0, (int)Math.Round(p.Amount * factor)); }
 }
 
@@ -57,13 +61,14 @@ public sealed class HitChance
     public Character Target { get; internal set; }
     public AttackKind Kind { get; internal set; }
     // 0..1 (the game clamps its own to 0.10-0.95; a mod's value is used as given, within 0..1).
-    public double Chance;
+    public double Chance { get; set; }
 }
 
 public sealed class TurnPoints
 {
     public Character Character { get; internal set; }
-    public int ActionPoints, MovementPoints;
+    public int ActionPoints { get; set; }
+    public int MovementPoints { get; set; }
 }
 
 public static class Combat
@@ -230,4 +235,5 @@ static class CombatHooks
             Combat.AttackResolved.Run(h => h(o));
         });
     }
+}
 }

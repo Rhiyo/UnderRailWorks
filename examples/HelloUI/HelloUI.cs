@@ -2,6 +2,7 @@
 // A small panel shows how long this session has been played, with a Hide button; a key (set in its settings) toggles it.
 using System;
 using Microsoft.Xna.Framework.Input;
+using UnderRailWorks;
 
 [assembly: System.Reflection.AssemblyVersion("1.0.0")]
 

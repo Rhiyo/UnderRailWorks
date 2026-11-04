@@ -11,27 +11,33 @@
 using System;
 using System.Reflection;
 using TimelapseVertigo.Rules.Characters;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class XpNeeded
 {
     // The level being reached, whether the game uses the Oddity system (else Classic XP), and the cost.
     public int Level { get; internal set; }
     public bool Oddity { get; internal set; }
-    public int Needed;
+    public int Needed { get; set; }
 }
 
 public sealed class LevelPoints
 {
     // The level just reached, and the points it gives (change them).
     public int Level { get; internal set; }
-    public int Ability, Skill, Feat;
+    public int Ability { get; set; }
+    public int Skill { get; set; }
+    public int Feat { get; set; }
 }
 
 public sealed class XpGain
 {
     public bool Oddity { get; internal set; }
     // What the player is about to get (Classic: before the game's intelligence bonus).
-    public int Amount;
+    public int Amount { get; set; }
 }
 
 public static class Progression
@@ -100,4 +106,5 @@ static class ProgressionHooks
         Progression.ModifyExperience.Run(h => h(g));
         __0 = Math.Max(0, g.Amount);
     }
+}
 }

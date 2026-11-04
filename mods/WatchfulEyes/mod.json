@@ -1,2 +1,2 @@
-{ "id": "WatchfulEyes", "name": "Watchful Eyes", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
+{ "id": "WatchfulEyes", "name": "Watchful Eyes", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
   "description": "Warns you when you open a container that isn't yours: who is watching, or that no one is." }

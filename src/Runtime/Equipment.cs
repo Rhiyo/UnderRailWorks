@@ -14,6 +14,10 @@ using System.Reflection;
 using TimelapseVertigo.Rules.Items;
 using TimelapseVertigo.Rules.Characters;
 using TimelapseVertigo.Generators.Items;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public enum EquipSlot { Helmet, Armor, Belt, Boots, Shield, PrimaryWeapon, SecondaryWeapon }
 
@@ -135,4 +139,5 @@ static class EquipmentHooks
         foreach (var c in World.Characters) if (c.HasGear(gear)) return c;
         return null;
     }
+}
 }

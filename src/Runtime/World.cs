@@ -12,6 +12,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 // What a tile holds, as a map would show it.
 public enum TileKind
@@ -23,12 +27,12 @@ public enum TileKind
     Door,
 }
 
-public struct Resistance { public int Threshold; public int Percent; }
+public struct Resistance { public int Threshold { get; set; } public int Percent { get; set; } }
 
 public struct Exit
 {
-    public Rectangle Tiles;      // the transition's tiles (map units)
-    public bool ToOtherZone;     // to another map (zone), else another area of this one
+    public Rectangle Tiles { get; set; }      // the transition's tiles (map units)
+    public bool ToOtherZone { get; set; }     // to another map (zone), else another area of this one
     // The colour the game draws its tiles in (a23): blue to another area, red to another map.
     public Color GameColour { get { return ToOtherZone ? World.ZoneExitColour : World.AreaExitColour; } }
 }
@@ -252,4 +256,5 @@ public static partial class World
         visible = list.AsReadOnly();
         drawing.Clear();
     }
+}
 }

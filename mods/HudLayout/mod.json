@@ -1,2 +1,2 @@
-{ "id": "HudLayout", "name": "HUD Layout", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
+{ "id": "HudLayout", "name": "HUD Layout", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
   "description": "Arrange the HUD: drag the game's parts and mods' panels (start with a Layout button on the HUD or a key, both in its settings); saved per HUD size." }

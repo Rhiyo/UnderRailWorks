@@ -1,5 +1,6 @@
 // Spike: make a new item file from a vanilla one with the game's own classes (run from the 64-bit test copy).
 using System; using System.Reflection;
+using UnderRailWorks;
 class MakeItem {
     static void Main(string[] a) {
         // a[0] vanilla .item, a[1] output .item, a[2] new name, a[3] new description

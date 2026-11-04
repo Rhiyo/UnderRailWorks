@@ -17,6 +17,10 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Xna.Framework;
 using Ouroboros.Common.Data;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 // A set of named game variables. Values are bool, int, float or string only: the stock game must be able to read
 // every save, and these are saved with their owner.
@@ -63,9 +67,12 @@ public enum QuestState { NotStarted, Active, Completed, Failed }
 
 public sealed class QuestInfo
 {
-    public string Id, Group, Text;
-    public int Xp, OddityXp;
-    public bool FromMod;
+    public string Id { get; set; }
+    public string Group { get; set; }
+    public string Text { get; set; }
+    public int Xp { get; set; }
+    public int OddityXp { get; set; }
+    public bool FromMod { get; set; }
 }
 
 public static class Quests
@@ -221,4 +228,5 @@ static class ContentHooks
         __result = text;
         return false;
     }
+}
 }

@@ -6,6 +6,10 @@
 // The base class can grow (new virtuals, properties) without breaking mods built against an older Works.
 using System;
 using HarmonyLib;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public abstract class WorksMod
 {
@@ -33,14 +37,16 @@ public sealed class ModLog
 {
     readonly string id;
     internal ModLog(string id) { this.id = id; }
-    public void Info(string line) { global::Log.Write("mods: " + id + ": " + line); }
-    public void Warn(string line) { global::Log.Write("mods: " + id + ": warning: " + line); }
-    public void Error(string line) { global::Log.Always("mods: " + id + ": error: " + line); }
+    public void Info(string line) { UnderRailWorks.Internal.Log.Write("mods: " + id + ": " + line); }
+    public void Warn(string line) { UnderRailWorks.Internal.Log.Write("mods: " + id + ": warning: " + line); }
+    public void Error(string line) { UnderRailWorks.Internal.Log.Always("mods: " + id + ": error: " + line); }
 }
 
-// The Works API version mods are checked against ("works": "1.0" in mod.json): same major version, at least that
-// minor. The minor goes up when the API gains something; the major only when something mods use changes or goes.
+// The Works API version mods are checked against ("works": "0.9" in mod.json). From 1.0: same major version, at least
+// that minor (the minor goes up when the API gains something; the major only when something mods use changes or goes).
+// While it is 0.x (a preview): the same minor exactly, since a minor may still change what mods use.
 public static class WorksApi
 {
-    public static readonly Version Version = new Version(1, 0);
+    public static readonly Version Version = new Version(0, 9);     // 0.x: a preview; breaking changes possible until 1.0
+}
 }

@@ -1,2 +1,2 @@
-{ "id": "DifficultyDial", "name": "Difficulty Dial", "version": "1.0.0", "author": "UnderRailWorks", "works": "1.0",
+{ "id": "DifficultyDial", "name": "Difficulty Dial", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
   "description": "Tune combat: damage you take and deal, your hit chance, your AP per turn. Settings apply at once." }

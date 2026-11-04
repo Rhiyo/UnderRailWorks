@@ -11,6 +11,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using TimelapseVertigo.Playfield.Locale;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class Container
 {
@@ -94,9 +98,9 @@ public sealed class LockAttempt
     public int Skill { get; internal set; }
     public int ToolBonus { get; internal set; }
     // Added to Skill + ToolBonus for this attempt (the lock itself stays as saved).
-    public int Bonus;
+    public int Bonus { get; set; }
     // null: the game decides; true: it opens; false: it fails.
-    public bool? Force;
+    public bool? Force { get; set; }
     // After the attempt (LockAttempted): whether it opened.
     public bool Success { get; internal set; }
 }
@@ -253,4 +257,5 @@ static class ContainerHooks
         __state.Success = __result == c9b.a;
         try { GameEvents.LockAttempted.Run(h => h(__state)); } catch (Exception ex) { Log.Write("locks: " + ex.Message); }
     }
+}
 }

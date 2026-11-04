@@ -2,6 +2,7 @@
 // (World.Place, Dialogs, Quests, Inventory, Variables). Nothing of it goes into the save but plain variables and the
 // quest's state: the stranger is placed again each time the area loads.
 using System;
+using UnderRailWorks;
 
 [assembly: System.Reflection.AssemblyVersion("1.0.0")]
 

@@ -9,6 +9,10 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public sealed class GalaxyBridge : acv
 {
@@ -68,4 +72,5 @@ public sealed class GalaxyBridge : acv
         catch (Exception ex) { Log.Write("galaxy: reading the game's Galaxy setup failed: " + ex.Message); }
         return found;
     }
+}
 }

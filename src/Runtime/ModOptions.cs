@@ -9,6 +9,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class ModPage
 {
@@ -344,4 +348,5 @@ public static class ModOptions
             catch (Exception ex) { Log.Write("mods: " + p.Key + ": saving options failed: " + ex); }
         }
     }
+}
 }

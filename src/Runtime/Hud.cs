@@ -15,6 +15,10 @@ using System.Linq;
 using System.Reflection;
 using Point = Microsoft.Xna.Framework.Point;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public enum HudPart
 {
@@ -467,4 +471,5 @@ static class HudHooks
     static void Toggled(bool __0) { try { Hud.Toggled(__0); } catch (Exception ex) { Log.Write("hud: " + ex.Message); } }
     static void Markup(dvp __instance, ref float __result) { try { __result = Prices.Buy(__instance, __result); } catch (Exception ex) { Log.Write("prices: " + ex.Message); } }
     static void SellFactorHook(ref float __result) { try { __result = Prices.Sell(__result); } catch (Exception ex) { Log.Write("prices: " + ex.Message); } }
+}
 }

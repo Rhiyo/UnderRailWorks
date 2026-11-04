@@ -8,6 +8,10 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 // The world view (a7m): the map's drawing for one frame.
 public struct WorldView : IEquatable<WorldView>
@@ -158,7 +162,7 @@ public struct MapObject : IEquatable<MapObject>
     public Vector3 MapPosition { get { return Entities.MapPosition(Game); } }
     public bool IsFlat { get { return Entities.IsFloor(Game) || Entities.IsGround(Game); } }
     // The character it is (null for walls, props, floors).
-    public Character Character { get { return Entities.Character(Game) == null ? null : global::Character.Of(Game); } }
+    public Character Character { get { return Entities.Character(Game) == null ? null : UnderRailWorks.Character.Of(Game); } }
     public bool Equals(MapObject o) { return ReferenceEquals(Game, o.Game); }
     public override bool Equals(object o) { return o is MapObject && Equals((MapObject)o); }
     public override int GetHashCode() { return RuntimeHelpers.GetHashCode(Game); }
@@ -171,3 +175,4 @@ public struct MapTile { internal readonly ak1 Game; internal MapTile(ak1 tile) {
 
 // The view a layer is drawn for (bkx), passed through to DrawAsGame.
 public struct LayerView { internal readonly bkx Game; internal LayerView(bkx view) { Game = view; } }
+}

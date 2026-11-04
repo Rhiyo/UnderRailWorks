@@ -5,6 +5,10 @@
 // load, so the .ogg is decoded with NVorbis (managed) and streamed through XNA's DynamicSoundEffectInstance (FNA).
 using System;
 using Microsoft.Xna.Framework.Audio;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class FixMusic
 {
@@ -196,4 +200,5 @@ sealed class OggMusic : IDisposable
         }
         lock (playing) playing.Remove(this);
     }
+}
 }

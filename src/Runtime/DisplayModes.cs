@@ -9,6 +9,10 @@ using System.Linq;
 using System.Collections;
 using System.Reflection;
 using TimelapseVertigo.Common.Settings;
+using UnderRailWorks;
+
+namespace UnderRailWorks.Internal
+{
 
 public static class UnderrailDisplayModes
 {
@@ -602,4 +606,5 @@ public static class ResolutionStore
         }
         return haveConfig ? configValue : NearestStock(current);     // no config.dat yet: the closest built-in size
     }
+}
 }

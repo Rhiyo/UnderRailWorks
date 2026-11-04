@@ -14,6 +14,10 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Xna.Framework.Input;
 using TimelapseVertigo.Common.Settings;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public sealed class Keybind
 {
@@ -108,4 +112,5 @@ public static class Keybinds
         ModSettings.For(k.Mod).Set(k.SettingKey, k.Key.ToString());
         return false;
     }
+}
 }

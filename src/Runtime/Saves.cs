@@ -16,6 +16,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
 
 public static partial class GameEvents
 {
@@ -280,4 +284,5 @@ static class SaveGuard
             throw new InvalidOperationException("UnderRailWorks: a mod's object (" + type.FullName + ") would be written into the save");
         }
     }
+}
 }
