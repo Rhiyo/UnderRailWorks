@@ -28,10 +28,12 @@ public sealed class NeuralReallocation : WorksMod
             int skills = SpentSkills(), abilities = SpentAbilities();
             d.Line("start", "Neural reallocation. I unwire what you've learned; you wire it back however you like at your next level-up. Skills: "
                     + config.SkillPrice + " charons. Abilities: " + config.AbilityPrice + " charons.")
-                .Option("Reallocate my skills (" + skills + " points, " + config.SkillPrice + " charons)", "skills", Condition.Code(() => skills > 0 && CanPay(config.SkillPrice)), Outcome.Code(RespecSkills))
-                .Option("Reallocate my abilities (" + abilities + " points, " + config.AbilityPrice + " charons)", "abilities", Condition.Code(() => abilities > 0 && CanPay(config.AbilityPrice)), Outcome.Code(RespecAbilities))
+                .Option("Reallocate my skills (" + skills + " points, " + config.SkillPrice + " charons)", "skills", Condition.Code(() => skills > 0 && CanPay(config.SkillPrice) && Progression.CanLevelUp), Outcome.Code(RespecSkills))
+                .Option("Reallocate my abilities (" + abilities + " points, " + config.AbilityPrice + " charons)", "abilities", Condition.Code(() => abilities > 0 && CanPay(config.AbilityPrice) && Progression.CanLevelUp), Outcome.Code(RespecAbilities))
+                .Option("[At the level cap] Why can't you rewire me?", "capped", Condition.Code(() => !Progression.CanLevelUp))
                 .Option("How does it work?", "how")
                 .Option("Not today.", Dialog.End);
+            d.Line("capped", "Loose points get placed at your next level-up, and you've had your last. I'd be selling you an empty head.").Next("start");
             d.Line("how", "The points stay in your head, loose. Next time you level up, you place them with the new ones. Until then you're... less, shall we say.").Next("start");
             d.Line("skills", "Done. Your skill points are loose: place them at your next level-up. Try not to forget your own name.").Next(Dialog.End);
             d.Line("abilities", "Done. Your abilities are back to the bare minimum; place the points at your next level-up. Walk slowly for a while.").Next(Dialog.End);

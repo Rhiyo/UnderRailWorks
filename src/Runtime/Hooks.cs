@@ -2,8 +2,9 @@
 // - Hook<T>: every handler runs, in mod load order (requirements first), e.g. "a layer is about to be drawn".
 // - ReplaceHook<T>: handlers run in load order until one returns true: that one has taken the step and the game's own
 //   step and later handlers are skipped (e.g. "draw this layer yourself"; one replacement, never two drawings).
-// A handler that throws is removed and logged with its mod's name; the game and the other mods carry on (tModLoader
-// lets such an exception through). With no handlers, the game runs as stock.
+// A handler that throws is logged with its mod's name and keeps running; one that fails 10 times is removed (a broken
+// per-frame handler would otherwise fill the log). The game and the other mods carry on (tModLoader lets such an
+// exception through). With no handlers, the game runs as stock.
 using System;
 using System.Collections.Generic;
 
@@ -12,6 +13,8 @@ public abstract class HookBase<T> where T : class
     readonly string name;
     T[] handlers = new T[0];
     string[] owners = new string[0];
+    readonly Dictionary<T, int> failures = new Dictionary<T, int>();
+    const int MaxFailures = 10;
     internal HookBase(string name) { this.name = name; }
 
     public bool Any { get { return handlers.Length > 0; } }
@@ -44,8 +47,9 @@ public abstract class HookBase<T> where T : class
             catch (Exception ex)
             {
                 string mod = i < owners.Length ? owners[i] : "?";
-                Remove(list[i]);
-                Log.Write("mods: " + mod + ": its " + name + " handler failed and was removed: " + ex);
+                int n; failures.TryGetValue(list[i], out n); failures[list[i]] = ++n;
+                if (n >= MaxFailures) { Remove(list[i]); failures.Remove(list[i]); Log.Write("mods: " + mod + ": its " + name + " handler failed " + n + " times and was removed: " + ex.Message); }
+                else if (n <= 3) Log.Write("mods: " + mod + ": its " + name + " handler failed (" + n + "): " + ex);
             }
         }
         return false;

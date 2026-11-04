@@ -23,7 +23,7 @@ using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 
-public static class Ui
+public static partial class Ui
 {
     static readonly PropertyInfo ColorProperty = typeof(avo).GetProperty("Color");
     static readonly MethodInfo StyleButton = typeof(t1).GetMethod("a", BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(dak), typeof(wj) }, null);
@@ -283,7 +283,7 @@ public sealed class UiTickBox : UiElement
     public bool Checked { get { return ((cao)Control).Checked; } set { ((cao)Control).Checked = value; } }
 }
 
-public sealed class UiPanel : UiElement
+public class UiPanel : UiElement
 {
     internal UiPanel(UiPanelControl panel) : base(panel) { }
     public Color Background { get { return ((UiPanelControl)Control).Background; } set { ((UiPanelControl)Control).Background = value; } }
@@ -376,6 +376,9 @@ public static class UiEvents
 {
     public static readonly Hook<Action<UiElement>> HudCreated = new Hook<Action<UiElement>>("HudCreated");
     public static readonly Hook<Action<UiElement>> MainMenuCreated = new Hook<Action<UiElement>>("MainMenuCreated");
+    // The in-game HUD is gone (back to the main menu); HudCreated follows when a game starts again. Drop references
+    // to HUD elements here.
+    public static readonly Hook<Action> HudDestroyed = new Hook<Action>("HudDestroyed");
     public static readonly Hook<Action<UiElement>> OptionsCreated = new Hook<Action<UiElement>>("OptionsCreated");
 }
 
@@ -463,6 +466,7 @@ static class UiHooks
         Group("dialog patches", () => Dialogs.InstallPatches(harmony));
         Group("containers, loot and locks", () => ContainerHooks.Install(harmony));
         Group("stealth", () => StealthHooks.Install(harmony));
+        Group("mod windows", () => UiWindows.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 
@@ -473,13 +477,19 @@ static class UiHooks
     }
 
     static void Hud(object __instance) { global::Hud.Created((ci3)__instance); var root = UiElement.Of((euz)__instance); if (UiEvents.HudCreated.Any) UiEvents.HudCreated.Run(h => h(root)); }
-    static void MainMenu(object __instance) { var root = UiElement.Of((euz)__instance); if (UiEvents.MainMenuCreated.Any) UiEvents.MainMenuCreated.Run(h => h(root)); }
+    static void MainMenu(object __instance)
+    {
+        if (global::Hud.Exists) { global::Hud.Gone(); if (UiEvents.HudDestroyed.Any) UiEvents.HudDestroyed.Run(h => h()); }     // back to the main menu: no HUD
+        var root = UiElement.Of((euz)__instance);
+        if (UiEvents.MainMenuCreated.Any) UiEvents.MainMenuCreated.Run(h => h(root));
+    }
     internal static t1 CurrentOptions;
     internal static void Options(t1 options) { CurrentOptions = options; if (UiEvents.OptionsCreated.Any) UiEvents.OptionsCreated.Run(h => h(UiElement.Of(options))); }
 
     static void Updated(GameTime __0)
     {
         Input.Tick();
+        UiWindows.Tick();
         try { UiTextBox.Poll(); } catch (Exception ex) { Log.Write("ui: " + ex.Message); }
         try { Saves.Tick(); } catch (Exception ex) { Log.Write("saves: " + ex); }
         double dt = __0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds;

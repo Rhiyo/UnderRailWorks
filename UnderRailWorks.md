@@ -421,6 +421,23 @@ converted and kept its place relative to the edges).
   anchor point; snapping to a grid counted from the anchor (settings: on/off, size 2-40, default 10 like the game's
   margins; Shift drags freely). A drag follows a part by name when its mod rebuilds it. Tested in game.
 
+## Mod windows, HUD lifecycle, tolerant hooks (Nov 2026)
+
+- `Ui.Window(mod, id, title, w, h)` -> `UiWindow`: a title bar, a close box, dragged by the title (its place kept per
+  mod in settings.ini as an anchored `Ui.Place`), Escape closes the topmost one: Works intercepts Escape in the game's
+  key handler `dka.a(object, ane)` (`ane.a == 27`; the handler's `e()` closes the game's topmost screen or opens the
+  menu), so the game menu doesn't open meanwhile. `Top` is where content starts; `Closed`; windows close with their
+  HUD. Merchant Ledger, Vendor Directory, Loadouts and the After-Action Report use it. Tested: open (K), drag, Escape.
+- `UiEvents.HudDestroyed` and `Hud.Exists` false on returning to the main menu (Hud.Current used to stay set, and
+  mods kept acting on the dead HUD).
+- A failing handler is logged (first 3 times) and only removed after 10 failures.
+- `Progression.MaxLevel`, `CanLevelUp`.
+- From a review of all mods: After-Action Report resets on load / new game; Vendor Directory skips hostile merchants
+  and combat, and no longer rebuilds its window every second (that swallowed clicks on Trade); Contract Board
+  bounties count only hostile kills; Neural Reallocation explains the level cap instead of taking the money;
+  Minimap's hidden state survives HUD rebuilds and merchant squares follow zone changes at once; Difficulty Dial
+  announces the detection setting; Loadouts opens with K by default.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

@@ -39,9 +39,10 @@ public sealed class DifficultyDial : WorksMod
         {
             if (announced || c == null || !c.IsPlayer) return;
             announced = true;
-            if (!config.Announce || (config.DamageTaken == 100 && config.DamageDealt == 100 && config.HitChance == 0 && config.ActionPoints == 0)) return;
+            if (!config.Announce || (config.DamageTaken == 100 && config.DamageDealt == 100 && config.HitChance == 0 && config.ActionPoints == 0 && config.Detection == 100)) return;
             Combat.Log("Difficulty dial: damage taken " + config.DamageTaken + "%, dealt " + config.DamageDealt + "%, hit chance "
-                + (config.HitChance >= 0 ? "+" : "") + config.HitChance + ", AP " + (config.ActionPoints >= 0 ? "+" : "") + config.ActionPoints);
+                + (config.HitChance >= 0 ? "+" : "") + config.HitChance + ", AP " + (config.ActionPoints >= 0 ? "+" : "") + config.ActionPoints
+                + ", noticed sneaking " + config.Detection + "%");
         });
     }
 }

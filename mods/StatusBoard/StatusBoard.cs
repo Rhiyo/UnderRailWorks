@@ -30,6 +30,7 @@ public sealed class StatusBoard : WorksMod
     {
         config = GetConfig<StatusBoardConfig>();
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; shown = ""; });
+        UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.StatusRemoved.Add(this, s =>
         {
             if (!config.AnnounceEnd || s.Character == null || !s.Character.IsPlayer || string.IsNullOrEmpty(s.Name)) return;

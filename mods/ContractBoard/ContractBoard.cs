@@ -67,7 +67,7 @@ public sealed class ContractBoard : WorksMod
 
         Combat.AttackResolved.Add(this, o =>
         {
-            if (!o.Killed || !o.ByPlayer) return;
+            if (!o.Killed || !o.ByPlayer || o.Target == null || !o.Target.IsHostile) return;     // bounties are for hostiles, not bystanders
             foreach (var j in ActiveJobs().Where(x => x.Kind == "bounty" && x.Progress < x.Count))
             {
                 j.Progress++;

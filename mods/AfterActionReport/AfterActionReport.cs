@@ -25,7 +25,7 @@ public sealed class AfterActionReport : WorksMod
     Keybind showKey;
     Fight current, last;
     UiElement hud;
-    UiPanel panel;
+    UiWindow panel;
     double shownFor;
 
     public override void Load()
@@ -33,7 +33,11 @@ public sealed class AfterActionReport : WorksMod
         config = GetConfig<AfterActionReportConfig>();
         showKey = Keybinds.Register(this, "show", "Last report", Keys.F11);
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; });
+        UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.CombatStarted.Add(this, () => current = new Fight());
+        // Another game: its fights are its own (a fight in progress at a quickload doesn't carry over).
+        GameEvents.GameLoaded.Add(this, () => { current = null; last = null; });
+        GameEvents.NewGame.Add(this, () => { current = null; last = null; });
         Combat.RoundEnded.Add(this, r => { if (current != null) current.Rounds = r + 1; });
         Combat.AttackResolved.Add(this, o =>
         {
@@ -61,7 +65,7 @@ public sealed class AfterActionReport : WorksMod
             if (showKey.Pressed && last != null) ShowReport();
             if (panel == null) return;
             shownFor += seconds;
-            if (shownFor > config.Seconds) { Ui.Remove(panel); panel = null; }
+            if (shownFor > config.Seconds) panel.Close();
         });
     }
 
@@ -71,7 +75,7 @@ public sealed class AfterActionReport : WorksMod
     void ShowReport()
     {
         if (hud == null || last == null) return;
-        if (panel != null) Ui.Remove(panel);
+        if (panel != null) panel.Close();
         var rows = new List<string[]>
         {
             new[] { "", "This fight", "Career" },
@@ -83,17 +87,16 @@ public sealed class AfterActionReport : WorksMod
             new[] { "Kills", last.Kills.ToString(), Total("aar_kills").ToString() },
             new[] { "Attacks dodged", last.Dodged.ToString(), "" },
         };
-        int w = 340, h = 34 + rows.Count * 20;
-        panel = Ui.Panel(w, h);
-        var title = Ui.Label("After-Action Report", w - 20); Ui.SetColor(title, new Color(230, 160, 60));
-        Ui.Add(panel, title, 10, 6);
+        int w = 340, h = 32 + rows.Count * 20;
+        panel = Ui.Window(this, "report", "After-Action Report", w, h);
+        if (panel == null) return;
+        panel.Closed += () => panel = null;
         for (int i = 0; i < rows.Count; i++)
         {
             var colour = i == 0 ? new Color(160, 160, 150) : new Color(215, 215, 205);
             int[] x = { 10, 150, 240 };
-            for (int c = 0; c < 3; c++) { var l = Ui.Label(rows[i][c], c == 0 ? 140 : 95); Ui.SetColor(l, colour); Ui.Add(panel, l, x[c], 28 + i * 20); }
+            for (int c = 0; c < 3; c++) { var l = Ui.Label(rows[i][c], c == 0 ? 140 : 95); Ui.SetColor(l, colour); Ui.Add(panel, l, x[c], panel.Top + 2 + i * 20); }
         }
-        Ui.Add(hud, panel, (hud.Width - w) / 2, 90);
         shownFor = 0;
     }
 

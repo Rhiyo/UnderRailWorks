@@ -110,7 +110,8 @@ public static class Hud
 
     public static readonly Hook<Action<HudModPart>> PartAdded = new Hook<Action<HudModPart>>("HudPartAdded");
 
-    internal static void Created(ci3 screen) { Current = screen; modParts.Clear(); tracked.Clear(); }
+    internal static void Created(ci3 screen) { UiWindows.HudGone(); Current = screen; modParts.Clear(); tracked.Clear(); }
+    internal static void Gone() { UiWindows.HudGone(); Current = null; modParts.Clear(); tracked.Clear(); }
 
     // --- Mod elements on the HUD hide with the game's HUD --------------------------------------------------------
     // The game hides its HUD (ci3.a(false): dka.j() while the game menu, Options or the character sheet is open, or the

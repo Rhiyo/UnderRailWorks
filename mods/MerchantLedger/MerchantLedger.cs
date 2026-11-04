@@ -16,7 +16,7 @@ public sealed class MerchantLedger : WorksMod
     const int Shown = 14;
     Keybind openKey;
     UiElement hud;
-    UiPanel panel;
+    UiWindow panel;
     UiTextBox search;
     readonly List<UiElement> rows = new List<UiElement>();
 
@@ -26,6 +26,7 @@ public sealed class MerchantLedger : WorksMod
     {
         openKey = Keybinds.Register(this, "open", "Ledger", Keys.L);
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; });
+        UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.TradeOpened.Add(this, merchant =>
         {
             if (merchant == null || !Variables.Global.Available) return;
@@ -67,20 +68,21 @@ public sealed class MerchantLedger : WorksMod
 
     void Open()
     {
-        int w = 560, h = 70 + Shown * 20;
-        panel = Ui.Panel(w, h);
+        int w = 560, h = 92 + Shown * 20;
         int seen = Ids().Count;
-        var title = Ui.Label("Merchant ledger: " + seen + (seen == 1 ? " merchant" : " merchants") + " seen. Type to search.", w - 20);
+        panel = Ui.Window(this, "ledger", "Merchant ledger: " + seen + (seen == 1 ? " merchant" : " merchants") + " seen", w, h);
+        if (panel == null) return;
+        panel.Closed += () => { panel = null; search = null; rows.Clear(); };
+        var title = Ui.Label("Type to search.", w - 20);
         Ui.SetColor(title, new Color(230, 160, 60));
-        Ui.Add(panel, title, 10, 8);
+        Ui.Add(panel, title, 10, panel.Top + 4);
         search = Ui.TextBox(w - 20, 40);
         search.Changed += text => Show(text);
-        Ui.Add(panel, search, 10, 32);
-        Ui.Add(hud, panel, (hud.Width - w) / 2, 80);
+        Ui.Add(panel, search, 10, panel.Top + 26);
         Show("");
     }
 
-    void Close() { if (panel != null) Ui.Remove(panel); panel = null; search = null; rows.Clear(); }
+    void Close() { if (panel != null) panel.Close(); }
 
     void Show(string text)
     {
@@ -88,7 +90,7 @@ public sealed class MerchantLedger : WorksMod
         rows.Clear();
         var found = All().Where(e => text.Length == 0 || e.Item.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
             .OrderBy(e => e.Item).ThenBy(e => e.Price).ToList();
-        int y = 66;
+        int y = panel.Top + 62;
         if (found.Count == 0)
         {
             var none = Ui.Label(Ids().Count == 0 ? "Nothing yet: trade with a merchant and their stock is written down." : "No item matches.", 520);

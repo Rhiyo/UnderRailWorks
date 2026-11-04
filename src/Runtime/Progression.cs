@@ -47,6 +47,10 @@ public static class Progression
         var data = p == null ? null : p.PlayerData;
         return data == null ? 0 : c2h.a(level, data.e(), data.BaseAbilities.Get<av8>().f());
     }
+    // The level cap of this game (the base game's, or the expansion's / custom difficulty's): c2h.a().
+    public static int MaxLevel { get { return c2h.a(); } }
+    // The player can still level up (points freed now can be spent at a next level-up).
+    public static bool CanLevelUp { get { var p = World.Player; return p != null && p.IsCharacter && p.Level < c2h.a(); } }
     public static bool Oddity { get { var p = World.Player; var d = p == null ? null : p.PlayerData; return d != null && d.e() == ExperienceSystem.Oddity; } }
 }
 

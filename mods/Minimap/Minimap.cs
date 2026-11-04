@@ -48,6 +48,7 @@ public sealed class Minimap : WorksMod
     double sinceDraw;
     List<Character> merchants = new List<Character>();
     string merchantsFor;
+    bool hidden;
     int sinceMerchants;
 
     public override void Load()
@@ -55,15 +56,16 @@ public sealed class Minimap : WorksMod
         config = GetConfig<MinimapConfig>();
         toggleKey = Keybinds.Register(this, "toggle", "Show/hide", Keys.F7);
         UiEvents.HudCreated.Add(this, root => { hud = root; Build(); });
+        UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.Update.Add(this, seconds =>
         {
             if (panel == null) return;
             if (Relayout) { Relayout = false; Build(); return; }
-            if (toggleKey.Pressed) Ui.Show(panel, !panel.Visible);
+            if (toggleKey.Pressed) { hidden = panel.Visible; Ui.Show(panel, !hidden); }     // kept across HUD rebuilds (loads, resolution changes)
             sinceDraw += seconds;
             if (!panel.Visible || sinceDraw < 0.25) return;
             sinceDraw = 0;
-            if (config.ShowMerchants && (merchantsFor == null || sinceMerchants++ > 20)) { merchants = World.Characters.Where(c => c.IsMerchant && !c.IsPlayer).ToList(); merchantsFor = World.ZoneId; sinceMerchants = 0; }
+            if (config.ShowMerchants && (merchantsFor != World.ZoneId || sinceMerchants++ > 20)) { merchants = World.Characters.Where(c => c.IsMerchant && !c.IsPlayer).ToList(); merchantsFor = World.ZoneId; sinceMerchants = 0; }
             map.Update(World.Player, config.ShowCharacters ? World.Visible : null, config.TilesAcross / 2, config.ShowExits, config.ShowMerchants ? merchants : null);
             if (map.Note != null) { Log.Info(map.Note); map.Note = null; }
         });
@@ -84,7 +86,7 @@ public sealed class Minimap : WorksMod
         var anchor = top ? (left ? HudAnchor.TopLeft : HudAnchor.TopRight) : (left ? HudAnchor.BottomLeft : HudAnchor.BottomRight);
         int dx = top ? 12 : left ? 56 : 52, dy = top ? (left ? 145 : 62) : 12;
         Hud.AddPart(this, "Minimap", panel, anchor, dx, dy);     // an anchored HUD part: layout mods can move it
-        Ui.Show(panel, config.Show);
+        Ui.Show(panel, config.Show && !hidden);
         sinceDraw = 1;
     }
 

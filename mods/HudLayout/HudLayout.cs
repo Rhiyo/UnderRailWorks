@@ -55,6 +55,7 @@ public sealed class HudLayout : WorksMod
             foreach (var p in Parts()) { originals[p.Name] = Default(p); Apply(p); }
             ShowButton();
         });
+        UiEvents.HudDestroyed.Add(this, () => { hud = null; overlay = null; help = null; dragging = null; layoutButton = null; });     // back to the main menu
         // A mod's part was added (or rebuilt): where the player put it.
         Hud.PartAdded.Add(this, part =>
         {
