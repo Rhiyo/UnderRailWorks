@@ -94,15 +94,17 @@ public static class Combat
     public static Character Current { get { var m = Manager; var e = m == null || !m.ahg() ? null : m.ahe(); var f = Fighter(e); return f == null ? null : Character.Of(f.a8()); } }
     public static int Round { get; internal set; }
 
-    // The current fighter's AP and MP (as the combat panel shows them).
+    // A fighter's AP and MP (as the combat panel shows them); 0 outside combat.
     public static int ActionPoints(Character c) { var e = Entry(c); return e == null ? 0 : (int)Ap(e); }
     public static void SetActionPoints(Character c, int ap) { var e = Entry(c); if (e != null) SetAp(e, ap); }
+    public static int MovementPoints(Character c) { var e = Entry(c); return e == null ? 0 : (int)Mp(e); }
+    // Any fighter's entry (crp.ahu(character data)), not only the current one's.
     static d4n Entry(Character c)
     {
         var m = Manager;
         if (m == null || c == null || !m.ahg()) return null;
-        var e = m.ahe();
-        return Fighter(e) != null && Fighter(e).a8() == c.Entity ? e : null;
+        var data = c.Entity is c5x ? ((c5x)c.Entity).GetAspect<amc>() : null;
+        return data == null || data.aa() == null ? null : m.ahu(data.aa());
     }
 
     // A line in the chat/combat log, and floating text over a character (the game's own).

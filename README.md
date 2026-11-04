@@ -21,6 +21,7 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   - Fair Trade: what merchants charge and pay, as settings.
   - Merchant Ledger: every merchant's stock and prices written down when you trade; L searches them all.
   - Movable Windows: drag the inventory, notes, crafting, map... by their title bar; they open where you left them.
+  - Status Board: health, status effects by name with turns left, and AP/MP in combat, on the HUD.
   - Neural Reallocation: a neurotechnician at South Gate Station resets your skills or abilities for charons.
 
 No game code or game files are shipped: the patcher changes the player's own copy, and mods patch it at runtime.
