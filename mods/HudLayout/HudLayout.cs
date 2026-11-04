@@ -21,30 +21,32 @@ public enum LayoutKey { F12, F11, F6 }
 
 public sealed class HudLayout : WorksMod
 {
-    static readonly HudPart[] Parts = (HudPart[])Enum.GetValues(typeof(HudPart));
+    static readonly HudPart[] GameParts = (HudPart[])Enum.GetValues(typeof(HudPart));
+
+    // One movable part: the game's (by HudPart) or a mod's (by its name).
+    sealed class Part { public string Name; public UiElement Element; public Point Original; }
+
     HudLayoutConfig config;
     UiElement hud, overlay;
     UiPanel help;
-    readonly Dictionary<HudPart, Point> original = new Dictionary<HudPart, Point>();
-    HudPart? dragging;
+    readonly Dictionary<string, Point> originals = new Dictionary<string, Point>();
+    Part dragging, hovered;
     Point dragStart, partStart;
-    HudPart? hovered;
 
     public override void Load()
     {
         config = GetConfig<HudLayoutConfig>();
         UiEvents.HudCreated.Add(this, root =>
         {
-            hud = root; overlay = null; help = null; dragging = null; original.Clear();
-            foreach (var p in Parts)
-            {
-                var e = Hud.Get(p);
-                if (e == null) continue;
-                original[p] = new Point(e.X, e.Y);
-                var saved = Settings.Get(Key(p));
-                Point at;
-                if (saved != null && TryParse(saved, out at)) Ui.Move(e, at.X, at.Y);
-            }
+            hud = root; overlay = null; help = null; dragging = null; originals.Clear();
+            foreach (var p in Parts()) { originals[p.Name] = new Point(p.Element.X, p.Element.Y); Apply(p); }
+        });
+        // A mod's part was added (or rebuilt): where the player put it.
+        Hud.PartAdded.Add(this, part =>
+        {
+            if (hud == null) return;
+            originals["mod:" + part.Name] = new Point(part.DefaultX, part.DefaultY);
+            Apply(new Part { Name = "mod:" + part.Name, Element = part.Element });
         });
         GameEvents.Update.Add(this, seconds =>
         {
@@ -55,26 +57,42 @@ public sealed class HudLayout : WorksMod
             hovered = PartAt(m);
             if (Input.MousePressed(MouseButton.Left) && hovered != null)
             {
-                var e = Hud.Get(hovered.Value);
-                dragging = hovered; dragStart = m; partStart = new Point(e.X, e.Y);
+                dragging = hovered; dragStart = m; partStart = new Point(hovered.Element.X, hovered.Element.Y);
             }
             if (dragging != null)
             {
-                var e = Hud.Get(dragging.Value);
-                Ui.Move(e, partStart.X + m.X - dragStart.X, partStart.Y + m.Y - dragStart.Y);
+                Ui.Move(dragging.Element, partStart.X + m.X - dragStart.X, partStart.Y + m.Y - dragStart.Y);
                 if (Input.MouseReleased(MouseButton.Left))
                 {
-                    Settings.Set(Key(dragging.Value), e.X + "," + e.Y);
+                    Settings.Set(Key(dragging.Name), dragging.Element.X + "," + dragging.Element.Y);
                     dragging = null;
                 }
             }
             if (Input.MousePressed(MouseButton.Right) && hovered != null)
             {
                 Point o;
-                if (original.TryGetValue(hovered.Value, out o)) Ui.Move(Hud.Get(hovered.Value), o.X, o.Y);
-                Settings.Set(Key(hovered.Value), "");
+                if (originals.TryGetValue(hovered.Name, out o)) Ui.Move(hovered.Element, o.X, o.Y);
+                Settings.Set(Key(hovered.Name), "");
             }
         });
+    }
+
+    // The game's parts, then the mods' (added later: they draw on top).
+    IEnumerable<Part> Parts()
+    {
+        foreach (var p in GameParts)
+        {
+            var e = Hud.Get(p);
+            if (e != null) yield return new Part { Name = p.ToString(), Element = e };
+        }
+        foreach (var p in Hud.ModParts) yield return new Part { Name = "mod:" + p.Name, Element = p.Element };
+    }
+
+    void Apply(Part p)
+    {
+        var saved = Settings.Get(Key(p.Name));
+        Point at;
+        if (saved != null && TryParse(saved, out at)) Ui.Move(p.Element, at.X, at.Y);
     }
 
     void Begin()
@@ -100,28 +118,26 @@ public sealed class HudLayout : WorksMod
     void Draw(UiCanvas canvas)
     {
         canvas.Fill(canvas.Bounds, new Color(0, 0, 0, 70));
-        foreach (var p in Parts)
+        foreach (var p in Parts())
         {
-            var e = Hud.Get(p);
-            if (e == null || !e.Visible || e.Width <= 0) continue;
-            var r = e.Bounds;
-            bool hot = p == hovered || p == dragging;
+            if (!p.Element.Visible || p.Element.Width <= 0) continue;
+            var r = p.Element.Bounds;
+            bool hot = Same(p, hovered) || Same(p, dragging);
             if (hot) canvas.Fill(r, new Color(230, 160, 60, 60));
-            canvas.Frame(r, hot ? new Color(255, 200, 90) : new Color(181, 92, 0));
+            canvas.Frame(r, hot ? new Color(255, 200, 90) : p.Name.StartsWith("mod:") ? new Color(120, 170, 230) : new Color(181, 92, 0));
         }
     }
 
-    HudPart? PartAt(Point m)
+    static bool Same(Part a, Part b) { return a != null && b != null && a.Name == b.Name; }
+
+    Part PartAt(Point m)
     {
-        foreach (var p in Parts.Reverse())     // later parts draw on top
-        {
-            var e = Hud.Get(p);
-            if (e != null && e.Visible && e.Bounds.Contains(m)) return p;
-        }
-        return null;
+        Part found = null;
+        foreach (var p in Parts()) if (p.Element.Visible && p.Element.Bounds.Contains(m)) found = p;     // the last one drawn on top
+        return found;
     }
 
-    string Key(HudPart p) { return p + "@" + hud.Width + "x" + hud.Height; }
+    string Key(string part) { return part + "@" + hud.Width + "x" + hud.Height; }
     static bool TryParse(string s, out Point p)
     {
         p = Point.Zero;

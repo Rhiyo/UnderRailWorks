@@ -83,7 +83,7 @@ public sealed class Minimap : WorksMod
         bool left = config.Corner == Corner.TopLeft || config.Corner == Corner.BottomLeft, top = config.Corner == Corner.TopRight || config.Corner == Corner.TopLeft;
         int x = left ? (top ? 12 : 56) : hud.Width - w - (top ? 12 : 52);
         int y = top ? (left ? 145 : 62) : hud.Height - h - 12;
-        Ui.Add(hud, panel, x, y);
+        Hud.AddPart(this, "Minimap", panel, x, y);     // a named HUD part: layout mods can move it
         Ui.Show(panel, config.Show);
         sinceDraw = 1;
     }

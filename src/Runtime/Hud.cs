@@ -53,8 +53,37 @@ public static class Hud
     // After the game showed or hid the HUD (its toggle sets every part's visibility): re-hide parts a mod hides.
     public static readonly Hook<Action<bool>> VisibilityChanged = new Hook<Action<bool>>("HudVisibilityChanged");
 
-    internal static void Created(ci3 screen) { Current = screen; }
+    // --- Parts mods add: listed with the game's, so layout tools can move them too ---------------------------------
+    static readonly List<HudModPart> modParts = new List<HudModPart>();
+
+    // Adds a mod's element to the HUD as a named part (e.g. "Minimap") at its default place, and announces it
+    // (PartAdded), so a layout mod can move it where the player put it. Call it again when the element is rebuilt.
+    public static void AddPart(WorksMod mod, string name, UiElement element, int x, int y)
+    {
+        if (Current == null || element == null) return;
+        modParts.RemoveAll(p => p.Name == name || p.Element.Control.Parent == null);
+        var part = new HudModPart { Name = name, Mod = mod == null ? "" : mod.Id, Element = element, DefaultX = x, DefaultY = y };
+        Ui.Add(Root, element, x, y);
+        modParts.Add(part);
+        if (PartAdded.Any) PartAdded.Run(h => h(part));
+    }
+
+    // The mod parts on the HUD now.
+    public static IList<HudModPart> ModParts { get { modParts.RemoveAll(p => p.Element.Control.Parent == null); return modParts.ToList(); } }
+
+    public static readonly Hook<Action<HudModPart>> PartAdded = new Hook<Action<HudModPart>>("HudPartAdded");
+
+    internal static void Created(ci3 screen) { Current = screen; modParts.Clear(); }
     internal static void Toggled(bool shown) { if (VisibilityChanged.Any) VisibilityChanged.Run(h => h(shown)); }
+}
+
+public sealed class HudModPart
+{
+    public string Name { get; internal set; }       // e.g. "Minimap"
+    public string Mod { get; internal set; }        // the mod's id
+    public UiElement Element { get; internal set; }
+    public int DefaultX { get; internal set; }      // where the mod put it
+    public int DefaultY { get; internal set; }
 }
 
 public enum Window { Inventory, CharacterSheet, CombatStats, Crafting, Notes, Oddities, Psi, Map, QuickInvoker, GameMenu }
