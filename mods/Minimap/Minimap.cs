@@ -1,6 +1,7 @@
 // Minimap: an UnderRailWorks mod. A panel on the HUD shows the area around the player in the same isometric
-// orientation as the screen (up-right on the minimap is up-right in the game): floors, walls and obstacles, area exits,
-// the player as a white dot and the characters the player can currently see as dots in the colour holding Tab gives
+// orientation as the screen (up-right on the minimap is up-right in the game): what the player has discovered (the
+// game's shroud): floors, walls, props, doors, exits in the game's transition colours,
+// the player as a gold dot and the characters the player can currently see as dots in the colour holding Tab gives
 // them (the game's own outline colours). Characters the game isn't drawing (out of sight, stealthed) are not shown.
 // It is rebuilt a few times a second, not every frame. Settings: Options -> Mods -> Minimap settings.
 using System;
@@ -19,11 +20,12 @@ public sealed class MinimapConfig : ModConfig
     public int Size = 260;
     [Label("Tiles across"), Range(20, 120), Increment(5), Tooltip("How many tiles the minimap spans, side to side.")]
     public int TilesAcross = 50;
-    [Label("Corner")] public Corner Corner = Corner.TopRight;
+    [Label("Corner"), Tooltip("Bottom right: beside the action bar, left of the menu button (out of the way of what lies ahead).")]
+    public Corner Corner = Corner.BottomRight;
     [Label("Background opacity"), Range(0, 100), Increment(5)] public int Opacity = 85;
     [Label("Show characters"), Tooltip("Characters the player can currently see, as dots in their Tab outline colour.")]
     public bool ShowCharacters = true;
-    [Label("Show exits"), Tooltip("Area exits (transitions to other areas), in yellow.")]
+    [Label("Show exits"), Tooltip("Exits in the game's transition colours: blue to another area of this map, red to another map.")]
     public bool ShowExits = true;
     [Label("Key that shows or hides it")] public ToggleKey Key = ToggleKey.F7;
 
@@ -42,6 +44,7 @@ public sealed class Minimap : WorksMod
     MapView view;
     double sinceDraw;
     b0b player;
+    a7m worldView;
     readonly HashSet<b0b> seenNow = new HashSet<b0b>();
     List<b0b> seen = new List<b0b>();
 
@@ -56,7 +59,7 @@ public sealed class Minimap : WorksMod
             var e = Layers.Entity(layer);
             var c = e == null ? null : Entities.Character(e);
             if (c == null) return;     // any of its layers (body, shadow...): it is being drawn
-            if (c.IsPlayer) player = e; else seenNow.Add(e);
+            if (c.IsPlayer) { player = e; this.worldView = worldView; } else seenNow.Add(e);
         });
         WorldDraw.WorldDone.Add(this, (worldView, context) => { seen = new List<b0b>(seenNow); seenNow.Clear(); });
         GameEvents.Update.Add(this, seconds =>
@@ -67,7 +70,12 @@ public sealed class Minimap : WorksMod
             sinceDraw += seconds;
             if (!panel.Visible || sinceDraw < 0.25) return;
             sinceDraw = 0;
-            try { view.Render(player, config.ShowCharacters ? seen : null, config.TilesAcross / 2, config.ShowExits); }
+            try
+            {
+                bool shroud = worldView != null && WorldViews.Shroud(worldView);
+                view.Render(player, config.ShowCharacters ? seen : null, config.TilesAcross / 2, config.ShowExits, shroud, worldView == null ? 1 : WorldViews.Observer(worldView));
+                if (view.Note != null) { Log.Info(view.Note); view.Note = null; }
+            }
             catch (Exception ex) { Log.Warn("render failed: " + ex.Message); }
         });
     }
@@ -81,8 +89,11 @@ public sealed class Minimap : WorksMod
         panel.Background = new Color(8, 8, 8) * (config.Opacity / 100f);
         view = new MapView { Size = new esj(w - 8, h - 8) };
         Ui.Add(panel, view, 4, 4);
-        int x = config.Corner == Corner.TopLeft || config.Corner == Corner.BottomLeft ? 12 : Ui.Width(hud) - w - 12;
-        int y = config.Corner == Corner.TopRight || config.Corner == Corner.TopLeft ? 70 : Ui.Height(hud) - h - 110;
+        // Clear of the HUD's own parts (interface units, the same at every interface scale): the portrait and the icon bar
+        // at the top, the side bar and the menu buttons in the bottom corners; the bottom edge level with the action bar's.
+        bool left = config.Corner == Corner.TopLeft || config.Corner == Corner.BottomLeft, top = config.Corner == Corner.TopRight || config.Corner == Corner.TopLeft;
+        int x = left ? (top ? 12 : 56) : Ui.Width(hud) - w - (top ? 12 : 52);
+        int y = top ? (left ? 145 : 62) : Ui.Height(hud) - h - 12;
         Ui.Add(hud, panel, x, y);
         Ui.Show(panel, config.Show);
         sinceDraw = 1;
@@ -98,19 +109,23 @@ public sealed class Minimap : WorksMod
 public sealed class MapView : euz
 {
     Texture2D picture;
+    aud lastArea;
+    internal string Note;     // once per area, for the log
     GraphicsDevice device;
     Microsoft.Xna.Framework.Color[] pixels;
     int tw, th;
 
 
     static readonly Microsoft.Xna.Framework.Color Floor = new Microsoft.Xna.Framework.Color(70, 74, 70), Wall = new Microsoft.Xna.Framework.Color(150, 150, 140),
-        Exit = new Microsoft.Xna.Framework.Color(220, 190, 60), Outline = Microsoft.Xna.Framework.Color.Black,
+        AreaExit = Areas.AreaExitColour, ZoneExit = Areas.ZoneExitColour, Outline = Microsoft.Xna.Framework.Color.Black,
         Furniture = new Microsoft.Xna.Framework.Color(92, 96, 90), Door = new Microsoft.Xna.Framework.Color(140, 100, 60);
 
-    // kind of each tile around the player: 0 nothing, 1 floor, 2 wall, 3 exit, 4 prop (furniture, containers), 5 door.
+    // kind of each tile around the player: 0 nothing (or undiscovered), 1 floor, 2 wall, 3 exit to another area, 4 prop
+    // (furniture, containers), 5 door, 6 exit to another map.
     static readonly System.Reflection.FieldInfo NameField = typeof(cae).GetField("b", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
     static string NameOf(c5x c) { return NameField.GetValue(c) as string; }
-    public void Render(b0b player, IList<b0b> characters, int radius, bool exits)
+    // shroud: hide what the observer hasn't discovered yet (the game's fog of war is on).
+    public void Render(b0b player, IList<b0b> characters, int radius, bool exits, bool shroud, long observer)
     {
         tw = Math.Max(16, Ui.Width(this)); th = Math.Max(8, Ui.Height(this));
         if (pixels == null || pixels.Length != tw * th) pixels = new Microsoft.Xna.Framework.Color[tw * th];
@@ -122,17 +137,18 @@ public sealed class MapView : euz
             float cx = at.X + 0.5f, cy = at.Y + 0.5f;
             int r = radius + radius / 2 + 2, size = 2 * r + 1, ox = (int)cx - r, oy = (int)cy - r;
             var kind = new byte[size, size];
+            int hidden = 0;
             int aw = Areas.Width(area), ah = Areas.Height(area);
             for (int i = 0; i < size; i++)
                 for (int j = 0; j < size; j++)
                 {
                     int x = ox + i, y = oy + j;
                     if (x < 0 || y < 0 || x >= aw || y >= ah) continue;
-                    // A wall stands where there is no floor; furniture and other props stand on floor (shown as floor, a
-                    // little lighter: the room's shape stays readable).
+                    // Undiscovered parts stay dark under the shroud, as in the game: only what the player has seen counts.
                     byte k = 0;
                     foreach (var e in Areas.On(Areas.Tile(area, x, y)))
                     {
+                        if (shroud && !Entities.Discovered(e, observer)) continue;
                         if (Entities.IsFloor(e) || Entities.IsGround(e)) { if (k == 0) k = 1; continue; }
                         var c = e as c5x;
                         if (c == null || Entities.Character(e) != null) continue;
@@ -143,16 +159,17 @@ public sealed class MapView : euz
                         else if (c.GetAspect<cd0>() != null && k != 5) { if (string.IsNullOrEmpty(NameOf(c))) k = 2; else if (k != 2) k = 4; }
                     }
                     kind[i, j] = k;
+                    if (shroud && k == 0) hidden++;
                 }
-            int floors = 0, walls = 0;
-            foreach (var kk in kind) { if (kk == 1 || kk == 4 || kk == 5) floors++; else if (kk == 2) walls++; }
+            if (area != lastArea) { lastArea = area; Note = "area " + Areas.Width(area) + "x" + Areas.Height(area) + ", shroud " + (shroud ? "on: " + hidden + " of " + size * size + " tiles around the player hidden" : "off"); }
+            // Exits in the game's own colours (blue: another area of this map, red: another map), only on discovered tiles.
             if (exits)
                 foreach (var ex in Areas.Exits(area))
-                    for (int x = ex.Left; x < ex.Right; x++)
-                        for (int y = ex.Top; y < ex.Bottom; y++)
+                    for (int x = ex.Tiles.Left; x < ex.Tiles.Right; x++)
+                        for (int y = ex.Tiles.Top; y < ex.Tiles.Bottom; y++)
                         {
                             int i = x - ox, j = y - oy;
-                            if (i >= 0 && j >= 0 && i < size && j < size) kind[i, j] = 3;
+                            if (i >= 0 && j >= 0 && i < size && j < size && kind[i, j] != 0) kind[i, j] = ex.ToOtherZone ? (byte)6 : (byte)3;
                         }
             // Isometric: a map step in X goes right and down on screen, in Y left and down (as the game draws).
             // Screen offset (u, v) from the centre -> map offset: x - y = u / k, x + y = 2v / k.
@@ -164,12 +181,12 @@ public sealed class MapView : euz
                     int i = (int)Math.Floor(cx + (u + v) / 2) - ox, j = (int)Math.Floor(cy + (v - u) / 2) - oy;
                     if (i < 0 || j < 0 || i >= size || j >= size) continue;
                     byte k = kind[i, j];
-                    if (k != 0) pixels[py * tw + px] = k == 1 ? Floor : k == 4 ? Furniture : k == 2 ? Wall : k == 5 ? Door : Exit;
+                    if (k != 0) pixels[py * tw + px] = k == 1 ? Floor : k == 4 ? Furniture : k == 2 ? Wall : k == 5 ? Door : k == 6 ? ZoneExit : AreaExit;
                 }
             if (characters != null)
                 foreach (var c in characters)
                     if (Areas.Of(c) == area) Dot(Entities.MapPosition(c), cx, cy, k2, Entities.OutlineColor(c), 2);
-            Dot(at, cx, cy, k2, Entities.OutlineColor(player), 3);     // the player last, on top (white, as Tab)
+            Dot(at, cx, cy, k2, Entities.OutlineColor(player), 3);     // the player last, on top (gold, as Tab)
         }
         if (picture == null || picture.IsDisposed || picture.Width != tw || picture.Height != th)
         {

@@ -90,18 +90,25 @@ public static class Entities
         catch { return Attitude.Neutral; }
     }
 
-    // The colour holding Tab outlines a character in: white for the player, else the game's colour for its attitude
-    // (adi.ae: red hostile, orange unfriendly, grey neutral, green friendly, blue ally).
+    // The colour holding Tab outlines a character in, as eg0 picks it: gold for the player's character (character data
+    // e3q), sandy brown for passive ones, else the game's colour for its attitude (adi.ae: red hostile, orange unfriendly,
+    // grey neutral, green friendly, blue ally). (eg0 also uses white for the hovered or targeted one.)
     static readonly FieldInfo OutlineColours = typeof(adi).GetField("ae", BindingFlags.Static | BindingFlags.Public);
     public static Color OutlineColor(b0b e)
     {
         var c = Character(e);
-        if (c != null && c.IsPlayer) return Color.White;
+        if (c != null && (c.IsPlayer || c.GetAspect<amc>().aa() is e3q)) return Color.Gold;
+        if (c != null && c.GetAspect<amc>().aa() != null && c.GetAspect<amc>().aa().Passive) return Color.SandyBrown;
         var colours = OutlineColours.GetValue(null) as System.Collections.IDictionary;
         var a = AttitudeOf(e);
         object key = a == Attitude.Hostile ? global::h.a : a == Attitude.Unfriendly ? global::h.b : a == Attitude.Friendly ? global::h.d : a == Attitude.Ally ? global::h.e : (object)global::h.c;
         return colours != null && colours.Contains(key) ? (Color)colours[key] : Color.Gray;
     }
+
+    // Fog of war: whether an observer (WorldViews.Observer) has discovered the entity (the shroud lifted there), and
+    // whether it sees it right now (b0b.b / b0b.c, as the world view decides what to draw).
+    public static bool Discovered(b0b e, long observer) { return e.b(observer); }
+    public static bool SeenNow(b0b e, long observer) { return e.c(observer); }
 
     // Hostile or unfriendly to the player (red and orange outlines), not passive.
     public static bool IsHostile(b0b e)
@@ -138,17 +145,31 @@ public static class Areas
     // The tile at x, y (null outside the area) and what stands on it (floor, walls, props, characters, items).
     public static ak1 Tile(aud area, int x, int y) { return area.b(x, y); }
     public static IList<b0b> On(ak1 tile) { return tile == null ? (IList<b0b>)new b0b[0] : tile.Entities; }
-    // Exits: area transitions within the zone (b0j, "ATT") and zone transitions to another map (cdo, "ZTT"): their tile
-    // rectangles.
-    public static IEnumerable<Rectangle> Exits(aud area)
+    // Exits: area transitions within the zone (b0j, "ATT") and zone transitions to another map (cdo, "ZTT") whose
+    // condition currently allows them (as the game decides whether to draw their tiles, a23), with their tile rectangles.
+    public static IEnumerable<Exit> Exits(aud area)
     {
         foreach (var t in area.Triggers)
-            if (t is b0j || t is cdo)
-            {
-                object at = TriggerLocation.GetValue(t, null), size = TriggerSize.GetValue(t, null);
-                yield return new Rectangle(UnderrailDropdownScroll.X(at), UnderrailDropdownScroll.Y(at), UnderrailDropdownScroll.W((esj)size), UnderrailDropdownScroll.H((esj)size));
-            }
+        {
+            bool zone = t is cdo;
+            if (!zone && !(t is b0j)) continue;
+            bool open;
+            try { open = zone ? (((cdo)t).c() == null || ((cdo)t).c().jh(null)) : (((b0j)t).Condition == null || ((b0j)t).Condition.jh(null)); }
+            catch { open = true; }
+            if (!open) continue;
+            object at = TriggerLocation.GetValue(t, null), size = TriggerSize.GetValue(t, null);
+            yield return new Exit { ToOtherZone = zone, Tiles = new Rectangle(UnderrailDropdownScroll.X(at), UnderrailDropdownScroll.Y(at), UnderrailDropdownScroll.W((esj)size), UnderrailDropdownScroll.H((esj)size)) };
+        }
     }
+
+    // The colours the game draws transition tiles in (a23): blue to another area of the zone, red to another zone.
+    public static readonly Color AreaExitColour = new Color(0, 0, 150), ZoneExitColour = new Color(150, 0, 0);
+}
+
+public struct Exit
+{
+    public Rectangle Tiles;
+    public bool ToOtherZone;     // to another map (zone), else another area of this one
 }
 
 // The world view (a7m, a UI control: mv : a7m : dnn).
@@ -159,6 +180,11 @@ public static class WorldViews
     static readonly MethodInfo BeginMethod = typeof(a7m).GetMethod("iu", new[] { typeof(cp9), typeof(SpriteSortMode), typeof(BlendState), typeof(SamplerState), typeof(DepthStencilState), typeof(RasterizerState) });
 
     public static float Zoom(a7m view) { return (float)ZoomField.GetValue(view); }
+    // Fog of war on the world view: true while undiscovered parts are hidden (the shroud; dnn.h.a == edg.b), and whose
+    // discoveries count (dnn.c.d; 1 without one, as a7m uses).
+    static readonly FieldInfo FogField = typeof(dnn).GetField("h"), ObserverField = typeof(dnn).GetField("c");
+    public static bool Shroud(a7m view) { var fog = FogField.GetValue(view) as bnd; return fog != null && fog.a == edg.b; }
+    public static long Observer(a7m view) { var o = ObserverField.GetValue(view) as bag; return o == null ? 1 : o.d; }
     // Layers with their own shader, drawn after the world (key: the shader's name, e.g. "Outline").
     public static Dictionary<string, List<a2f>> ShaderLayers(a7m view) { return ShaderField.GetValue(view) as Dictionary<string, List<a2f>>; }
     // The view's clipping rasterizer state.
