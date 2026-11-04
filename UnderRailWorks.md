@@ -378,6 +378,9 @@ the mod line showed, and "@" returned to Bret's stock line with all his options.
   first zone visit or spawn; the loot is saved, so only stock items may be added).
 - `Lock` (Locked, Kind, Difficulty, Pickable, KeyCode, `TryPick(character)`), `Locks.ModifyAttempt` (Bonus or
   Force), `GameEvents.LockAttempted` (around `d2b.a(amc, LockType, int)`: no dice, skill + tool bonus vs difficulty).
+- `Container.Owned`, `IsOwner(character)`, `Witnesses(thief)`: the game's theft rule without running it (`c3g.a(amc)`
+  is not a check: it provokes; the owner test is `c3g.a(efk)`; protectors are `c3g.g()` ids and `c3g.d()` factions,
+  and in mode `c2n.b` only those in the area whose vision `bm6.b(thief, false)` sees the thief count).
 - Tested: loot rolled for the spawned NPCs; the nearest locker opened with 2 added stacks; a difficulty-30 lock
   opened with skill 16 + 50. The game's own rules held: picking a guarded locker, and taking from an owned one in
   view of its protector, both turned a guard hostile.
@@ -401,6 +404,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | MovableWindows | the game's titled windows dragged by their title bar, reopened where left (a setting), right-click a title to put it back; per HUD size | Windows.OpenWindows, Input mouse, Settings |
 | Loadouts | three gear sets per game, saved with the save; Wear swaps from the bag, not in combat | Equipment, WorksMod.Data, Keybinds (unbound by default), UiPanel.Clear |
 | Pacing | XP per level, XP earned, extra skill / feat / ability points per level | Progression (ModifyXpNeeded, ModifyExperience, ModifyLevelPoints) |
+| WatchfulEyes | opening a container that isn't yours names who would see a theft; optional: no lock picking in view of a guard | ContainerOpened, Container.Owned / IsOwner / Witnesses, Locks.ModifyAttempt (Force) |
 | MerchantLedger | every merchant's stock and prices recorded on trade (plain variables), L opens a search over all of them | TradeOpened, Stock/Markup, Ui.TextBox, Keybinds, Character.Key |
 | StatusBoard | health, status effects in words with turns left, AP/MP and whose turn in combat; a HUD part | StatusEffects, Combat.ActionPoints/MovementPoints (any fighter: crp.ahu), Hud.AddPart |
 | HudLayout | a Layout button on the HUD (a setting, off by default; movable itself) or a key (none by default): drag the HUD's parts, Reset all, Done (the game's, and mods' named parts: Minimap, Quest Tracker), right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |

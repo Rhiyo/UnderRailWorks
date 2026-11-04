@@ -28,6 +28,36 @@ public sealed class Container
     // Opens it for the player now, as a click on it would after walking there (its lock and the game's checks
     // are skipped; owners still notice a theft).
     public bool Open() { var p = World.Player; return p != null && Game.a((c5x)p.Entity, null, true, true); }
+    // Someone owns it: taking from it (and, for some, opening it) is theft if you aren't an owner (c3g ownership,
+    // c7j's protection mode).
+    public bool Owned { get { return Game.ContainerProtectionMode != ctz.a && Game.a8().GetAspect<c3g>() != null; } }
+    public bool IsOwner(Character who)
+    {
+        var o = Game.a8().GetAspect<c3g>();
+        var data = who == null ? null : ((c5x)who.Entity).GetAspect<amc>();
+        return o == null || (data != null && data.aa() != null && o.a(data.aa()));
+    }
+    // Who would turn hostile if thief took from it now, by the game's rule: protectors (by id or faction) in the area
+    // who can see the thief; for zone- or faction-wide protection, every protector in the zone (seen or not).
+    public IList<Character> Witnesses(Character thief)
+    {
+        var result = new List<Character>();
+        var o = Game.a8().GetAspect<c3g>();
+        if (!Owned || thief == null || IsOwner(thief)) return result;
+        var thiefData = ((c5x)thief.Entity).GetAspect<amc>();
+        bool needSight = o.a() == c2n.b;
+        foreach (var c in World.Characters)
+        {
+            if (c == thief || c.IsPlayer) continue;
+            var e = (c5x)c.Entity;
+            var d = e.GetAspect<amc>() == null ? null : e.GetAspect<amc>().aa();
+            if (d == null || !(o.g().Contains(d.Id ?? "") || o.d().Contains(d.FactionId ?? ""))) continue;
+            var eyes = needSight ? e.GetAspect<bm6>() : null;     // e.t.b: a field/method name clash
+            if (needSight && (e.Area != thief.Entity.Area || eyes == null || !eyes.b(thiefData, false))) continue;
+            result.Add(c);
+        }
+        return result;
+    }
     // Its lock (null: none).
     public Lock Lock { get { var l = Game.a8().GetAspect<d2b>(); return l == null ? null : new Lock(l); } }
 }

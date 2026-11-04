@@ -21,6 +21,7 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   - Fair Trade: what merchants charge and pay, as settings.
   - Loadouts: three gear sets per game; save what you wear, put a set back on in one click or key.
   - Pacing: XP a level costs, XP earned, extra skill/feat/ability points per level.
+  - Watchful Eyes: opening someone else's container tells you who would see you steal (or that no one is).
   - Merchant Ledger: every merchant's stock and prices written down when you trade; L searches them all.
   - Movable Windows: drag the inventory, notes, crafting, map... by their title bar; they open where you left them.
   - Status Board: health, status effects by name with turns left, and AP/MP in combat, on the HUD.
