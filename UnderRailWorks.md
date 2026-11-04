@@ -261,6 +261,10 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
   outside took no clicks (the game passes a click only to a control whose parent contains the point; measured:
   the Mods tab only answered in its first few pixels at 2560x720 with insets). Works narrows the headers so the last
   ends inside (`dpg.b(size)`).
+- **Mod elements hide with the HUD**: the game hides its HUD part by part (`ci3.a(false)` from `dka.j()`: while the game
+  menu, Options or the character sheet is open, or with the HUD toggle off). Every element a mod puts directly on the
+  HUD (`Ui.Add` to the root, `Hud.AddPart`) is tracked and hidden with it, then shown again as the mod last wanted
+  (a mod's own show/hide while the HUD is hidden is kept for later). Mods do nothing for it.
 - **Mod HUD parts**: `Hud.AddPart(mod, name, element, x, y)` puts a mod's element on the HUD as a named part
   (`Hud.ModParts`, `Hud.PartAdded`), so layout mods move mods' panels like the game's; a rebuilt panel is added again
   and the layout re-applies the player's position. The Minimap and the Quest Tracker use it.

@@ -73,8 +73,40 @@ public static class Hud
 
     public static readonly Hook<Action<HudModPart>> PartAdded = new Hook<Action<HudModPart>>("HudPartAdded");
 
-    internal static void Created(ci3 screen) { Current = screen; modParts.Clear(); }
-    internal static void Toggled(bool shown) { if (VisibilityChanged.Any) VisibilityChanged.Run(h => h(shown)); }
+    internal static void Created(ci3 screen) { Current = screen; modParts.Clear(); tracked.Clear(); }
+
+    // --- Mod elements on the HUD hide with the game's HUD --------------------------------------------------------
+    // The game hides its HUD (ci3.a(false): dka.j() while the game menu, Options or the character sheet is open, or the
+    // HUD toggle is off) part by part; every element a mod puts directly on the HUD (Ui.Add to the root, AddPart) is
+    // tracked and hidden with it, and shown again as the mod last wanted it (a mod's own show/hide while hidden is
+    // remembered, not applied).
+    static readonly Dictionary<UiElement, bool> tracked = new Dictionary<UiElement, bool>();     // element -> visible as the mod wants
+    internal static bool Hidden { get { return Current != null && !Current.r(); } }
+
+    internal static void Track(UiElement element)
+    {
+        if (tracked.ContainsKey(element)) return;
+        tracked[element] = element.Control.Visible;
+        if (Hidden) element.Control.Visible = false;
+    }
+
+    // UiElement.Visible's setter: a tracked element while the HUD is hidden keeps the wish for later.
+    internal static bool Defer(UiElement element, bool visible)
+    {
+        if (!tracked.ContainsKey(element)) return false;
+        tracked[element] = visible;
+        return Hidden;
+    }
+
+    internal static void Toggled(bool shown)
+    {
+        foreach (var e in tracked.Keys.ToList())
+        {
+            if (e.Control.Parent == null) { tracked.Remove(e); continue; }     // removed by its mod
+            e.Control.Visible = shown && tracked[e];
+        }
+        if (VisibilityChanged.Any) VisibilityChanged.Run(h => h(shown));
+    }
 }
 
 public sealed class HudModPart

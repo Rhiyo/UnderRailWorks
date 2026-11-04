@@ -76,7 +76,12 @@ public static class Ui
         return UiElement.Of(new UiCustomControl(draw) { Size = new esj(width, height) });
     }
 
-    public static void Add(UiElement parent, UiElement element, int x, int y) { Move(element, x, y); UnderrailDropdownScroll.Add(parent.Control, element.Control); }
+    public static void Add(UiElement parent, UiElement element, int x, int y)
+    {
+        Move(element, x, y);
+        UnderrailDropdownScroll.Add(parent.Control, element.Control);
+        if (parent.Control is ci3) Hud.Track(element);     // on the HUD: hidden with the game's HUD
+    }
     public static void Remove(UiElement element) { if (element != null && element.Control.Parent != null) UnderrailDropdownScroll.Remove(element.Control.Parent, element.Control); }
     public static void Move(UiElement element, int x, int y) { UnderrailDropdownScroll.Move(element.Control, x, y); }
     public static void Resize(UiElement element, int width, int height) { element.Control.Size = new esj(width, height); }
@@ -129,7 +134,7 @@ public class UiElement
     static readonly ConditionalWeakTable<euz, UiElement> Handles = new ConditionalWeakTable<euz, UiElement>();
     internal static UiElement Of(euz control) { return control == null ? null : Handles.GetValue(control, c => new UiElement(c)); }
 
-    public bool Visible { get { return Control.Visible; } set { Control.Visible = value; } }
+    public bool Visible { get { return Control.Visible; } set { if (!Hud.Defer(this, value)) Control.Visible = value; } }
     // Its position in its parent (interface units), as Ui.Move sets it.
     public int X { get { return UnderrailDropdownScroll.X(UnderrailDropdownScroll.LocationOf(Control)); } }
     public int Y { get { return UnderrailDropdownScroll.Y(UnderrailDropdownScroll.LocationOf(Control)); } }
