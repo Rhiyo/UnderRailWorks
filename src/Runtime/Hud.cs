@@ -13,6 +13,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Point = Microsoft.Xna.Framework.Point;
+using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
 public enum HudPart
 {
@@ -100,9 +102,57 @@ public static class Hud
         if (Current == null || element == null) return;
         modParts.RemoveAll(p => p.Name == name || p.Element.Control.Parent == null);
         var part = new HudModPart { Name = name, Mod = mod == null ? "" : mod.Id, Element = element, DefaultX = x, DefaultY = y, Anchor = anchor };
+        if (anchor != null) { var old = asked.FirstOrDefault(a => a.Key == name); asked.Remove(old); asked.Add(new KeyValuePair<string, Point>(name, new Point(x, y))); }
         Ui.Add(Root, element, x, y);
+        part.AutoX = x; part.AutoY = y;
         modParts.Add(part);
+        if (anchor != null) Flow(anchor.Value);
         if (PartAdded.Any) PartAdded.Run(h => h(part));
+    }
+
+    // --- Stacking: anchored mod parts sharing an anchor don't cover each other ------------------------------------
+    // In the order they were first added (kept across HUD rebuilds, so a part rebuilt with new text keeps its place in
+    // the stack), each visible part goes where it asked, or just past the earlier ones it would overlap (downwards for
+    // top and middle anchors, upwards for bottom ones). A part the player moved (HUD Layout) isn't moved, but is still
+    // in the way where it is.
+    static readonly List<KeyValuePair<string, Point>> asked = new List<KeyValuePair<string, Point>>();     // first-add order, the position each asked for
+    static string flowState;
+    const int StackGap = 6;
+
+    static void Flow(HudAnchor anchor)
+    {
+        var parts = modParts.Where(p => p.Anchor == anchor && p.Element.Control.Parent != null)
+            .OrderBy(p => asked.FindIndex(a => a.Key == p.Name)).ToList();
+        bool up = (int)anchor / 3 == 2;
+        var placed = new List<Rectangle>();
+        foreach (var p in parts)
+        {
+            var e = p.Element;
+            bool moved = e.X != p.AutoX || e.Y != p.AutoY;     // the player put it somewhere
+            if (!e.Visible) continue;
+            if (moved) { placed.Add(new Rectangle(e.X, e.Y, e.Width, e.Height)); continue; }
+            var a = asked.FirstOrDefault(k => k.Key == p.Name).Value;
+            var r = new Rectangle(a.X, a.Y, e.Width, e.Height);
+            for (int guard = 0; guard < 20; guard++)
+            {
+                var hit = placed.Where(q => q.Intersects(r)).ToList();
+                if (hit.Count == 0) break;
+                r.Y = up ? hit.Min(q => q.Top) - StackGap - r.Height : hit.Max(q => q.Bottom) + StackGap;
+            }
+            if (r.X != e.X || r.Y != e.Y) Ui.Move(e, r.X, r.Y);
+            p.AutoX = r.X; p.AutoY = r.Y; p.DefaultX = r.X; p.DefaultY = r.Y;
+            placed.Add(r);
+        }
+    }
+
+    // Each frame: re-stack when a part was shown, hidden or resized.
+    internal static void FlowTick()
+    {
+        if (Current == null || modParts.Count == 0) return;
+        var state = string.Join("|", modParts.Where(p => p.Anchor != null).Select(p => p.Name + (p.Element.Visible ? "+" : "-") + p.Element.Width + "x" + p.Element.Height));
+        if (state == flowState) return;
+        flowState = state;
+        foreach (var a in modParts.Where(p => p.Anchor != null).Select(p => p.Anchor.Value).Distinct().ToList()) Flow(a);
     }
 
     // The mod parts on the HUD now.
@@ -156,6 +206,7 @@ public sealed class HudModPart
     public int DefaultY { get; internal set; }
     // The anchor the mod gave (null: added at a pixel position).
     public HudAnchor? Anchor { get; internal set; }
+    internal int AutoX, AutoY;     // where Works last put it (stacking): elsewhere means the player moved it
 }
 
 public enum Window { Inventory, CharacterSheet, CombatStats, Crafting, Notes, Oddities, Psi, Map, QuickInvoker, GameMenu, Barter, Container }

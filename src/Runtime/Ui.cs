@@ -490,6 +490,7 @@ static class UiHooks
     {
         Input.Tick();
         UiWindows.Tick();
+        global::Hud.FlowTick();
         try { UiTextBox.Poll(); } catch (Exception ex) { Log.Write("ui: " + ex.Message); }
         try { Saves.Tick(); } catch (Exception ex) { Log.Write("saves: " + ex); }
         double dt = __0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds;

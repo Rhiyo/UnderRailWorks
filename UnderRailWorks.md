@@ -451,6 +451,16 @@ converted and kept its place relative to the edges).
 - Mods load at start. In a game the Mods tab's switches are greyed ("switched on and off from the main menu's
   Options"); at the main menu they apply at the next start, and the status says "On at restart" / "Off at restart".
 
+## Stacked HUD parts; guarded locks (Nov 2026)
+
+- Anchored mod parts sharing an anchor stack instead of covering each other: in first-added order (kept across HUD
+  rebuilds), each visible part goes where it asked or just past the earlier ones it would overlap (down for top and
+  middle anchors, up for bottom ones); re-stacked when one is shown, hidden or resized; a part the player moved with
+  HUD Layout stays put (and is in the way where it is). Tested: Minimap and Quest Tracker both top left, stacked.
+- `Lock.Guarded` / `Lock.Witnesses(thief)` (the lock's protection mode `d2b.o()` and its entity's owners), shared
+  with containers (`Ownership`). Watchful Eyes' "no picking in view of a guard" now covers doors too. Tested: the
+  guarded gate locker refused, no fight.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

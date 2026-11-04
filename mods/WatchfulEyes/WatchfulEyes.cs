@@ -34,8 +34,7 @@ public sealed class WatchfulEyes : WorksMod
         Locks.ModifyAttempt.Add(this, a =>
         {
             if (!config.GuardLocks || a.Character == null || !a.Character.IsPlayer) return;
-            var owner = World.Containers.FirstOrDefault(c => c.Lock != null && c.Entity == a.Lock.Entity);
-            if (owner == null || owner.Witnesses(a.Character).Count == 0) return;
+            if (a.Lock.Witnesses(a.Character).Count == 0) return;     // doors and containers alike
             a.Force = false;
             Notify.OverPlayer("Someone is watching. Not now.");
         });

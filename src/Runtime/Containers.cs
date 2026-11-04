@@ -39,25 +39,7 @@ public sealed class Container
     }
     // Who would turn hostile if thief took from it now, by the game's rule: protectors (by id or faction) in the area
     // who can see the thief; for zone- or faction-wide protection, every protector in the zone (seen or not).
-    public IList<Character> Witnesses(Character thief)
-    {
-        var result = new List<Character>();
-        var o = Game.a8().GetAspect<c3g>();
-        if (!Owned || thief == null || IsOwner(thief)) return result;
-        var thiefData = ((c5x)thief.Entity).GetAspect<amc>();
-        bool needSight = o.a() == c2n.b;
-        foreach (var c in World.Characters)
-        {
-            if (c == thief || c.IsPlayer) continue;
-            var e = (c5x)c.Entity;
-            var d = e.GetAspect<amc>() == null ? null : e.GetAspect<amc>().aa();
-            if (d == null || !(o.g().Contains(d.Id ?? "") || o.d().Contains(d.FactionId ?? ""))) continue;
-            var eyes = needSight ? e.GetAspect<bm6>() : null;     // e.t.b: a field/method name clash
-            if (needSight && (e.Area != thief.Entity.Area || eyes == null || !eyes.b(thiefData, false))) continue;
-            result.Add(c);
-        }
-        return result;
-    }
+    public IList<Character> Witnesses(Character thief) { return Owned && !IsOwner(thief) ? Ownership.Witnesses(Game.a8(), thief) : new List<Character>(); }
     // Its lock (null: none).
     public Lock Lock { get { var l = Game.a8().GetAspect<d2b>(); return l == null ? null : new Lock(l); } }
 }
@@ -88,6 +70,10 @@ public sealed class Lock
     public bool Pickable { get { return Game.e(); } }
     public string KeyCode { get { return Game.g(); } }
     public MapObject Entity { get { return new MapObject(Game.a8()); } }
+    // Picking or hacking it provokes its owners (its protection mode, d2b.o(), isn't none and someone owns the door
+    // or container: c3g); Witnesses: who would turn hostile now.
+    public bool Guarded { get { return Game.o() != d1c.a && Game.a8().GetAspect<c3g>() != null; } }
+    public IList<Character> Witnesses(Character thief) { return Guarded ? Ownership.Witnesses(Game.a8(), thief) : new List<Character>(); }
     // A pick (mechanical) or hack (electronic) attempt by a character with its own skill and no tool, through the
     // game's check (Locks.ModifyAttempt applies). True if it opened. The game's XP and messages for picking with a
     // tool are not given; guards who see it may turn hostile, as with a real pick.
@@ -140,6 +126,32 @@ public static class Containers
         item.Lootable = true; item.Stealable = true;
         bag.z3(item);
         return true;
+    }
+}
+
+// The game's ownership rule (c3g): owners never provoke; protectors by id (g()) or faction (d()) do, in mode c2n.b
+// only those in the thief's area whose vision (bm6.b(thief, false)) sees the thief. c3g.a(amc) is not a check (it
+// provokes); the owner test is c3g.a(efk).
+static class Ownership
+{
+    internal static IList<Character> Witnesses(c5x entity, Character thief)
+    {
+        var result = new List<Character>();
+        var o = entity == null ? null : entity.GetAspect<c3g>();
+        var thiefData = thief == null ? null : ((c5x)thief.Entity).GetAspect<amc>();
+        if (o == null || thiefData == null || thiefData.aa() == null || o.a(thiefData.aa())) return result;
+        bool needSight = o.a() == c2n.b;
+        foreach (var c in World.Characters)
+        {
+            if (c == thief || c.IsPlayer) continue;
+            var e = (c5x)c.Entity;
+            var d = e.GetAspect<amc>() == null ? null : e.GetAspect<amc>().aa();
+            if (d == null || !(o.g().Contains(d.Id ?? "") || o.d().Contains(d.FactionId ?? ""))) continue;
+            var eyes = needSight ? e.GetAspect<bm6>() : null;     // e.t.b: a field/method name clash
+            if (needSight && (e.Area != thief.Entity.Area || eyes == null || !eyes.b(thiefData, false))) continue;
+            result.Add(c);
+        }
+        return result;
     }
 }
 
