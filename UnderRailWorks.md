@@ -352,6 +352,13 @@ nothing), `Unequip(slot)` (into the bag). `GameEvents.Equipped` / `Unequipped` f
 on the map (acd's private notifiers: `a(coh)` gets the **old** item, `b(coh)` the new one, because `c1.b()` is the
 old value). Tested: armour off and on twice, events in order, the bag consistent.
 
+## Progression (Nov 2026)
+
+`Progression.ModifyXpNeeded` (postfix on `c2h.a(level, ExperienceSystem, intelligence)`: the level-up check and the
+deduction on level-up both use it), `ModifyLevelPoints` (around e3q's private `a()`, the per-level grant; level 1 is
+`b()` and untouched), `ModifyExperience` (prefix on `e3q.c(amount)`), `XpFor(level)`, `Oddity`. Tested: level 2
+gave 40 + 10 skill points and an extra feat; the Oddity costs 4, 6, 8, 9, 12 became 2, 3, 4, 4, 6 at 50 %.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
@@ -368,6 +375,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | NeuralReallocation | a placed neurotechnician resets skills or abilities for charons; the points are the game's own unspent points, placed on its level-up screen (tested: 120 refunded + 40 for level 2 = 160 on the screen) | Character skills/abilities/points, dynamic dialog, Inventory |
 | MovableWindows | the game's titled windows dragged by their title bar, reopened where left (a setting), right-click a title to put it back; per HUD size | Windows.OpenWindows, Input mouse, Settings |
 | Loadouts | three gear sets per game, saved with the save; Wear swaps from the bag, not in combat | Equipment, WorksMod.Data, Keybinds (unbound by default), UiPanel.Clear |
+| Pacing | XP per level, XP earned, extra skill / feat / ability points per level | Progression (ModifyXpNeeded, ModifyExperience, ModifyLevelPoints) |
 | MerchantLedger | every merchant's stock and prices recorded on trade (plain variables), L opens a search over all of them | TradeOpened, Stock/Markup, Ui.TextBox, Keybinds, Character.Key |
 | StatusBoard | health, status effects in words with turns left, AP/MP and whose turn in combat; a HUD part | StatusEffects, Combat.ActionPoints/MovementPoints (any fighter: crp.ahu), Hud.AddPart |
 | HudLayout | a Layout button on the HUD (a setting, off by default; movable itself) or a key (none by default): drag the HUD's parts, Reset all, Done (the game's, and mods' named parts: Minimap, Quest Tracker), right-click to put one back; saved per HUD size | Hud handles, Ui.Custom overlay (catches the clicks), Input.Mouse, Settings |

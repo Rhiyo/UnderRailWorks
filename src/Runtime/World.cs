@@ -90,6 +90,7 @@ public sealed class Character
     public bool HasFeat(string name) { return Need.Feats.Any(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)); }
 
     // The player's XP (0 for others) and the game's way to award it (Intelligence factor, notice, level-up).
+    internal e3q PlayerData { get { return Data as e3q; } }
     public int Experience { get { var p = Data as e3q; return p == null ? 0 : p.i(); } }
     public void GiveExperience(int amount, string reason = null) { if (IsPlayer) awq.a(amount, reason); }
 

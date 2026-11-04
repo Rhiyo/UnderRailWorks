@@ -362,6 +362,7 @@ static class UiHooks
         Group("keybinds", () => Keybinds.Install(harmony));
         Group("status effects and levels", () => ProgressHooks.Install(harmony));
         Group("equipment", () => EquipmentHooks.Install(harmony));
+        Group("progression", () => ProgressionHooks.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 

@@ -39,6 +39,7 @@ public sealed class WorksTest : WorksMod
                 Log.Info("took off " + (armor == null ? "nothing" : armor.Name) + "; put back: " + (armor != null && eq.Equip(World.Player.Inventory.Items.First(i => i.Code == armor.Code))));
             }
             if (Input.Pressed(Keys.V)) { var inv = World.Player.Inventory; inv.Add("armor\\jkktacticalvest", 1); var vest = inv.Items.FirstOrDefault(i => i.Code == "jkkTacticalVest"); Log.Info("vest on: " + (vest != null && World.Player.Equipment.Equip(vest))); }
+            if (Input.Pressed(Keys.X)) Log.Info("xp " + World.Player.Experience + " (oddity " + Progression.Oddity + "), level " + World.Player.Level + "; next levels cost " + string.Join(", ", Enumerable.Range(2, 5).Select(l => l + ":" + Progression.XpFor(l))));
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
