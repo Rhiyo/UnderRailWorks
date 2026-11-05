@@ -1,0 +1,62 @@
+<!--
+  UnderRailWorks mod build (import it from a mod's .csproj; see template/). It:
+  - references the game's UnderRailWorks.dll and FNA.dll (from $(UnderRailPath)) without copying them;
+  - checks mod.json (an id, and "works" matching the installed Works API);
+  - after each build copies the mod into $(UnderRailPath)/Mods/$(ModId): the DLL, mod.json, icon.png and the
+    content/, i18n/ and textures/ folders (so `dotnet build` is enough to try it in game);
+  - `dotnet build -t:PackMod` writes bin/<ModId>-<version>.zip for release.
+  UnderRailPath: the game folder (the one with underrail.exe). Set it once in Directory.Build.props, an environment
+  variable, or on the command line (-p:UnderRailPath=...); the Steam default is tried otherwise.
+-->
+<Project>
+  <PropertyGroup>
+    <UnderRailPath Condition="'$(UnderRailPath)' == '' and Exists('$(HOME)/.local/share/Steam/steamapps/common/Underrail/underrail.exe')">$(HOME)/.local/share/Steam/steamapps/common/Underrail</UnderRailPath>
+    <UnderRailPath Condition="'$(UnderRailPath)' == '' and Exists('C:\Program Files (x86)\Steam\steamapps\common\Underrail\underrail.exe')">C:\Program Files (x86)\Steam\steamapps\common\Underrail</UnderRailPath>
+    <ModId Condition="'$(ModId)' == ''">$(AssemblyName)</ModId>
+    <ModFolder>$(UnderRailPath)/Mods/$(ModId)</ModFolder>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="UnderRailWorks"><HintPath>$(UnderRailPath)/UnderRailWorks.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="FNA"><HintPath>$(UnderRailPath)/FNA.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony" Condition="'$(UseHarmony)' == 'true'"><HintPath>$(UnderRailPath)/0Harmony.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <Target Name="CheckUnderRailPath" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="'$(UnderRailPath)' == '' or !Exists('$(UnderRailPath)/UnderRailWorks.dll')"
+           Text="UnderRailWorks isn't installed at UnderRailPath='$(UnderRailPath)'. Install it, then set UnderRailPath to the game folder (Directory.Build.props, an environment variable or -p:UnderRailPath=...)." />
+    <Error Condition="!Exists('$(MSBuildProjectDirectory)/mod.json')" Text="mod.json is missing next to the project (id, name, version, works)." />
+  </Target>
+
+  <ItemGroup>
+    <ModFile Include="$(MSBuildProjectDirectory)/mod.json" />
+    <ModFile Include="$(MSBuildProjectDirectory)/icon.png" Condition="Exists('$(MSBuildProjectDirectory)/icon.png')" />
+    <ModFile Include="$(MSBuildProjectDirectory)/content/**/*;$(MSBuildProjectDirectory)/i18n/**/*;$(MSBuildProjectDirectory)/textures/**/*;$(MSBuildProjectDirectory)/assets/**/*" />
+  </ItemGroup>
+
+  <!-- Each file's path inside the mod folder (as in the project). -->
+  <Target Name="ModFilePaths">
+    <ItemGroup>
+      <ModFile><Rel>$([MSBuild]::MakeRelative('$(MSBuildProjectDirectory)/', '%(FullPath)'))</Rel></ModFile>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="DeployMod" AfterTargets="Build" DependsOnTargets="ModFilePaths" Condition="'$(UnderRailPath)' != ''">
+    <MakeDir Directories="$(ModFolder)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModFolder)" />
+    <Copy SourceFiles="@(ModFile)" DestinationFiles="@(ModFile->'$(ModFolder)/%(Rel)')" />
+    <Message Importance="high" Text="$(ModId) -> $(ModFolder)" />
+  </Target>
+
+  <Target Name="PackMod" DependsOnTargets="Build;ModFilePaths">
+    <PropertyGroup><ModZip>$(MSBuildProjectDirectory)/bin/$(ModId)-$(Version).zip</ModZip><PackDir>$(IntermediateOutputPath)pack/$(ModId)</PackDir></PropertyGroup>
+    <RemoveDir Directories="$(IntermediateOutputPath)pack" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(PackDir)" />
+    <Copy SourceFiles="@(ModFile)" DestinationFiles="@(ModFile->'$(PackDir)/%(Rel)')" />
+    <Delete Files="$(ModZip)" />
+    <ZipDirectory SourceDirectory="$(IntermediateOutputPath)pack" DestinationFile="$(ModZip)" />
+    <Message Importance="high" Text="Packed $(ModZip) (unzip into the game's Mods folder)" />
+  </Target>
+</Project>

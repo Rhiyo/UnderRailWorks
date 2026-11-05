@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- An UnderRailWorks mod. `dotnet build` builds it and copies it into the game's Mods folder;
+       `dotnet build -t:PackMod` makes a release zip. Rename MyMod (here, in mod.json and MyMod.cs) to your mod's id. -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <AssemblyName>MyMod</AssemblyName>
+    <Version>1.0.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <!-- <UnderRailPath>/path/to/Underrail</UnderRailPath>  (if it isn't Steam's default folder) -->
+    <!-- <UseHarmony>true</UseHarmony>  (only to patch the game where Works has no hook) -->
+  </PropertyGroup>
+  <Import Project="../UnderRailWorks.Mod.targets" />
+</Project>

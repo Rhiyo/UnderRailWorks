@@ -60,6 +60,10 @@ an UnderRailFixes 1.x install and takes over its settings. After a game update, 
 
 ## For modders
 
+The quickest start: `sdk/template` (copy it, rename MyMod, `dotnet build`: the mod is built and copied into the
+game's Mods folder; `dotnet build -t:PackMod` makes a release zip). It needs the .NET SDK and UnderRailWorks
+installed in the game (`UnderRailPath` if it isn't Steam's default folder).
+
 A mod is a folder in `Mods\` with a `mod.json` and a DLL whose main class derives from `WorksMod`:
 
 ```json
