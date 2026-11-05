@@ -859,6 +859,13 @@ Get gave null before and a list after. `SaveData.Set` now stores the JSON shape 
 dictionaries as Dictionary<string, object>, numbers as double). Tested:
 a near marker on the map, a far one on the edge, both back after quicksave + quickload.
 
+## Cookbook (Nov 2026)
+
+`tools/cookbook/Cookbook.cs`: one example per API area, built by build.sh as a mod (not shipped), turned into
+`docs/Cookbook.md` by `tools/cookbook/cookbook.py`; its `cookbook` console command runs every example (all 15 ran in
+game). Writing it found: `Tooltip.AddLine` needed a colour (now optional), and `UiEvents.HudCreated` misses the HUD
+that already exists when a mod subscribes late: `Hud.WhenReady(mod, build)` runs now and on every rebuild.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

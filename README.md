@@ -60,7 +60,7 @@ an UnderRailFixes 1.x install and takes over its settings. After a game update, 
 
 ## For modders
 
-The API reference is `docs/API.md` (generated from the code's comments on every build); the guide with how each part
+Start with `docs/Cookbook.md` (an example per API area, compiled and run on every build). The API reference is `docs/API.md` (generated from the code's comments on every build); the guide with how each part
 works in the game is UnderRailWorks.md. The quickest start: `sdk/template` (copy it, rename MyMod, `dotnet build`: the mod is built and copied into the
 game's Mods folder; `dotnet build -t:PackMod` makes a release zip). It needs the .NET SDK and UnderRailWorks
 installed in the game (`UnderRailPath` if it isn't Steam's default folder).

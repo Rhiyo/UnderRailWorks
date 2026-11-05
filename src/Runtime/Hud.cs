@@ -67,6 +67,15 @@ public static class Hud
 
     // There is an in-game screen (a game is loaded).
     public static bool Exists { get { return Current != null; } }
+    // Runs build now if the in-game screen exists, and every time the game builds it anew (loads, resolution changes):
+    // UiEvents.HudCreated alone misses the HUD that is already there when a mod subscribes late (after Load).
+    public static void WhenReady(WorksMod mod, Action<UiElement> build)
+    {
+        UiEvents.HudCreated.Add(mod, build);
+        var root = Root;
+        if (root != null) try { build(root); } catch (Exception ex) { ModErrors.Report(mod.Id, "Hud.WhenReady", ex); }
+    }
+
     // The in-game screen: mods add their own elements to it (they draw above the HUD).
     public static UiElement Root { get { return UiElement.Of(Current); } }
 

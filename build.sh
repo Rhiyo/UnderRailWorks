@@ -167,6 +167,9 @@ SH
     chmod +x "$dir/$name" "$dir/linux/$name.bin"
     cp "$HERE/README.md" "$dir/"
 }
+# The cookbook's examples must build against the current API (not shipped), then docs/Cookbook.md from them.
+mod Cookbook "$HERE/build/Mods" "$HERE/tools/cookbook/Cookbook.cs"
+python3 "$HERE/tools/cookbook/cookbook.py" >/dev/null || echo "docs/Cookbook.md not written" >&2
 # The API reference (docs/API.md) from the source comments.
 python3 "$HERE/tools/apidoc/apidoc.py" >/dev/null || echo "docs/API.md not written" >&2
 patchers "$OUT" UnderRailWorks-Patcher.exe underrailworks-patcher

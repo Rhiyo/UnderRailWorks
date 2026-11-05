@@ -1,0 +1,2 @@
+{ "id": "Cookbook", "name": "Cookbook", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+  "description": "The cookbook examples (build check only, not shipped)." }

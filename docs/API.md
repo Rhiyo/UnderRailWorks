@@ -460,6 +460,7 @@ Values: `First = 0, Early = 1, Normal = 2, Late = 3, Last = 4`
 - `static HudAnchor AnchorOf(HudPart part)` — Where the game itself anchors each of its parts (ci3's layout: the portrait at 10,10, the system bar 10 from the top right, the action bar centred 10 above the bottom, the feed at the left above the XP bar...).
 - `static Microsoft.Xna.Framework.Point At(HudAnchor anchor, UiElement element, int dx, int dy)` — Where element would sit at offset (dx, dy) from anchor in the HUD: dx/dy count inwards from the anchored edges (from the centre, rightwards/downwards, for Top/Bottom/Left/Right/Center's free axis).
 - `static bool Exists` — There is an in-game screen (a game is loaded).
+- `static void WhenReady(WorksMod mod, Action<UiElement> build)` — Runs build now if the in-game screen exists, and every time the game builds it anew (loads, resolution changes): UiEvents.HudCreated alone misses the HUD that is already there when a mod subscribes late (after Load).
 - `static UiElement Root` — The in-game screen: mods add their own elements to it (they draw above the HUD).
 - `static UiElement Get(HudPart part)` — A part of the game's HUD (null when the game didn't make it: zoom buttons are optional). Move it or hide it with Ui.Move / Ui.Show, from UiEvents.HudCreated (the game builds the HUD anew on loads and resolution changes). Resizing isn't supported: the parts are drawn at fixed sizes.
 - `static bool Visible` — The whole HUD shown (the game's HUD toggle).
@@ -1220,6 +1221,8 @@ What a tile holds, as a map would show it.
 - `bool InTrade` — Whether it is shown for a merchant's goods.
 - `int LineCount`
 - `string Line(int index)` — The text of a line (its sections joined).
+- `void AddLine(string text)` — In the game's light grey (its tooltip text colour), or a colour of the mod's.
+- `void InsertLine(int index, string text)`
 - `void AddLine(string text, Color colour)`
 - `void InsertLine(int index, string text, Color colour)`
 - `void AddValue(string label, string value)` — "label: value" in the game's two colours (grey label, white value).

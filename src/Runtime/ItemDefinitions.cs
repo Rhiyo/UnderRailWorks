@@ -97,6 +97,9 @@ namespace UnderRailWorks
         public int LineCount { get { return Lines.Count; } }
         // The text of a line (its sections joined).
         public string Line(int index) { var s = SectionsField.GetValue(Lines[index]) as System.Collections.IEnumerable; return s == null ? "" : string.Concat(s.Cast<bph>().Select(x => x.b)); }
+        // In the game's light grey (its tooltip text colour), or a colour of the mod's.
+        public void AddLine(string text) { AddLine(text, Color.LightGray); }
+        public void InsertLine(int index, string text) { InsertLine(index, text, Color.LightGray); }
         public void AddLine(string text, Color colour) { Lines.Add(cq4.a(text, colour, null)); }
         public void InsertLine(int index, string text, Color colour) { var l = Lines; l.Insert(Math.Max(0, Math.Min(index, l.Count)), cq4.a(text, colour, null)); }
         // "label: value" in the game's two colours (grey label, white value).
