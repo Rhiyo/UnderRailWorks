@@ -145,18 +145,36 @@ namespace UnderRailWorks.Internal
         }
 
         // The game's stat type for an ability or skill name (for requirements).
+        // From fixed tables, not the player's data (there is no player on the creation screen, where feats are picked).
         internal static Type StatType(string name, bool ability)
         {
-            var p = World.Player;
-            var data = p == null ? null : (p.Entity as c5x)?.GetAspect<amc>()?.aa();
-            if (data == null) return null;
-            object s = ability ? (object)data.BaseAbilities.a(name) : data.Skills.a(name);
-            return s == null ? null : s.GetType();
+            Type t;
+            return (ability ? StatHooks.AbilityTypes : StatHooks.SkillTypes).TryGetValue(name ?? "", out t) ? t : null;
         }
 
-        static void RequirementsOf(ai8 __instance, ref List<brl> __result)
+        // Only for the feat's own nearest j0 / cy: one that calls its base's (also patched) would get it twice.
+        static readonly Dictionary<KeyValuePair<Type, bool>, Type> nearest = new Dictionary<KeyValuePair<Type, bool>, Type>();
+        static bool Nearest(ai8 feat, MethodBase method, bool requirements)
         {
-            if (Feats.Requirements.Count == 0) return;
+            Type found;
+            var key = new KeyValuePair<Type, bool>(feat.GetType(), requirements);
+            if (!nearest.TryGetValue(key, out found)) nearest[key] = found = Declaring(feat.GetType(), requirements);
+            return found == method.DeclaringType;
+        }
+        static Type Declaring(Type type, bool requirements)
+        {
+            const BindingFlags inst = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var t = type; t != null; t = t.BaseType)
+            {
+                var m = requirements ? t.GetMethod("j0", inst, null, Type.EmptyTypes, null) : t.GetMethod("cy", inst, null, new[] { typeof(efk) }, null);
+                if (m != null && !m.IsAbstract) return t;
+            }
+            return null;
+        }
+
+        static void RequirementsOf(ai8 __instance, ref List<brl> __result, MethodBase __originalMethod)
+        {
+            if (Feats.Requirements.Count == 0 || !Nearest(__instance, __originalMethod, true)) return;
             FeatRequirements r;
             if (!Feats.Requirements.TryGetValue(ck.a(__instance.GetType()), out r)) return;
             var list = new List<brl>();
@@ -166,9 +184,9 @@ namespace UnderRailWorks.Internal
             __result = list;
         }
 
-        static void BonusesOf(ai8 __instance, ref List<d3e> __result)
+        static void BonusesOf(ai8 __instance, ref List<d3e> __result, MethodBase __originalMethod)
         {
-            if (Feats.Bonuses.Count == 0) return;
+            if (Feats.Bonuses.Count == 0 || !Nearest(__instance, __originalMethod, false)) return;
             List<StatBonus> extra;
             if (!Feats.Bonuses.TryGetValue(ck.a(__instance.GetType()), out extra) || extra.Count == 0) return;
             var list = __result == null ? new List<d3e>() : new List<d3e>(__result);

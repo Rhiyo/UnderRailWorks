@@ -147,6 +147,7 @@ public sealed class WorksTest : WorksMod
         });
         Commands.Add(this, "wt.surv", "wt.surv [n]: show / set Survival", args => { if (args.Length > 0) survival.Base = int.Parse(args[0]); Log.Info("survival now " + survival.Base + " [" + survival.Value + "]"); return "surv"; });
         Commands.Add(this, "wt.setskill", "wt.setskill <name> <n>: a mod skill's points", args => { var sk = CustomStats.SkillsAdded.FirstOrDefault(x => x.Name == args[0]); if (sk == null) return "none"; sk.Base = int.Parse(args[1]); Log.Info(sk.Name + " " + sk.Base + " [" + sk.Value + "], Mechanics " + World.Player.Skill("Mechanics")); return "set"; });
+        Commands.Add(this, "wt.mech", "wt.mech", args => { Log.Info("mechanics " + World.Player.Skill("Mechanics")); return "mech"; });
         Commands.Add(this, "wt.xp", "wt.xp: enough experience for a level", args => { World.Player.GiveExperience(5000, "testing"); return "xp"; });
         Commands.Add(this, "wt.gear", "wt.gear: what the player wears and carries", args =>
         {

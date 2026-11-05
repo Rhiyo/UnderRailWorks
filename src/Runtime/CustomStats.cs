@@ -132,6 +132,8 @@ namespace UnderRailWorks.Internal
             {
                 var tabs = Tabs.GetValue(__instance) as dpg;
                 if (tabs == null) return;
+                opened.Clear();
+                foreach (var s in All()) opened[s] = s.Base;     // also after an import rebuilt the tabs: the floor is the imported value
                 var page = new cvh { Text = "Other" };
                 tabs.n().Add(page);
                 Fill(__instance, UiElement.Of(page));
@@ -151,6 +153,7 @@ namespace UnderRailWorks.Internal
         static void Closing(object __instance, cku __0)
         {
             if (!(__instance is iw) || __0 != cku.b) return;     // amm.a(cku) closes every window: the character screen's Cancel
+            if (Hud.Current == null) CharacterFiles.CreationCancelled();     // no game on screen: the creation screen (an import is a9m.b at any level)
             foreach (var kv in opened) if (kv.Key.Base != kv.Value) kv.Key.Base = kv.Value;
         }
 

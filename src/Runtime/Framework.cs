@@ -295,10 +295,11 @@ namespace UnderRailWorks.Internal
         // iw.a(object, el5): the creation screen took an imported character (k = the file's e3q).
         static void Chosen(object __0)
         {
-            pending = null; pendingName = null;
             try
             {
                 var g = __0 == null ? null : __0.GetType().GetField("g", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(__0) as ajk;
+                if (g == null) return;     // the dialog cancelled: the screen keeps the character it has (and its data)
+                pending = null; pendingName = null;
                 Dictionary<string, object> ch;
                 var c = g == null ? null : Char(g);
                 Clear();     // a character chosen before (or none): its data out
@@ -314,12 +315,12 @@ namespace UnderRailWorks.Internal
         static void Clear() { foreach (var k in SaveFiles.Current.Keys.Where(k => k.StartsWith(Prefix, StringComparison.Ordinal)).ToList()) SaveFiles.Current.Remove(k); }
         internal static void NewGame() { if (pending != null) Apply(pending); }
         internal static void Forget() { pending = null; pendingName = null; }     // a save loaded instead
+        // The creation screen was cancelled (back to the main menu): an imported character's data goes with it.
+        internal static void CreationCancelled() { if (pending != null) Log.Write("import: cancelled, " + pendingName + "'s data dropped"); Forget(); Clear(); }
         internal static void ZoneReady()
         {
             var ch = pending; pending = null;
             if (ch == null) return;
-            var p = World.Player;
-            if (p != null && pendingName != null && p.Name != pendingName) { Clear(); Log.Write("import: the new game's character isn't " + pendingName + ": its data dropped"); return; }
             Log.Write("import: " + pendingName + " started with its character data");
             if (GameEvents.CharacterImported.Any) GameEvents.CharacterImported.Run(h => h());
         }

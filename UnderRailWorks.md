@@ -944,6 +944,23 @@ so widgets work outside the HUD and Options (the character screen at creation).
 Traps: `amm.a(cku)` is the base window's close (patch it there, filter on iw); the character screen's tabs are added
 in `iw.c()`, not `e()`.
 
+## A review of the character code, fixed (Nov 2026)
+
+- Stats.Modify: bonuses went into an effect list the game threw away on a character's first rebuild after a load
+  (`bl()` starts with `ak()`, which makes a new `z` then): `ak()` is called first. Nested rebuilds kept one shared
+  static list (a handler calling Stats.Refresh recursed forever, others leaked entries): now Harmony's `__state` per
+  call and a per-character re-entry guard. And the game's rebuild while loading runs before the player is known, so
+  Works rebuilds the player once the loaded zone is ready (measured: Mechanics 16 -> 26 after a quickload).
+- Import: cancelling the import dialog wiped the already-imported character's data (now ignored); cancelling the
+  creation screen now drops the imported data (it leaked into the next new game); no name check (renaming an imported
+  character lost its data). Tested: import then cancel -> "data dropped".
+- The Other tab's "-" floor is taken again when the tabs are rebuilt (after an import: no free respec).
+- Feat requirements on the creation screen: ability/skill types came from the player's data, absent there, so
+  requirements vanished; now fixed tables (abilities' classes, skills' `[a1("Name")]`). Nimble with changed
+  requirements is no longer offered at creation.
+- Feat bonuses / requirements are added only by the feat's own nearest `cy` / `j0` (a feat calling its patched base
+  would get them twice); cached per type.
+
 ## Scavenger (Nov 2026)
 
 mods/Scavenger (startsOff): a mod skill, Scavenging (Perception 1, Intelligence 0.5), on the Other tab; its value sets

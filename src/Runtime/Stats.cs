@@ -48,11 +48,14 @@ namespace UnderRailWorks.Internal
     static class StatHooks
     {
         static readonly FieldInfo Effects = typeof(efk).GetField("z", BindingFlags.Instance | BindingFlags.NonPublic);
-        [ThreadStatic] static List<RequirementRestrictedElementContainer<d3e>> added;
+        // Characters in a rebuild now: a handler that rebuilds one again (Stats.Refresh, Feats.Give...) gets the game's
+        // rebuild without Works' additions (no endless recursion), and nested rebuilds keep their own lists (__state).
+        static readonly HashSet<efk> rebuilding = new HashSet<efk>();
 
-        static void Rebuilding(efk __instance)
+        static void Rebuilding(efk __instance, ref List<RequirementRestrictedElementContainer<d3e>> __state)
         {
-            if (!Stats.Modify.Any) return;
+            __state = null;
+            if (!Stats.Modify.Any || !rebuilding.Add(__instance)) return;
             try
             {
                 var c = Combat.OfData(__instance);
@@ -60,28 +63,36 @@ namespace UnderRailWorks.Internal
                 var r = new StatRebuild { Character = c };
                 Stats.Modify.Run(h => h(r));
                 if (r.Added.Count == 0) return;
+                // bl() starts with ak(), which makes a new effect list when the character's isn't built yet (after every
+                // load): build it first, or the additions would go into the list it throws away.
+                __instance.ak();
                 var list = (List<RequirementRestrictedElementContainer<d3e>>)Effects.GetValue(__instance);
-                added = r.Added.Select(b => new RequirementRestrictedElementContainer<d3e>(b.Make())).ToList();
-                list.AddRange(added);
+                __state = r.Added.Select(b => new RequirementRestrictedElementContainer<d3e>(b.Make())).ToList();
+                list.AddRange(__state);
             }
             catch (Exception ex) { Log.Write("stats: " + ex.Message); }
+            finally { rebuilding.Remove(__instance); }
         }
 
-        static Exception Rebuilt(efk __instance, Exception __exception)
+        static Exception Rebuilt(efk __instance, List<RequirementRestrictedElementContainer<d3e>> __state, Exception __exception)
         {
-            var a = added; added = null;
-            if (a != null) try { var list = (List<RequirementRestrictedElementContainer<d3e>>)Effects.GetValue(__instance); foreach (var x in a) list.Remove(x); } catch (Exception ex) { Log.Write("stats: " + ex.Message); }
+            if (__state != null) try { var list = (List<RequirementRestrictedElementContainer<d3e>>)Effects.GetValue(__instance); foreach (var x in __state) list.Remove(x); } catch (Exception ex) { Log.Write("stats: " + ex.Message); }
             return __exception;
         }
 
         // The seven abilities' classes (bn2's properties: Strength d3m, Dexterity cwu, Agility dqg, Perception eav,
         // Constitution axa, Intelligence av8, Will axr).
-        static readonly Dictionary<string, Type> AbilityTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
+        internal static readonly Dictionary<string, Type> AbilityTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase)
         {
             { "Strength", typeof(d3m) }, { "Dexterity", typeof(cwu) }, { "Agility", typeof(dqg) }, { "Perception", typeof(eav) },
             { "Constitution", typeof(axa) }, { "Intelligence", typeof(av8) }, { "Will", typeof(axr) },
         };
-        static readonly Dictionary<string, Type> SkillTypes = new Dictionary<string, Type>(StringComparer.OrdinalIgnoreCase);
+        // Skill classes by name: their [a1("Guns")] attribute.
+        internal static readonly Dictionary<string, Type> SkillTypes = typeof(csn).Assembly.GetTypes()
+            .Where(t => typeof(csn).IsAssignableFrom(t) && !t.IsAbstract)
+            .Select(t => new { t, a = t.GetCustomAttributes(typeof(a1), false).OfType<a1>().FirstOrDefault() })
+            .Where(x => x.a != null && x.a.Name != null).GroupBy(x => x.a.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First().t, StringComparer.OrdinalIgnoreCase);
 
         static void AbilityBonuses(csn __instance, ref Dictionary<Type, float> __result)
         {
@@ -96,7 +107,6 @@ namespace UnderRailWorks.Internal
         {
             Dictionary<string, float> w;
             if (Skills.Synergies.Count == 0 || !Skills.Synergies.TryGetValue(__instance.Name, out w)) return;
-            if (SkillTypes.Count == 0 && __instance.Skills != null) foreach (var sk in __instance.Skills) SkillTypes[sk.Name] = sk.GetType();     // names from a real character's list
             var d = new Dictionary<Type, float>();
             foreach (var kv in w) { Type t; if (SkillTypes.TryGetValue(kv.Key, out t)) d[t] = kv.Value; }
             __result = d;

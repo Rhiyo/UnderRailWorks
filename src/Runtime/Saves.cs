@@ -152,6 +152,9 @@ static class Saves
         Log.Write("saves: zone loaded: " + id + (first ? " (first visit)" : ""));
         Run("placing characters", () => World.SpawnPlacements(zone, id));
         Run("imported character", CharacterFiles.ZoneReady);
+        // The game rebuilt the player's stats while loading, before the player was known: once more now, so mods'
+        // Stats.Modify rules (which test IsPlayer, mod skills...) are in.
+        if (Stats.Modify.Any) Run("player stats", () => { if (World.Player != null) Stats.Refresh(World.Player); });
         if (GameEvents.ZoneLoaded.Any) GameEvents.ZoneLoaded.Run(h => h(id, first));
     }
 
