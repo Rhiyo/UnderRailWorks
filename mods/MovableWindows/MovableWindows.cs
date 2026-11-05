@@ -1,6 +1,6 @@
 // Movable Windows: an UnderRailWorks mod. The game's windows with a title bar (inventory, notes, crafting, map,
 // oddities, psi, combat stats, barter, containers) can be dragged by their title bar. Each opens where you last left
-// it (a setting; kept relative to the nearest screen edge, so it survives resolution changes); right-click a title bar to put that window back where the game places it. Built from
+// it (a setting; kept relative to the nearest screen edge, so it survives resolution changes); right-click a title bar to put that window back where the game places it. Clicking a window brings it to the front. Built from
 // Works' API only (Windows.OpenWindows, Input mouse, Ui, Settings).
 using System;
 using System.Collections.Generic;
@@ -8,7 +8,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0")]
 
 public sealed class MovableWindowsConfig : ModConfig
 {
@@ -43,6 +43,12 @@ public sealed class MovableWindows : WorksMod
                 if (config.Remember) Restore(w, hud);
             }
             var m = Input.Mouse;
+            // A click anywhere on a window brings it in front of the others.
+            if (Input.MousePressed(MouseButton.Left) || Input.MousePressed(MouseButton.Right))
+            {
+                var hit = WindowAt(open, m);
+                if (hit != null && hit != open[open.Count - 1]) { Ui.ToFront(hit.Element); open = Windows.OpenWindows; }
+            }
             if (dragging == null && Input.MousePressed(MouseButton.Left))
             {
                 var w = TitleAt(open, m);
@@ -78,6 +84,13 @@ public sealed class MovableWindows : WorksMod
             if (title.Contains(m)) return open[i];
             if (b.Contains(m)) return null;     // over a window in front: not the one behind
         }
+        return null;
+    }
+
+    // The topmost window under the mouse.
+    static OpenWindow WindowAt(IList<OpenWindow> open, Point m)
+    {
+        for (int i = open.Count - 1; i >= 0; i--) if (open[i].Element.Bounds.Contains(m)) return open[i];
         return null;
     }
 

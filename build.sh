@@ -165,7 +165,7 @@ here="\$(cd "\$(dirname "\$0")" && pwd)"
 case " \$* " in *" /"*|*" ."*|*" ~"*) ;; *) [ -f "\$here/underrail.exe" ] && set -- "\$here" "\$@" ;; esac
 # TERM=dumb: Mono 6.12 can't read the newer terminfo format (ncurses 6.1+, e.g. xterm-256color) and crashes at the
 # first console write (mono/mono#21862); with TERM=dumb it doesn't read terminfo at all. The patcher only prints lines.
-TERM=dumb LD_LIBRARY_PATH="\$here/linux\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}" exec "\$here/linux/$name.bin" "\$@"
+TERM=dumb UNDERRAILWORKS_PATCHER_DIR="\$here" LD_LIBRARY_PATH="\$here/linux\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}" exec "\$here/linux/$name.bin" "\$@"
 SH
     chmod +x "$dir/$name" "$dir/linux/$name.bin"
     cp "$HERE/README.md" "$dir/"

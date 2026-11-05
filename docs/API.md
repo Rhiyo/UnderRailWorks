@@ -1336,6 +1336,7 @@ What a tile holds, as a map would show it.
 - `static void Add(UiElement parent, UiElement element, int x, int y)`
 - `static void Remove(UiElement element)`
 - `static void Move(UiElement element, int x, int y)`
+- `static void ToFront(UiElement element)` — Drawn over its siblings and first to get clicks (the game's euz.d: "always on top" popups and tooltips stay above).
 - `static string Place(UiElement element)` — --- Places that survive resolution and interface-scale changes ------------------------------------------------ A position saved as pixels is wrong (or off-screen) once the HUD changes size. Place(element) writes where it is relative to the nearest edge or the centre of its parent, on each axis ("R24,B110": 24 from the right edge, 110 from the bottom); Restore puts it back at the same distance from the same edge on any size, kept on screen.
 - `static string Place(UiElement element, HudAnchor anchor)` — The place relative to a chosen anchor (instead of the nearest edge).
 - `static HudAnchor AnchorOfPlace(string place)` — The anchor a place string uses.

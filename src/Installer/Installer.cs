@@ -67,9 +67,17 @@ static class Patcher
         return code;
     }
 
+    // The patcher's own folder. The bundled Linux patcher's BaseDirectory is the current directory, not the binary's:
+    // run from elsewhere it found the game's installed copies as "its" files and reinstalled them over themselves.
+    static string Here()
+    {
+        var dir = Environment.GetEnvironmentVariable("UNDERRAILWORKS_PATCHER_DIR");     // set by the Linux launch script
+        return string.IsNullOrEmpty(dir) ? AppDomain.CurrentDomain.BaseDirectory : Path.Combine(dir, "linux");
+    }
+
     static string FindGame()
     {
-        foreach (string d in new[] { AppDomain.CurrentDomain.BaseDirectory, Environment.CurrentDirectory })
+        foreach (string d in new[] { Here(), Environment.CurrentDirectory })
             if (File.Exists(Path.Combine(d, Exe))) return d;
         return null;
     }
@@ -107,7 +115,7 @@ static class Patcher
     static int Install(string dir)
     {
         string exe = Path.Combine(dir, Exe), backup = Path.Combine(dir, Backup), game = Path.Combine(dir, Game);
-        string here = AppDomain.CurrentDomain.BaseDirectory;     // on Linux the patcher binary is in linux/
+        string here = Here();     // on Linux the patcher binary is in linux/
         Func<string, string> bundled = name => new[] { here, Path.Combine(here, ".."), dir }.Select(d => Path.Combine(d, name)).FirstOrDefault(p => File.Exists(p) || Directory.Exists(p));
 
         // The source: the original game. underrail.exe is it on a first install, or after Steam put it back (an update or

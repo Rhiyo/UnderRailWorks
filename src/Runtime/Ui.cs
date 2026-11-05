@@ -114,6 +114,8 @@ public static partial class Ui
     }
     public static void Remove(UiElement element) { if (element != null && element.Control.Parent != null) UnderrailDropdownScroll.Remove(element.Control.Parent, element.Control); }
     public static void Move(UiElement element, int x, int y) { UnderrailDropdownScroll.Move(element.Control, x, y); }
+    // Drawn over its siblings and first to get clicks (the game's euz.d: "always on top" popups and tooltips stay above).
+    public static void ToFront(UiElement element) { var p = element == null ? null : element.Control.Parent; if (p != null) p.d(element.Control); }
 
     // --- Places that survive resolution and interface-scale changes ------------------------------------------------
     // A position saved as pixels is wrong (or off-screen) once the HUD changes size. Place(element) writes where it is
