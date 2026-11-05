@@ -24,6 +24,7 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   - Watchful Eyes: opening someone else's container tells you who would see you steal (or that no one is).
   - The Pit: a pit master at South Gate Station runs waves of beasts that fight only you; each wave pays out.
   - Scanner: point at a creature for its level, health, attitude, resistances per damage type and detection.
+  - Field Medic: after a fight, if you're hurt, uses a bandage (or a health hypo when too hurt) from your bag.
   - Merchant Ledger: every merchant's stock and prices written down when you trade; L searches them all.
   - Movable Windows: drag the inventory, notes, crafting, map... by their title bar; they open where you left them.
   - Status Board: health, status effects by name with turns left, and AP/MP in combat, on the HUD.

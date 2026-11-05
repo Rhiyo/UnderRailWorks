@@ -86,6 +86,7 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.B) && Input.Down(Keys.LeftControl)) Log.Info("bandage: " + World.Player.Inventory.Add("consumables\\medicine\\bandage", 3));
             if (Input.Pressed(Keys.W) && Input.Down(Keys.LeftControl)) { World.Player.Health = World.Player.MaxHealth / 2; Log.Info("wounded to " + World.Player.Health); }
             if (Input.Pressed(Keys.Y) && Input.Down(Keys.LeftControl)) { var b = World.Player.Inventory.Items.FirstOrDefault(i => i.Code == "med.bandage"); Log.Info("use bandage: " + (b != null && Items.Use(World.Player, b))); }
+            if (Input.Pressed(Keys.R) && Input.Down(Keys.LeftControl)) { var pp = World.Player.Position; var t = World.FreeTilesNear((int)pp.X, (int)pp.Y, 6).Skip(10).FirstOrDefault(); Log.Info("rathound: " + World.Spawn("creatures\\rathound", t.X, t.Y, true)); }
             if (Input.Pressed(Keys.G) && Input.Down(Keys.LeftControl)) Log.Info("clock: world " + GameClock.WorldTime + ", turn " + GameClock.TurnTime + " (" + GameClock.Turns.ToString("0.0") + " turns), paused " + GameClock.Paused + ", ticks summed " + gameTime);
             if (Input.Pressed(Keys.U) && Input.Down(Keys.LeftControl)) { blockUse = !blockUse; Log.Info("block item use: " + blockUse); }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
