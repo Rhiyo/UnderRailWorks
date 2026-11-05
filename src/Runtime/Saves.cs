@@ -222,6 +222,7 @@ static class Saves
         Run("level", () => { var p = World.Player; ProgressHooks.Known(p == null || !p.IsCharacter ? 0 : p.Level); });
         zonePending = true;
         if (GameEvents.GameLoaded.Any) GameEvents.GameLoaded.Run(h => h());
+        Markers.Raise();     // another game's markers
         return null;
     }
 

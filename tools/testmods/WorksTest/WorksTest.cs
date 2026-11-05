@@ -100,6 +100,14 @@ public sealed class WorksTest : WorksMod
         });
         Commands.Add(this, "wt.walk", "wt.walk: walk the player back", args => { var ok = World.Player.MoveTo(startX, startY); Log.Info("walk " + ok + " from " + World.Player.Position); return "walk"; });
         Commands.Add(this, "wt.where", "wt.where", args => { Log.Info("player at " + World.Player.Position); return "where"; });
+        Commands.Add(this, "wt.mark", "wt.mark: markers near and far", args =>
+        {
+            var at = World.Player.Position;
+            Markers.Add(this, "near", World.ZoneId, (int)at.X + 3, (int)at.Y + 3, "Near", Microsoft.Xna.Framework.Color.Magenta);
+            Markers.Add(this, "far", World.ZoneId, (int)at.X + 60, (int)at.Y - 40, "Far", Microsoft.Xna.Framework.Color.Lime);
+            Log.Info("markers here: " + string.Join(", ", Markers.Here.Select(m => m.Label + "@" + m.X + "," + m.Y)));
+            return "marked";
+        });
         Commands.Add(this, "wt.gear", "wt.gear: what the player wears and carries", args =>
         {
             var p = World.Player;

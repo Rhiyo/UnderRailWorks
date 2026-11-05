@@ -28,6 +28,7 @@ public sealed class MinimapConfig : ModConfig
     [Label("Background opacity"), Range(0, 100), Increment(5)] public int Opacity = 85;
     [Label("Show characters"), Tooltip("Characters the player can currently see, as dots in their Tab outline colour.")]
     public bool ShowCharacters = true;
+    [Label("Show markers"), Tooltip("Places mods mark (quest targets, notes): a diamond, at the map's edge when farther away.")] public bool ShowMarkers = true;
     [Label("Show merchants"), Tooltip("Every merchant in the area as a small square (seen or not, as long as their spot is discovered).")]
     public bool ShowMerchants = true;
     [Label("Show exits"), Tooltip("Exits in the game's transition colours: blue to another area of this map, red to another map.")]
@@ -48,6 +49,8 @@ public sealed class Minimap : WorksMod
     readonly MapPicture map = new MapPicture();
     double sinceDraw;
     List<Character> merchants = new List<Character>();
+    IList<MapMarker> markers = new List<MapMarker>();
+    string markersFor; bool markersDirty = true;
     string merchantsFor;
     bool hidden;
     int sinceMerchants;
@@ -55,6 +58,7 @@ public sealed class Minimap : WorksMod
     public override void Load()
     {
         config = GetConfig<MinimapConfig>();
+        Markers.Changed.Add(this, () => markersDirty = true);
         toggleKey = Keybinds.Register(this, "toggle", "Show/hide", Keys.F7);
         UiEvents.HudCreated.Add(this, root => { hud = root; Build(); });
         UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
@@ -67,7 +71,8 @@ public sealed class Minimap : WorksMod
             if (!panel.Visible || sinceDraw < 0.25) return;
             sinceDraw = 0;
             if (config.ShowMerchants && (merchantsFor != World.ZoneId || sinceMerchants++ > 20)) { merchants = World.Characters.Where(c => c.IsMerchant && !c.IsPlayer).ToList(); merchantsFor = World.ZoneId; sinceMerchants = 0; }
-            map.Update(World.Player, config.ShowCharacters ? World.Visible : null, config.TilesAcross / 2, config.ShowExits, config.ShowMerchants ? merchants : null);
+            if (config.ShowMarkers && (markersDirty || markersFor != World.ZoneId)) { markers = Markers.Here; markersFor = World.ZoneId; markersDirty = false; }
+            map.Update(World.Player, config.ShowCharacters ? World.Visible : null, config.TilesAcross / 2, config.ShowExits, config.ShowMerchants ? merchants : null, config.ShowMarkers ? markers : null);
             if (map.Note != null) { Log.Info(map.Note); map.Note = null; }
         });
     }
@@ -108,7 +113,7 @@ sealed class MapPicture
 
     public void Resize(int width, int height) { tw = Math.Max(16, width); th = Math.Max(8, height); }
 
-    public void Update(Character player, IList<Character> characters, int radius, bool exits, IList<Character> merchants = null)
+    public void Update(Character player, IList<Character> characters, int radius, bool exits, IList<Character> merchants = null, IList<MapMarker> markers = null)
     {
         if (pixels == null || pixels.Length != tw * th) pixels = new Color[tw * th];
         Array.Clear(pixels, 0, pixels.Length);
@@ -161,6 +166,9 @@ sealed class MapPicture
                 if (mi < 0 || mj < 0 || mi >= size || mj >= size || colour[mi, mj] == null) continue;
                 Square(m.Position, cx, cy, k2, Merchant);
             }
+        // Markers: a diamond in the marker's colour; one off the map sits on its edge, in its direction.
+        if (markers != null)
+            foreach (var mk in markers) Diamond(new Vector3(mk.X, mk.Y, 0), cx, cy, k2, mk.Colour);
         Dot(at, cx, cy, k2, player.OutlineColor, 3);     // the player last, on top (gold, as Tab)
     }
 
@@ -175,6 +183,29 @@ sealed class MapPicture
                 int px = sx + x, py = sy + y;
                 if (px < 0 || py < 0 || px >= tw || py >= th) continue;
                 pixels[py * tw + px] = Math.Abs(x) == 4 || Math.Abs(y) == 4 ? Outline : colour;
+            }
+    }
+
+    void Diamond(Vector3 map, float cx, float cy, float k2, Color colour)
+    {
+        float dx = map.X + 0.5f - cx, dy = map.Y + 0.5f - cy;
+        float fx = tw / 2f + (dx - dy) * k2, fy = th / 2f + (dx + dy) * k2 / 2;
+        const int R = 5;
+        bool off = fx < R || fy < R || fx > tw - 1 - R || fy > th - 1 - R;
+        if (off)
+        {
+            // Along the line from the centre, to the edge (minus the diamond's size).
+            float vx = fx - tw / 2f, vy = fy - th / 2f;
+            float s = Math.Min(vx == 0 ? float.MaxValue : (tw / 2f - R - 1) / Math.Abs(vx), vy == 0 ? float.MaxValue : (th / 2f - R - 1) / Math.Abs(vy));
+            fx = tw / 2f + vx * s; fy = th / 2f + vy * s;
+        }
+        int sx = (int)Math.Round(fx), sy = (int)Math.Round(fy), r = off ? R - 1 : R;
+        for (int y = -r; y <= r; y++)
+            for (int x = -r; x <= r; x++)
+            {
+                int d = Math.Abs(x) + Math.Abs(y), px = sx + x, py = sy + y;
+                if (d > r || px < 0 || py < 0 || px >= tw || py >= th) continue;
+                pixels[py * tw + px] = d == r ? Outline : colour;
             }
     }
 

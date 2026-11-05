@@ -849,6 +849,14 @@ mods/Ambushes (startsOff): on returning to a zone, a chance of a pack (World.Spa
 gathered round one tile); clearing it gives experience; an `ambush` console command. Tested: 3 rathounds sprang, the
 station's guards stayed out, killing all three gave 100 XP ("You gain 100 XP for clearing an ambush").
 
+## Map markers (Nov 2026)
+
+`Markers.Add(mod, id, zone, x, y, label, colour, area)` / `Remove` / `Of(mod)` / `All` / `Here`, `Markers.Changed`: kept
+in each mod's per-save data (`works_markers`), so per game and never in the game's files. The Minimap draws `Here` as
+diamonds, on its edge in the marker's direction when farther away ("Show markers"). Trap: SaveData returns a value
+as it was stored this session (a typed list) or as JSON read it back (List<object>): read lists as IEnumerable. Tested:
+a near marker on the map, a far one on the edge, both back after quicksave + quickload.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

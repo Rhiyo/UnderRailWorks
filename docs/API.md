@@ -742,6 +742,17 @@ Loot just rolled for a container or a character (once per entity per game). Add 
 
 - `static void SetBackground(WorksMod mod, string file)` — The picture behind the main menu (and the other full-screen menus that use the same art: options, loading a game). Works' BackgroundFit setting decides between cropping and letterboxing it.
 
+## MapMarker  _(class, Markers.cs)_
+
+- `string Mod`
+- `string Id`
+- `string Zone`
+- `string Area`
+- `int X`
+- `int Y`
+- `string Label`
+- `Color Colour`
+
 ## MapObject  _(struct, DrawApi.cs)_
 
 Something on the map (b0b): a wall piece, a prop, a creature, a floor tile.
@@ -761,6 +772,15 @@ Something on the map (b0b): a wall piece, a prop, a creature, a floor tile.
 
 A map tile (ak1), as the world pass hands it to the tile-extras step.
 
+
+## Markers  _(class, Markers.cs)_
+
+- `static void Add(WorksMod mod, string id, string zone, int x, int y, string label, Color? colour = null, string area = null)` — Adds (or moves) the mod's marker id. colour: null = a light blue.
+- `static void Remove(WorksMod mod, string id)`
+- `static IList<MapMarker> Of(WorksMod mod)`
+- `static IList<MapMarker> All` — Every loaded mod's markers in this game.
+- `static IList<MapMarker> Here` — The markers in the current zone (and the player's area, for markers that name one).
+- `static readonly Hook<Action> Changed = new Hook<Action>("MarkersChanged")` — After a mod added or removed one (and after a load, when the game's markers are new).
 
 ## ModAbility  _(class, Abilities.cs)_
 

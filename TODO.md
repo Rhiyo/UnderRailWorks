@@ -151,6 +151,6 @@ startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
 - [ ] Fewer allocations per world layer (the wrappers: ~13 MB/s with the keyhole on); a struct or reused view types.
 - [ ] Followers through zone changes (spawns stay in their zone today).
 - [ ] AI weapon choice / reload nodes (not traced).
-- [ ] Journal entries or map pins from mods (the game's notes are saved: needs Works-side storage, like recipes).
+- [x] Map markers from mods (Markers; the Minimap draws them). Journal entries: still open.
 - [ ] A modder's cookbook page (one example per API area) next to docs/API.md.
 - [ ] Real Windows, sound output, Steam achievements through the helper: still untested.
