@@ -1266,6 +1266,8 @@ work (0.1 ms), STA vs MTA, .NET tiered compilation and PGO, exceptions, the Map 
   Status Board, Scanner and The Pit use it (about 20 lines each removed). `Text.Count(n, "turn")` for plurals.
 - Null checks on World.Player in reward handlers (Ambushes, Bounty Hunter, The Pit).
 - Already there, now in the cookbook: `Hud.WhenReady` covers the HUD-created boilerplate.
+- `UiDrag`: an element follows the mouse from a press until release, kept inside its parent or by a Keep rule;
+  HUD Layout (parts and its bar) and Movable Windows (title kept reachable) use it. Tested in game.
 
 ## Traps (Nov 2026)
 

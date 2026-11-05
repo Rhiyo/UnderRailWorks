@@ -318,6 +318,35 @@ public sealed class UiTickBox : UiElement
     public bool Checked { get { return ((cao)Control).Checked; } set { ((cao)Control).Checked = value; } }
 }
 
+// Moving an element with the mouse: start it on a press over the element, then call Update every frame until it
+// returns false (the button was let go). The element follows the mouse from where it was, kept inside its parent
+// (or by Keep: e.g. let a window go partly off screen). Element can be swapped mid-drag (a part rebuilt by its mod).
+//   if (drag == null && Input.MousePressed(MouseButton.Left) && Ui.IsHot(panel)) drag = UiDrag.Begin(panel);
+//   if (drag != null && !drag.Update()) { Settings.Set("at", Ui.Place(panel)); drag = null; }
+public sealed class UiDrag
+{
+    readonly Point mouseStart, elementStart;
+    public UiElement Element { get; set; }
+    // Where the element may go: gets the element and the wanted position, returns the allowed one.
+    public Func<UiElement, Point, Point> Keep { get; set; }
+    // How far the mouse has moved since the press.
+    public Point Offset { get { var m = Input.Mouse; return new Point(m.X - mouseStart.X, m.Y - mouseStart.Y); } }
+    public bool Moved { get; private set; }
+
+    UiDrag(UiElement element) { Element = element; mouseStart = Input.Mouse; elementStart = new Point(element.X, element.Y); }
+    public static UiDrag Begin(UiElement element) { return element == null ? null : new UiDrag(element); }
+
+    // Moves the element to follow the mouse; false once the left button is up (the element stays where it is).
+    public bool Update()
+    {
+        var o = Offset;
+        var want = new Point(elementStart.X + o.X, elementStart.Y + o.Y);
+        var to = Keep != null ? Keep(Element, want) : Ui.KeepInside(Element, want.X, want.Y);
+        if (to.X != Element.X || to.Y != Element.Y) { Ui.Move(Element, to.X, to.Y); Moved = true; }
+        return Input.MouseDown(MouseButton.Left);
+    }
+}
+
 public class UiPanel : UiElement
 {
     internal UiPanel(UiPanelControl panel) : base(panel) { }

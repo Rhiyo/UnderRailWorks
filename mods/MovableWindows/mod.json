@@ -1,2 +1,2 @@
-{ "id": "MovableWindows", "name": "Movable Windows", "version": "1.2.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "MovableWindows", "name": "Movable Windows", "version": "1.2.1", "author": "UnderRailWorks", "works": "0.9",
   "description": "Drag the game's windows (inventory, notes, crafting, map...) by their title bar; clicking a window brings it to the front. A window you moved stays open when another opens on its side. Right-click a title bar to put it back." }

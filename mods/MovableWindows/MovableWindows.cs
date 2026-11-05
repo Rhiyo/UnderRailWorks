@@ -10,18 +10,18 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.2.0")]
+[assembly: System.Reflection.AssemblyVersion("1.2.1")]
 
 public sealed class MovableWindows : WorksMod
 {
     readonly HashSet<UiElement> seen = new HashSet<UiElement>();
     readonly Dictionary<UiElement, Point> gamePlace = new Dictionary<UiElement, Point>();
     OpenWindow dragging;
-    Point dragStart, windowStart;
+    UiDrag drag;
 
     public override void Load()
     {
-        UiEvents.HudCreated.Add(this, root => { seen.Clear(); gamePlace.Clear(); dragging = null; });
+        UiEvents.HudCreated.Add(this, root => { seen.Clear(); gamePlace.Clear(); dragging = null; drag = null; });
         GameEvents.Update.Add(this, seconds =>
         {
             if (!Hud.Exists) return;
@@ -42,15 +42,15 @@ public sealed class MovableWindows : WorksMod
             if (dragging == null && Input.MousePressed(MouseButton.Left))
             {
                 var w = TitleAt(open, m);
-                if (w != null) { dragging = w; dragStart = m; windowStart = new Point(w.Element.X, w.Element.Y); }
+                if (w != null) { dragging = w; drag = UiDrag.Begin(w.Element); drag.Keep = (e, at) => Reachable(w, at, hud); }
             }
             if (dragging != null)
             {
-                if (!open.Any(w => w.Element == dragging.Element)) { dragging = null; return; }     // closed meanwhile
-                Place(dragging, new Point(windowStart.X + m.X - dragStart.X, windowStart.Y + m.Y - dragStart.Y), hud);
+                if (!open.Any(w => w.Element == dragging.Element)) { dragging = null; drag = null; return; }     // closed meanwhile
+                bool held = drag.Update();
                 Point o;     // moved away from the game's place: it stays open when another window opens on its side
                 if (gamePlace.TryGetValue(dragging.Element, out o) && (dragging.Element.X != o.X || dragging.Element.Y != o.Y)) dragging.StaysOpen = true;
-                if (!Input.MouseDown(MouseButton.Left)) dragging = null;
+                if (!held) { dragging = null; drag = null; }
             }
             if (Input.MousePressed(MouseButton.Right))
             {
@@ -81,11 +81,10 @@ public sealed class MovableWindows : WorksMod
         return null;
     }
 
-    // Moved, but kept on screen: at least part of the title bar stays reachable.
-    static void Place(OpenWindow w, Point at, UiElement hud)
+    // Windows may go partly off screen, but at least 60 px of the title bar stays reachable.
+    const int Reach = 60;
+    static Point Reachable(OpenWindow w, Point at, UiElement hud)
     {
-        int x = Math.Max(60 - w.Element.Width, Math.Min(hud.Width - 60, at.X));
-        int y = Math.Max(0, Math.Min(hud.Height - w.TitleHeight, at.Y));
-        Ui.Move(w.Element, x, y);
+        return new Point(Math.Max(Reach - w.Element.Width, Math.Min(hud.Width - Reach, at.X)), Math.Max(0, Math.Min(hud.Height - w.TitleHeight, at.Y)));
     }
 }

@@ -12,7 +12,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1")]
 
 public sealed class HudLayoutConfig : ModConfig
 {
@@ -44,7 +44,7 @@ public sealed class HudLayout : WorksMod
     UiPanel help;
     readonly Dictionary<string, Point> originals = new Dictionary<string, Point>();
     Part dragging, hovered;
-    Point dragStart, partStart;
+    UiDrag partDrag;
 
     public override void Load()
     {
@@ -52,7 +52,7 @@ public sealed class HudLayout : WorksMod
         arrangeKey = Keybinds.Register(this, "arrange", "Arrange");     // unbound by default (Options -> Controls)
         UiEvents.HudCreated.Add(this, root =>
         {
-            hud = root; overlay = null; help = null; dragging = null; layoutButton = null; originals.Clear();
+            hud = root; overlay = null; help = null; dragging = null; partDrag = null; barDrag = null; layoutButton = null; originals.Clear();
             foreach (var p in Parts()) { originals[p.Name] = Default(p); Apply(p); }
             ShowButton();
         });
@@ -72,34 +72,31 @@ public sealed class HudLayout : WorksMod
             if (overlay == null) return;
             var m = Input.Mouse;
             hovered = PartAt(m);
-            if (movingBar)
+            if (barDrag != null)
             {
-                var to = Ui.KeepInside(help, barStart.X + m.X - dragStart.X, barStart.Y + m.Y - dragStart.Y);
-                Ui.Move(help, to.X, to.Y);
-                if (!Input.MouseDown(MouseButton.Left)) { movingBar = false; var place = Ui.Place(help); if (place != null) Settings.Set("bar", place); }
+                if (!barDrag.Update()) { barDrag = null; var place = Ui.Place(help); if (place != null) Settings.Set("bar", place); }
                 return;
             }
             if (Input.MousePressed(MouseButton.Left) && BarClick(m)) return;
             if (Input.MousePressed(MouseButton.Left) && hovered != null)
             {
-                dragging = hovered; dragStart = m; partStart = new Point(hovered.Element.X, hovered.Element.Y);
+                dragging = hovered; partDrag = UiDrag.Begin(hovered.Element);
                 help.Visible = false;     // out of the way while a part moves
             }
             if (dragging != null)
             {
                 // Mods rebuild their parts (new text, new size): follow the part by name, not the old element.
                 var now = Parts().FirstOrDefault(p => p.Name == dragging.Name);
-                if (now == null) { dragging = null; if (help != null) help.Visible = true; return; }
-                dragging.Element = now.Element;
-                var to = Ui.KeepInside(dragging.Element, partStart.X + m.X - dragStart.X, partStart.Y + m.Y - dragStart.Y);
-                Ui.Move(dragging.Element, to.X, to.Y);
+                if (now == null) { dragging = null; partDrag = null; if (help != null) help.Visible = true; return; }
+                dragging.Element = partDrag.Element = now.Element;
+                bool held = partDrag.Update();
                 if (config.Snap && !Input.Down(Keys.LeftShift) && !Input.Down(Keys.RightShift)) Snap(dragging);
-                if (Input.MouseReleased(MouseButton.Left))
+                if (!held)
                 {
                     var place = Ui.Place(dragging.Element, AnchorFor(dragging));
                     if (place != null) Settings.Set(Key(dragging.Name), place);
                     if (help != null) help.Visible = true;
-                    dragging = null;
+                    dragging = null; partDrag = null;
                 }
             }
             int wheel = Input.Wheel;
@@ -241,8 +238,7 @@ public sealed class HudLayout : WorksMod
     // The bar while arranging: what to do, the snap switch and grid size, Reset all, Done. Drag it by its text; it hides
     // while a part is being dragged (it would be in the way).
     UiElement snapBox, gridMinus, gridPlus, resetButton, doneButton;
-    bool movingBar;
-    Point barStart;
+    UiDrag barDrag;
 
     void Begin()
     {
@@ -295,7 +291,7 @@ public sealed class HudLayout : WorksMod
             return true;
         }
         if (resetButton.Bounds.Contains(m) || doneButton.Bounds.Contains(m)) return true;     // the buttons' own clicks
-        movingBar = true; dragStart = m; barStart = new Point(help.X, help.Y);     // (the game's buttons take their own clicks)
+        barDrag = UiDrag.Begin(help);     // (the game's buttons take their own clicks)
         return true;
     }
 
@@ -303,7 +299,7 @@ public sealed class HudLayout : WorksMod
     {
         if (overlay != null) Ui.Remove(overlay);
         if (help != null) Ui.Remove(help);
-        overlay = null; help = null; dragging = null; movingBar = false;
+        overlay = null; help = null; dragging = null; partDrag = null; barDrag = null;
     }
 
     static readonly string[] AnchorNames = { "top left", "top", "top right", "left", "centre", "right", "bottom left", "bottom", "bottom right" };

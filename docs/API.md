@@ -1434,6 +1434,17 @@ What a custom element draws with, during its draw: everything in interface units
 - `int Index`
 - `event Action<int> Changed`
 
+## UiDrag  _(class, Ui.cs)_
+
+Moving an element with the mouse: start it on a press over the element, then call Update every frame until it returns false (the button was let go). The element follows the mouse from where it was, kept inside its parent (or by Keep: e.g. let a window go partly off screen). Element can be swapped mid-drag (a part rebuilt by its mod). if (drag == null && Input.MousePressed(MouseButton.Left) && Ui.IsHot(panel)) drag = UiDrag.Begin(panel); if (drag != null && !drag.Update()) { Settings.Set("at", Ui.Place(panel)); drag = null; }
+
+- `UiElement Element`
+- `Func<UiElement, Point, Point> Keep` — Where the element may go: gets the element and the wanted position, returns the allowed one.
+- `Point Offset` — How far the mouse has moved since the press.
+- `bool Moved`
+- `static UiDrag Begin(UiElement element)`
+- `bool Update()` — Moves the element to follow the mouse; false once the left button is up (the element stays where it is).
+
 ## UiElement  _(class, Ui.cs)_
 
 A handle on an interface element (one of the game's controls inside).
