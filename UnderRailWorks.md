@@ -771,6 +771,24 @@ An independent review of the day's code found, all fixed:
   item, II:CP, and would break the save for the stock game); sliders format with the invariant culture (U+2212 minus
   under ICU); a widget handler that throws is reported for its mod and doesn't stop the others.
 
+## Allies, followers, game key clashes; Beastmaster (Nov 2026)
+
+- `SpawnSide.Ally`: the spawn joins the game's "playerNativeAlly" faction (the one it gives the player's force fields),
+  so the faction table makes it the player's friend and the player's enemies' enemy, both ways. Tested: an allied
+  rathound targeted and killed a hostile one ("killed by Rathound") and survived.
+- `Character.Follow(leader, distance)` / `StopFollowing` / `IsFollowing`: out of combat, every 0.5 s a follower more than
+  distance tiles behind is ordered (the movement aspect `ale.a(tile)`, as the game's AI moves) to a free tile near its
+  leader; in combat its own AI fights. (The game's own follow goal `aqs`, AI properties FollowTarget/FollowDistance,
+  exists only in the "soldier" AI.) Tested: followed the player across the station.
+- **Mod keys against the game's**: once the game's key table exists (`cnk.aq1().e().c()`), a mod default on a game key
+  starts unbound (logged; a key the player set is kept and reported) and the game's whole table is logged once. It
+  caught G (Crafting), B (Recharge Shield), Y (quick slot 6), F9 (Quick Load) in my own mods. Mods should use
+  `Keybinds.Register`; keys read with `Input.Pressed` can't be checked.
+- Beastmaster (mods/Beastmaster): Call Companion (J) summons an allied rathound for N turns, follows, HUD part with its
+  health and time left; one at a time; the cooldown is in the save data. Tested: called, HUD part, quicksave with it
+  present -> stock loader OK, quickload: companion not in the save, cooldown kept.
+- WorksTest's autorun.txt takes `wait <seconds>` lines (whole test sequences without typing in the console).
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

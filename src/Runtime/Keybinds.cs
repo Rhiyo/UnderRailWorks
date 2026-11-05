@@ -63,6 +63,31 @@ public static class Keybinds
         return k2;
     }
 
+    // The game's own keys (its Controls tab: cnk.aq1().e().c(), Hotkey -> key), once they are loaded: a mod's default
+    // on one of them starts unbound (G is the game's Crafting, H its..., they'd both fire); a key the player set is only
+    // reported. Run from Works' update until the game's table exists.
+    static bool gameChecked;
+    internal static void CheckGameKeys()
+    {
+        if (gameChecked || all.Count == 0) return;
+        var game = ces.a();
+        var table = game == null || game.aq1() == null || game.aq1().e() == null ? null : game.aq1().e().c();
+        if (table == null || table.Count == 0) return;
+        gameChecked = true;
+        Log.Write("keys: the game's: " + string.Join(", ", table.Where(kv => (int)kv.Key < First && kv.Value != Keys.None).OrderBy(kv => kv.Value.ToString()).Select(kv => kv.Value + "=" + kv.Key)));
+        foreach (var k in all)
+        {
+            if (k.Key == Keys.None) continue;
+            var hit = table.Where(kv => (int)kv.Key < First && kv.Value == k.Key).Select(kv => kv.Key).FirstOrDefault();
+            if ((int)hit == 0 && !table.Any(kv => (int)kv.Key < First && kv.Value == k.Key)) continue;
+            var mod = ModLoader.Find(k.Mod);
+            bool chosen = mod != null && mod.Instance != null && mod.Instance.Settings.Get(k.SettingKey) != null;
+            if (chosen) { Log.Write("keys: " + k.ModName + " (" + k.Label + ") uses " + k.Key + ", also the game's " + hit + ": both act"); continue; }
+            Log.Write("keys: " + k.ModName + " (" + k.Label + ") wanted " + k.Key + ", the game's " + hit + ": unbound, set one in Options -> Controls");
+            k.Key = Keys.None;
+        }
+    }
+
     // A mod's keys (for its settings page).
     public static IList<Keybind> Of(string modId) { return all.Where(k => k.Mod == modId).ToList(); }
 

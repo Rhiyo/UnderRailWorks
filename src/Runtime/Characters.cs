@@ -101,7 +101,7 @@ public sealed partial class Item
     public override string ToString() { return Name + (Stacks > 1 ? " x" + Stacks : ""); }
 }
 
-public enum SpawnSide { Neutral, Hostile, PlayerOnly }
+public enum SpawnSide { Neutral, Hostile, PlayerOnly, Ally }
 
 // A character placed by a mod: re-created each time its zone loads, while When holds; never saved.
 public sealed partial class Placement
@@ -205,12 +205,51 @@ public static partial class World
         var id = "spawn:" + (++spawned);
         var p = new Placement { Id = id, Zone = zone, Area = player.Area.Name, X = x, Y = y, Blueprint = blueprint, Friendly = !hostile, Temporary = true };
         if (side == SpawnSide.PlayerOnly) p.Setup = c => { c.Faction = "works_spawn"; c.SetAttitudeToPlayer(Attitude.Hostile); };
+        // Ally: the game's own faction for what the player brings into a fight (its force fields: playerNativeAlly),
+        // so the faction table makes it friends with the player and enemies with the player's enemies, both ways.
+        else if (side == SpawnSide.Ally) p.Setup = c => c.Faction = "playerNativeAlly";
         else if (hostile) p.Setup = c => c.SetAttitudeToPlayer(Attitude.Hostile);
         Place(p);
         p.When = Condition.Code(() => false);     // created: never again
         return Placed(id);
     }
     static int spawned;
+
+    // --- Followers -----------------------------------------------------------------------------------------------
+    // Out of combat, a follower that falls more than distance tiles behind is sent (the game's own move order, as its
+    // AI moves: ale.a(tile)) to a free tile near its leader; in combat its AI fights as it would. Spawned characters
+    // stay in their zone (they are never saved), so a follower is left behind at an exit.
+    sealed class Follow { public Character Who, Leader; public int Distance; public double Wait; }
+    static readonly Dictionary<b0b, Follow> followers = new Dictionary<b0b, Follow>();     // by entity
+    internal static void SetFollow(Character who, Character leader, int distance)
+    {
+        if (who == null || who.Entity == null) return;
+        if (leader == null) followers.Remove(who.Entity); else followers[who.Entity] = new Follow { Who = who, Leader = leader, Distance = Math.Max(1, distance) };
+    }
+    internal static bool IsFollowing(Character who) { return who != null && who.Entity != null && followers.ContainsKey(who.Entity); }
+
+    internal static void FollowTick(double seconds)
+    {
+        if (followers.Count == 0) return;
+        foreach (var kv in followers.ToList())
+        {
+            var f = kv.Value; var who = f.Who;
+            if (who.IsDead || who.Area == null || f.Leader.IsDead) { followers.Remove(kv.Key); continue; }
+            if (Combat.InCombat || (f.Wait -= seconds) > 0) continue;
+            f.Wait = 0.5;
+            var a = who.Position; var b = f.Leader.Position;
+            if (who.Area.Game != f.Leader.Area?.Game) continue;
+            double far = Math.Max(Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
+            if (far <= f.Distance + 1) continue;
+            var to = FreeTilesNear((int)Math.Round(b.X), (int)Math.Round(b.Y), f.Distance)
+                .OrderBy(t => (t.X - b.X) * (t.X - b.X) + (t.Y - b.Y) * (t.Y - b.Y) + 0.1 * ((t.X - a.X) * (t.X - a.X) + (t.Y - a.Y) * (t.Y - a.Y))).Cast<Point?>().FirstOrDefault();
+            var c = who.Entity as c5x;
+            var move = c == null ? null : c.GetAspect<ale>();
+            if (to == null || move == null) continue;
+            try { move.a(Areas.Tile(who.Area.Game, to.Value.X, to.Value.Y), 0.0, 1, 0, true); }
+            catch (Exception ex) { Log.Write("follow: " + ex.Message); followers.Remove(kv.Key); }
+        }
+    }
 
     // Removes a spawned (or placed) character from the world now.
     public static void Despawn(Character c)

@@ -51,6 +51,10 @@ public sealed class Character
     public bool IsHostile { get { return Entities.IsHostile(Entity); } }
     // Map position (tiles; fractional while moving).
     public Vector3 Position { get { return Entities.MapPosition(Entity); } }
+    // Keeps near leader (within distance tiles) out of combat; null stops it. For spawned allies, pets, escorts.
+    public void Follow(Character leader, int distance = 3) { World.SetFollow(this, leader, distance); }
+    public void StopFollowing() { World.SetFollow(this, null, 0); }
+    public bool IsFollowing { get { return World.IsFollowing(this); } }
     public Area Area { get { return Area.Of(Entities.AreaOf(Entity)); } }
     public Attitude Attitude { get { return Entities.AttitudeOf(Entity); } }
     // The colour holding Tab outlines it in (gold for the player, sandy brown if passive, else by attitude).

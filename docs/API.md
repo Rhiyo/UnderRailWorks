@@ -103,6 +103,9 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `bool IsPlayer`
 - `bool IsHostile` — Hostile or unfriendly to the player, not passive (red and orange outlines).
 - `Vector3 Position` — Map position (tiles; fractional while moving).
+- `void Follow(Character leader, int distance = 3)` — Keeps near leader (within distance tiles) out of combat; null stops it. For spawned allies, pets, escorts.
+- `void StopFollowing()`
+- `bool IsFollowing`
 - `Area Area`
 - `Attitude Attitude`
 - `Color OutlineColor` — The colour holding Tab outlines it in (gold for the player, sandy brown if passive, else by attitude).
@@ -1090,7 +1093,7 @@ The first handler that returns true replaces the game's step.
 
 ## SpawnSide  _(enum, Characters.cs)_
 
-Values: `Neutral, Hostile, PlayerOnly`
+Values: `Neutral, Hostile, PlayerOnly, Ally`
 
 ## StatBonus  _(class, StatBonus.cs)_
 

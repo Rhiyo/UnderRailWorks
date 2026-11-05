@@ -19,6 +19,8 @@ public sealed class WorksTest : WorksMod
     AreaTrigger trigger;
     ModFeat grit;
     bool aiHold, block, aiFlee;
+    Character pet; double petLog, autoWait;
+    readonly System.Collections.Generic.Queue<string> autorun = new System.Collections.Generic.Queue<string>();
     int aiLogs;
     TimeSpan gameTime;
     bool blockUse;
@@ -53,9 +55,9 @@ public sealed class WorksTest : WorksMod
         Ai.TakingTurn.Add(this, t => { if (aiHold && !t.Npc.Name.Contains("Rathound")) { t.EndTurn = true; if (++aiLogs < 30) Log.Info("ai: held " + t.Npc); } });
         Ai.Acting.Add(this, a => Log.Info("ai: " + a.Npc + " uses " + a.Action));
         Ai.ShouldFlee.Add(this, f => { if (aiFlee && f.Npc.Name.Contains("Rathound")) { if (++aiLogs < 40) Log.Info("ai: rathound flees (game: " + f.Fleeing + ")"); return true; } return null; });
-        var wind = Abilities.Add(this, "wind", "Second Wind", "Heals 20 health.", "art/wind.png", cooldown: 3, key: Microsoft.Xna.Framework.Input.Keys.F9);
+        var wind = Abilities.Add(this, "wind", "Second Wind", "Heals 20 health.", "art/wind.png", cooldown: 3, key: Microsoft.Xna.Framework.Input.Keys.F12);
         wind.Used += (user, target) => { user.Health += 20; Log.Info("ability: second wind, health " + user.Health); };
-        var zap = Abilities.Add(this, "zap", "Zap", "10 damage to the target.", "art/zap.png", apCost: 15, cooldown: 2, target: AbilityTarget.Character, key: Microsoft.Xna.Framework.Input.Keys.F10);
+        var zap = Abilities.Add(this, "zap", "Zap", "10 damage to the target.", "art/zap.png", apCost: 15, cooldown: 2, target: AbilityTarget.Character, key: Microsoft.Xna.Framework.Input.Keys.OemQuotes);
         zap.Range = 12;
         bool zapped = false;
         Combat.TurnStarted.Add(this, c => { if (!aiHold || zapped || !c.IsPlayer) return; zapped = true;
@@ -71,6 +73,17 @@ public sealed class WorksTest : WorksMod
             return "slay " + dealt;
         });
         Commands.Add(this, "wt.flee", "wt.flee: rathounds flee", args => { aiFlee = true; return "fleeing"; });
+        Commands.Add(this, "wt.pet", "wt.pet: an allied rathound that follows you", args =>
+        {
+            var pp = World.Player.Position; var t = World.FreeTilesNear((int)pp.X, (int)pp.Y, 4).Skip(5).FirstOrDefault();
+            pet = World.Spawn("creatures\\rathound", t.X, t.Y, SpawnSide.Ally);
+            if (pet == null) return "no pet";
+            pet.Follow(World.Player, 2);
+            Log.Info("pet " + pet.Name + " attitude " + pet.Attitude + " faction " + pet.Faction);
+            return "pet";
+        });
+        GameEvents.Update.Add(this, sec => { if (pet == null) return; petLog -= sec; if (petLog > 0) return; petLog = 3;
+            Log.Info("pet at " + pet.Position + ", player at " + World.Player.Position + ", dead " + pet.IsDead); });
         Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
         {
             aiHold = true; Commands.CloseConsole();
@@ -80,7 +93,21 @@ public sealed class WorksTest : WorksMod
         GameEvents.ZoneLoaded.Add(this, (zone, first) =>
         {
             var auto = System.IO.Path.Combine(Info.Folder, "autorun.txt");
-            if (System.IO.File.Exists(auto)) foreach (var line in System.IO.File.ReadAllLines(auto).Concat(new string[0]).ToList().Also(() => System.IO.File.Delete(auto))) if (line.Trim().Length > 0) { Log.Info("autorun: " + line); Commands.Execute(line); }
+            if (!System.IO.File.Exists(auto)) return;
+            foreach (var line in System.IO.File.ReadAllLines(auto)) if (line.Trim().Length > 0) autorun.Enqueue(line.Trim());
+            System.IO.File.Delete(auto);
+        });
+        // autorun.txt: console lines, run once the zone is loaded; "wait <seconds>" pauses (game time keeps going).
+        GameEvents.Update.Add(this, sec =>
+        {
+            if (autoWait > 0) { autoWait -= sec; return; }
+            while (autorun.Count > 0)
+            {
+                var line = autorun.Dequeue();
+                Log.Info("autorun: " + line);
+                if (line.StartsWith("wait ")) { autoWait = double.Parse(line.Substring(5), System.Globalization.CultureInfo.InvariantCulture); return; }
+                Commands.Execute(line);
+            }
         });
         GameEvents.TradeOpening.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked trade with " + e.Merchant); } });
         GameEvents.ContainerOpening.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked container"); } });
@@ -162,7 +189,7 @@ public sealed class WorksTest : WorksMod
         {
             if (Input.Typing) return;     // the console or a text box has the keyboard
             var p = World.Player;
-            if (p == null || !Input.Pressed(Keys.F10)) return;
+            if (p == null || !Input.Pressed(Keys.OemQuotes)) return;
             p.Inventory.AddMoney(20);
             Log.Info("gave 20 charons: now " + p.Inventory.Money + ", HP " + p.Health + "/" + p.MaxHealth + ", level " + p.Level + ", XP " + p.Experience
                 + ", Strength " + p.Ability("Strength") + ", Persuasion " + p.Skill("Persuasion") + ", feats " + string.Join(",", p.Feats));
@@ -206,13 +233,13 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.F) && Input.Down(Keys.LeftControl)) failNow = true;
             if (Input.Pressed(Keys.N) && Input.Down(Keys.LeftControl)) Log.Info("stim: " + World.Player.Inventory.Add(stimPath, 2) + "; def " + Items.Definition(stimPath).Name + " " + Items.Definition(stimPath).Value + "; bandage " + Items.Definition("consumables\\medicine\\bandage").Name);
             if (Input.Pressed(Keys.M) && Input.Down(Keys.LeftControl)) { musicOn = !musicOn; Log.Info("mod music " + musicOn + "; songs " + Music.Songs.Count + ", sounds " + Sound.Ids.Count); }
-            if (Input.Pressed(Keys.F9) && Input.Down(Keys.LeftControl)) Commands.OpenConsole();
+            if (Input.Pressed(Keys.F12) && Input.Down(Keys.LeftControl)) Commands.OpenConsole();
             if (Input.Pressed(Keys.Home) && Input.Down(Keys.LeftControl)) { glow.Apply(World.Player, 40); Log.Info("glow on: " + glow.Has(World.Player)); }
             if (Input.Pressed(Keys.G) && Input.Down(Keys.LeftControl)) Log.Info("clock: world " + GameClock.WorldTime + ", turn " + GameClock.TurnTime + " (" + GameClock.Turns.ToString("0.0") + " turns), paused " + GameClock.Paused + ", ticks summed " + gameTime);
             if (Input.Pressed(Keys.U) && Input.Down(Keys.LeftControl)) { blockUse = !blockUse; Log.Info("block item use: " + blockUse); }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
-            if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
+            if (Input.Pressed(Keys.J) && Input.Down(Keys.LeftControl) && Input.Down(Keys.LeftShift)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
             if (Input.Pressed(Keys.U) && !Input.Down(Keys.LeftControl)) Log.Info("trade with the test merchant: " + Trade.Open(World.Placed("workstest_merchant")));
             if (Input.Pressed(Keys.F11)) { p.GiveExperience(5000, "test"); Log.Info("XP now " + p.Experience + ", level " + p.Level + ", skill points " + p.SkillPoints + ", ability points " + p.AbilityPoints); }
             if (Input.Pressed(Keys.F12))

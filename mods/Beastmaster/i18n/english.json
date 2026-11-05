@@ -1,0 +1,9 @@
+{
+  "ability.name": "Call Companion",
+  "ability.desc": "A rathound answers your whistle: it follows you and fights your enemies for {0} turns.",
+  "called": "A rathound answers",
+  "gone": "Your companion wanders off",
+  "fell": "Your companion fell",
+  "noRoom": "No room for a companion here",
+  "status": "{0}: {1}/{2} HP, {3} turns"
+}

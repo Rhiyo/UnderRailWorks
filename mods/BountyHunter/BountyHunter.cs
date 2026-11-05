@@ -33,7 +33,7 @@ public sealed class BountyHunter : WorksMod
         headhunter = Feats.Add(this, "headhunter", T("feat.name"), T("feat.desc"), new FeatRequirements { Abilities = { ["Perception"] = 6 }, Level = 4 },
             null, new[] { StatBonus.Detection(5) });
         mark = Abilities.Add(this, "mark", T("ability.name"), T("ability.desc"), "art/mark.png", apCost: config.ApCost, cooldown: 3,
-            target: AbilityTarget.Character, key: Keys.B);
+            target: AbilityTarget.Character, key: Keys.F4);
         mark.Range = 15;
         mark.Used += (user, target) =>
         {
@@ -42,7 +42,7 @@ public sealed class BountyHunter : WorksMod
             Notify.Over(target, T("status.name"), new Microsoft.Xna.Framework.Color(230, 160, 60));
         };
         GameEvents.CharacterDying.Add(this, (who, killer) => Died(who));     // statuses are still on while it dies
-        ledgerKey = Keybinds.Register(this, "ledger", T("ledger"), Keys.Y);
+        ledgerKey = Keybinds.Register(this, "ledger", T("ledger"), Keys.F10);
         GameEvents.Update.Add(this, s => { if (ledgerKey.Pressed) Ledger(); });
         config.Changed += () => mark.ApCost = config.ApCost;
     }
