@@ -76,6 +76,22 @@ public sealed class Equipment
         return false;
     }
 
+    // Puts an item from the bag into a quick slot (index from 0; -1: the first free one), as the game's scripts do
+    // (bn.SwapIn: what was there goes back into the bag). bn.a only takes items it knows as quick-slot items, which
+    // medicine like bandages isn't (its quick-slot flag is unset in the data, yet the player can slot it).
+    public bool ToQuickSlot(Item item, int slot = -1)
+    {
+        if (item == null) return false;
+        var c = Owner;
+        var slots = c.Gear.d();
+        if (slot < 0) slot = Enumerable.Range(0, Math.Min(c.AvailableQuickSlots, slots.Length)).Where(i => slots[i].Enabled && slots[i].Item == null).DefaultIfEmpty(-1).First();
+        if (slot < 0 || slot >= Math.Min(c.AvailableQuickSlots, slots.Length) || !slots[slot].Enabled) return false;
+        if (!c.Bag.z5(item.Game)) return false;
+        bn.SwapIn(slots[slot], c.Bag, item.Game);
+        c.bl();
+        return true;
+    }
+
     // Takes the item out of a slot into the bag.
     public Item Unequip(EquipSlot slot)
     {

@@ -552,8 +552,16 @@ From `~/UnderRailWorks-research/specs/clock-items-crafting.md` (not committed):
 - `GameEvents.ItemCrafted` (postfix `ahu.i()`: the blueprint's name, the items).
 - `GameEvents.ItemStolen` / `CaughtStealing` (`rc.a(coh)` / `rc.a()`), `Stealing.ModifySuspicion` (`b87.a(efk,
   efk, coh, double)`: per item; also the window's preview every frame; caught at 1.5 in all, no dice).
+- `Crafting.All` (119 blueprints: id, name, category), `Crafting.Known`, `Crafting.Learn(id or name)` (`e3q.b(Type)`,
+  stock blueprints only). `Stealing.Pickpocket(thief, victim)` (the Pickpocket ability `eag` through a proxy, as
+  `Items.Use`). `Equipment.ToQuickSlot(item, slot)` (`bn.SwapIn`; `bn.a` skips medicine: a bandage's quick-slot flag
+  `I:QQ` is unset in the data, yet players can slot it).
 - Tested: the clocks (world time and the summed ticks agree to the millisecond over 5 s), `Items.Use` on a bandage
-  (90 -> 180 health), the veto, both item events. **Not yet tested in game:** crafting and stealing events.
+  (90 -> 180 health), the veto, both item events; crafting (Throwing Net learned, crafted in the window, ItemCrafted
+  fired); pickpocketing (four items stolen from a Sentry at 0.33 suspicion each, then CaughtStealing);
+  a bandage with a mod icon in a quick slot (icon shown) then a quicksave: no `works:` name anywhere in the save, the
+  slot's icon field `CP:I` empty. **Not verified:** using an item from a quick slot in the headless runner (neither
+  the key nor a click used it).
 
 ## The test mods (Nov 2026)
 

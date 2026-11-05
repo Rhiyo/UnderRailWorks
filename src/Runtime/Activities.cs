@@ -63,6 +63,58 @@ namespace UnderRailWorks
         }
     }
 
+    public sealed class Blueprint
+    {
+        public string Id { get; internal set; }         // the game's technical name, e.g. "throwingNet"
+        public string Name { get; internal set; }       // as the crafting window shows it
+        public string Category { get; internal set; }
+        internal Type Type;
+    }
+
+    public static class Crafting
+    {
+        static List<Blueprint> all;
+        // Every blueprint in the game (its blueprint classes).
+        public static IList<Blueprint> All
+        {
+            get
+            {
+                if (all != null) return all;
+                all = new List<Blueprint>();
+                foreach (var t in typeof(cwp).Assembly.GetTypes().Where(t => typeof(cwp).IsAssignableFrom(t) && !t.IsAbstract && t.GetConstructor(Type.EmptyTypes) != null))
+                {
+                    try { var b = (cwp)Activator.CreateInstance(t); all.Add(new Blueprint { Id = b.TechnicalName, Name = b.LocalizedName, Category = b.Category.ToString(), Type = t }); }
+                    catch (Exception ex) { Log.Write("crafting: blueprint " + t.Name + ": " + ex.Message); }
+                }
+                all = all.OrderBy(b => b.Name).ToList();
+                return all;
+            }
+        }
+
+        // The blueprints the player knows (e3q.d()).
+        public static IList<Blueprint> Known
+        {
+            get
+            {
+                var p = World.Player == null ? null : World.Player.PlayerData;
+                if (p == null) return new List<Blueprint>();
+                var known = new HashSet<string>(p.d().Select(r => r.ao() == null ? null : r.ao().TechnicalName).Where(n => n != null));
+                return All.Where(b => known.Contains(b.Id)).ToList();
+            }
+        }
+
+        // The player learns a stock blueprint (by id or name), as reading its blueprint item does. Saved with the game
+        // (the stock game knows every stock blueprint). False if there's no such blueprint.
+        public static bool Learn(string idOrName)
+        {
+            var p = World.Player == null ? null : World.Player.PlayerData;
+            var b = All.FirstOrDefault(x => string.Equals(x.Id, idOrName, StringComparison.OrdinalIgnoreCase) || string.Equals(x.Name, idOrName, StringComparison.OrdinalIgnoreCase));
+            if (p == null || b == null) return false;
+            p.b(b.Type);
+            return true;
+        }
+    }
+
     public sealed class Crafted
     {
         public string Blueprint { get; internal set; }       // its name as the game shows it
@@ -80,6 +132,19 @@ namespace UnderRailWorks
 
     public static class Stealing
     {
+        // thief tries to pickpocket victim the game's way (its Pickpocket ability: the window opens for the player,
+        // with the game's checks: in reach, not in combat, the victim's suspicion). False if the game refuses.
+        public static bool Pickpocket(Character thief, Character victim)
+        {
+            var t = thief == null ? null : thief.Entity as c5x;
+            var data = t == null ? null : t.GetAspect<amc>();
+            if (data == null || victim == null) return false;
+            var cap = dgk.Get<eag>();
+            var proxy = cap == null ? null : ecf.a(cap, new eru(new Ouroboros.Playfield.References.EntityAspectReference<amc, amc>(data)), null) as eu7;
+            if (proxy == null || !proxy.yw()) return false;
+            return cp.b(proxy, t, victim.Entity) != null;
+        }
+
         public static readonly Hook<Action<Theft>> ModifySuspicion = new Hook<Action<Theft>>("ModifySuspicion");
     }
 
