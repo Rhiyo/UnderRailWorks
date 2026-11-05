@@ -16,6 +16,7 @@
 // int as a number, enum as its name in lower case (read in any case). Supported types: bool, int, float (as a
 // slider in steps), enums; other fields are ini-only.
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -133,6 +134,10 @@ public abstract class ModConfig
             }
             else if (f.FieldType == typeof(int))
                 page.Slider(f.Name, label, (int)(range?.Min ?? 0), (int)(range?.Max ?? 100), Math.Max(1, (int)step), (int)d);
+            else if (f.FieldType == typeof(float) || f.FieldType == typeof(double))
+                page.Slider(f.Name, label, (double)(range?.Min ?? 0), (double)(range?.Max ?? 1), f.GetCustomAttribute<IncrementAttribute>() == null ? 0.1 : (double)step, Convert.ToDouble(d));
+            else if (f.FieldType == typeof(string))
+                page.Note(label, (Format(v) ?? "") + "   (edit Mods/" + Path.GetFileName(Mod.Folder) + "/settings.ini)");
             else continue;     // ini only
             any = true;
         }

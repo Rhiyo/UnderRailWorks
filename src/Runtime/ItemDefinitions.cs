@@ -123,12 +123,49 @@ namespace UnderRailWorks
         // Lines added to item tooltips (every window that shows them).
         public static void ModifyTooltip(WorksMod mod, Action<Item, Tooltip> edit) { ItemHooks.Tooltips.Add(mod, edit); }
 
+        // Every item path in the game's data (and the mods' defined ones), optionally of one kind.
+        public static IList<string> All(ItemKind? kind = null)
+        {
+            var root = System.IO.Path.Combine(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data"), "rules", "items");
+            var paths = (System.IO.Directory.Exists(root) ? System.IO.Directory.GetFiles(root, "*.item", System.IO.SearchOption.AllDirectories)
+                .Select(f => f.Substring(root.Length + 1, f.Length - root.Length - 6).Replace('/', '\\')) : Enumerable.Empty<string>()).Concat(ItemHooks.Defined.Keys);
+            if (kind == null) return paths.ToList();
+            return paths.Where(p => { bk3 d; try { d = ez2.b(p); } catch { d = null; } return d != null && Item.KindOf(d) == kind; }).ToList();
+        }
+
         // Every new item's path the mods defined.
         public static IList<string> Defined { get { return ItemHooks.Defined.Keys.ToList(); } }
     }
 
+    public enum ItemKind { Other, Weapon, Armor, Shield, Component, Ammo, Currency, Throwable, Consumable }
+
     public sealed partial class Item
     {
+        // What sort of item it is (from the definition's class).
+        public ItemKind Kind
+        {
+            get { return KindOf(Game.Definition); }
+        }
+        internal static ItemKind KindOf(bk3 d)
+        {
+            {
+                if (d is bke) return ItemKind.Weapon;
+                if (d is eya) return ItemKind.Armor;
+                if (d is b3n) return ItemKind.Shield;
+                if (d is a1k) return ItemKind.Component;
+                if (d is dgr) return ItemKind.Ammo;
+                if (d is a54) return ItemKind.Currency;
+                if (d is cdk) return ItemKind.Throwable;
+                if (d != null && d.bg()) return ItemKind.Consumable;
+                return ItemKind.Other;
+            }
+        }
+        // Quality tier 0 (junk) .. 5 (the game's cr1), and how worn it is (0..1; 1 for items without durability).
+        public int Tier { get { return Game.Definition == null ? 0 : (int)Game.Definition.bc(); } }
+        public double Condition { get { var max = Game.MaxDurability; return max <= 0 ? 1 : Math.Max(0, Math.Min(1, Game.Durability / max)); } }
+        // A plain value kept on this one item (saved with it; the stock game keeps and ignores it). Primitive values.
+        public object GetValue(string key) { var p = Game.CustomProperties; return p == null || !p.HasProperty(key) ? null : p[key]; }
+        public void SetValue(string key, object value) { if (value == null) Game.CustomProperties.RemoveProperty(key); else Game.CustomProperties[key] = value; }
         public ItemDefinition Definition { get { return Game.Definition == null ? null : new ItemDefinition(Game.Definition); } }
         // This one item gets its own copy of the definition (as crafted items have), to edit without touching others.
         // Saved whole, with stock types only: the stock game shows it as edited.

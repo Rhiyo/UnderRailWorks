@@ -687,6 +687,18 @@ setters), leaving a zone. Tested: trade, container and dialog refused.
 with `Ui.Custom` in the game's colours; input in Works' update (weak references, so a removed widget costs nothing).
 Tested in a mod window: all five.
 
+## Item kinds; decimal settings; content packs for the new APIs (Nov 2026)
+
+- `Item.Kind` (Weapon, Armor, Shield, Component, Ammo, Currency, Throwable, Consumable, Other: from the definition's
+  class), `Item.Tier`, `Item.Condition`, `Item.GetValue / SetValue(key)` (the item's own CustomProperties: saved with
+  it, primitives only, ignored by the stock game), `Items.All(kind)`.
+- ModConfig: float/double fields get sliders (Range, Increment as the step); string fields show their value with a
+  pointer to settings.ini.
+- Content packs: `items`, `itemEdits`, `stores`, `loot`, `music`, `sounds` (packs without code get a stand-in mod for
+  the APIs). TheProspector defines "Prospector's Lucky Pick" (a boning knife renamed, 15 % crit), sells it once at
+  bigbret, edits the bandage's description and adds a loot rule. Tested: the knife in the merchant's stock with the
+  pack's name, description and crit chance.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

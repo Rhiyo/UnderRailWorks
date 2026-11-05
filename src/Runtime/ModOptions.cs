@@ -44,8 +44,13 @@ public sealed class ModPage
     sealed class Slide : Binding
     {
         public oz Slider;
-        public override string Value { get { return UnderrailOptions.Moved(Slider) ? Slider.l().ToString() : Was; } }
-        public override void Show(string v) { int n; if (int.TryParse(v, out n)) Slider.e(n); }
+        public double Scale = 1;     // a decimal setting: the game's slider holds value / Scale as whole numbers
+        public override string Value { get { return UnderrailOptions.Moved(Slider) ? (Scale == 1 ? Slider.l().ToString() : (Slider.l() * Scale).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)) : Was; } }
+        public override void Show(string v)
+        {
+            double n;
+            if (double.TryParse(v, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out n)) Slider.e((int)Math.Round(n / Scale));
+        }
     }
     readonly List<Binding> bindings = new List<Binding>();
 
@@ -93,6 +98,17 @@ public sealed class ModPage
         int v = Settings.Int(key, fallback, min, max);
         var slider = UnderrailOptions.SliderRow(Options, Page, "works." + mod + "." + key, label, v, min, max, step);
         if (slider != null) bindings.Add(new Slide { Key = key, Was = v.ToString(), Slider = slider });
+    }
+
+    // A decimal setting (float/double fields): the game's slider counts in steps of step.
+    public void Slider(string key, string label, double min, double max, double step, double fallback)
+    {
+        if (step <= 0) step = 0.1;
+        double v = fallback; double parsed;
+        var raw = Settings.Get(key);
+        if (raw != null && double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out parsed)) v = Math.Max(min, Math.Min(max, parsed));
+        var slider = UnderrailOptions.SliderRow(Options, Page, "works." + mod + "." + key, label, (int)Math.Round(v / step), (int)Math.Round(min / step), (int)Math.Round(max / step), 1);
+        if (slider != null) bindings.Add(new Slide { Key = key, Was = v.ToString(System.Globalization.CultureInfo.InvariantCulture), Slider = slider, Scale = step });
     }
 
     // A button on its own row; click runs on the options screen (e.g. to put rows back with Set).

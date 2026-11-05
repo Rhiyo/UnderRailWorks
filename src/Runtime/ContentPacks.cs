@@ -11,6 +11,11 @@
 //   "placements": [ { "id": "my_npc", "zone": "LU-SouthGateStation-N", "area": "LU-SouthGateStation-N", "x": 14, "y": 21,
 //                     "blueprint": "creatures\\generichumans\\foundryworker", "name": "Stranger", "dialog": "my/dialog",
 //                     "store": "bigbret", "when": { condition } } ]
+//   "items":      [ { "id", "base": stock path, "name", "description", "value", "weight", "icon": png, "stats": {...} } ]
+//   "itemEdits":  [ { "path", "name", "value", "critChance", "critDamage", "actionPoints", "minStrength", "armorPenalty",
+//                     "damage": [ { "type", "min", "max" } ], "resistances": { "Heat": [threshold, percent] } } ]
+//   "stores":     [ { "store", "item", "count", "once" } ]     "loot": [ { "item", "chance", "count", "character", "container" } ]
+//   "music":      [ { "replace" | "add": id, "file": ogg } ]   "sounds": [ { "id", "file": wav } ]
 // Conditions (one key each, combinable): flag (+ "is"), atLeast [var, n], equals [var, text], quest + "is"
 // (notstarted/active/completed/failed), money n, has item code + "count", skill / ability name + "min", level n,
 // not {..}, all [..], any [..].
@@ -89,7 +94,13 @@ static class ContentPacks
                         case "placements": count += Each(kv.Value, where, "placement", LoadPlacement); break;
                         case "dialogpatches": foreach (var d in (kv.Value as Dictionary<string, object>) ?? new Dictionary<string, object>()) { LoadDialogPatch(mod.Id, d.Key, d.Value as Dictionary<string, object>); count++; } break;
                         case "triggers": count += Each(kv.Value, where, "trigger", t => LoadTrigger(mod.Id, t)); break;
-                        default: Log.Write("content: " + where + ": unknown section \"" + kv.Key + "\" (text, quests, dialogs, dialogPatches, placements, triggers)"); break;
+                        case "items": count += Each(kv.Value, where, "item", i => LoadItem(mod, i)); break;
+                        case "itemedits": count += Each(kv.Value, where, "item edit", i => LoadItemEdit(mod, i)); break;
+                        case "stores": count += Each(kv.Value, where, "store entry", i => LoadStore(mod, i)); break;
+                        case "loot": count += Each(kv.Value, where, "loot rule", i => LoadLoot(mod, i)); break;
+                        case "music": count += Each(kv.Value, where, "song", i => LoadMusic(mod, i)); break;
+                        case "sounds": count += Each(kv.Value, where, "sound", i => LoadSound(mod, i)); break;
+                        default: Log.Write("content: " + where + ": unknown section \"" + kv.Key + "\" (text, quests, dialogs, dialogPatches, placements, triggers, items, itemEdits, stores, loot, music, sounds)"); break;
                     }
                 }
                 catch (Exception ex) { Log.Write("content: " + where + ": " + kv.Key + ": " + ex.Message); }
@@ -202,6 +213,74 @@ static class ContentPacks
             }
         });
     }
+
+    // A WorksMod stand-in for packs without code (the APIs take a mod for its id and folder).
+    sealed class PackMod : WorksMod { }
+    static readonly Dictionary<string, WorksMod> packMods = new Dictionary<string, WorksMod>(StringComparer.OrdinalIgnoreCase);
+    static WorksMod Mod(ModInfo info)
+    {
+        if (info.Instance != null) return info.Instance;
+        WorksMod m;
+        if (!packMods.TryGetValue(info.Id, out m)) packMods[info.Id] = m = new PackMod { Info = info, Log = new ModLog(info.Id) };
+        return m;
+    }
+
+    // "items": [ { "id": "stim", "base": "consumables\\medicine\\healthhypo", "name": "...", "description": "...",
+    //   "value": 300, "weight": 0.2, "icon": "art/stim.png", "stats": { ... as itemEdits } } ]
+    static void LoadItem(ModInfo info, Dictionary<string, object> i)
+    {
+        var mod = Mod(info);
+        var icon = Opt(i, "icon");
+        var path = Items.Define(mod, Req(i, "id"), Req(i, "base"), d => { Edit(d, i); if (i.ContainsKey("stats")) Edit(d, (Dictionary<string, object>)i["stats"]); });
+        if (icon != null) Icons.SetItemIcon(mod, "works." + info.Id + "." + Req(i, "id"), icon);
+        Log.Write("content: " + info.Id + " item " + path);
+    }
+
+    // "itemEdits": [ { "path": "weapons\\...", "name": "...", "value": 500, "critChance": 0.1, "damage": [ { "type": "Mechanical", "min": 10, "max": 20 } ],
+    //   "resistances": { "Heat": [5, 20] } } ]
+    static void LoadItemEdit(ModInfo info, Dictionary<string, object> i) { Items.EditDefinition(Mod(info), Req(i, "path"), d => Edit(d, i)); }
+
+    static void Edit(ItemDefinition d, Dictionary<string, object> v)
+    {
+        if (v.ContainsKey("name")) d.Name = Str(v["name"]);
+        if (v.ContainsKey("description")) d.Description = Str(v["description"]);
+        if (v.ContainsKey("value")) d.Value = Num(v["value"]);
+        if (v.ContainsKey("weight")) d.Weight = Num(v["weight"]);
+        if (v.ContainsKey("maxStack")) d.MaxStack = (int)Num(v["maxStack"]);
+        if (v.ContainsKey("actionPoints")) d.ActionPoints = (int)Num(v["actionPoints"]);
+        if (v.ContainsKey("critChance")) d.CritChance = Num(v["critChance"]);
+        if (v.ContainsKey("critDamage")) d.CritDamage = Num(v["critDamage"]);
+        if (v.ContainsKey("minStrength")) d.MinStrength = (int)Num(v["minStrength"]);
+        if (v.ContainsKey("armorPenalty")) d.ArmorPenalty = Num(v["armorPenalty"]);
+        if (v.ContainsKey("damage"))
+            d.Damage = ((List<object>)v["damage"]).Cast<Dictionary<string, object>>().Select(x => new DamageRange { Type = Req(x, "type"), Min = Int(x, "min"), Max = Int(x, "max") }).ToList();
+        if (v.ContainsKey("resistances"))
+            foreach (var kv in (Dictionary<string, object>)v["resistances"]) { var a = (List<object>)kv.Value; d.SetResistance(kv.Key, (int)Num(a[0]), (int)Num(a[1])); }
+    }
+
+    // "stores": [ { "store": "bigbret", "item": "path", "count": 3, "once": false } ]
+    static void LoadStore(ModInfo info, Dictionary<string, object> s)
+    {
+        var mod = Mod(info); var path = Req(s, "item"); int n = Math.Max(1, Int(s, "count"));
+        if (s.ContainsKey("once") && Bool(s["once"])) Stores.AddOnce(mod, Req(s, "store"), path, n); else Stores.AddRestock(mod, Req(s, "store"), path, n);
+    }
+
+    // "loot": [ { "item": "path", "chance": 0.5, "count": 2, "character": "Rathound" (name contains), "container": true } ]
+    static void LoadLoot(ModInfo info, Dictionary<string, object> l)
+    {
+        var who = Opt(l, "character"); bool boxes = l.ContainsKey("container") && Bool(l["container"]);
+        Loot.Add(Mod(info), (c, box) => box != null ? boxes : c != null && (who == null || c.Name.IndexOf(who, StringComparison.OrdinalIgnoreCase) >= 0),
+            Req(l, "item"), l.ContainsKey("chance") ? Num(l["chance"]) : 1.0, Math.Max(1, Int(l, "count")));
+    }
+
+    // "music": [ { "replace": "Junkyard", "file": "music/junk.ogg" } or { "add": "myTrack", "file": "..." } ]
+    static void LoadMusic(ModInfo info, Dictionary<string, object> m)
+    {
+        if (m.ContainsKey("replace")) Music.Replace(Mod(info), Req(m, "replace"), Req(m, "file")); else Music.Add(Mod(info), Req(m, "add"), Req(m, "file"));
+    }
+
+    // "sounds": [ { "id": "Interface.ButtonClick", "file": "sounds/click.wav" } ]
+    static void LoadSound(ModInfo info, Dictionary<string, object> m) { Sound.Replace(Mod(info), Req(m, "id"), Req(m, "file")); }
 
     static void LoadTrigger(string mod, Dictionary<string, object> t)
     {

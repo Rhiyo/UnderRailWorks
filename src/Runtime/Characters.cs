@@ -72,7 +72,7 @@ public static class ItemCodes { public const string Charons = "currency.sc"; }
 public static partial class Items
 {
     // The game's class for an item and its quick-slot flag (for tests).
-    public static string DebugKind(Item item) { return item == null ? "" : item.Kind; }
+    public static string DebugKind(Item item) { return item == null ? "" : item.DebugKind; }
     public static bool Exists(string path) { return RawDefinition(path) != null; }
     public static string Code(string path) { var d = RawDefinition(path); return d == null ? null : d.a5(); }
     public static string Name(string path) { var d = RawDefinition(path); return d == null ? null : d.az(); }
@@ -97,7 +97,7 @@ public sealed partial class Item
     public int Value { get { return Game.SingleItemValue; } }
     public int StackValue { get { return Game.ItemValue; } }
     public double Weight { get { return Game.Weight; } }
-    internal string Kind { get { return Game.GetType().Name + (Game.Definition != null && Game.Definition.v ? " quickslot" : ""); } }
+    internal string DebugKind { get { return Game.GetType().Name + (Game.Definition != null && Game.Definition.v ? " quickslot" : ""); } }
     public override string ToString() { return Name + (Stacks > 1 ? " x" + Stacks : ""); }
 }
 

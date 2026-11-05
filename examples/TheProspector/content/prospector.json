@@ -44,5 +44,12 @@
           "options": [ { "text": "I'll look in on him.", "goto": "@", "do": [ { "setFlag": "prospector_heard" } ] } ] }
       }
     }
-  }
+  },
+  "items": [
+    { "id": "lucky_pick", "base": "weapons\\boningknife", "name": "Prospector's Lucky Pick",
+      "description": "An old pick that never seems to dull.", "value": 450, "stats": { "critChance": 0.15 } }
+  ],
+  "itemEdits": [ { "path": "consumables\\medicine\\bandage", "description": "Clean cloth strips. The prospector swears by them." } ],
+  "stores": [ { "store": "bigbret", "item": "works\\TheProspector\\lucky_pick", "count": 1, "once": true } ],
+  "loot": [ { "character": "Rathound", "item": "components\\scraps\\fabricscraps", "chance": 0.5, "count": 3 } ]
 }
