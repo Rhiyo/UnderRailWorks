@@ -671,6 +671,14 @@ HasFeat checks).
 - Tested: with every NPC but a rathound ending its turn, the rathound targeted and fought the player alone
   (180 -> 69 health) while the station guards stood by. Not covered: flight, weapon choice.
 
+## Cancellable events (Nov 2026)
+
+`GameEvents.TradeOpening` (prefix `dka.amw`), `ContainerOpening` (`c7j.mz`), `ItemTaking` (`c7j.kj`, the window's
+"can remove"), `DialogStarting` (in the `dka.amu` prefix; `Name` can be changed to open another dialog; not barks),
+`Crafting` (`ahu.i`): a handler sets `Cancel`. With the earlier ones (StatusApplying, ItemUsing, Locks.ModifyAttempt,
+Ai.Acting) most player actions can be refused. Not cancellable yet: equipping (the slots are generic `ItemSlot<T>`
+setters), leaving a zone. Tested: trade, container and dialog refused.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

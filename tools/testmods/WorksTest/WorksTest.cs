@@ -18,7 +18,7 @@ public sealed class WorksTest : WorksMod
     ModStatus glow;
     AreaTrigger trigger;
     ModFeat grit;
-    bool aiHold;
+    bool aiHold, block;
     int aiLogs;
     TimeSpan gameTime;
     bool blockUse;
@@ -63,6 +63,10 @@ public sealed class WorksTest : WorksMod
             var auto = System.IO.Path.Combine(Info.Folder, "autorun.txt");
             if (System.IO.File.Exists(auto)) foreach (var line in System.IO.File.ReadAllLines(auto)) if (line.Trim().Length > 0) { Log.Info("autorun: " + line); Commands.Execute(line); }
         });
+        GameEvents.TradeOpening.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked trade with " + e.Merchant); } });
+        GameEvents.ContainerOpening.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked container"); } });
+        GameEvents.DialogStarting.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked dialog " + e.Name); } });
+        Commands.Add(this, "wt.block", "wt.block: refuse trades, containers, dialogs", args => { block = true; return "blocking"; });
         Commands.Add(this, "wt.lever", "wt.lever: the player uses the test lever", args => { Commands.CloseConsole(); return "use: " + World.Use(World.Player, "wt_lever"); });
         Commands.Add(this, "wt.glow", "wt.glow: the test status on the player", args => { glow.Apply(World.Player, 40); Commands.CloseConsole(); return "glow on: " + glow.Has(World.Player); });
         glow.OnTick += (who, stacks) => Log.Info("glow tick on " + who.Name + " (" + stacks + ")");

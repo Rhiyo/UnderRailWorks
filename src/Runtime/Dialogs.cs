@@ -189,6 +189,13 @@ public static partial class Dialogs
     {
         string over;
         if (target != null && overrides.TryGetValue(target, out over)) name = over;
+        if (GameEvents.DialogStarting.Any && name != null && !barkMode)
+        {
+            var e = new DialogStart { Name = name, With = target == null ? null : Character.Of(target) };
+            GameEvents.DialogStarting.Run(h => h(e));
+            if (e.Cancel) { result = false; return false; }
+            name = e.Name;     // a handler may send it to another dialog
+        }
         Action<DialogBuilder> build;
         if (name == null || !defined.TryGetValue(name, out build)) return true;     // the game's own dialog
         azm model;
