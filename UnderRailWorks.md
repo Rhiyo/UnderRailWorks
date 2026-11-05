@@ -648,6 +648,19 @@ the binary (the decompiler adds `m_` on clashes); every reflected field needs th
 - Tested: the trigger's enter, a placed lever used through `World.Use` (the handler ran). Not verified: a mouse click
   on it in the test runner (it was off screen).
 
+## Mod feats (Nov 2026)
+
+`Feats.Add(mod, id, name, description, FeatRequirements { Abilities, Skills, Level }, icon)` -> `ModFeat` (`Key`
+"mod_<mod>_<id>", `OnGain`, `OnLose`), `Feats.Give(character, key)`, `Character.HasFeat(name or key)`. A feat is a
+class deriving `ai8` in the registry `ck.m_a` (key = type name lower case without a `d29` attribute); Works has one
+`WorksFeat : ai8` (requirements as the game's `awr`/`bap`, gain/lose callbacks) and emits a subclass per mod feat
+(System.Reflection.Emit, works on .NET 10) named by the key; texts via `FeatNames/<name>` and `Feats/<wn()>`; icons
+answered for "Feat.<key>". A save keeps the key string (`ctu FR:FTN`); an unknown key is skipped by the game.
+Tested: the feat given, listed on the character sheet with its description, its key in global.dat, the save
+passes the stock loader, and loaded with the mod switched off it plays with the feat simply absent.
+Not done: real stat modifiers (`cy()` static effects): a mod feat's effect is the mod's code (events, hooks,
+HasFeat checks).
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

@@ -256,6 +256,9 @@ namespace UnderRailWorks.Internal
 
         // --- Icons ---------------------------------------------------------------------------------------------------
         internal static void Icon(string name, string file) { iconFiles[name] = file; icons.Remove(name); }
+        // A game icon name (e.g. "Feat.<key>") answered with a mod's picture.
+        internal static void IconAlias(string name, string file) { iconFiles[name] = file; icons.Remove(name); aliases.Add(name); }
+        static readonly HashSet<string> aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         internal static void ItemIcon(string code, string icon) { itemIcons[code] = icon; }
 
         static readonly FieldInfo IconSize = typeof(c3i).GetField("a");
@@ -278,7 +281,7 @@ namespace UnderRailWorks.Internal
         // ejh.b(name): any icon by name.
         static bool IconByName(string __0, ref c3i __result)
         {
-            if (__0 == null || !__0.StartsWith("works:", StringComparison.Ordinal)) return true;
+            if (__0 == null || (!__0.StartsWith("works:", StringComparison.Ordinal) && !aliases.Contains(__0))) return true;
             __result = IconFor(__0) as c3i;
             return false;
         }

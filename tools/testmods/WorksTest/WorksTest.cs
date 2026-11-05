@@ -17,6 +17,7 @@ public sealed class WorksTest : WorksMod
     bool musicOn;
     ModStatus glow;
     AreaTrigger trigger;
+    ModFeat grit;
     TimeSpan gameTime;
     bool blockUse;
     public override void PostLoad() { Log.Info("cross-mod call: " + Mods.Call("WorksTest", "Echo", "hi") + ", typed: " + Mods.Api<TestApi>("WorksTest").Echo("there")); }
@@ -43,6 +44,9 @@ public sealed class WorksTest : WorksMod
             }
             return string.Join("; ", found);
         });
+        grit = Feats.Add(this, "grit", "Works Grit", "A mod feat: you feel tougher. (Requires Strength 3.)", new FeatRequirements { Abilities = { ["Strength"] = 3 } });
+        grit.OnGain += who => Log.Info("feat gained by " + who.Name);
+        Commands.Add(this, "wt.feat", "wt.feat: give the test feat", args => { Commands.CloseConsole(); return "give: " + Feats.Give(World.Player, grit.Key) + ", has: " + World.Player.HasFeat(grit.Key) + "; feats: " + string.Join(", ", World.Player.Feats); });
         Commands.Add(this, "wt.lever", "wt.lever: the player uses the test lever", args => { Commands.CloseConsole(); return "use: " + World.Use(World.Player, "wt_lever"); });
         Commands.Add(this, "wt.glow", "wt.glow: the test status on the player", args => { glow.Apply(World.Player, 40); Commands.CloseConsole(); return "glow on: " + glow.Has(World.Player); });
         glow.OnTick += (who, stacks) => Log.Info("glow tick on " + who.Name + " (" + stacks + ")");

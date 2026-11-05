@@ -107,7 +107,8 @@ public sealed class Character
     public int AbilityPoints { get { var p = Data as e3q; return p == null ? 0 : p.g(); } set { var p = Data as e3q; if (p != null) p.b(Math.Max(0, value)); } }
     public int FeatPoints { get { var p = Data as e3q; return p == null ? 0 : p.j(); } set { var p = Data as e3q; if (p != null) p.f(Math.Max(0, value)); } }
     public IList<string> Feats { get { return Need.Feats.Select(f => f.Name).ToList(); } }
-    public bool HasFeat(string name) { return Need.Feats.Any(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase)); }
+    // By display name or key (the game's internal name, or a mod feat's ModFeat.Key).
+    public bool HasFeat(string name) { return Need.Feats.Any(f => string.Equals(f.Name, name, StringComparison.OrdinalIgnoreCase) || string.Equals(ck.a(f.GetType()), name, StringComparison.OrdinalIgnoreCase)); }
 
     // The player's XP (0 for others) and the game's way to award it (Intelligence factor, notice, level-up).
     internal e3q PlayerData { get { return Data as e3q; } }
