@@ -944,6 +944,14 @@ so widgets work outside the HUD and Options (the character screen at creation).
 Traps: `amm.a(cku)` is the base window's close (patch it there, filter on iw); the character screen's tabs are added
 in `iw.c()`, not `e()`.
 
+## Scavenger (Nov 2026)
+
+mods/Scavenger (startsOff): a mod skill, Scavenging (Perception 1, Intelligence 0.5), on the Other tab; its value sets
+the chance of extra salvage in loot (new `Loot.Add` overload with a chance worked out per roll), and from 40 it gives
++10 Mechanics (Stats.Modify; CustomStats.Changed -> Stats.Refresh). Loot rules now log what they add. Tested:
+Scavenging 80 [86 with the abilities], Mechanics 16 -> 26, rathounds dropping repair kits, scraps and a fusion cell from
+its rules.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

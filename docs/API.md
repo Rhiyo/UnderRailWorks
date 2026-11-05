@@ -770,6 +770,7 @@ Values: `Mechanical, Electronic`
 ## Loot  _(class, LootStores.cs)_
 
 - `static void Add(WorksMod mod, Func<Character, Container, bool> where, string itemPath, double chance, int count = 1)` — When loot is rolled for a character or a container (once each, at its first appearance) and where holds, add count of the item with chance (0..1). where gets the character (null for containers) and the container (null for characters). Rolled with Works' own random numbers: the game's rolls stay as they were.
+- `static void Add(WorksMod mod, Func<Character, Container, bool> where, string itemPath, Func<Character, Container, double> chance, int count = 1)` — The chance worked out per roll (e.g. from a skill): 0..1, for the dead character or the container.
 
 ## LootTarget  _(class, Containers.cs)_
 

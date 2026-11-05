@@ -1,0 +1,5 @@
+{
+  "skill.name": "Scavenging",
+  "skill.desc": "Finding what others missed: more salvage in containers and on the fallen. Raised by Perception and Intelligence.",
+  "found": "Scavenged: {0}"
+}

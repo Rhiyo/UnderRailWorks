@@ -31,6 +31,8 @@ namespace UnderRailWorks
         // add count of the item with chance (0..1). where gets the character (null for containers) and the container
         // (null for characters). Rolled with Works' own random numbers: the game's rolls stay as they were.
         public static void Add(WorksMod mod, Func<Character, Container, bool> where, string itemPath, double chance, int count = 1) { LootHooks.Rules.Add(new LootHooks.Rule { Mod = mod.Id, Where = where, Path = itemPath, Chance = chance, Count = count }); }
+        // The chance worked out per roll (e.g. from a skill): 0..1, for the dead character or the container.
+        public static void Add(WorksMod mod, Func<Character, Container, bool> where, string itemPath, Func<Character, Container, double> chance, int count = 1) { LootHooks.Rules.Add(new LootHooks.Rule { Mod = mod.Id, Where = where, Path = itemPath, ChanceOf = chance, Count = count }); }
     }
 }
 
@@ -81,7 +83,7 @@ namespace UnderRailWorks.Internal
 
     static class LootHooks
     {
-        internal sealed class Rule { public string Mod, Path; public Func<Character, Container, bool> Where; public double Chance; public int Count; }
+        internal sealed class Rule { public string Mod, Path; public Func<Character, Container, bool> Where; public double Chance; public Func<Character, Container, double> ChanceOf; public int Count; }
         internal static readonly List<Rule> Rules = new List<Rule>();
         [ThreadStatic] static ery rolling;
 
@@ -105,12 +107,13 @@ namespace UnderRailWorks.Internal
             {
                 try
                 {
-                    if (!r.Where(who, box) || rng.NextDouble() >= r.Chance) continue;
+                    if (!r.Where(who, box) || rng.NextDouble() >= (r.ChanceOf != null ? r.ChanceOf(who, box) : r.Chance)) continue;
                     var item = ez2.a(r.Path);
                     if (item == null) { Log.Write("loot: " + r.Mod + ": no item " + r.Path); continue; }
                     item.Stacks = r.Count;
                     item.Lootable = true; item.Stealable = true;
                     __result.Add(new bmd(item, AutoEquipMode.None));
+                    Log.Write("loot: " + r.Mod + " adds " + r.Path + " x" + r.Count + " to " + (who != null ? who.Name : "a container"));
                 }
                 catch (Exception ex) { ModErrors.Report(r.Mod, "loot " + r.Path, ex); }
             }

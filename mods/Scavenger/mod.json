@@ -1,0 +1,2 @@
+{ "id": "Scavenger", "name": "Scavenger", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9", "startsOff": true,
+  "description": "A new skill, Scavenging (Perception and Intelligence), on the character screen's Other tab: the better you are, the more salvage (scraps, batteries, kits) turns up in containers and on fallen creatures. At 40 you get the Salvager feat's eye: +10 Mechanics." }
