@@ -8,6 +8,7 @@
 //   Traps.ModifyDetection.Add(this, (who, score) => who.IsPlayer ? score + 5 : score);
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Microsoft.Xna.Framework;
 using UnderRailWorks.Internal;
@@ -34,6 +35,7 @@ namespace UnderRailWorks
         public Vector3 Position { get; internal set; }
         public int DetectDifficulty { get; internal set; }
         public int DisarmDifficulty { get; internal set; }
+        public Trap Trap { get; internal set; }
     }
 
     public sealed class TrapDisarmResult
@@ -53,8 +55,48 @@ namespace UnderRailWorks
         public static readonly Hook<Action<TrapSpotted>> TrapDetected = new Hook<Action<TrapSpotted>>("TrapDetected");
     }
 
+    // A trap in the world (laid by a character or placed in the map).
+    public sealed class Trap
+    {
+        internal c5x Entity; internal ed2 Aspect;
+        public Vector3 Position { get { return Entity.Location; } }
+        public int DetectDifficulty { get { return TrapHooks.Detect(Aspect); } }
+        public int DisarmDifficulty { get { return TrapHooks.Get(Aspect); } }
+        // Has this character spotted it (or laid it).
+        public bool KnownTo(Character c) { return c != null && c.Entity != null && TrapHooks.Spotted(Aspect).Contains(c.Entity.qe()); }
+        // The character tries to disarm it, as clicking the trap does: the game's disarm capability (bb3), queued as
+        // the character's next action (it walks there first; the game's checks and time). False if it can't be queued.
+        public bool Disarm(Character who)
+        {
+            var c = who == null ? null : who.Entity as c5x;
+            var data = c == null ? null : c.GetAspect<amc>();
+            var cap = dgk.Get<bb3>();     // what a click on a trap uses (dka: a trap under the cursor -> bb3)
+            if (data == null || cap == null) return false;
+            var proxy = ecf.a(cap, new eru(new Ouroboros.Playfield.References.EntityAspectReference<amc, amc>(data)), null) as eu7;
+            return proxy != null && cp.b(proxy, c, Entity) != null;
+        }
+    }
+
     public static class Traps
     {
+        // The traps in the current zone (all its areas).
+        public static IList<Trap> InZone
+        {
+            get
+            {
+                var list = new List<Trap>();
+                var zone = Areas.CurrentZone();
+                if (zone == null) return list;
+                foreach (var area in zone.Areas)
+                    foreach (var e in area.Entities)
+                    {
+                        var c = e as c5x; var t = c == null ? null : c.GetAspect<b4h>() as ed2;
+                        if (t != null) list.Add(new Trap { Entity = c, Aspect = t });
+                    }
+                return list;
+            }
+        }
+
         // A character's trap detection score (the player's is then x1.25 against the trap's difficulty): each handler
         // gets the score so far and returns the new one. Also what the character sheet shows.
         public static readonly Hook<Func<Character, int, int>> ModifyDetection = new Hook<Func<Character, int, int>>("Traps.ModifyDetection");
@@ -68,7 +110,9 @@ namespace UnderRailWorks.Internal
         sealed class State { public ed2 Trap; public int Difficulty; public TrapDisarm Attempt; }
         // ed2.d: the disarm difficulty (a field and a method share the name).
         static readonly FieldInfo DisarmDifficulty = typeof(ed2).GetField("d", BindingFlags.Instance | BindingFlags.Public);
-        static int Get(ed2 t) { return (int)DisarmDifficulty.GetValue(t); }
+        internal static int Get(ed2 t) { return (int)DisarmDifficulty.GetValue(t); }
+        internal static int Detect(ed2 t) { return (int)DetectField.GetValue(t); }
+        internal static HashSet<Guid> Spotted(ed2 t) { return (HashSet<Guid>)SpottedBy.GetValue(t); }
         static void Set(ed2 t, int v) { DisarmDifficulty.SetValue(t, v); }
 
         static bool Disarming(ds __instance, ref dc4 __result, ref State __state)
@@ -80,7 +124,7 @@ namespace UnderRailWorks.Internal
                 var ctx = __instance.vg();
                 var target = ctx == null ? null : ctx.h() as c5x;
                 var actor = ctx == null ? null : ctx.q();
-                var trap = target == null ? null : target.GetAspect<ed2>();
+                var trap = target == null ? null : target.GetAspect<b4h>() as ed2;
                 var who = actor == null ? null : actor.GetAspect<amc>();
                 if (trap == null || who == null) return true;
                 var data = who.aa();
@@ -127,7 +171,7 @@ namespace UnderRailWorks.Internal
                 foreach (var tile in __0)
                     foreach (var e in tile.Entities)
                     {
-                        var c = e as c5x; var trap = c == null ? null : c.GetAspect<ed2>();
+                        var c = e as c5x; var trap = c == null ? null : c.GetAspect<b4h>() as ed2;
                         if (trap == null || ((HashSet<Guid>)SpottedBy.GetValue(trap)).Contains(id)) continue;
                         (__state ?? (__state = new List<KeyValuePair<c5x, ed2>>())).Add(new KeyValuePair<c5x, ed2>(c, trap));
                     }
@@ -145,33 +189,49 @@ namespace UnderRailWorks.Internal
                 {
                     if (!((HashSet<Guid>)SpottedBy.GetValue(kv.Value)).Contains(id)) continue;
                     if (who == null) who = Character.Of((b0b)__instance.a8());
-                    var e = new TrapSpotted { Character = who, Position = Character.Of(kv.Key).Position, DetectDifficulty = (int)DetectField.GetValue(kv.Value), DisarmDifficulty = Get(kv.Value) };
+                    var e = new TrapSpotted { Character = who, Position = Character.Of(kv.Key).Position, DetectDifficulty = (int)DetectField.GetValue(kv.Value), DisarmDifficulty = Get(kv.Value), Trap = new Trap { Entity = kv.Key, Aspect = kv.Value } };
                     GameEvents.TrapDetected.Run(h => h(e));
                 }
             }
             catch (Exception ex) { Log.Write("traps: " + ex.Message); }
         }
 
-        static void Detection(efk __0, ref int __result)
+        // The detection score qw.a(efk) is tiny, so the JIT inlines it into its callers: a postfix on it never ran for
+        // the real scan (measured: the player's score stayed 25 against a 50 trap), and invoking it by reflection runs
+        // the original. So its two callers (the scan amc.a(List<ak1>) and the character sheet dm1.b()) are rewritten to
+        // call Score, which takes the game's value and applies Traps.ModifyDetection once.
+        static readonly MethodInfo ScoreMethod = typeof(qw).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(efk) }, null);
+        public static int Score(efk data)
         {
-            if (!Traps.ModifyDetection.Any) return;
+            int v = (int)ScoreMethod.Invoke(null, new object[] { data });
+            if (!Traps.ModifyDetection.Any) return v;
             try
             {
-                var who = Combat.OfData(__0);
-                if (who == null) return;
-                int v = __result;
+                var who = Combat.OfData(data);
+                if (who == null) return v;
                 Traps.ModifyDetection.Run(h => v = h(who, v));
-                __result = Math.Max(0, v);
+                return Math.Max(0, v);
             }
-            catch (Exception ex) { Log.Write("traps: " + ex.Message); }
+            catch (Exception ex) { Log.Write("traps: " + ex.Message); return v; }
+        }
+        static IEnumerable<HarmonyLib.CodeInstruction> UseScore(IEnumerable<HarmonyLib.CodeInstruction> code, MethodBase __originalMethod)
+        {
+            var score = typeof(TrapHooks).GetMethod("Score", BindingFlags.Static | BindingFlags.Public);
+            int n = 0;
+            foreach (var i in code)
+            {
+                if (i.opcode == System.Reflection.Emit.OpCodes.Call && Equals(i.operand, ScoreMethod)) { i.operand = score; n++; }
+                yield return i;
+            }
+            if (n != 1) Log.Write("traps: " + __originalMethod.DeclaringType.Name + "." + __originalMethod.Name + ": the detection score call found " + n + " times");
         }
 
         internal static void Install(HarmonyLib.Harmony harmony)
         {
             Func<string, HarmonyLib.HarmonyMethod> m = n => new HarmonyLib.HarmonyMethod(typeof(TrapHooks).GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
             harmony.Patch(typeof(ds).GetMethod("fr", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(TimeSpan), typeof(TimeSpan) }, null), prefix: m("Disarming"), finalizer: m("Disarmed"));
-            harmony.Patch(typeof(qw).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(efk) }, null), postfix: m("Detection"));
-            harmony.Patch(typeof(amc).GetMethod("a", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(List<ak1>) }, null), prefix: m("Scanning"), postfix: m("Scanned"));
+            harmony.Patch(typeof(dm1).GetMethod("b", BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null), transpiler: m("UseScore"));
+            harmony.Patch(typeof(amc).GetMethod("a", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(List<ak1>) }, null), prefix: m("Scanning"), postfix: m("Scanned"), transpiler: m("UseScore"));
         }
     }
 }

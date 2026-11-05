@@ -151,7 +151,14 @@ public static class Combat
     {
         if (data == null) return null;
         b0b e;
-        if (owners.TryGetValue(data, out e)) return Character.Of(e);
+        if (owners.TryGetValue(data, out e))
+        {
+            // Still that character's entity, in the world? A zone change can give the same data a new entity (the
+            // player's, measured: the old one no longer counted as the player and every hook saw a stranger).
+            var c = e as c5x; var a = c == null ? null : c.GetAspect<amc>();
+            if (a != null && a.aa() == data && c.Area != null) return Character.Of(e);
+            owners.Remove(data);
+        }
         var zone = Areas.CurrentZone();
         if (zone == null) return null;
         foreach (var area in zone.Areas)

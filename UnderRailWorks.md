@@ -1282,15 +1282,23 @@ Disarmed, Recovered, Failed, CriticalFailure, worked out with the game's own com
 change is written into the trap (ed2.d) for the call and put back in a finalizer. Tested in game: detection (a scan
 every 2-3 s, the score changed); the disarm hooks install, but a disarm wasn't played through (laying a trap by input
 in a test run didn't work out). Wired in WorksTest (`wt.trapslot` puts a trap in a quick slot).
-`GameEvents.TrapDetected` (Nov 2026): a prefix/postfix on amc.a(List<ak1>) (a character's scan of nearby tiles) notes
-the traps on them that character hadn't spotted (ed2.a, the set of characters who know of it) and reports those it
-has after. Not seen firing in game yet: no test zone with a foreign trap. Tried, so nobody repeats it:
-- Q / clicking the utility slot then a tile in a headless run: the player walked instead of laying it.
-- `wt.npctrap`: a spawned neutral NPC given a bear trap and Items.Use: the use is queued but NPCs don't act out of
-  combat (`wt.npcinv`: still carrying it).
-- `wt.laytrap`: Items.Use on the player lays it (the bag loses it), but under the player and it's the player's own
-  (OwnTrap: always disarmed, never "detected").
-Next time: a save in a zone with map traps (the game's own, placed through c11.a with A_3 true), or combat.
+`GameEvents.TrapDetected`, `Traps.InZone` (Trap: Position, difficulties, KnownTo, Disarm). Tested through in game
+(Nov 2026): lu-b22u has 5 map traps (found by scanning the map files for "TA0:D"; `wt.b22` travels there, `wt.traps`
+lists them and teleports next to one); spotted by the player within a second, `wt.disarm` (Trap.Disarm) queued the
+disarm, TrapDisarming lowered the difficulty to 0 and TrapDisarmed said Disarmed; the trap was gone after. With the
+difficulty left at 50 (skill 16) a click on the trap gave CriticalFailure and the frag mine killed the character, as
+the game decides. What it took (each measured, don't redo):
+- The trap aspect is registered as its base type (SetAspect((b4h)ed2)): GetAspect<ed2>() finds nothing; use
+  GetAspect<b4h>() as ed2 (the game reads r.b is ed2).
+- qw.a(efk), the detection score, is inlined into the scan: a postfix never counted there, and invoking it by
+  reflection runs the original. Its two callers (amc.a(List<ak1>), dm1.b()) are transpiled to TrapHooks.Score.
+- **Combat.OfData cached a character's data -> its entity, and a zone change gives the player a new entity**: the
+  cache kept the old one, which no longer counted as the player, so every hook going through OfData (combat, stats,
+  detection) saw a stranger after travelling. The cache entry is now checked (same data, in an area) before use.
+- A click on a trap uses capability bb3 (dka: trap under the cursor); Trap.Disarm queues it with ecf.a + cp.b.
+  (bim.a, the usable-object path, returned true and did nothing.)
+- Laying a trap in a test doesn't work out: Q and the slot click walk; NPCs don't act out of combat; Items.Use lays
+  the player's own trap under the player.
 
 ## Reloading (Nov 2026)
 

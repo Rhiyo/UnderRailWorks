@@ -88,6 +88,39 @@ public sealed class WorksTest : WorksMod
             Log.Info("reload command: " + ok + (gun == null ? " (no gun found)" : ""));
             return "used: " + ok;
         });
+        // A zone with map traps (lu-b22u: 4 in its first level, found by scanning the map files for trap aspects).
+        Commands.Add(this, "wt.b22", "wt.b22: travel to lu-b22u (map traps)", args => "travel: " + World.Travel("lu-b22u", "FromNorth"));
+        Commands.Add(this, "wt.traps", "wt.traps: list the zone's traps; go next to the nearest one the player doesn't know", args =>
+        {
+            var p = World.Player; if (p == null) return "no player";
+            var traps = Traps.InZone;
+            foreach (var t in traps) Log.Info("trap at " + t.Position + ": detect " + t.DetectDifficulty + ", disarm " + t.DisarmDifficulty + ", known " + t.KnownTo(p) + ", distance " + (int)Microsoft.Xna.Framework.Vector2.Distance(new Microsoft.Xna.Framework.Vector2(t.Position.X, t.Position.Y), new Microsoft.Xna.Framework.Vector2(p.Position.X, p.Position.Y)));
+            var near = traps.Where(t => !t.KnownTo(p) && (int)t.Position.Z == (int)p.Position.Z).OrderBy(t => Microsoft.Xna.Framework.Vector2.Distance(new Microsoft.Xna.Framework.Vector2(t.Position.X, t.Position.Y), new Microsoft.Xna.Framework.Vector2(p.Position.X, p.Position.Y))).FirstOrDefault();
+            if (near == null) return traps.Count + " traps, none unknown here";
+            var tile = World.FreeTilesNear((int)near.Position.X, (int)near.Position.Y, 3).Skip(1).FirstOrDefault();
+            bool moved = p.TeleportTo(tile.X, tile.Y);
+            Log.Info("traps: " + traps.Count + "; next to the one at " + near.Position + ": " + moved);
+            return traps.Count + " traps; teleported " + moved;
+        });
+        int paceStep = 0;
+        Commands.Add(this, "wt.pace", "wt.pace: walk to another free tile near the nearest unknown trap (scans run while moving)", args =>
+        {
+            var p = World.Player; if (p == null) return "no player";
+            var t = Traps.InZone.Where(x => !x.KnownTo(p)).OrderBy(x => Microsoft.Xna.Framework.Vector2.Distance(new Microsoft.Xna.Framework.Vector2(x.Position.X, x.Position.Y), new Microsoft.Xna.Framework.Vector2(p.Position.X, p.Position.Y))).FirstOrDefault();
+            if (t == null) return "no unknown trap";
+            var tiles = World.FreeTilesNear((int)t.Position.X, (int)t.Position.Y, 3).Skip(1).ToList();
+            if (tiles.Count == 0) return "no room";
+            var to = tiles[(paceStep++ * 3) % tiles.Count];
+            return "walking to " + to + ": " + p.MoveTo(to.X, to.Y);
+        });
+        Commands.Add(this, "wt.disarm", "wt.disarm: the player disarms the nearest trap", args =>
+        {
+            var p = World.Player; if (p == null) return "no player";
+            var t = Traps.InZone.OrderBy(x => Microsoft.Xna.Framework.Vector2.Distance(new Microsoft.Xna.Framework.Vector2(x.Position.X, x.Position.Y), new Microsoft.Xna.Framework.Vector2(p.Position.X, p.Position.Y))).FirstOrDefault();
+            bool ok = t != null && t.Disarm(p);
+            Log.Info("disarm command: " + ok);
+            return "disarm: " + ok;
+        });
         Commands.Add(this, "wt.trapslot", "wt.trapslot: the bag's first trap into quick slot 1", args =>
         {
             var p = World.Player; var trap = p == null ? null : p.Inventory.Items.FirstOrDefault(i => i.Code != null && i.Code.StartsWith("trap."));
@@ -418,7 +451,7 @@ public sealed class WorksTest : WorksMod
         GameEvents.GameLoaded.Add(this, () => Log.Info("game loaded"));
         int trapScans = 0;
         Traps.ModifyDetection.Add(this, (who, score) => { if (who.IsPlayer && trapScans++ < 2) Log.Info("trap detection score " + score + " -> " + (score + 100)); return who.IsPlayer ? score + 100 : score; });
-        GameEvents.TrapDisarming.Add(this, d => Log.Info("disarming: skill " + d.Skill + " vs " + d.Difficulty + (d.OwnTrap ? " (own)" : "")));
+        GameEvents.TrapDisarming.Add(this, d => { if (Variables.Global.Get("wt_easy", false)) d.Difficulty = 0; Log.Info("disarming: skill " + d.Skill + " vs " + d.Difficulty + (d.OwnTrap ? " (own)" : "")); });
         GameEvents.TrapDisarmed.Add(this, r => Log.Info("disarmed: " + r.Outcome));
         GameEvents.Reloading.Add(this, r => Log.Info("reloading: " + r.Character.Name + " " + (r.Weapon == null ? "?" : r.Weapon.Name) + " with " + (r.Ammo == null ? "-" : r.Ammo.Name)));
         GameEvents.Reloaded.Add(this, r => Log.Info("reloaded: " + r.Character.Name));

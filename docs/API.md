@@ -1356,6 +1356,16 @@ What a tile holds, as a map would show it.
 - `static string Language` — The game's language: "english", or its Localization folder name (e.g. "srpski").
 - `static string Get(WorksMod mod, string key, params object[] args)`
 
+## Trap  _(class, Traps.cs)_
+
+A trap in the world (laid by a character or placed in the map).
+
+- `Vector3 Position`
+- `int DetectDifficulty`
+- `int DisarmDifficulty`
+- `bool KnownTo(Character c)` — Has this character spotted it (or laid it).
+- `bool Disarm(Character who)` — The character tries to disarm it, as clicking the trap does: the game's disarm capability (bb3), queued as the character's next action (it walks there first; the game's checks and time). False if it can't be queued.
+
 ## TrapDisarm  _(class, Traps.cs)_
 
 A disarm attempt about to be decided: change Difficulty for this attempt only (the trap keeps its own), or Cancel (nothing happens; the action ends).
@@ -1376,6 +1386,7 @@ A disarm attempt about to be decided: change Difficulty for this attempt only (t
 
 ## Traps  _(class, Traps.cs)_
 
+- `static IList<Trap> InZone` — The traps in the current zone (all its areas).
 - `static readonly Hook<Func<Character, int, int>> ModifyDetection = new Hook<Func<Character, int, int>>("Traps.ModifyDetection")` — A character's trap detection score (the player's is then x1.25 against the trap's difficulty): each handler gets the score so far and returns the new one. Also what the character sheet shows.
 
 ## TrapSpotted  _(class, Traps.cs)_
@@ -1386,6 +1397,7 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `Vector3 Position`
 - `int DetectDifficulty`
 - `int DisarmDifficulty`
+- `Trap Trap`
 
 ## Triggers  _(class, Interactions.cs)_
 
