@@ -595,6 +595,18 @@ share a cached definition per path and save only the path; crafted items (and `c
 - Tested: a defined "Works Stim" (name, description, value 1234, weight) given and shown; the stock bandage renamed
   and revalued; a tooltip line on both.
 
+## Music and sounds (Nov 2026)
+
+- `Music.Replace(mod, id, ogg)`, `Music.Add(mod, id, ogg)` (the song table built in `b6d.c()`: `za.SourcePath` may
+  be absolute), `Music.Override(mod, () => id or null)` (prefix on `c4m.ai6()`, the per-frame choice; ours is marked
+  `works:<id>` in its current choice; the game takes over again when no mod answers), `Music.Songs`, `Music.Current`.
+- `Sound.Replace(mod, id, wav)` / `Add` (the sound table: `d6c`'s SoundEffect set to the WAV's), `Sound.Play(id)`,
+  `Sound.Remap(old, new)` (prefix on `b6d.aeb`), `Sound.Ids` (638).
+- Trap hit while building it: `"x".StartsWith("\u0001")` is true under ICU culture comparison (control characters
+  are ignored): the marker cleared the game's choice every frame and the menu music restarted ~50 times a second.
+  Always compare game strings Ordinal.
+- Tested: the mod's OGG played by the override, the area music back when it stopped.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

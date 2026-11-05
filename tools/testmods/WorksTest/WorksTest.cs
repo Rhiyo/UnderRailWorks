@@ -14,6 +14,7 @@ public sealed class WorksTest : WorksMod
     int detections, instants, suspicions;
     bool failNow;
     string stimPath;
+    bool musicOn;
     TimeSpan gameTime;
     bool blockUse;
     public override void PostLoad() { Log.Info("cross-mod call: " + Mods.Call("WorksTest", "Echo", "hi") + ", typed: " + Mods.Api<TestApi>("WorksTest").Echo("there")); }
@@ -25,6 +26,8 @@ public sealed class WorksTest : WorksMod
         GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
         Items.EditDefinition(this, "consumables\\medicine\\bandage", d => { d.Name = "Field Bandage"; d.Value = 99; });
         stimPath = Items.Define(this, "stim", "consumables\\medicine\\bandage", d => { d.Name = "Works Stim"; d.Description = "A test item defined by a mod."; d.Value = 1234; d.Weight = 0.1; });
+        Music.Add(this, "workstest", "music/test.ogg");
+        Music.Override(this, () => musicOn ? "workstest" : null);
         Items.ModifyTooltip(this, (item, tip) => { tip.AddSeparator(); tip.AddValue("Works", item.Code + (tip.InTrade ? " (trade)" : "")); });
         Log.Info("translation: " + T("hello", "player") + " / missing: " + T("nope"));
         Mods.Provide(this, new TestApi());
@@ -105,6 +108,7 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.D) && Input.Down(Keys.LeftControl)) { int c = SaveData.Get("counter", 0) + 1; SaveData.Set("counter", c); SaveData.Set("list", new System.Collections.Generic.List<object> { "a", 2.0, true }); Log.Info("save data counter = " + c); }
             if (Input.Pressed(Keys.F) && Input.Down(Keys.LeftControl)) failNow = true;
             if (Input.Pressed(Keys.N) && Input.Down(Keys.LeftControl)) Log.Info("stim: " + World.Player.Inventory.Add(stimPath, 2) + "; def " + Items.Definition(stimPath).Name + " " + Items.Definition(stimPath).Value + "; bandage " + Items.Definition("consumables\\medicine\\bandage").Name);
+            if (Input.Pressed(Keys.M) && Input.Down(Keys.LeftControl)) { musicOn = !musicOn; Log.Info("mod music " + musicOn + "; songs " + Music.Songs.Count + ", sounds " + Sound.Ids.Count); }
             if (Input.Pressed(Keys.G) && Input.Down(Keys.LeftControl)) Log.Info("clock: world " + GameClock.WorldTime + ", turn " + GameClock.TurnTime + " (" + GameClock.Turns.ToString("0.0") + " turns), paused " + GameClock.Paused + ", ticks summed " + gameTime);
             if (Input.Pressed(Keys.U) && Input.Down(Keys.LeftControl)) { blockUse = !blockUse; Log.Info("block item use: " + blockUse); }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());

@@ -76,6 +76,8 @@ public sealed class Hook<T> : HookBase<T> where T : class
 {
     internal Hook(string name) : base(name) { }
     internal void Run(Action<T> call) { Each(h => { call(h); return false; }); }
+    // Handlers in turn until one returns true (for "first answer wins" hooks).
+    internal bool RunUntil(Func<T, bool> call) { return Each(call); }
 }
 
 // The first handler that returns true replaces the game's step.
