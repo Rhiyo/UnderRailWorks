@@ -826,6 +826,7 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `Version Works`
 - `WorksMod Instance`
 - `bool Enabled`
+- `bool StartsOff` — mod.json "startsOff": true: switched off until the player switches it on (gameplay rules, difficulty changes).
 - `bool Loaded`
 - `List<ModDependency> Requires`
 - `List<ModDependency> Optional`

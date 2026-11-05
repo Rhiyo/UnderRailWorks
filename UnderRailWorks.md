@@ -814,6 +814,12 @@ crafting passes the stock loader.
 - WorksTest's autorun.txt is also picked up mid-game (checked every second): test steps after the load without the
   console.
 
+## mod.json "startsOff" (Nov 2026)
+
+`"startsOff": true`: a mod mods.ini doesn't name yet starts switched off (written as `<id>=0`, logged); the player
+switches it on in the Mods tab. For gameplay rules a player should choose (Hunger has it). Tested: Hunger removed from
+mods.ini -> "starts switched off", Hunger=0 written.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

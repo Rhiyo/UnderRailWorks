@@ -48,6 +48,8 @@ public sealed class ModInfo
     public Version Works { get; set; }
     public WorksMod Instance { get; set; }
     public bool Enabled { get; set; }
+    // mod.json "startsOff": true: switched off until the player switches it on (gameplay rules, difficulty changes).
+    public bool StartsOff { get; internal set; }
     public bool Loaded { get; set; }
     public List<ModDependency> Requires { get; set; } = new List<ModDependency>();
     public List<ModDependency> Optional { get; set; } = new List<ModDependency>();
@@ -88,9 +90,13 @@ public static class ModLoader
     public static void Init()
     {
         if (!Directory.Exists(ModsFolder)) return;
-        var off = Disabled();
+        HashSet<string> listed;
+        var off = Disabled(out listed);
         var all = Directory.GetDirectories(ModsFolder).OrderBy(d => d, StringComparer.OrdinalIgnoreCase).Select(Read).ToList();
         foreach (var m in all) m.Enabled = !off.Contains(m.Id);
+        // "startsOff" mods (gameplay changes a player should choose) that mods.ini doesn't name yet: off, written down
+        // so the Mods tab and the file show it.
+        foreach (var m in all.Where(m => m.StartsOff && !listed.Contains(m.Id))) { m.Enabled = false; SetEnabled(m.Id, false); Log.Write("mods: " + m.Id + " starts switched off (switch it on in Options -> Mods)"); }
         if (all.Count == 0) return;
         if (IntPtr.Size != 8)
         {
@@ -173,6 +179,7 @@ public static class ModLoader
             m.SortBefore = list("sortBefore");
             m.Incompatible = list("incompatible").Select(ModDependency.Parse).ToList();
             m.Homepage = str("homepage");
+            m.StartsOff = str("startsOff") != null && str("startsOff").Equals("true", StringComparison.OrdinalIgnoreCase);
             m.Issues = str("issues");
             m.License = str("license");
             m.Game = str("game");     // the game versions it was made for, e.g. "1.3.1.2" (shown, not enforced)
@@ -250,9 +257,10 @@ public static class ModLoader
         return order;
     }
 
-    static HashSet<string> Disabled()
+    static HashSet<string> Disabled(out HashSet<string> listed)
     {
         var off = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        listed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         try
         {
             if (File.Exists(ListPath))
@@ -262,6 +270,7 @@ public static class ModLoader
                     int eq = line.IndexOf('=');
                     if (line.Length == 0 || line[0] == ';' || eq < 0) continue;
                     string v = line.Substring(eq + 1).Trim();
+                    listed.Add(line.Substring(0, eq).Trim());
                     if (v == "0" || v.Equals("off", StringComparison.OrdinalIgnoreCase)) off.Add(line.Substring(0, eq).Trim());
                 }
         }
