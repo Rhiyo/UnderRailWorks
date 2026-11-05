@@ -625,6 +625,19 @@ args => reply)` is answered in a prefix on `bdg.c(string)` before the game's tab
 - Tested: the test merchant (store bigbret) sold the mod's Works Stim x3 and a JKK jacket; a spawned rathound's loot
   had the rule's Fabric Scraps x7.
 
+## Mod status effects (Nov 2026)
+
+`ModStatuses.Define(mod, id, name, description, icon)` -> `ModStatus` (`Apply(who, turns)`, `Has`, `Remove`,
+`OnTick(who, stacks)`; code `mod:<mod>:<id>`). A food buff (`c9i`, whose name, icon and description are data) with its
+code field rewritten. Ticks: postfix `els.o()` (an owner's combat turn) and `els.e(double)` (true = a tick, every 5 s
+outside combat). **Never in a save file:** Works takes every `mod:` effect out of the player's and the loaded
+characters' effect lists (found by code: the game applies a copy of the effect it is given) before `d6f.b` (global)
+and `bl1.yp` (zone) write, puts them back after, records owner / time left / stacks in UnderRailWorks.json at
+`d6f.arg`, and re-applies them after a load. Icons: stock names such as `Status.Poison`, `Status.PsiBoost`,
+`Status.5`. Tested: shown by the portrait, ticking, absent from global.dat and chunk0.dat, recorded in the sidecar,
+restored after loading the quicksave; the save passed the stock loader. Field-name trap again: `br5.m_c` is `c` in
+the binary (the decompiler adds `m_` on clashes); every reflected field needs the fallback.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

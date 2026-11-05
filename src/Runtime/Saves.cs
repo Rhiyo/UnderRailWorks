@@ -96,6 +96,7 @@ static class Saves
 
     static void ZoneStoring(c1a __1, out List<KeyValuePair<c5x, aud>> __state)
     {
+        Run("taking mod statuses out", ModStatusStore.Strip);
         List<KeyValuePair<c5x, aud>> removed = null;
         Run("removing placed characters", () => removed = World.RemovePlaced(__1));
         __state = removed;
@@ -104,6 +105,7 @@ static class Saves
 
     static Exception ZoneStored(bool __2, List<KeyValuePair<c5x, aud>> __state, Exception __exception)
     {
+        Run("putting mod statuses back", ModStatusStore.PutBack);
         if (__state != null && __state.Count > 0)
         {
             if (!__2) Run("putting placed characters back", () => World.PutBack(__state));     // a save: the zone stays loaded
@@ -113,7 +115,7 @@ static class Saves
     }
 
     // While a save loads, ari loads the zone (arp) before Works restores mod quests: nothing zone-related before its end.
-    static bool loading;
+    static bool loading, statusPending;
 
     // The player is placed after the zone loads (ars, after arp; for a save, at its end): the zone's placements and
     // event wait for the first update with the zone and the player there.
@@ -132,6 +134,7 @@ static class Saves
         if (Areas.CurrentZone() == null || World.Player == null || World.Player.Area == null) return;
         zonePending = false;
         ZoneReady();
+        if (statusPending) { statusPending = false; Run("restoring mod statuses", ModStatusStore.Restore); }
     }
 
     static void ZoneReady()
@@ -150,6 +153,7 @@ static class Saves
 
     static void GlobalWriting(out List<Taken> __state)
     {
+        Run("taking mod statuses out", ModStatusStore.Strip);
         var taken = new List<Taken>();
         __state = taken;
         Run("keeping mod quests out of the save", () =>
@@ -170,6 +174,7 @@ static class Saves
 
     static Exception GlobalWritten(List<Taken> __state, Exception __exception)
     {
+        Run("putting mod statuses back", ModStatusStore.PutBack);
         if (__state != null) Run("putting mod quests back", () => { foreach (var t in __state) t.List.Insert(Math.Min(t.Index, t.List.Count), t.Entry); });
         return __exception;
     }
@@ -199,7 +204,7 @@ static class Saves
 
     // --- Lifecycle -----------------------------------------------------------------------------------------------
 
-    static void SaveStarting(string __0) { Log.Write("saves: saving " + __0); if (GameEvents.Saving.Any) GameEvents.Saving.Run(h => h(__0)); }
+    static void SaveStarting(string __0) { Run("recording mod statuses", ModStatusStore.Record); Log.Write("saves: saving " + __0); if (GameEvents.Saving.Any) GameEvents.Saving.Run(h => h(__0)); }
     static void SaveDone(string __0) { Run("writing mod save data", () => SaveFiles.Save(__0)); Run("re-applying placements", World.ReapplyAll); if (GameEvents.Saved.Any) GameEvents.Saved.Run(h => h(__0)); }
     static void NewGameCreated() { SaveFiles.NewGame(); World.ForgetAll(); if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); }
 
@@ -210,6 +215,7 @@ static class Saves
         loading = false;
         if (__exception != null) return __exception;
         Run("restoring mod quests", RestoreQuests);
+        statusPending = true;
         Run("level", () => { var p = World.Player; ProgressHooks.Known(p == null || !p.IsCharacter ? 0 : p.Level); });
         zonePending = true;
         if (GameEvents.GameLoaded.Any) GameEvents.GameLoaded.Run(h => h());

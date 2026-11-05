@@ -140,7 +140,7 @@ public static class Hud
             sb.Append(part + "=" + r.X + "," + r.Y + " " + r.Width + "x" + r.Height + "; ");
         }
         var text = sb.ToString();
-        if (text != lastObstacles) { lastObstacles = text; Log.Write("hud: drawn parts " + (Root == null ? "" : Root.Width + "x" + Root.Height + ": ") + text); }
+        if (text != lastObstacles && FixSettings.Raw("HudDebug") == "1") { lastObstacles = text; Log.Write("hud: drawn parts " + (Root == null ? "" : Root.Width + "x" + Root.Height + ": ") + text); }
         return list;
     }
 

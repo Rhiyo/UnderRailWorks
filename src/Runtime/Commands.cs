@@ -25,6 +25,8 @@ namespace UnderRailWorks
 
         // Opens the game's console (as its ` key does; in game only).
         public static void OpenConsole() { var hud = Hud.Current; if (hud != null) hud.k(); }
+        public static void CloseConsole() { var hud = Hud.Current; if (hud != null) CloseField.Invoke(hud, null); }
+        static readonly MethodInfo CloseField = typeof(ci3).GetMethod("j", BindingFlags.Instance | BindingFlags.Public, null, Type.EmptyTypes, null);
 
         // Prints a line in the console.
         public static void Print(string text) { try { bdg.a("{0}", text); } catch { } }

@@ -478,6 +478,7 @@ static class UiHooks
         Group("console commands", () => CommandHooks.Install(harmony));
         Group("stores", () => StoreHooks.Install(harmony));
         Group("loot rules", () => LootHooks.Install(harmony));
+        Group("mod statuses", () => ModStatusStore.Install(harmony));
         Group("world hit test with insets", () => WorldHitTest.Install(harmony));
         Log.Write("ui: hooks in place");
     }

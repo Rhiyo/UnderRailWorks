@@ -15,6 +15,7 @@ public sealed class WorksTest : WorksMod
     bool failNow;
     string stimPath;
     bool musicOn;
+    ModStatus glow;
     TimeSpan gameTime;
     bool blockUse;
     public override void PostLoad() { Log.Info("cross-mod call: " + Mods.Call("WorksTest", "Echo", "hi") + ", typed: " + Mods.Api<TestApi>("WorksTest").Echo("there")); }
@@ -29,6 +30,9 @@ public sealed class WorksTest : WorksMod
         Stores.AddRestock(this, "bigbret", stimPath, 3);
         Stores.AddOnce(this, "bigbret", "armor\\jkktacticalvest", 1);
         Loot.Add(this, (who, box) => who != null && who.Name.Contains("Rathound"), "components\\scraps\\fabricscraps", 1.0, 7);
+        glow = ModStatuses.Define(this, "glow", "Works Glow", "A test status from a mod: +1 to a counter each turn.", "Status.PsiBoost");
+        Commands.Add(this, "wt.glow", "wt.glow: the test status on the player", args => { glow.Apply(World.Player, 40); Commands.CloseConsole(); return "glow on: " + glow.Has(World.Player); });
+        glow.OnTick += (who, stacks) => Log.Info("glow tick on " + who.Name + " (" + stacks + ")");
         Music.Add(this, "workstest", "music/test.ogg");
         Music.Override(this, () => musicOn ? "workstest" : null);
         Items.ModifyTooltip(this, (item, tip) => { tip.AddSeparator(); tip.AddValue("Works", item.Code + (tip.InTrade ? " (trade)" : "")); });
@@ -114,6 +118,7 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.N) && Input.Down(Keys.LeftControl)) Log.Info("stim: " + World.Player.Inventory.Add(stimPath, 2) + "; def " + Items.Definition(stimPath).Name + " " + Items.Definition(stimPath).Value + "; bandage " + Items.Definition("consumables\\medicine\\bandage").Name);
             if (Input.Pressed(Keys.M) && Input.Down(Keys.LeftControl)) { musicOn = !musicOn; Log.Info("mod music " + musicOn + "; songs " + Music.Songs.Count + ", sounds " + Sound.Ids.Count); }
             if (Input.Pressed(Keys.F9) && Input.Down(Keys.LeftControl)) Commands.OpenConsole();
+            if (Input.Pressed(Keys.Home) && Input.Down(Keys.LeftControl)) { glow.Apply(World.Player, 40); Log.Info("glow on: " + glow.Has(World.Player)); }
             if (Input.Pressed(Keys.G) && Input.Down(Keys.LeftControl)) Log.Info("clock: world " + GameClock.WorldTime + ", turn " + GameClock.TurnTime + " (" + GameClock.Turns.ToString("0.0") + " turns), paused " + GameClock.Paused + ", ticks summed " + gameTime);
             if (Input.Pressed(Keys.U) && Input.Down(Keys.LeftControl)) { blockUse = !blockUse; Log.Info("block item use: " + blockUse); }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
