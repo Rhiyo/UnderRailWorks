@@ -148,7 +148,7 @@ startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
 
 ## Next
 
-- [ ] Fewer allocations per world layer (the wrappers: ~13 MB/s with the keyhole on); a struct or reused view types.
+- [~] Fewer allocations per world layer: Hook dispatch done (143 -> 124 MB/s); the Layer wrappers can't be reused (UnderRailFixes keeps them for the keyhole redraw).
 - [x] Followers through zone changes (Follow(..., travels: true)).
 - [ ] AI weapon choice / reload nodes (not traced).
 - [x] Map markers from mods (Markers; the Minimap draws them). Journal entries: still open.

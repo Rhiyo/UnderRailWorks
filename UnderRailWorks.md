@@ -883,6 +883,8 @@ export follows the save rules: the stock game must read it.
 - Tested: a player with a mod feat and a mod status exported: the .char has the feat's key, no mod status, no Works
   types, and the stock game reads it (`asd.char -> ajk`); New Game -> Import -> the mod feat on the Feats tab, and the
   new game started with the exported CharacterData. Not handled: deleting an export in the dialog leaves its side file.
+  Later, with mod skills: Survival 12 and Scavenging 30 exported (one side file, two mods), imported into a new game:
+  Survival 12 there.
 
 ## Stat rules: Stats.Modify, skill weights, the game's feats (Nov 2026)
 
