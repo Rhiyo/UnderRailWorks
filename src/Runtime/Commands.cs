@@ -1,0 +1,97 @@
+// UnderRailWorks: commands in the game's developer console (the ` key in game; SMAPI and tModLoader have their own
+// consoles, UnderRail has one built in). The game's side: the console (ci3.k() opens j9) runs a line with bdg.c(line),
+// which looks the first word up in its command table; Works answers its own and the mods' commands first, in a prefix,
+// and prints with the console's bdg.a(format) (markup: [cmd] [val] [param] [war] [error]).
+//   Commands.Add(this, "heal", "heal [amount]: heals the player", args => { ...; return "healed"; });
+// Works' own: works (lists mods' commands), works.give <item path> [count], works.spawn <blueprint> [hostile],
+// works.var <name> [value], works.mods, works.content (writes UnderRailWorks-content.txt).
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using UnderRailWorks.Internal;
+
+namespace UnderRailWorks
+{
+    public static class Commands
+    {
+        sealed class Command { public string Mod, Name, Help; public Func<string[], string> Run; }
+        static readonly Dictionary<string, Command> all = new Dictionary<string, Command>(StringComparer.OrdinalIgnoreCase);
+
+        // A console command: run gets the words after the name (quotes keep spaces) and returns a line to print (or
+        // null). Name it after the mod to avoid clashes ("mymod.heal"); the game's own commands win otherwise.
+        public static void Add(WorksMod mod, string name, string help, Func<string[], string> run) { Add(mod.Id, name, help, run); }
+        internal static void Add(string mod, string name, string help, Func<string[], string> run) { all[name] = new Command { Mod = mod, Name = name, Help = help, Run = run }; }
+
+        // Opens the game's console (as its ` key does; in game only).
+        public static void OpenConsole() { var hud = Hud.Current; if (hud != null) hud.k(); }
+
+        // Prints a line in the console.
+        public static void Print(string text) { try { bdg.a("{0}", text); } catch { } }
+
+        internal static bool Run(string line)
+        {
+            var words = Split(line);
+            Command c;
+            if (words.Count == 0 || !all.TryGetValue(words[0], out c)) return false;
+            try { var r = c.Run(words.Skip(1).ToArray()); if (r != null) Print(r); }
+            catch (Exception ex) { Print("[error]" + c.Name + " failed: " + ex.Message); ModErrors.Report(c.Mod, "command " + c.Name, ex); }
+            return true;
+        }
+
+        static List<string> Split(string line)
+        {
+            var r = new List<string>(); var cur = new System.Text.StringBuilder(); bool q = false, any = false;
+            foreach (var ch in line ?? "")
+            {
+                if (ch == '"') { q = !q; any = true; continue; }
+                if (char.IsWhiteSpace(ch) && !q) { if (any) r.Add(cur.ToString()); cur.Clear(); any = false; continue; }
+                cur.Append(ch); any = true;
+            }
+            if (any) r.Add(cur.ToString());
+            return r;
+        }
+
+        internal static void Builtins()
+        {
+            Add("UnderRailWorks", "works", "works: the commands mods added", a => string.Join("\n", all.Values.OrderBy(x => x.Name).Select(x => "[cmd]" + x.Name + "[/cmd]  " + x.Help + "  (" + x.Mod + ")")));
+            Add("UnderRailWorks", "works.give", "works.give <item path> [count]: into the player's bag", a =>
+            {
+                if (a.Length == 0) return "[error]works.give <item path> [count]";
+                int n = a.Length > 1 ? int.Parse(a[1]) : 1;
+                return World.Player.Inventory.Add(a[0], n) ? "gave " + n + " " + (Items.Name(a[0]) ?? a[0]) : "[error]no item " + a[0];
+            });
+            Add("UnderRailWorks", "works.spawn", "works.spawn <blueprint> [hostile]: next to the player (gone when you leave)", a =>
+            {
+                if (a.Length == 0) return "[error]works.spawn <blueprint> [hostile]";
+                var p = World.Player.Position;
+                var t = World.FreeTilesNear((int)p.X, (int)p.Y, 4).Skip(2).FirstOrDefault();
+                var c = World.Spawn(a[0], t.X, t.Y, a.Length > 1 && a[1].StartsWith("h", StringComparison.OrdinalIgnoreCase));
+                return c == null ? "[error]couldn't spawn " + a[0] : "spawned " + c.Name + " at " + t.X + "," + t.Y;
+            });
+            Add("UnderRailWorks", "works.var", "works.var <name> [value]: read or write a global variable (saved)", a =>
+            {
+                if (a.Length == 0) return "[error]works.var <name> [value]";
+                if (a.Length > 1) { int i; bool b; if (int.TryParse(a[1], out i)) Variables.Global.Set(a[0], i); else if (bool.TryParse(a[1], out b)) Variables.Global.Set(a[0], b); else Variables.Global.Set(a[0], a[1]); }
+                return a[0] + " = " + (Variables.Global.Get<object>(a[0], null) ?? "(unset)");
+            });
+            Add("UnderRailWorks", "works.mods", "works.mods: the mods and their state", a => string.Join("\n", ModLoader.Mods.Select(m => m.Name + " " + m.VersionText + ": " + (m.Loaded ? "loaded" : m.Enabled ? "not loaded (" + m.Error + ")" : "off") + (m.Failures > 0 ? ", " + m.Failures + " errors" : ""))));
+            Add("UnderRailWorks", "works.content", "works.content: writes UnderRailWorks-content.txt (item paths, blueprints, stores...)", a => "written: " + ContentIndex.Write());
+        }
+    }
+}
+
+namespace UnderRailWorks.Internal
+{
+    static class CommandHooks
+    {
+        static bool Line(string __0) { try { return !Commands.Run(__0); } catch { return true; } }
+
+        internal static void Install(HarmonyLib.Harmony harmony)
+        {
+            Commands.Builtins();
+            var run = typeof(bdg).GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).First(m => m.Name == "c" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == typeof(string));
+            harmony.Patch(run, prefix: new HarmonyLib.HarmonyMethod(typeof(CommandHooks).GetMethod("Line", BindingFlags.Static | BindingFlags.NonPublic)));
+        }
+    }
+}

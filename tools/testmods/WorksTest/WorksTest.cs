@@ -64,6 +64,7 @@ public sealed class WorksTest : WorksMod
         GameEvents.Unequipped.Add(this, e => Log.Info("unequipped " + e.Item.Name + " from " + e.Character.Name));
         GameEvents.Update.Add(this, seconds =>
         {
+            if (Input.Typing) return;     // the console or a text box has the keyboard
             var p = World.Player;
             if (p == null || !Input.Pressed(Keys.F10)) return;
             p.Inventory.AddMoney(20);
@@ -109,6 +110,7 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.F) && Input.Down(Keys.LeftControl)) failNow = true;
             if (Input.Pressed(Keys.N) && Input.Down(Keys.LeftControl)) Log.Info("stim: " + World.Player.Inventory.Add(stimPath, 2) + "; def " + Items.Definition(stimPath).Name + " " + Items.Definition(stimPath).Value + "; bandage " + Items.Definition("consumables\\medicine\\bandage").Name);
             if (Input.Pressed(Keys.M) && Input.Down(Keys.LeftControl)) { musicOn = !musicOn; Log.Info("mod music " + musicOn + "; songs " + Music.Songs.Count + ", sounds " + Sound.Ids.Count); }
+            if (Input.Pressed(Keys.F9) && Input.Down(Keys.LeftControl)) Commands.OpenConsole();
             if (Input.Pressed(Keys.G) && Input.Down(Keys.LeftControl)) Log.Info("clock: world " + GameClock.WorldTime + ", turn " + GameClock.TurnTime + " (" + GameClock.Turns.ToString("0.0") + " turns), paused " + GameClock.Paused + ", ticks summed " + gameTime);
             if (Input.Pressed(Keys.U) && Input.Down(Keys.LeftControl)) { blockUse = !blockUse; Log.Info("block item use: " + blockUse); }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());

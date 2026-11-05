@@ -475,6 +475,7 @@ static class UiHooks
         Group("clock, items, crafting, stealing", () => ActivityHooks.Install(harmony));
         Group("item definitions and tooltips", () => ItemHooks.Install(harmony));
         Group("music and sounds", () => AudioHooks.Install(harmony));
+        Group("console commands", () => CommandHooks.Install(harmony));
         Group("world hit test with insets", () => WorldHitTest.Install(harmony));
         Log.Write("ui: hooks in place");
     }

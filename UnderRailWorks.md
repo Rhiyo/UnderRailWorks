@@ -607,6 +607,14 @@ share a cached definition per path and save only the path; crafted items (and `c
   Always compare game strings Ordinal.
 - Tested: the mod's OGG played by the override, the area music back when it stopped.
 
+## Console commands (Nov 2026)
+
+The game has a developer console in the release build (the ` key in game: `ci3.k()` opens `j9`; Enter runs
+`bdg.c(line)`; output `bdg.a(format)` with [cmd] [val] [param] [war] [error] markup). `Commands.Add(mod, name, help,
+args => reply)` is answered in a prefix on `bdg.c(string)` before the game's table; `Commands.Print`,
+`Commands.OpenConsole()`. Built in: `works`, `works.give <path> [n]`, `works.spawn <blueprint> [hostile]`,
+`works.var <name> [value]`, `works.mods`, `works.content`. Tested: works.var and works.mods typed in the console.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
