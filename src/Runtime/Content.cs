@@ -171,6 +171,9 @@ public static class Text
     // The game's text for "category/key" (e.g. "quests/jonaswatch", "ui/..."), in the player's language; "" if none.
     public static string Get(string path) { return qv.b(path) ?? ""; }
 
+    // "1 turn", "3 turns": a count with its noun, plural with an s unless given (Count(n, "enemy", "enemies")).
+    public static string Count(int n, string one, string many = null) { return n + " " + (n == 1 || n == -1 ? one : many ?? one + "s"); }
+
     // Text a mod adds (or replaces), in every language: "category/key". In memory only.
     public static void Set(string category, string key, string text) { added[category + "/" + key] = text; }
 

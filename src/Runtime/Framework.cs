@@ -325,6 +325,20 @@ namespace UnderRailWorks.Internal
             if (GameEvents.CharacterImported.Any) GameEvents.CharacterImported.Run(h => h());
         }
 
+        // The import dialog's delete, confirmed (e7u.b.g0 "Y": m_b the .char path): the side file goes with it.
+        static readonly Type DeleteConfirm = typeof(e7u).GetNestedType("b", BindingFlags.NonPublic);
+        static readonly FieldInfo DeletePath = DeleteConfirm == null ? null : DeleteConfirm.GetField("m_b", BindingFlags.Instance | BindingFlags.NonPublic) ?? DeleteConfirm.GetField("b", BindingFlags.Instance | BindingFlags.NonPublic);
+        static void Deleted(object __instance, string A_0)
+        {
+            if (A_0 != "Y" || DeletePath == null) return;
+            try
+            {
+                var path = DeletePath.GetValue(__instance) as string;
+                if (path != null && !File.Exists(path) && File.Exists(Side(path))) { File.Delete(Side(path)); Log.Write("export: deleted " + Path.GetFileName(Side(path)) + " with its character"); }
+            }
+            catch (Exception ex) { Log.Write("export: " + ex.Message); }
+        }
+
         internal static void Install(HarmonyLib.Harmony harmony)
         {
             const BindingFlags any = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
@@ -332,6 +346,8 @@ namespace UnderRailWorks.Internal
             harmony.Patch(typeof(ajk).GetMethod("b", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null), prefix: m("Writing"), finalizer: m("Written"));
             harmony.Patch(typeof(ajk).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(string) }, null), postfix: m("Read"));
             harmony.Patch(typeof(iw).GetMethods(any).First(x => x.Name == "a" && x.GetParameters().Length == 2 && x.GetParameters()[1].ParameterType == typeof(el5)), postfix: m("Chosen"));
+            if (DeleteConfirm != null) harmony.Patch(DeleteConfirm.GetMethod("g0", BindingFlags.Instance | BindingFlags.Public), postfix: m("Deleted"));
+            else Log.Write("export: the delete confirmation isn't where expected; side files stay after a delete");
         }
     }
 }

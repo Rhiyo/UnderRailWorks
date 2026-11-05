@@ -27,6 +27,9 @@ public static partial class GameEvents
     public static readonly Hook<Action> NewGame = new Hook<Action>("NewGame");
     // A save was loaded (the game state, the current zone and the player are there).
     public static readonly Hook<Action> GameLoaded = new Hook<Action>("GameLoaded");
+    // Another game is now the current one: after NewGame and after GameLoaded. Reset a mod's per-game state here (one
+    // handler instead of the same reset on both; SaveData already belongs to the new game).
+    public static readonly Hook<Action> GameStarted = new Hook<Action>("GameStarted");
     // A zone was loaded (entering it, or loading a save), with the player in it: its id (World.ZoneId) and whether
     // this is the player's first visit.
     public static readonly Hook<Action<string, bool>> ZoneLoaded = new Hook<Action<string, bool>>("ZoneLoaded");
@@ -220,7 +223,7 @@ static class Saves
 
     static void SaveStarting(string __0) { Run("recording mod statuses", ModStatusStore.Record); Log.Write("saves: saving " + __0); if (GameEvents.Saving.Any) GameEvents.Saving.Run(h => h(__0)); }
     static void SaveDone(string __0) { Run("writing mod save data", () => SaveFiles.Save(__0)); Run("re-applying placements", World.ReapplyAll); if (GameEvents.Saved.Any) GameEvents.Saved.Run(h => h(__0)); }
-    static void NewGameCreated() { SaveFiles.NewGame(); World.ForgetAll(); Run("imported character data", CharacterFiles.NewGame); if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); }
+    static void NewGameCreated() { SaveFiles.NewGame(); World.ForgetAll(); Run("imported character data", CharacterFiles.NewGame); if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); if (GameEvents.GameStarted.Any) GameEvents.GameStarted.Run(h => h()); }
 
     static void Loading(string __0) { loading = true; CharacterFiles.Forget(); SaveFiles.Load(__0); World.ForgetAll(); Log.Write("saves: loading " + __0); }
 
@@ -233,6 +236,7 @@ static class Saves
         Run("level", () => { var p = World.Player; ProgressHooks.Known(p == null || !p.IsCharacter ? 0 : p.Level); });
         zonePending = true;
         if (GameEvents.GameLoaded.Any) GameEvents.GameLoaded.Run(h => h());
+        if (GameEvents.GameStarted.Any) GameEvents.GameStarted.Run(h => h());
         Markers.Raise();     // another game's markers
         return null;
     }

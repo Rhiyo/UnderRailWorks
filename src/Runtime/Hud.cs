@@ -15,6 +15,7 @@ using System.Linq;
 using System.Reflection;
 using Point = Microsoft.Xna.Framework.Point;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
+using Color = Microsoft.Xna.Framework.Color;
 using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
@@ -294,6 +295,70 @@ public sealed class HudModPart
     // The anchor the mod gave (null: added at a pixel position).
     public HudAnchor? Anchor { get; internal set; }
     internal int AutoX, AutoY;     // where Works last put it (stacking): elsewhere means the player moved it
+}
+
+// Lines of text for a HudText (each with its colour).
+public sealed class HudLines
+{
+    internal readonly List<KeyValuePair<string, Color>> Items = new List<KeyValuePair<string, Color>>();
+    public static readonly Color Body = new Color(215, 215, 205);
+    public HudLines Add(string text) { return Add(text, Body); }
+    public HudLines Add(string text, Color colour) { if (text != null) Items.Add(new KeyValuePair<string, Color>(text, colour)); return this; }
+    public int Count { get { return Items.Count; } }
+}
+
+// A HUD part showing lines of text (a status readout, a tracker): create it once in Load, then Show the current lines
+// whenever they may have changed. It is rebuilt only when the text or colours change, removed while there are no
+// lines, and comes back by itself after the game rebuilds its HUD (loads, resolution changes). Players can move it
+// like any HUD part.
+//   board = HudText.Add(this, "Status Board", HudAnchor.Top, 0, 10);
+//   board.Show(new HudLines().Add("Health " + hp, Color.Red).Add("AP " + ap));
+public sealed class HudText
+{
+    readonly WorksMod mod; readonly string name; readonly HudAnchor anchor; readonly int dx, dy;
+    UiPanel panel; string shown; HudLines last;
+    public int MinWidth { get; set; } = 160;
+    public Color Background { get; set; } = new Color(8, 8, 8) * 0.8f;
+    public Color? Border { get; set; }
+    public const int LineHeight = 18;
+
+    HudText(WorksMod mod, string name, HudAnchor anchor, int dx, int dy) { this.mod = mod; this.name = name; this.anchor = anchor; this.dx = dx; this.dy = dy; }
+
+    public static HudText Add(WorksMod mod, string name, HudAnchor anchor, int dx, int dy)
+    {
+        var t = new HudText(mod, name, anchor, dx, dy);
+        UiEvents.HudCreated.Add(mod, root => { t.panel = null; t.shown = null; if (t.last != null) t.Show(t.last); });
+        UiEvents.HudDestroyed.Add(mod, () => { t.panel = null; t.shown = null; });
+        return t;
+    }
+
+    public bool Visible { get { return panel != null; } }
+
+    public void Show(HudLines lines)
+    {
+        last = lines;
+        if (!Hud.Exists) return;
+        var items = lines == null ? new List<KeyValuePair<string, Color>>() : lines.Items;
+        var key = string.Join("\n", items.Select(l => l.Key + "\u0001" + l.Value.PackedValue));
+        if (key == shown) return;
+        shown = key;
+        if (panel != null) Ui.Remove(panel);
+        panel = null;
+        if (items.Count == 0) return;
+        int w = Math.Max(MinWidth, items.Max(l => Ui.TextWidth(l.Key)) + 24), h = 10 + items.Count * LineHeight;
+        panel = Ui.Panel(w, h);
+        panel.Background = Background;
+        if (Border.HasValue) panel.Border = Border.Value;
+        for (int i = 0; i < items.Count; i++)
+        {
+            var label = Ui.Label(items[i].Key, w - 16);
+            Ui.SetColor(label, items[i].Value);
+            Ui.Add(panel, label, 8, 4 + i * LineHeight);
+        }
+        Hud.AddPart(mod, name, panel, anchor, dx, dy);
+    }
+
+    public void Hide() { Show(null); }
 }
 
 public enum Window { Inventory, CharacterSheet, CombatStats, Crafting, Notes, Oddities, Psi, Map, QuickInvoker, GameMenu, Barter, Container }

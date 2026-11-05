@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1")]
 
 public sealed class BeastmasterConfig : ModConfig
 {
@@ -35,7 +35,7 @@ public sealed class Beastmaster : WorksMod
         config.Changed += () => { call.ApCost = config.ApCost; call.Cooldown = config.Cooldown; };
         GameEvents.Update.Add(this, s => Tick());
         GameEvents.FollowerArrived.Add(this, (now, old) => { if (old == companion) companion = now; });
-        GameEvents.GameLoaded.Add(this, () => companion = null);     // spawns are never saved
+        GameEvents.GameStarted.Add(this, () => { companion = null; leaveAt = 0; });     // spawns are never saved
         GameEvents.CharacterDying.Add(this, (who, killer) => { if (who == companion) { Notify.OverPlayer(T("fell")); companion = null; } });
         UiEvents.HudCreated.Add(this, root =>
         {

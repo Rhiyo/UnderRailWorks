@@ -1,2 +1,2 @@
-{ "id": "StatusBoard", "name": "Status Board", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "StatusBoard", "name": "Status Board", "version": "1.1.0", "author": "UnderRailWorks", "works": "0.9",
   "description": "A HUD panel with your health, status effects by name with turns left, and in combat AP, MP and whose turn it is." }

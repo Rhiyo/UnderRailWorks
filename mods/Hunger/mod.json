@@ -1,2 +1,2 @@
-{ "id": "Hunger", "name": "Hunger", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9", "startsOff": true,
+{ "id": "Hunger", "name": "Hunger", "version": "1.0.1", "author": "UnderRailWorks", "works": "0.9", "startsOff": true,
   "description": "An optional survival rule: you get hungry as game time passes and eat the game's food to stay fed. Hungry and starving cost strength, agility and dodge. A meter on the HUD; off in the Mods tab with no trace in your save." }

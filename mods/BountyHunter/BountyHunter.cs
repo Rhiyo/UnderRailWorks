@@ -8,7 +8,7 @@ using System.Linq;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1")]
 
 public sealed class BountyHunterConfig : ModConfig
 {
@@ -49,7 +49,7 @@ public sealed class BountyHunter : WorksMod
 
     void Died(Character who)
     {
-        if (who == null || !marked.Has(who)) return;
+        if (who == null || !marked.Has(who) || World.Player == null) return;
         int pay = (int)Math.Round(Math.Max(1, who.Level) * config.PerLevel * config.Multiplier * (World.Player.HasFeat(headhunter.Key) ? 1.5 : 1.0));
         World.Player.Inventory.AddMoney(pay);
         Notify.Log(T("paid", pay, who.Name));

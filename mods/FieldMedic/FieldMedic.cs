@@ -6,7 +6,7 @@ using System;
 using System.Linq;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1")]
 
 public sealed class FieldMedicConfig : ModConfig
 {
@@ -26,7 +26,7 @@ public sealed class FieldMedic : WorksMod
     {
         config = GetConfig<FieldMedicConfig>();
         GameEvents.CombatEnded.Add(this, () => wait = 1.5);
-        GameEvents.GameLoaded.Add(this, () => wait = -1);
+        GameEvents.GameStarted.Add(this, () => wait = -1);
         GameEvents.Update.Add(this, seconds =>
         {
             if (wait < 0) return;

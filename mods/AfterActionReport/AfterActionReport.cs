@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1")]
 
 public sealed class AfterActionReportConfig : ModConfig
 {
@@ -37,8 +37,7 @@ public sealed class AfterActionReport : WorksMod
         UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.CombatStarted.Add(this, () => current = new Fight());
         // Another game: its fights are its own (a fight in progress at a quickload doesn't carry over).
-        GameEvents.GameLoaded.Add(this, () => { current = null; last = null; });
-        GameEvents.NewGame.Add(this, () => { current = null; last = null; });
+        GameEvents.GameStarted.Add(this, () => { current = null; last = null; });
         Combat.RoundEnded.Add(this, r => { if (current != null) current.Rounds = r + 1; });
         Combat.AttackResolved.Add(this, o =>
         {

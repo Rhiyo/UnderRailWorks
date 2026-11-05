@@ -65,6 +65,7 @@ public sealed class Cookbook : WorksMod
     void Events()
     {
         GameEvents.GameLoaded.Add(this, () => Log.Info("loaded, zone " + World.ZoneId));
+        GameEvents.GameStarted.Add(this, () => Log.Info("another game: reset per-game state"));     // new game or load
         GameEvents.ZoneLoaded.Add(this, (zone, firstVisit) => { if (firstVisit) Notify.Log("New place: " + zone); });
         Combat.ModifyIncomingDamage.Add(this, d => { if (!d.Target.IsPlayer) d.Scale(1 + config.Bonus / 100f); });
     }
@@ -156,6 +157,8 @@ public sealed class Cookbook : WorksMod
             var badge = Ui.Custom(80, 20, c => c.Text("Hi!", c.Bounds.X + 4, c.Bounds.Y + 2, Color.White));
             Hud.AddPart(this, "Badge", badge, HudAnchor.TopRight, 10, 120);
         });
+        var readout = HudText.Add(this, "Readout", HudAnchor.TopRight, 10, 150);     // lines of text; survives HUD rebuilds
+        GameEvents.Update.Add(this, s => { var p = World.Player; readout.Show(p == null ? null : new HudLines().Add("HP " + (int)p.Health).Add(Text.Count(3, "turn"), Color.Orange)); });
     }
     #endregion
 

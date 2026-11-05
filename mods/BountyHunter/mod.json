@@ -1,2 +1,2 @@
-{ "id": "BountyHunter", "name": "Bounty Hunter", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "BountyHunter", "name": "Bounty Hunter", "version": "1.0.1", "author": "UnderRailWorks", "works": "0.9",
   "description": "Mark a hostile with the Mark Target ability (bar at the bottom, key F4): marked targets are easier to hit, and killing one pays a bounty in charons. The Headhunter feat pays more. Ledger window: F10." }

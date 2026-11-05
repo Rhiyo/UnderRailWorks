@@ -8,7 +8,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0")]
 
 public sealed class ThePitConfig : ModConfig
 {
@@ -32,12 +32,10 @@ public sealed class ThePit : WorksMod
     };
 
     ThePitConfig config;
-    UiElement hud;
-    UiPanel status;
+    HudText status;
     readonly List<Character> alive = new List<Character>();
     int wave;            // 0: no run
     double countdown;    // > 0: the next wave comes after this many seconds
-    string shown;
 
     public override void Load()
     {
@@ -60,10 +58,10 @@ public sealed class ThePit : WorksMod
             Id = "pit_master", Zone = "LU-SouthGateStation-N", Area = "LU-SouthGateStation-N", X = 12, Y = 26,
             Blueprint = "creatures\\generichumans\\foundryworker", Name = "Pit Master", Dialog = "pit/master",
         });
-        UiEvents.HudCreated.Add(this, root => { hud = root; status = null; shown = null; });
-        UiEvents.HudDestroyed.Add(this, () => hud = null);
-        GameEvents.GameLoaded.Add(this, () => Reset());
-        GameEvents.NewGame.Add(this, () => Reset());
+        status = HudText.Add(this, "The Pit", HudAnchor.Top, 0, 40);
+        status.MinWidth = 0;
+        status.Background = new Color(30, 8, 4) * 0.85f;
+        GameEvents.GameStarted.Add(this, () => Reset());
         GameEvents.ZoneLoaded.Add(this, (zone, first) => { if (wave > 0) EndRun("You left the Pit at wave " + wave + "."); });
         GameEvents.CharacterDied.Add(this, c =>
         {
@@ -72,7 +70,7 @@ public sealed class ThePit : WorksMod
             if (alive.RemoveAll(a => a == c) == 0) return;
             if (alive.Count > 0) { Notify.OverPlayer(alive.Count + " left"); return; }
             int pay = config.Reward * wave;
-            if (pay > 0) World.Player.Inventory.AddMoney(pay);
+            if (pay > 0 && World.Player != null) World.Player.Inventory.AddMoney(pay);
             if (wave > Data.GetInt("best")) Data.Set("best", wave);
             Notify.Log("The Pit: wave " + wave + " cleared" + (pay > 0 ? ", " + pay + " charons" : "") + ". The next comes in " + config.Breather + " seconds.");
             Notify.OverPlayer("Wave " + wave + " cleared!");
@@ -137,19 +135,9 @@ public sealed class ThePit : WorksMod
     // A small part at the top of the HUD while a run is on.
     void ShowStatus()
     {
-        string text = hud == null || wave == 0 ? null
+        string text = wave == 0 ? null
             : countdown > 0 ? "The Pit: wave " + wave + " cleared, wave " + (wave + 1) + " in " + Math.Ceiling(countdown) + " s"
             : "The Pit: wave " + wave + ", " + alive.Count(c => !c.IsDead) + " left";
-        if (text == shown) return;
-        shown = text;
-        if (status != null) Ui.Remove(status);
-        status = null;
-        if (text == null) return;
-        int w = Ui.TextWidth(text) + 20;
-        status = Ui.Panel(w, 24);
-        status.Background = new Color(30, 8, 4) * 0.85f;
-        var label = Ui.Label(text, w - 12); Ui.SetColor(label, new Color(240, 170, 90));
-        Ui.Add(status, label, 8, 4);
-        Hud.AddPart(this, "The Pit", status, HudAnchor.Top, 0, 40);
+        status.Show(new HudLines().Add(text, new Color(240, 170, 90)));
     }
 }

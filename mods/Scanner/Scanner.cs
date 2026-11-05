@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0")]
 
 public sealed class ScannerConfig : ModConfig
 {
@@ -22,43 +22,28 @@ public sealed class Scanner : WorksMod
 {
     ScannerConfig config;
     Keybind holdKey;
-    UiElement hud;
-    UiPanel panel;
-    Character shownFor;
-    string shownText;
+    HudText readout;
     double since;
 
     public override void Load()
     {
         config = GetConfig<ScannerConfig>();
         holdKey = Keybinds.Register(this, "hold", "Scanner (hold)", Keys.LeftAlt);
-        UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; shownFor = null; shownText = null; });
-        UiEvents.HudDestroyed.Add(this, () => hud = null);
+        readout = HudText.Add(this, "Scanner", HudAnchor.TopRight, 10, 80);
+        readout.MinWidth = 220;
+        readout.Background = new Color(6, 10, 12) * 0.88f;
+        readout.Border = new Color(90, 160, 200);
         GameEvents.Update.Add(this, seconds =>
         {
-            if (hud == null) return;
+            if (!Hud.Exists) return;
             since += seconds;
             if (since < 0.15) return;     // the hovered creature, a few times a second
             since = 0;
             var c = Target();
             var text = c == null ? null : Describe(c);
-            if (c == shownFor && text == shownText) return;
-            shownFor = c; shownText = text;
-            if (panel != null) Ui.Remove(panel);
-            panel = null;
-            if (text == null) return;
-            var lines = text.Split('\n');
-            int w = Math.Max(220, lines.Max(l => Ui.TextWidth(l)) + 24), h = 10 + lines.Length * 18;
-            panel = Ui.Panel(w, h);
-            panel.Background = new Color(6, 10, 12) * 0.88f;
-            panel.Border = new Color(90, 160, 200);
-            for (int i = 0; i < lines.Length; i++)
-            {
-                var l = Ui.Label(lines[i], w - 16);
-                Ui.SetColor(l, i == 0 ? new Color(140, 210, 240) : new Color(210, 215, 215));
-                Ui.Add(panel, l, 8, 4 + i * 18);
-            }
-            Hud.AddPart(this, "Scanner", panel, HudAnchor.TopRight, 10, 80);
+            var lines = new HudLines();
+            if (text != null) { var parts = text.Split('\n'); for (int i = 0; i < parts.Length; i++) lines.Add(parts[i], i == 0 ? new Color(140, 210, 240) : new Color(210, 215, 215)); }
+            readout.Show(lines);
         });
     }
 

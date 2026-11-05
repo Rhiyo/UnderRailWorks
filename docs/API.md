@@ -458,6 +458,7 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<int>> LevelledUp = new Hook<Action<int>>("LevelledUp")` — The player levelled up (the level-up screen closed without Cancel): the new level.
 - `static readonly Hook<Action> NewGame = new Hook<Action>("NewGame")` — A new game was created (before character creation).
 - `static readonly Hook<Action> GameLoaded = new Hook<Action>("GameLoaded")` — A save was loaded (the game state, the current zone and the player are there).
+- `static readonly Hook<Action> GameStarted = new Hook<Action>("GameStarted")` — Another game is now the current one: after NewGame and after GameLoaded. Reset a mod's per-game state here (one handler instead of the same reset on both; SaveData already belongs to the new game).
 - `static readonly Hook<Action<string, bool>> ZoneLoaded = new Hook<Action<string, bool>>("ZoneLoaded")` — A zone was loaded (entering it, or loading a save), with the player in it: its id (World.ZoneId) and whether this is the player's first visit.
 - `static readonly Hook<Action<string, Character>> DialogStarted = new Hook<Action<string, Character>>("DialogStarted")` — A conversation opened (its name, and the character talked to) / closed (its name).
 - `static readonly Hook<Action<string>> DialogEnded = new Hook<Action<string>>("DialogEnded")`
@@ -524,6 +525,15 @@ Which edge or corner (or the centre) of the HUD a part keeps its distance from w
 
 Values: `TopLeft, Top, TopRight, Left, Center, Right, BottomLeft, Bottom, BottomRight`
 
+## HudLines  _(class, Hud.cs)_
+
+Lines of text for a HudText (each with its colour).
+
+- `static readonly Color Body = new Color(215, 215, 205)`
+- `HudLines Add(string text)`
+- `HudLines Add(string text, Color colour)`
+- `int Count`
+
 ## HudModPart  _(class, Hud.cs)_
 
 - `string Name`
@@ -536,6 +546,19 @@ Values: `TopLeft, Top, TopRight, Left, Center, Right, BottomLeft, Bottom, Bottom
 
 ## HudPart  _(enum, Hud.cs)_
 
+
+## HudText  _(class, Hud.cs)_
+
+A HUD part showing lines of text (a status readout, a tracker): create it once in Load, then Show the current lines whenever they may have changed. It is rebuilt only when the text or colours change, removed while there are no lines, and comes back by itself after the game rebuilds its HUD (loads, resolution changes). Players can move it like any HUD part. board = HudText.Add(this, "Status Board", HudAnchor.Top, 0, 10); board.Show(new HudLines().Add("Health " + hp, Color.Red).Add("AP " + ap));
+
+- `int MinWidth`
+- `Color Background`
+- `Color? Border`
+- `const int LineHeight = 18`
+- `static HudText Add(WorksMod mod, string name, HudAnchor anchor, int dx, int dy)`
+- `bool Visible`
+- `void Show(HudLines lines)`
+- `void Hide()`
 
 ## Icons  _(class, Assets.cs)_
 
@@ -1276,6 +1299,7 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 ## Text  _(class, Content.cs)_
 
 - `static string Get(string path)` — The game's text for "category/key" (e.g. "quests/jonaswatch", "ui/..."), in the player's language; "" if none.
+- `static string Count(int n, string one, string many = null)` — "1 turn", "3 turns": a count with its noun, plural with an s unless given (Count(n, "enemy", "enemies")).
 - `static void Set(string category, string key, string text)` — Text a mod adds (or replaces), in every language: "category/key". In memory only.
 
 ## Theft  _(class, Activities.cs)_

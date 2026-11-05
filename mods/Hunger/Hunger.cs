@@ -7,7 +7,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1")]
 
 public sealed class HungerConfig : ModConfig
 {
@@ -32,8 +32,7 @@ public sealed class Hunger : WorksMod
         hungry = ModStatuses.Define(this, "hungry", T("hungry.name"), T("hungry.desc"), "Status.Poison", StatBonus.Ability("Strength", -1), StatBonus.Dodge(-5));
         starving = ModStatuses.Define(this, "starving", T("starving.name"), T("starving.desc"), "Status.Poison",
             StatBonus.Ability("Strength", -2), StatBonus.Ability("Agility", -1), StatBonus.Dodge(-15));
-        GameEvents.GameLoaded.Add(this, () => { satiety = SaveData.Get<double>("satiety", 100); loaded = true; Apply(false); });
-        GameEvents.NewGame.Add(this, () => { satiety = 100; loaded = true; Apply(false); });
+        GameEvents.GameStarted.Add(this, () => { satiety = SaveData.Get<double>("satiety", 100); loaded = true; Apply(false); });     // a new game has no saved value: 100
         GameEvents.Saving.Add(this, name => SaveData.Set("satiety", Math.Round(satiety, 2)));
         GameEvents.GameTimeAdvanced.Add(this, dt =>
         {

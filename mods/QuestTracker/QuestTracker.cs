@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1")]
 
 public sealed class QuestTrackerConfig : ModConfig
 {
@@ -49,7 +49,7 @@ public sealed class QuestTracker : WorksMod
             if (info != null && state != QuestState.Active)
                 Notify.Log("Tracker: " + (state == QuestState.Completed ? "done" : "failed") + " - " + FirstLine(Quests.JournalText(id)), state == QuestState.Completed ? new Color(120, 220, 120) : new Color(220, 120, 100));
         });
-        GameEvents.GameLoaded.Add(this, () => Dirty = true);
+        GameEvents.GameStarted.Add(this, () => Dirty = true);
         GameEvents.Update.Add(this, seconds =>
         {
             if (hud == null) return;

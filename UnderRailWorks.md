@@ -882,7 +882,7 @@ export follows the save rules: the stock game must read it.
 - `World.ExportPlayer()` / `works.export`; `check-saves.sh --only` takes a .char (read as the import reads it).
 - Tested: a player with a mod feat and a mod status exported: the .char has the feat's key, no mod status, no Works
   types, and the stock game reads it (`asd.char -> ajk`); New Game -> Import -> the mod feat on the Feats tab, and the
-  new game started with the exported CharacterData. Not handled: deleting an export in the dialog leaves its side file.
+  new game started with the exported CharacterData. Deleting an export in the dialog (its confirmation, `e7u.b.g0("Y")`) deletes the side file too (tested).
   Later, with mod skills: Survival 12 and Scavenging 30 exported (one side file, two mods), imported into a new game:
   Survival 12 there.
 
@@ -1257,3 +1257,12 @@ window above it (in test runs 1 in 10 got through). Measured, layer by layer:
 Fix: ConfigDefaults turns the mask on for a new config.dat (the game's own setting, stock-readable). Fresh sessions:
 5 of 5 healthy, 0 of 30 presses lost. Ruled out on the way (measured): mods (all off: still lost), Works' per-frame
 work (0.1 ms), STA vs MTA, .NET tiered compilation and PGO, exceptions, the Map window, Movable Windows.
+
+## Consolidation from a review of the mods (Nov 2026)
+
+- `GameEvents.GameStarted`: after NewGame and after GameLoaded. Mods reset per-game state there; four mods reset only
+  on load (Beastmaster's companion survived New Game) and three registered the same reset twice.
+- `HudText` / `HudLines`: a HUD part of text lines, rebuilt only when they change, back by itself after HUD rebuilds;
+  Status Board, Scanner and The Pit use it (about 20 lines each removed). `Text.Count(n, "turn")` for plurals.
+- Null checks on World.Player in reward handlers (Ambushes, Bounty Hunter, The Pit).
+- Already there, now in the cookbook: `Hud.WhenReady` covers the HUD-created boilerplate.

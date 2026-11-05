@@ -7,7 +7,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1")]
 
 public sealed class AmbushesConfig : ModConfig
 {
@@ -46,7 +46,7 @@ public sealed class Ambushes : WorksMod
             if (pack.All(c => c.IsDead))
             {
                 pack.Clear();
-                if (config.Xp > 0) World.Player.GiveExperience(config.Xp, T("cleared"));
+                if (config.Xp > 0 && World.Player != null) World.Player.GiveExperience(config.Xp, T("cleared"));
             }
         });
         Commands.Add(this, "ambush", "ambush: spring an ambush now", a => { Spring(); return pack.Count + " creatures"; });

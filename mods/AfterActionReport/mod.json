@@ -1,2 +1,2 @@
-{ "id": "AfterActionReport", "name": "After-Action Report", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "AfterActionReport", "name": "After-Action Report", "version": "1.0.1", "author": "UnderRailWorks", "works": "0.9",
   "description": "A summary after each fight (damage, hits, crits, kills) and career totals for the save." }
