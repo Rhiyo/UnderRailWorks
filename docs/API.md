@@ -311,6 +311,11 @@ The game's draw context (cp9) for the frame.
 - `static bool operator ==(DrawContext a, DrawContext b)`
 - `static bool operator !=(DrawContext a, DrawContext b)`
 
+## EquipAttempt  _(class, Cancellable.cs)_
+
+The player putting an item into a gear or quick slot (Cancel: it stays where it was). The game's own scripted equips (NPC loadouts, Items.ToQuickSlot) aren't asked.
+
+
 ## EquipChange  _(class, Equipment.cs)_
 
 - `Character Character`
@@ -375,6 +380,8 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<ContainerOpen>> ContainerOpening = new Hook<Action<ContainerOpen>>("ContainerOpening")`
 - `static readonly Hook<Action<ItemTake>> ItemTaking = new Hook<Action<ItemTake>>("ItemTaking")` — An item about to be taken from a container by the player (Cancel: it stays; in "Take all" the rest stay too).
 - `static readonly Hook<Action<DialogStart>> DialogStarting = new Hook<Action<DialogStart>>("DialogStarting")` — A conversation about to open (Cancel, or change Name to open another). Not combat barks.
+- `static readonly Hook<Action<EquipAttempt>> Equipping = new Hook<Action<EquipAttempt>>("Equipping")`
+- `static readonly Hook<Action<ZoneLeave>> ZoneLeaving = new Hook<Action<ZoneLeave>>("ZoneLeaving")`
 - `static readonly Hook<Action<CraftAttempt>> Crafting = new Hook<Action<CraftAttempt>>("Crafting")`
 - `static readonly Hook<Action<Container, Character, bool>> ContainerOpened = new Hook<Action<Container, Character, bool>>("ContainerOpened");     // container, opener, first time`
 - `static readonly Hook<Action<Container, Item, Character>> ItemTaken = new Hook<Action<Container, Item, Character>>("ItemTaken")`
@@ -1331,6 +1338,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static void Despawn(Character c)` — Removes a spawned (or placed) character from the world now.
 - `static IList<Point> FreeTilesNear(int x, int y, int radius)` — Floor tiles in the player's area within radius, nearest first, not taken by a character or a solid object.
 - `static Character Placed(string id)` — The character a placement put in the world (null if it isn't there now).
+- `static bool Travel(string zone, string entry)` — Sends the player to another zone as an exit does (zone id and entry point, as the game's maps name them, e.g. "lu-c1b", "entry"; the ids are in UnderRailWorks-content.txt). False if there's no player.
 - `static bool Use(Character user, string placementId)` — A character uses a placed object (as clicking it does, without walking there or the game's checks).
 - `static Character Player` — The player's character, as the game finds it (cnk.aqu(): the player's data au2, its entity).
 - `static IList<Character> Visible` — The characters the game drew in the last frame, the player excepted: the ones in sight (stealthed or out of sight characters aren't drawn). Updated at the end of each world pass.
@@ -1375,3 +1383,8 @@ The world view (a7m): the map's drawing for one frame.
 - `int Level` — The level being reached, whether the game uses the Oddity system (else Classic XP), and the cost.
 - `bool Oddity`
 - `int Needed`
+
+## ZoneLeave  _(class, Cancellable.cs)_
+
+The player about to leave the zone (an exit, a door between maps, a script, World.Travel). To: the destination zone's id, Entry: the entry point there.
+

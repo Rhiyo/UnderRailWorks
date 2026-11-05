@@ -676,8 +676,16 @@ HasFeat checks).
 `GameEvents.TradeOpening` (prefix `dka.amw`), `ContainerOpening` (`c7j.mz`), `ItemTaking` (`c7j.kj`, the window's
 "can remove"), `DialogStarting` (in the `dka.amu` prefix; `Name` can be changed to open another dialog; not barks),
 `Crafting` (`ahu.i`): a handler sets `Cancel`. With the earlier ones (StatusApplying, ItemUsing, Locks.ModifyAttempt,
-Ai.Acting) most player actions can be refused. Not cancellable yet: equipping (the slots are generic `ItemSlot<T>`
-setters), leaving a zone. Tested: trade, container and dialog refused.
+Ai.Acting) most player actions can be refused. Tested: trade, container and dialog refused.
+
+- `GameEvents.Equipping` (the player putting an item into a gear or quick slot): a postfix on the slot control's
+  `FreeItemSlotControl<T>.ye(source, item)` ("will you take it?"), only for `PlayerGearItemSlotControl<T>`. The screen
+  (`c69.a`) asks that before it moves anything. **Trap:** refusing in the data slot's own check (`ItemSlot<T>.c`) lost
+  the item: the screen had already taken it out of the bag and put the old item in. Tested: double-click and drag
+  refused, armour stays in the bag, the worn shirt stays on.
+- `GameEvents.ZoneLeaving` (From, To, Entry; prefix on `a0l.a(c5x, c2w, int, Point?)`, which every exit and script uses
+  to queue the ChangeZone workflow) and `World.Travel(zone, entry)` (the same call). Tested: travel to lu-c1b refused,
+  and done without the refusal.
 
 ## UI widgets (Nov 2026)
 

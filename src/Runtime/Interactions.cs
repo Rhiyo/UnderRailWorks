@@ -74,6 +74,16 @@ namespace UnderRailWorks
 
     public static partial class World
     {
+        // Sends the player to another zone as an exit does (zone id and entry point, as the game's maps name them,
+        // e.g. "lu-c1b", "entry"; the ids are in UnderRailWorks-content.txt). False if there's no player.
+        public static bool Travel(string zone, string entry)
+        {
+            var p = Player == null ? null : Player.Entity as c5x;
+            if (p == null || string.IsNullOrEmpty(zone) || string.IsNullOrEmpty(entry)) return false;
+            a0l.a(p, new c2w(zone, entry), 0, null);
+            return true;
+        }
+
         // A character uses a placed object (as clicking it does, without walking there or the game's checks).
         public static bool Use(Character user, string placementId)
         {

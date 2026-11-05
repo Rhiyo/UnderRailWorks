@@ -61,10 +61,13 @@ public sealed class WorksTest : WorksMod
         GameEvents.ZoneLoaded.Add(this, (zone, first) =>
         {
             var auto = System.IO.Path.Combine(Info.Folder, "autorun.txt");
-            if (System.IO.File.Exists(auto)) foreach (var line in System.IO.File.ReadAllLines(auto)) if (line.Trim().Length > 0) { Log.Info("autorun: " + line); Commands.Execute(line); }
+            if (System.IO.File.Exists(auto)) foreach (var line in System.IO.File.ReadAllLines(auto).Concat(new string[0]).ToList().Also(() => System.IO.File.Delete(auto))) if (line.Trim().Length > 0) { Log.Info("autorun: " + line); Commands.Execute(line); }
         });
         GameEvents.TradeOpening.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked trade with " + e.Merchant); } });
         GameEvents.ContainerOpening.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked container"); } });
+        GameEvents.Equipping.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked equipping " + e.Item.Name); } });
+        GameEvents.ZoneLeaving.Add(this, e => { Log.Info("leaving " + e.From + " for " + e.To + "/" + e.Entry); if (block) { e.Cancel = true; Log.Info("blocked leaving"); } });
+        Commands.Add(this, "wt.travel", "wt.travel: World.Travel to lu-c1b", args => "travel: " + World.Travel("lu-c1b", "entry"));
         GameEvents.DialogStarting.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked dialog " + e.Name); } });
         Commands.Add(this, "wt.block", "wt.block: refuse trades, containers, dialogs", args => { block = true; return "blocking"; });
         Commands.Add(this, "wt.ui", "wt.ui: a window with the UI widgets", args =>
@@ -239,3 +242,5 @@ public sealed class TestApi
 {
     public string Echo(string text) { return "echo " + text; }
 }
+
+static class TestExtensions { public static T Also<T>(this T value, System.Action a) { a(); return value; } }
