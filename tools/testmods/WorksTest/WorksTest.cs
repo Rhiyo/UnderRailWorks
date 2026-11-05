@@ -70,6 +70,23 @@ public sealed class WorksTest : WorksMod
             Log.Info("laytrap: used " + used);
             return "used: " + used;
         });
+        Commands.Add(this, "wt.gun", "wt.gun: a Beretta 99 in hand and 9 mm rounds in the bag", args =>
+        {
+            var p = World.Player; if (p == null) return "no player";
+            p.Inventory.Add("weapons\\beretta99", 1, false); p.Inventory.Add("ammo\\caliber_5_std", 40, false);
+            var gun = p.Inventory.Items.FirstOrDefault(i => i.Code == "wep.beretta99");     // the game spells it "Bieretta 99"
+            bool ok = gun != null && p.Equipment.Equip(gun);
+            Log.Info("gun: equipped " + ok);
+            return "equipped: " + ok;
+        });
+        Commands.Add(this, "wt.reload", "wt.reload: the player uses the bag's first ammo (the game's reload)", args =>
+        {
+            var p = World.Player; if (p == null) return "no player";
+            var ammo = p.Inventory.Items.FirstOrDefault(i => i.Code != null && i.Code.StartsWith("Ammo.Caliber_5"));
+            bool ok = ammo != null && Items.Use(p, ammo);
+            Log.Info("reload command: " + ok);
+            return "used: " + ok;
+        });
         Commands.Add(this, "wt.trapslot", "wt.trapslot: the bag's first trap into quick slot 1", args =>
         {
             var p = World.Player; var trap = p == null ? null : p.Inventory.Items.FirstOrDefault(i => i.Code != null && i.Code.StartsWith("trap."));
@@ -402,6 +419,8 @@ public sealed class WorksTest : WorksMod
         Traps.ModifyDetection.Add(this, (who, score) => { if (who.IsPlayer && trapScans++ < 2) Log.Info("trap detection score " + score + " -> " + (score + 100)); return who.IsPlayer ? score + 100 : score; });
         GameEvents.TrapDisarming.Add(this, d => Log.Info("disarming: skill " + d.Skill + " vs " + d.Difficulty + (d.OwnTrap ? " (own)" : "")));
         GameEvents.TrapDisarmed.Add(this, r => Log.Info("disarmed: " + r.Outcome));
+        GameEvents.Reloading.Add(this, r => Log.Info("reloading: " + r.Character.Name + " " + (r.Weapon == null ? "?" : r.Weapon.Name) + " with " + (r.Ammo == null ? "-" : r.Ammo.Name)));
+        GameEvents.Reloaded.Add(this, r => Log.Info("reloaded: " + r.Character.Name));
         GameEvents.TrapDetected.Add(this, t => Log.Info("trap spotted by " + t.Character.Name + " at " + t.Position + ", detect " + t.DetectDifficulty + ", disarm " + t.DisarmDifficulty));
         GameEvents.ZoneLoaded.Add(this, (zone, first) => Log.Info("zone " + zone + (first ? " (first visit)" : "")));
         GameEvents.DialogStarted.Add(this, (name, npc) => Log.Info("dialog " + name + " with " + (npc == null ? "?" : npc.Name)));

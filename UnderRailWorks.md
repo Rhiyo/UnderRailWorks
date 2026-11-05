@@ -1291,3 +1291,14 @@ has after. Not seen firing in game yet: no test zone with a foreign trap. Tried,
 - `wt.laytrap`: Items.Use on the player lays it (the bag loses it), but under the player and it's the player's own
   (OwnTrap: always disarmed, never "detected").
 Next time: a save in a zone with map traps (the game's own, placed through c11.a with A_3 true), or combat.
+
+## Reloading (Nov 2026)
+
+`GameEvents.Reloading` (cancellable: Character, Weapon, Ammo) and `GameEvents.Reloaded` (after a reload that loaded
+ammo), on the game's reload action nh.fr, which the player and NPCs' AI both use. The weapon is worked out as nh.fr
+does (its mode field: 0 the weapon in hand, 2 the target item, else the action's item). Tested in game: Reloading fires
+(character and ammo right) when the player uses ammo with Items.Use (`wt.gun`, `wt.reload` in WorksTest); that use
+then fails in the game too, because Items.Use targets characters and the ammo's "Reload Weapon" use wants the weapon
+item as its target (mode 1, the action's item was the player entity). The `]` key and clicking the ammo bar didn't
+reload in a headless run either, so Reloaded and a cancel weren't seen yet. Next: Items.Use with an item target, or an
+NPC reloading in combat.

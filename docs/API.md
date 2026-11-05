@@ -460,6 +460,8 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<StatusChange>> StatusApplied = new Hook<Action<StatusChange>>("StatusApplied")`
 - `static readonly Hook<Action<StatusChange>> StatusRemoved = new Hook<Action<StatusChange>>("StatusRemoved")`
 - `static readonly Hook<Action<int>> LevelledUp = new Hook<Action<int>>("LevelledUp")` — The player levelled up (the level-up screen closed without Cancel): the new level.
+- `static readonly Hook<Action<Reload>> Reloading = new Hook<Action<Reload>>("Reloading")` — A character about to reload (Cancel: it doesn't; the action ends without AP spent on loading).
+- `static readonly Hook<Action<Reload>> Reloaded = new Hook<Action<Reload>>("Reloaded")` — A reload went through (ammo loaded).
 - `static readonly Hook<Action> NewGame = new Hook<Action>("NewGame")` — A new game was created (before character creation).
 - `static readonly Hook<Action> GameLoaded = new Hook<Action>("GameLoaded")` — A save was loaded (the game state, the current zone and the player are there).
 - `static readonly Hook<Action> GameStarted = new Hook<Action>("GameStarted")` — Another game is now the current one: after NewGame and after GameLoaded. Reset a mod's per-game state here (one handler instead of the same reset on both; SaveData already belongs to the new game).
@@ -1196,6 +1198,12 @@ Values: `NotStarted, Active, Completed, Failed`
 - `static RecipeSlot Item(string label, string code, int skill = 0, int count = 1)` — A component by item code (Item.Code, e.g. "syringe"), the crafting skill it needs, how many.
 - `static RecipeSlot AnyOf(string label, string[] codes, int skill = 0, int count = 1)`
 - `RecipeSlot AsOptional()`
+
+## Reload  _(class, Reload.cs)_
+
+- `Character Character`
+- `Item Weapon`
+- `Item Ammo`
 
 ## ReplaceHook<T>  _(class, Hooks.cs)_
 
