@@ -27,6 +27,7 @@ namespace UnderRailWorks
         public string Name { get; internal set; }
         public string Description { get; internal set; }
         public string Icon { get; internal set; }
+        public StatBonus[] Bonuses { get; internal set; }
         // The code the game sees (StatusChange.Code, Character.HasStatusEffect).
         public string Code { get { return "mod:" + Mod + ":" + Id; } }
         // Each turn it is on a character (each owner's turn in combat, every 5 s outside): the character, its stacks.
@@ -42,9 +43,9 @@ namespace UnderRailWorks
     public static class ModStatuses
     {
         // icon: an icon name the game knows ("Status.Poison", "Status.PsiBoost", "Status.5"..., or one from Icons.Register).
-        public static ModStatus Define(WorksMod mod, string id, string name, string description, string icon)
+        public static ModStatus Define(WorksMod mod, string id, string name, string description, string icon, params StatBonus[] bonuses)
         {
-            var s = new ModStatus { Mod = mod.Id, Id = id, Name = name, Description = description, Icon = icon };
+            var s = new ModStatus { Mod = mod.Id, Id = id, Name = name, Description = description, Icon = icon, Bonuses = bonuses ?? new StatBonus[0] };
             ModStatusStore.Types[s.Code] = s;
             return s;
         }
@@ -67,7 +68,7 @@ namespace UnderRailWorks.Internal
             var fx = Effects(who);
             if (fx == null) return;
             Remove(s, who);     // refresh: one at a time
-            var carrier = new c9i("works", s.Name, s.Icon, null, null, s.Description);
+            var carrier = new c9i("works", s.Name, s.Icon, s.Bonuses.Select(b => b.Make()).ToArray(), null, s.Description);
             CodeField.SetValue(carrier, s.Code);
             carrier.Duration = (int)Math.Min(int.MaxValue, ms);
             carrier.TimeLeft = ms;

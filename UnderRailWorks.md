@@ -705,6 +705,15 @@ Tested in a mod window: all five.
 needs a restart (.NET can't unload a mod's DLL that Harmony has patched into; content packs' dialogs and quests are
 registered once). Tested: a texture pack portrait changed on disk from red to green, shown after works.reload.
 
+## Stat bonuses for mod feats and statuses (Nov 2026)
+
+`StatBonus.Ability / Skill / Evasion / Dodge / Fortitude / Resolve / Initiative / Detection / Health / CarryCapacity /
+Psi / PsiRegeneration`: the game's own flat modifier objects (`ax6`, `dpw`, `a6z`, `bel`, `ddl`, `ciw`, `b5x`, `ds1`,
+`dxd`, `bgl`, `d72`, `emn`; matched by their StaticEffects description keys). `Feats.Add(..., bonuses:)` returns them
+from the feat's `cy(efk)` (collected by `efk.bl()` while held, never saved); `ModStatuses.Define(..., bonuses)` puts
+them into the status carrier (stripped from saves with the status). Tested: Strength +2 from a feat and Agility +1
+from a status shown green on the character sheet; a save with both passes the stock loader.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

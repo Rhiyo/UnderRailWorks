@@ -36,6 +36,7 @@ namespace UnderRailWorks
         // The key the game (and a save) knows it by, for Character.HasFeat.
         public string Key { get { return ("mod_" + Mod + "_" + Id).ToLowerInvariant(); } }
         public FeatRequirements Requires { get; internal set; }
+        public StatBonus[] Bonuses { get; internal set; }
         public event Action<Character> OnGain, OnLose;
         internal void Gained(Character c) { var a = OnGain; if (a != null) try { a(c); } catch (Exception ex) { ModErrors.Report(Mod, "feat " + Id, ex); } }
         internal void Lost(Character c) { var a = OnLose; if (a != null) try { a(c); } catch (Exception ex) { ModErrors.Report(Mod, "feat " + Id, ex); } }
@@ -46,9 +47,9 @@ namespace UnderRailWorks
     {
         internal static readonly Dictionary<string, ModFeat> All = new Dictionary<string, ModFeat>(StringComparer.OrdinalIgnoreCase);
         // A new feat on the level-up screen (call in Load). icon: a PNG in the mod's folder (optional).
-        public static ModFeat Add(WorksMod mod, string id, string name, string description, FeatRequirements requires = null, string icon = null)
+        public static ModFeat Add(WorksMod mod, string id, string name, string description, FeatRequirements requires = null, string icon = null, StatBonus[] bonuses = null)
         {
-            var f = new ModFeat { Mod = mod.Id, Id = id, Name = name, Description = description, Requires = requires ?? new FeatRequirements() };
+            var f = new ModFeat { Mod = mod.Id, Id = id, Name = name, Description = description, Requires = requires ?? new FeatRequirements(), Bonuses = bonuses ?? new StatBonus[0] };
             All[f.Key] = f;
             FeatRegistry.Register(f, icon == null ? null : System.IO.Path.Combine(mod.Info.Folder, icon));
             return f;
@@ -80,6 +81,14 @@ namespace UnderRailWorks.Internal
             if (d == null) return list;
             foreach (var kv in d.Requires.Abilities) { var t = FeatRegistry.StatType(kv.Key, true); if (t != null) list.Add(new awr(t, kv.Value)); }
             foreach (var kv in d.Requires.Skills) { var t = FeatRegistry.StatType(kv.Key, false); if (t != null) list.Add(new bap(kv.Value, t)); }
+            return list;
+        }
+        // While held: the bonuses, as the game's own modifiers (efk.bl() collects them from every feat).
+        public override List<d3e> cy(efk A_0)
+        {
+            var list = new List<d3e>();
+            var d = Def;
+            if (d != null) foreach (var b in d.Bonuses) { try { list.Add(b.Make()); } catch (Exception ex) { Log.Write("feats: " + d.Key + ": " + ex.Message); } }
             return list;
         }
         public override void ar(efk A_0) { var d = Def; if (d != null) d.Gained(Combat.OfData(A_0)); }

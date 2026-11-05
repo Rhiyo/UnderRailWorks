@@ -344,7 +344,7 @@ Values: `Helmet, Armor, Belt, Boots, Shield, PrimaryWeapon, SecondaryWeapon`
 
 ## Feats  _(class, Feats.cs)_
 
-- `static ModFeat Add(WorksMod mod, string id, string name, string description, FeatRequirements requires = null, string icon = null)` — A new feat on the level-up screen (call in Load). icon: a PNG in the mod's folder (optional).
+- `static ModFeat Add(WorksMod mod, string id, string name, string description, FeatRequirements requires = null, string icon = null, StatBonus[] bonuses = null)` — A new feat on the level-up screen (call in Load). icon: a PNG in the mod's folder (optional).
 - `static bool Give(Character who, string key)` — Gives a feat (a mod's or the game's, by key) to a character, as the game does (no feat point is spent).
 
 ## GameBatch  _(struct, DrawApi.cs)_
@@ -768,6 +768,7 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `string Description`
 - `string Key` — The key the game (and a save) knows it by, for Character.HasFeat.
 - `FeatRequirements Requires`
+- `StatBonus[] Bonuses`
 - `event Action<Character> OnGain, OnLose`
 
 ## ModInfo  _(class, ModLoader.cs)_
@@ -873,6 +874,7 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `string Name`
 - `string Description`
 - `string Icon`
+- `StatBonus[] Bonuses`
 - `string Code` — The code the game sees (StatusChange.Code, Character.HasStatusEffect).
 - `event Action<Character, int> OnTick` — Each turn it is on a character (each owner's turn in combat, every 5 s outside): the character, its stacks.
 - `void Apply(Character who, int turns)` — Puts it on a character for turns (5 s each outside combat); applying again refreshes it.
@@ -881,7 +883,7 @@ A mod's own data for the current game, kept with the save as plain values (the g
 
 ## ModStatuses  _(class, ModStatus.cs)_
 
-- `static ModStatus Define(WorksMod mod, string id, string name, string description, string icon)` — icon: an icon name the game knows ("Status.Poison", "Status.PsiBoost", "Status.5"..., or one from Icons.Register).
+- `static ModStatus Define(WorksMod mod, string id, string name, string description, string icon, params StatBonus[] bonuses)` — icon: an icon name the game knows ("Status.Poison", "Status.PsiBoost", "Status.5"..., or one from Icons.Register).
 
 ## MouseButton  _(enum, Ui.cs)_
 
@@ -1047,6 +1049,22 @@ The first handler that returns true replaces the game's step.
 ## SpawnSide  _(enum, Characters.cs)_
 
 Values: `Neutral, Hostile, PlayerOnly`
+
+## StatBonus  _(class, StatBonus.cs)_
+
+- `string Text`
+- `static StatBonus Ability(string ability, int amount)` — Abilities: Strength, Dexterity, Agility, Constitution, Perception, Will, Intelligence.
+- `static StatBonus Skill(string skill, int amount)` — Skills by name (Guns, Stealth, Persuasion, Lockpicking...).
+- `static StatBonus Evasion(int amount)`
+- `static StatBonus Dodge(int amount)`
+- `static StatBonus Fortitude(int amount)`
+- `static StatBonus Resolve(int amount)`
+- `static StatBonus Initiative(int amount)`
+- `static StatBonus Detection(int amount)`
+- `static StatBonus Health(int amount)`
+- `static StatBonus CarryCapacity(int amount)`
+- `static StatBonus Psi(int amount)`
+- `static StatBonus PsiRegeneration(int amount)`
 
 ## StatusChange  _(class, Progress.cs)_
 

@@ -34,7 +34,7 @@ public sealed class WorksTest : WorksMod
         Stores.AddRestock(this, "bigbret", stimPath, 3);
         Stores.AddOnce(this, "bigbret", "armor\\jkktacticalvest", 1);
         Loot.Add(this, (who, box) => who != null && who.Name.Contains("Rathound"), "components\\scraps\\fabricscraps", 1.0, 7);
-        glow = ModStatuses.Define(this, "glow", "Works Glow", "A test status from a mod: +1 to a counter each turn.", "Status.PsiBoost");
+        glow = ModStatuses.Define(this, "glow", "Works Glow", "A test status from a mod: +1 to a counter each turn.", "Status.PsiBoost", StatBonus.Dodge(15), StatBonus.Ability("Agility", 1));
         Commands.Add(this, "wt.probe", "wt.probe: which device blueprints are usable", args =>
         {
             var pp = World.Player.Position; var t = World.FreeTilesNear((int)pp.X, (int)pp.Y, 5).Skip(4).FirstOrDefault();
@@ -46,9 +46,9 @@ public sealed class WorksTest : WorksMod
             }
             return string.Join("; ", found);
         });
-        grit = Feats.Add(this, "grit", "Works Grit", "A mod feat: you feel tougher. (Requires Strength 3.)", new FeatRequirements { Abilities = { ["Strength"] = 3 } });
+        grit = Feats.Add(this, "grit", "Works Grit", "A mod feat: you feel tougher. (Requires Strength 3.)", new FeatRequirements { Abilities = { ["Strength"] = 3 } }, null, new[] { StatBonus.Ability("Strength", 2), StatBonus.CarryCapacity(50), StatBonus.Skill("Guns", 10) });
         grit.OnGain += who => Log.Info("feat gained by " + who.Name);
-        Commands.Add(this, "wt.feat", "wt.feat: give the test feat", args => { Commands.CloseConsole(); return "give: " + Feats.Give(World.Player, grit.Key) + ", has: " + World.Player.HasFeat(grit.Key) + "; feats: " + string.Join(", ", World.Player.Feats); });
+        Commands.Add(this, "wt.feat", "wt.feat: give the test feat", args => { Commands.CloseConsole(); var before = "Str " + World.Player.Ability("Strength") + " Guns " + World.Player.Skill("Guns"); return before + " -> give: " + Feats.Give(World.Player, grit.Key) + " Str " + World.Player.Ability("Strength") + " Guns " + World.Player.Skill("Guns") + ", has: " + World.Player.HasFeat(grit.Key) + "; feats: " + string.Join(", ", World.Player.Feats); });
         Ai.ChooseTarget.Add(this, c => { if (++aiLogs < 12) Log.Info("ai: " + c.Npc + " targets " + c.Chosen); return null; });
         Ai.TakingTurn.Add(this, t => { if (aiHold && !t.Npc.Name.Contains("Rathound")) { t.EndTurn = true; if (++aiLogs < 30) Log.Info("ai: held " + t.Npc); } });
         Ai.Acting.Add(this, a => Log.Info("ai: " + a.Npc + " uses " + a.Action));
@@ -82,7 +82,7 @@ public sealed class WorksTest : WorksMod
             return "window";
         });
         Commands.Add(this, "wt.lever", "wt.lever: the player uses the test lever", args => { Commands.CloseConsole(); return "use: " + World.Use(World.Player, "wt_lever"); });
-        Commands.Add(this, "wt.glow", "wt.glow: the test status on the player", args => { glow.Apply(World.Player, 40); Commands.CloseConsole(); return "glow on: " + glow.Has(World.Player); });
+        Commands.Add(this, "wt.glow", "wt.glow: the test status on the player", args => { glow.Apply(World.Player, 40); Commands.CloseConsole(); Log.Info("agility after glow: " + World.Player.Ability("Agility")); return "glow on: " + glow.Has(World.Player); });
         glow.OnTick += (who, stacks) => Log.Info("glow tick on " + who.Name + " (" + stacks + ")");
         GameEvents.ZoneLoaded.Add(this, (zone, first) =>
         {
