@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TimelapseVertigo.Rules.Items;
+using TimelapseVertigo.Rules.Characters;
 using System.Reflection;
 using UnderRailWorks.Internal;
 
@@ -21,6 +22,8 @@ namespace UnderRailWorks
     // The player about to leave the zone (an exit, a door between maps, a script, World.Travel). To: the destination
     // zone's id, Entry: the entry point there.
     public sealed class ZoneLeave : Cancellable { public string From { get; internal set; } public string To { get; internal set; } public string Entry { get; internal set; } }
+    // A character (the player or an NPC's AI) about to switch between its primary and secondary weapon.
+    public sealed class WeaponSwitch : Cancellable { public Character Character { get; internal set; } public bool ToSecondary { get; internal set; } }
     public sealed class CraftAttempt : Cancellable { public string Blueprint { get; internal set; } }
 
     public static partial class GameEvents
@@ -33,6 +36,7 @@ namespace UnderRailWorks
         public static readonly Hook<Action<DialogStart>> DialogStarting = new Hook<Action<DialogStart>>("DialogStarting");
         public static readonly Hook<Action<EquipAttempt>> Equipping = new Hook<Action<EquipAttempt>>("Equipping");
         public static readonly Hook<Action<ZoneLeave>> ZoneLeaving = new Hook<Action<ZoneLeave>>("ZoneLeaving");
+        public static readonly Hook<Action<WeaponSwitch>> WeaponSwitching = new Hook<Action<WeaponSwitch>>("WeaponSwitching");
         public static readonly Hook<Action<CraftAttempt>> Crafting = new Hook<Action<CraftAttempt>>("Crafting");
     }
 }
@@ -41,6 +45,23 @@ namespace UnderRailWorks.Internal
 {
     static class CancelHooks
     {
+        internal static readonly FieldInfo CurrentWeapon = typeof(dcu).GetField("m_d", BindingFlags.Instance | BindingFlags.NonPublic) ?? typeof(dcu).GetField("d", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly);
+        // dcu.a(WeaponKey): the switch itself (the player's key, the AI's swap nodes, scripts).
+        static bool Switch(dcu __instance, WeaponKey __0)
+        {
+            if (!GameEvents.WeaponSwitching.Any) return true;
+            try
+            {
+                if (CurrentWeapon != null && Equals(CurrentWeapon.GetValue(__instance), __0)) return true;     // no change
+                var who = Combat.OfData(__instance.a1());
+                if (who == null) return true;
+                var e = new WeaponSwitch { Character = who, ToSecondary = __0 == WeaponKey.Secondary };
+                GameEvents.WeaponSwitching.Run(h => h(e));
+                return !e.Cancel;
+            }
+            catch (Exception ex) { Log.Write("weapon switch: " + ex.Message); return true; }
+        }
+
         // a0l.a(character, destination, ...): queues the game's ChangeZone workflow (exits and scripts alike).
         static bool Leave(c5x __0, c2w __1)
         {
@@ -138,6 +159,7 @@ namespace UnderRailWorks.Internal
             harmony.Patch(typeof(c69).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(ebk), typeof(ebk), typeof(coh), typeof(bool) }, null), prefix: m("Move"));
             harmony.Patch(typeof(a0l).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(c5x), typeof(c2w), typeof(int), typeof(Microsoft.Xna.Framework.Point?) }, null), prefix: m("Leave"));
             harmony.Patch(typeof(eed).GetMethod("b", BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null), postfix: m("Refreshed"));
+            harmony.Patch(typeof(dcu).GetMethod("a", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(WeaponKey) }, null), prefix: m("Switch"));
             harmony.Patch(typeof(ahu).GetMethod("i", BindingFlags.Instance | BindingFlags.Public, null, Type.EmptyTypes, null), prefix: m("Craft"));
         }
     }

@@ -984,6 +984,12 @@ health; when the next zone is ready they are spawned again next to the player, f
 `GameEvents.FollowerArrived(new, old)` lets mods swap their reference. Still never saved. Beastmaster's companion uses
 it. Tested: called a companion, travelled to lu-c1b: "Rathound arrived with the player", the HUD part still tracks it.
 
+## Weapon switching (Nov 2026)
+
+`GameEvents.WeaponSwitching` (Character, ToSecondary; cancellable): prefix on `dcu.a(WeaponKey)`, the switch the
+player's X key, the AI's swap nodes (`Offense.k()` in the tactics) and scripts all use. `Character.UsingSecondaryWeapon`
+/ `SwitchWeapons()`. Tested: X switched to secondary; refused, the switch back didn't happen.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

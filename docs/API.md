@@ -103,6 +103,8 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `bool MoveTo(int x, int y)` — Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it can't take orders (no movement, not on a map) or the tile is outside the area. Not in turn-based combat.
 - `bool TeleportTo(int x, int y)` — Puts it on tile x, y of its area at once (no walking, as the game's scripts move characters between scenes).
 - `DefenseStats Defense`
+- `bool UsingSecondaryWeapon` — In its secondary weapon set now (the game's swap: X). SwitchWeapons() swaps as the key does.
+- `void SwitchWeapons()`
 - `int Initiative` — Its initiative (efk.Offense ay(): what StatBonus.Initiative changes).
 - `bool IsPlayer`
 - `bool IsHostile` — Hostile or unfriendly to the player, not passive (red and orange outlines).
@@ -442,6 +444,7 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<DialogStart>> DialogStarting = new Hook<Action<DialogStart>>("DialogStarting")` — A conversation about to open (Cancel, or change Name to open another). Not combat barks.
 - `static readonly Hook<Action<EquipAttempt>> Equipping = new Hook<Action<EquipAttempt>>("Equipping")`
 - `static readonly Hook<Action<ZoneLeave>> ZoneLeaving = new Hook<Action<ZoneLeave>>("ZoneLeaving")`
+- `static readonly Hook<Action<WeaponSwitch>> WeaponSwitching = new Hook<Action<WeaponSwitch>>("WeaponSwitching")`
 - `static readonly Hook<Action<CraftAttempt>> Crafting = new Hook<Action<CraftAttempt>>("Crafting")`
 - `static readonly Hook<Action<Container, Character, bool>> ContainerOpened = new Hook<Action<Container, Character, bool>>("ContainerOpened");     // container, opener, first time`
 - `static readonly Hook<Action<Container, Item, Character>> ItemTaken = new Hook<Action<Container, Item, Character>>("ItemTaken")`
@@ -1448,6 +1451,11 @@ A set of named game variables. Values are bool, int, float or string only: the s
 - `void Set(string name, float value)`
 - `void Set(string name, string value)`
 - `void Remove(string name)`
+
+## WeaponSwitch  _(class, Cancellable.cs)_
+
+A character (the player or an NPC's AI) about to switch between its primary and secondary weapon.
+
 
 ## Window  _(enum, Hud.cs)_
 

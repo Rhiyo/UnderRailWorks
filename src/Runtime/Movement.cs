@@ -50,6 +50,9 @@ namespace UnderRailWorks
     public sealed partial class Character
     {
         public DefenseStats Defense { get { var g = GameData; return g == null ? null : new DefenseStats(g.Defense); } }
+        // In its secondary weapon set now (the game's swap: X). SwitchWeapons() swaps as the key does.
+        public bool UsingSecondaryWeapon { get { var g = GameData; return g != null && Equals(Internal.CancelHooks.CurrentWeapon.GetValue(g.Offense), TimelapseVertigo.Rules.Characters.WeaponKey.Secondary); } }
+        public void SwitchWeapons() { var g = GameData; if (g != null) g.Offense.k(); }
         // Its initiative (efk.Offense ay(): what StatBonus.Initiative changes).
         public int Initiative { get { var g = GameData; return g == null ? 0 : g.Offense.ay(); } }
     }
