@@ -1307,5 +1307,8 @@ ammo), on the game's reload action nh.fr, which the player and NPCs' AI both use
 does (its mode field: 0 the weapon in hand, 2 the target item, else the action's item). `Items.Use(user, item, Item
 target)` uses an item on another item (the game's use call takes any object as its target): ammo on a weapon reloads
 it. Tested in game (`wt.gun`, `wt.reload`): Reloading with the weapon and ammo, Reloaded, the magazine full. Before
-the item overload, Items.Use(ammo) aimed at the player and the game's reload failed (mode 1, no weapon). Not seen yet:
-an NPC reloading in combat; the `]` key and the ammo bar didn't reload in a headless run.
+the item overload, Items.Use(ammo) aimed at the player and the game's reload failed (mode 1, no weapon). NPCs in
+combat (`wt.gunner`: a hostile Ironhead Gunner next to a player who takes no damage, Space to end turns): it spawns with
+an empty rifle and reloads on its first turn; Reloading/Reloaded named the 7.62mm Jaguar and its ammo. Cancelled for
+NPCs (`works.var wt_noreload true`): the AI tries about once a turn and its turn ends normally (no hang; it doesn't
+fight instead). The `]` key and the ammo bar didn't reload in a headless run.

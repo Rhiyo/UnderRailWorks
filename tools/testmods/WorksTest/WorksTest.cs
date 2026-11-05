@@ -121,6 +121,17 @@ public sealed class WorksTest : WorksMod
             Log.Info("disarm command: " + ok);
             return "disarm: " + ok;
         });
+        // A hostile gunner next to the player, who takes no damage while wt_god is set: end turns until it reloads.
+        Combat.ModifyIncomingDamage.Add(this, d => { if (d.Target.IsPlayer && Variables.Global.Get("wt_god", false)) d.Scale(0); });
+        Commands.Add(this, "wt.gunner", "wt.gunner: a hostile Ironhead gunner next to the player (player takes no damage)", args =>
+        {
+            var p = World.Player; if (p == null) return "no player";
+            Variables.Global.Set("wt_god", true);
+            var t = World.FreeTilesNear((int)p.Position.X, (int)p.Position.Y, 4).Skip(2).FirstOrDefault();
+            var g = World.Spawn("creatures\\generichumans\\ironheadgunner", t.X, t.Y, SpawnSide.Hostile);
+            Log.Info("gunner: " + (g == null ? "none" : g.Name + " at " + t));
+            return g == null ? "no gunner" : "spawned " + g.Name;
+        });
         Commands.Add(this, "wt.trapslot", "wt.trapslot: the bag's first trap into quick slot 1", args =>
         {
             var p = World.Player; var trap = p == null ? null : p.Inventory.Items.FirstOrDefault(i => i.Code != null && i.Code.StartsWith("trap."));
@@ -453,6 +464,7 @@ public sealed class WorksTest : WorksMod
         Traps.ModifyDetection.Add(this, (who, score) => { if (who.IsPlayer && trapScans++ < 2) Log.Info("trap detection score " + score + " -> " + (score + 100)); return who.IsPlayer ? score + 100 : score; });
         GameEvents.TrapDisarming.Add(this, d => { if (Variables.Global.Get("wt_easy", false)) d.Difficulty = 0; Log.Info("disarming: skill " + d.Skill + " vs " + d.Difficulty + (d.OwnTrap ? " (own)" : "")); });
         GameEvents.TrapDisarmed.Add(this, r => Log.Info("disarmed: " + r.Outcome));
+        GameEvents.Reloading.Add(this, r => { if (!r.Character.IsPlayer && Variables.Global.Get("wt_noreload", false)) { r.Cancel = true; Log.Info("reload cancelled for " + r.Character.Name); } });
         GameEvents.Reloading.Add(this, r => Log.Info("reloading: " + r.Character.Name + " " + (r.Weapon == null ? "?" : r.Weapon.Name) + " with " + (r.Ammo == null ? "-" : r.Ammo.Name)));
         GameEvents.Reloaded.Add(this, r => Log.Info("reloaded: " + r.Character.Name));
         GameEvents.TrapDetected.Add(this, t => Log.Info("trap spotted by " + t.Character.Name + " at " + t.Position + ", detect " + t.DetectDifficulty + ", disarm " + t.DisarmDifficulty));

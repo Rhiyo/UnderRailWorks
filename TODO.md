@@ -151,7 +151,7 @@ startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
 
 - [~] Fewer allocations per world layer: Hook dispatch done (143 -> 124 MB/s); the Layer wrappers can't be reused (UnderRailFixes keeps them for the keyhole redraw).
 - [x] Followers through zone changes (Follow(..., travels: true)).
-- [~] AI weapon choice: switching is hookable (WeaponSwitching); reloading too (Reloading/Reloaded, nh.fr). Tested in game with the player; Items.Use on an item. Still: an NPC reload in combat.
+- [x] AI weapon choice: switching is hookable (WeaponSwitching); reloading too (Reloading/Reloaded, nh.fr). Tested in game with the player and an NPC in combat, cancel included; Items.Use on an item.
 - [x] Map markers from mods (Markers; the Minimap draws them). Journal entries: the game's journal is its quest log, which mod quests already fill (Quests, content packs).
 - [x] A modder's cookbook (docs/Cookbook.md, compiled and run).
 - [ ] Real Windows, Steam achievements through the helper: still untested. Sound output: measured from the test run's
