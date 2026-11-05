@@ -578,6 +578,23 @@ From `~/UnderRailWorks-research/specs/clock-items-crafting.md` (not committed):
 - mod.json: `incompatible` (a mod that loads with an incompatible one is skipped with the reason), `homepage`,
   `issues`, `license`, `game`; `icon.png` (ModInfo.Icon).
 
+## Item definitions, new items, tooltips (Nov 2026)
+
+From `~/UnderRailWorks-research/specs/items-stores.md`: every stat is on the definition (`bk3`); data-file items
+share a cached definition per path and save only the path; crafted items (and `coh.c()`) carry their own copy.
+- `Items.Definition(path)` -> `ItemDefinition` (Code, Name, Description, Icon, Value, Weight, MaxStack; weapons:
+  Damage ranges, ActionPoints, CritChance, CritDamage, MinStrength; armour: Resistances / SetResistance,
+  ArmorPenalty). `Items.EditDefinition(mod, path, edit)`: applied to the cached definition and whenever `ez2.b(path,
+  bool)` loads it; never saved.
+- `Items.Define(mod, id, basePath, edit)` -> `works\<mod>\<id>`, code `works.<mod>.<id>`: a prefix on `ez2.b` answers
+  that path with the base definition's clone (`tw()`), edited. Saves hold the path; the stock game loads such a save
+  (checked with tools/savecheck --only: global.dat, chunk0.dat, info.dat OK) and shows the item as "Unknown".
+- `Item.Definition`, `Item.MakeUnique()` (`coh.c()`: its own definition, saved whole as stock types).
+- `Items.ModifyTooltip(mod, (item, tooltip) => ...)`: postfix on `cq4.a(coh, efk, object, bool, bool, eg, c3n,
+  double?, bool)`; `Tooltip.AddLine / AddValue / InsertLine / Find / RemoveLine / AddSeparator / InTrade`.
+- Tested: a defined "Works Stim" (name, description, value 1234, weight) given and shown; the stock bandage renamed
+  and revalued; a tooltip line on both.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

@@ -2,6 +2,7 @@
 // Each save folder is copied to <output>/<name>/ with global.dat, chunk0.dat and info.dat loaded and written again on
 // .NET 10 by the game's own code; config.dat likewise. Prints OK / FAIL per file.
 using System;
+using UnderRailWorks.Internal;
 using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;

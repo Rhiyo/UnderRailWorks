@@ -73,11 +73,11 @@ public static partial class Items
 {
     // The game's class for an item and its quick-slot flag (for tests).
     public static string DebugKind(Item item) { return item == null ? "" : item.Kind; }
-    public static bool Exists(string path) { return Definition(path) != null; }
-    public static string Code(string path) { var d = Definition(path); return d == null ? null : d.a5(); }
-    public static string Name(string path) { var d = Definition(path); return d == null ? null : d.az(); }
+    public static bool Exists(string path) { return RawDefinition(path) != null; }
+    public static string Code(string path) { var d = RawDefinition(path); return d == null ? null : d.a5(); }
+    public static string Name(string path) { var d = RawDefinition(path); return d == null ? null : d.az(); }
     static readonly Dictionary<string, bk3> cache = new Dictionary<string, bk3>(StringComparer.OrdinalIgnoreCase);
-    static bk3 Definition(string path)
+    static bk3 RawDefinition(string path)
     {
         bk3 d;
         if (path == null) return null;
@@ -86,7 +86,7 @@ public static partial class Items
     }
 }
 
-public sealed class Item
+public sealed partial class Item
 {
     internal readonly coh Game;
     internal Item(coh item) { Game = item; }
