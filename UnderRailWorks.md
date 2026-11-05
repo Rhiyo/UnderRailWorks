@@ -699,6 +699,12 @@ Tested in a mod window: all five.
   bigbret, edits the bandage's description and adds a loot rule. Tested: the knife in the merchant's stock with the
   pack's name, description and crit chance.
 
+## Hot reload (Nov 2026)
+
+`works.reload` (console) re-reads mods' pictures and texture packs, translations and every ModConfig from disk. Code
+needs a restart (.NET can't unload a mod's DLL that Harmony has patched into; content packs' dialogs and quests are
+registered once). Tested: a texture pack portrait changed on disk from red to green, shown after works.reload.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

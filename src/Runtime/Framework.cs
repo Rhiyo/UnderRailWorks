@@ -69,6 +69,7 @@ namespace UnderRailWorks
         static readonly System.Reflection.FieldInfo ActiveField = typeof(aji).GetField("a");     // aji.a: the active localization (a field/method name clash)
 
         static readonly Dictionary<string, Dictionary<string, string>> loaded = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
+        internal static void Forget() { loaded.Clear(); }
 
         public static string Get(WorksMod mod, string key, params object[] args)
         {

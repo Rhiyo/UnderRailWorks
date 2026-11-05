@@ -86,6 +86,14 @@ namespace UnderRailWorks
                 return a[0] + " = " + (Variables.Global.Get<object>(a[0], null) ?? "(unset)");
             });
             Add("UnderRailWorks", "works.mods", "works.mods: the mods and their state", a => string.Join("\n", ModLoader.Mods.Select(m => m.Name + " " + m.VersionText + ": " + (m.Loaded ? "loaded" : m.Enabled ? "not loaded (" + m.Error + ")" : "off") + (m.Failures > 0 ? ", " + m.Failures + " errors" : ""))));
+            Add("UnderRailWorks", "works.reload", "works.reload: re-reads mods' pictures, texture packs, translations and settings (code needs a restart)", a =>
+            {
+                AssetStore.ReloadFiles();
+                Translations.Forget();
+                int n = 0;
+                foreach (var c in ModConfig.All) { c.Reload(); n++; }
+                return "reloaded pictures and translations, settings of " + n + " mods";
+            });
             Add("UnderRailWorks", "works.content", "works.content: writes UnderRailWorks-content.txt (item paths, blueprints, stores...)", a => "written: " + ContentIndex.Write());
         }
     }

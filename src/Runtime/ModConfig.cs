@@ -186,6 +186,7 @@ public abstract class ModConfig
     // --- The loader's side ---------------------------------------------------------------------------------------
 
     static readonly Dictionary<Type, ModConfig> Loaded = new Dictionary<Type, ModConfig>();
+    internal static IEnumerable<ModConfig> All { get { return Loaded.Values.ToList(); } }
 
     internal static T Get<T>(ModInfo mod) where T : ModConfig
     {

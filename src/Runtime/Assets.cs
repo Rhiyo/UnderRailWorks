@@ -201,6 +201,15 @@ namespace UnderRailWorks.Internal
         }
 
         // --- Replacing the game's textures --------------------------------------------------------------------------
+        // Reads every mod picture again from disk (works.reload): the files may have changed.
+        internal static void ReloadFiles()
+        {
+            files.Clear(); icons.Clear();
+            foreach (var p in replaced.Values) if (p.File != null) p.Texture = null;
+            foreach (var mod in ModLoader.Mods.Where(m => m.Loaded || m.Instance == null)) ScanTexturePack(mod);
+            dirty = true;
+        }
+
         internal static void Replace(string mod, string gameAsset, string file)
         {
             replaced[Norm(gameAsset)] = new Pending { Mod = mod, File = file };
