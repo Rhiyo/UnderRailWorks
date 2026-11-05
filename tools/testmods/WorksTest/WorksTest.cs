@@ -40,6 +40,11 @@ public sealed class WorksTest : WorksMod
         Stores.AddOnce(this, "bigbret", "armor\\jkktacticalvest", 1);
         Loot.Add(this, (who, box) => who != null && who.Name.Contains("Rathound"), "components\\scraps\\fabricscraps", 1.0, 7);
         glow = ModStatuses.Define(this, "glow", "Works Glow", "A test status from a mod: +1 to a counter each turn.", "Status.PsiBoost", StatBonus.Dodge(15), StatBonus.Ability("Agility", 1));
+        Commands.Add(this, "wt.trapslot", "wt.trapslot: the bag's first trap into quick slot 1", args =>
+        {
+            var p = World.Player; var trap = p == null ? null : p.Inventory.Items.FirstOrDefault(i => i.Code != null && i.Code.StartsWith("trap."));
+            var ok = trap != null && p.Equipment.ToQuickSlot(trap, 0); Log.Info("trapslot: " + ok); return "slotted: " + ok;
+        });
         Commands.Add(this, "wt.probe", "wt.probe: which device blueprints are usable", args =>
         {
             var pp = World.Player.Position; var t = World.FreeTilesNear((int)pp.X, (int)pp.Y, 5).Skip(4).FirstOrDefault();
@@ -363,6 +368,10 @@ public sealed class WorksTest : WorksMod
         GameEvents.QuestChanged.Add(this, (id, state) => Log.Info("quest " + id + " -> " + state));
         GameEvents.Saved.Add(this, folder => Log.Info("saved " + folder));
         GameEvents.GameLoaded.Add(this, () => Log.Info("game loaded"));
+        int trapScans = 0;
+        Traps.ModifyDetection.Add(this, (who, score) => { if (who.IsPlayer && trapScans++ < 2) Log.Info("trap detection score " + score + " -> " + (score + 100)); return who.IsPlayer ? score + 100 : score; });
+        GameEvents.TrapDisarming.Add(this, d => Log.Info("disarming: skill " + d.Skill + " vs " + d.Difficulty + (d.OwnTrap ? " (own)" : "")));
+        GameEvents.TrapDisarmed.Add(this, r => Log.Info("disarmed: " + r.Outcome));
         GameEvents.ZoneLoaded.Add(this, (zone, first) => Log.Info("zone " + zone + (first ? " (first visit)" : "")));
         GameEvents.DialogStarted.Add(this, (name, npc) => Log.Info("dialog " + name + " with " + (npc == null ? "?" : npc.Name)));
         GameEvents.DialogEnded.Add(this, name => Log.Info("dialog ended " + name));

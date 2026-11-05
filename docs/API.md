@@ -355,6 +355,10 @@ The defense values the character sheet's Defense tab shows (what StatBonus.Dodge
 ## DialogStart  _(class, Cancellable.cs)_
 
 
+## DisarmOutcome  _(enum, Traps.cs)_
+
+Values: `Disarmed, Recovered, Failed, CriticalFailure`
+
 ## DrawContext  _(struct, DrawApi.cs)_
 
 The game's draw context (cp9) for the frame.
@@ -475,6 +479,8 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<Character, Character>> CharacterDying = new Hook<Action<Character, Character>>("CharacterDying")` — Just before the game handles a death: the character still has its status effects (the game clears them while it dies: measured, none left at CharacterDied) and gear. Killer: who dealt the blow, when known.
 - `static readonly Hook<Action> CombatStarted = new Hook<Action>("CombatStarted")` — Combat started / ended.
 - `static readonly Hook<Action> CombatEnded = new Hook<Action>("CombatEnded")`
+- `static readonly Hook<Action<TrapDisarm>> TrapDisarming = new Hook<Action<TrapDisarm>>("TrapDisarming")`
+- `static readonly Hook<Action<TrapDisarmResult>> TrapDisarmed = new Hook<Action<TrapDisarmResult>>("TrapDisarmed")`
 - `static readonly Hook<Action<double>> Update = new Hook<Action<double>>("Update")` — Once per game update; the argument is the time since the last one, in seconds.
 
 ## HitChance  _(class, Combat.cs)_
@@ -1339,6 +1345,28 @@ What a tile holds, as a map would show it.
 
 - `static string Language` — The game's language: "english", or its Localization folder name (e.g. "srpski").
 - `static string Get(WorksMod mod, string key, params object[] args)`
+
+## TrapDisarm  _(class, Traps.cs)_
+
+A disarm attempt about to be decided: change Difficulty for this attempt only (the trap keeps its own), or Cancel (nothing happens; the action ends).
+
+- `Character Character`
+- `Vector3 Position`
+- `int Skill`
+- `int Difficulty`
+- `bool OwnTrap`
+
+## TrapDisarmResult  _(class, Traps.cs)_
+
+- `Character Character`
+- `Vector3 Position`
+- `int Skill`
+- `int Difficulty`
+- `DisarmOutcome Outcome`
+
+## Traps  _(class, Traps.cs)_
+
+- `static readonly Hook<Func<Character, int, int>> ModifyDetection = new Hook<Func<Character, int, int>>("Traps.ModifyDetection")` — A character's trap detection score (the player's is then x1.25 against the trap's difficulty): each handler gets the score so far and returns the new one. Also what the character sheet shows.
 
 ## Triggers  _(class, Interactions.cs)_
 

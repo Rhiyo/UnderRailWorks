@@ -256,6 +256,19 @@ void Exports()
 }
 ```
 
+## Traps
+
+Change a disarm attempt's difficulty or stop it, see how it went, adjust detection.
+
+```csharp
+void TrapsExample()
+{
+    GameEvents.TrapDisarming.Add(this, d => { if (d.Character.IsPlayer) d.Difficulty -= 5; });     // this attempt only
+    GameEvents.TrapDisarmed.Add(this, r => { if (r.Outcome == DisarmOutcome.Recovered) Notify.OverPlayer("Got it back"); });
+    Traps.ModifyDetection.Add(this, (who, score) => who.IsPlayer ? score + 10 : score);
+}
+```
+
 ## Other mods
 
 Offer an API, call another's (optional dependencies stay optional).

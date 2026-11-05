@@ -214,6 +214,15 @@ public sealed class Cookbook : WorksMod
     }
     #endregion
 
+    #region Traps: change a disarm attempt's difficulty or stop it, see how it went, adjust detection
+    void TrapsExample()
+    {
+        GameEvents.TrapDisarming.Add(this, d => { if (d.Character.IsPlayer) d.Difficulty -= 5; });     // this attempt only
+        GameEvents.TrapDisarmed.Add(this, r => { if (r.Outcome == DisarmOutcome.Recovered) Notify.OverPlayer("Got it back"); });
+        Traps.ModifyDetection.Add(this, (who, score) => who.IsPlayer ? score + 10 : score);
+    }
+    #endregion
+
     #region Other mods: offer an API, call another's (optional dependencies stay optional)
     public interface IGreeter { string Greet(string name); }
     sealed class Greeter : IGreeter { public string Greet(string name) { return "Hello, " + name; } }

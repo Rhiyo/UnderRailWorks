@@ -1266,3 +1266,12 @@ work (0.1 ms), STA vs MTA, .NET tiered compilation and PGO, exceptions, the Map 
   Status Board, Scanner and The Pit use it (about 20 lines each removed). `Text.Count(n, "turn")` for plurals.
 - Null checks on World.Player in reward handlers (Ambushes, Bounty Hunter, The Pit).
 - Already there, now in the cookbook: `Hud.WhenReady` covers the HUD-created boilerplate.
+
+## Traps (Nov 2026)
+
+`GameEvents.TrapDisarming` (change Difficulty for this attempt, or Cancel), `GameEvents.TrapDisarmed` (Outcome:
+Disarmed, Recovered, Failed, CriticalFailure, worked out with the game's own comparisons in ds.fr: no dice), and
+`Traps.ModifyDetection` (postfix on qw.a(efk), the detection score; the character sheet shows it too). The difficulty
+change is written into the trap (ed2.d) for the call and put back in a finalizer. Tested in game: detection (a scan
+every 2-3 s, the score changed); the disarm hooks install, but a disarm wasn't played through (laying a trap by input
+in a test run didn't work out). Wired in WorksTest (`wt.trapslot` puts a trap in a quick slot).

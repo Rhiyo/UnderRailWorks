@@ -117,13 +117,13 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Status effect events (applying with a veto, applied, removed). Custom status effects still to do.
 - [x] Level-up event; XP curve, XP gains and points per level (Progression).
 - [ ] New item definitions (clone a stock item, override name/stats; the save holds the stock base).
-- [ ] New feats / abilities; level-up and progression hooks (XP curve, points per level).
-- [ ] Cancellable hooks everywhere with a set order (some combat hooks already modify).
+- [x] New feats / abilities; level-up and progression hooks (XP curve, points per level): mod feats, mod abilities, CustomStats, CharacterRules, Stats.Modify.
+- [x] Cancellable hooks with a set order (HookOrder; trade, containers, taking, dialogs, crafting, equipping, leaving a zone, weapon switching, disarming).
 - [x] Equipment (slots, equip/unequip, events). A veto still to do.
 - [x] Containers, loot, locks (events, contents, loot rolled, lock attempts).
 - [x] Stealth detection hooks (rate untested in game: test sneaking up on hostiles unseen).
-- [ ] Pickpocketing, traps, crafting events (mapped in scratchpad/specs/loot-locks-stealth.md); AI hooks.
-- [ ] Area triggers and interactables.
+- [x] Pickpocketing (ItemStolen), traps (TrapDisarming/TrapDisarmed, Traps.ModifyDetection), crafting events, AI hooks. Still: a trap detected event; a disarm played through in game.
+- [x] Area triggers and interactables (Triggers, usable objects).
 - [x] Content packs: triggers; DLL-registered conditions and effects.
 - [x] Patching stock dialogs (Dialogs.Patch, content packs' dialogPatches).
 - [ ] Content packs: stores, item tweaks.
@@ -147,6 +147,10 @@ CharacterDying, allies and followers, MoveTo/TeleportTo, mod crafting recipes, k
 startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
 
 ## Next
+
+- [ ] Consolidation candidates from the Nov 2026 mod review not done yet: a drag helper (HUD Layout and Movable Windows
+  drag by hand), mods keeping per-game data in Variables.Global strings (Merchant Ledger) instead of SaveData,
+  list windows rebuilt by hand (Loadouts, Vendor Directory) vs Ui.List.
 
 - [~] Fewer allocations per world layer: Hook dispatch done (143 -> 124 MB/s); the Layer wrappers can't be reused (UnderRailFixes keeps them for the keyhole redraw).
 - [x] Followers through zone changes (Follow(..., travels: true)).
