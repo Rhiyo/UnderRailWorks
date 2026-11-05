@@ -40,6 +40,36 @@ public sealed class WorksTest : WorksMod
         Stores.AddOnce(this, "bigbret", "armor\\jkktacticalvest", 1);
         Loot.Add(this, (who, box) => who != null && who.Name.Contains("Rathound"), "components\\scraps\\fabricscraps", 1.0, 7);
         glow = ModStatuses.Define(this, "glow", "Works Glow", "A test status from a mod: +1 to a counter each turn.", "Status.PsiBoost", StatBonus.Dodge(15), StatBonus.Ability("Agility", 1));
+        // A neutral NPC lays a bear trap next to the player (someone else's trap: the player can spot and disarm it).
+        Commands.Add(this, "wt.npctrap", "wt.npctrap: a neutral NPC lays a bear trap near the player", args =>
+        {
+            var p = World.Player; if (p == null) return "no player";
+            var tiles = World.FreeTilesNear((int)p.Position.X, (int)p.Position.Y, 3);
+            if (tiles.Count < 2) return "no room";
+            var npc = World.Spawn("creatures\\generichumans\\foundryworker", tiles[1].X, tiles[1].Y, SpawnSide.Neutral);
+            if (npc == null) return "no npc";
+            npc.Inventory.Add("traps\\beartrap", 1, false);
+            var trap = npc.Inventory.Items.FirstOrDefault(i => i.Code != null && i.Code.StartsWith("trap."));
+            bool used = trap != null && Items.Use(npc, trap);
+            Log.Info("npctrap: npc " + npc.Name + " at " + tiles[1] + ", trap " + (trap != null) + ", used " + used);
+            return "used: " + used;
+        });
+        Commands.Add(this, "wt.npcinv", "wt.npcinv: traps carried by characters near the player", args =>
+        {
+            var p = World.Player; if (p == null) return "no player";
+            var lines = World.CharactersNear(p.Position, 6).Where(c => !c.IsPlayer).Select(c => c.Name + " at " + c.Position + ": " + c.Inventory.Items.Count(i => i.Code != null && i.Code.StartsWith("trap.")) + " traps").ToList();
+            Log.Info("npcinv: " + string.Join("; ", lines));
+            return string.Join("; ", lines);
+        });
+        Commands.Add(this, "wt.laytrap", "wt.laytrap: the player lays a bear trap (gives one if needed)", args =>
+        {
+            var p = World.Player; if (p == null) return "no player";
+            if (!p.Inventory.Items.Any(i => i.Code != null && i.Code.StartsWith("trap."))) p.Inventory.Add("traps\\beartrap", 1, false);
+            var trap = p.Inventory.Items.FirstOrDefault(i => i.Code != null && i.Code.StartsWith("trap."));
+            bool used = Items.Use(p, trap);
+            Log.Info("laytrap: used " + used);
+            return "used: " + used;
+        });
         Commands.Add(this, "wt.trapslot", "wt.trapslot: the bag's first trap into quick slot 1", args =>
         {
             var p = World.Player; var trap = p == null ? null : p.Inventory.Items.FirstOrDefault(i => i.Code != null && i.Code.StartsWith("trap."));
@@ -372,6 +402,7 @@ public sealed class WorksTest : WorksMod
         Traps.ModifyDetection.Add(this, (who, score) => { if (who.IsPlayer && trapScans++ < 2) Log.Info("trap detection score " + score + " -> " + (score + 100)); return who.IsPlayer ? score + 100 : score; });
         GameEvents.TrapDisarming.Add(this, d => Log.Info("disarming: skill " + d.Skill + " vs " + d.Difficulty + (d.OwnTrap ? " (own)" : "")));
         GameEvents.TrapDisarmed.Add(this, r => Log.Info("disarmed: " + r.Outcome));
+        GameEvents.TrapDetected.Add(this, t => Log.Info("trap spotted by " + t.Character.Name + " at " + t.Position + ", detect " + t.DetectDifficulty + ", disarm " + t.DisarmDifficulty));
         GameEvents.ZoneLoaded.Add(this, (zone, first) => Log.Info("zone " + zone + (first ? " (first visit)" : "")));
         GameEvents.DialogStarted.Add(this, (name, npc) => Log.Info("dialog " + name + " with " + (npc == null ? "?" : npc.Name)));
         GameEvents.DialogEnded.Add(this, name => Log.Info("dialog ended " + name));

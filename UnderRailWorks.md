@@ -1282,3 +1282,12 @@ Disarmed, Recovered, Failed, CriticalFailure, worked out with the game's own com
 change is written into the trap (ed2.d) for the call and put back in a finalizer. Tested in game: detection (a scan
 every 2-3 s, the score changed); the disarm hooks install, but a disarm wasn't played through (laying a trap by input
 in a test run didn't work out). Wired in WorksTest (`wt.trapslot` puts a trap in a quick slot).
+`GameEvents.TrapDetected` (Nov 2026): a prefix/postfix on amc.a(List<ak1>) (a character's scan of nearby tiles) notes
+the traps on them that character hadn't spotted (ed2.a, the set of characters who know of it) and reports those it
+has after. Not seen firing in game yet: no test zone with a foreign trap. Tried, so nobody repeats it:
+- Q / clicking the utility slot then a tile in a headless run: the player walked instead of laying it.
+- `wt.npctrap`: a spawned neutral NPC given a bear trap and Items.Use: the use is queued but NPCs don't act out of
+  combat (`wt.npcinv`: still carrying it).
+- `wt.laytrap`: Items.Use on the player lays it (the bag loses it), but under the player and it's the player's own
+  (OwnTrap: always disarmed, never "detected").
+Next time: a save in a zone with map traps (the game's own, placed through c11.a with A_3 true), or combat.

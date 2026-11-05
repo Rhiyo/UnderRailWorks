@@ -122,7 +122,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Equipment (slots, equip/unequip, events). A veto still to do.
 - [x] Containers, loot, locks (events, contents, loot rolled, lock attempts).
 - [x] Stealth detection hooks (rate untested in game: test sneaking up on hostiles unseen).
-- [x] Pickpocketing (ItemStolen), traps (TrapDisarming/TrapDisarmed, Traps.ModifyDetection), crafting events, AI hooks. Still: a trap detected event; a disarm played through in game.
+- [x] Pickpocketing (ItemStolen), traps (TrapDisarming/TrapDisarmed, Traps.ModifyDetection), crafting events, AI hooks. TrapDetected added. Still: the disarm and detection events seen in game (needs a zone with map traps; UnderRailWorks.md "Traps").
 - [x] Area triggers and interactables (Triggers, usable objects).
 - [x] Content packs: triggers; DLL-registered conditions and effects.
 - [x] Patching stock dialogs (Dialogs.Patch, content packs' dialogPatches).

@@ -481,6 +481,7 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action> CombatEnded = new Hook<Action>("CombatEnded")`
 - `static readonly Hook<Action<TrapDisarm>> TrapDisarming = new Hook<Action<TrapDisarm>>("TrapDisarming")`
 - `static readonly Hook<Action<TrapDisarmResult>> TrapDisarmed = new Hook<Action<TrapDisarmResult>>("TrapDisarmed")`
+- `static readonly Hook<Action<TrapSpotted>> TrapDetected = new Hook<Action<TrapSpotted>>("TrapDetected")` — A character spotted a trap (its scan every couple of seconds; the player's included).
 - `static readonly Hook<Action<double>> Update = new Hook<Action<double>>("Update")` — Once per game update; the argument is the time since the last one, in seconds.
 
 ## HitChance  _(class, Combat.cs)_
@@ -1367,6 +1368,15 @@ A disarm attempt about to be decided: change Difficulty for this attempt only (t
 ## Traps  _(class, Traps.cs)_
 
 - `static readonly Hook<Func<Character, int, int>> ModifyDetection = new Hook<Func<Character, int, int>>("Traps.ModifyDetection")` — A character's trap detection score (the player's is then x1.25 against the trap's difficulty): each handler gets the score so far and returns the new one. Also what the character sheet shows.
+
+## TrapSpotted  _(class, Traps.cs)_
+
+A trap a character has just spotted (the player sees "Trap detected!").
+
+- `Character Character`
+- `Vector3 Position`
+- `int DetectDifficulty`
+- `int DisarmDifficulty`
 
 ## Triggers  _(class, Interactions.cs)_
 

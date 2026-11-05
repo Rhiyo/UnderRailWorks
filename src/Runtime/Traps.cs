@@ -7,6 +7,7 @@
 //   GameEvents.TrapDisarmed.Add(this, r => { if (r.Outcome == DisarmOutcome.CriticalFailure) Notify.OverPlayer("Ouch"); });
 //   Traps.ModifyDetection.Add(this, (who, score) => who.IsPlayer ? score + 5 : score);
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Xna.Framework;
 using UnderRailWorks.Internal;
@@ -26,6 +27,15 @@ namespace UnderRailWorks
         public bool OwnTrap { get; internal set; }       // the character's own trap: always disarmed and recovered
     }
 
+    // A trap a character has just spotted (the player sees "Trap detected!").
+    public sealed class TrapSpotted
+    {
+        public Character Character { get; internal set; }
+        public Vector3 Position { get; internal set; }
+        public int DetectDifficulty { get; internal set; }
+        public int DisarmDifficulty { get; internal set; }
+    }
+
     public sealed class TrapDisarmResult
     {
         public Character Character { get; internal set; }
@@ -39,6 +49,8 @@ namespace UnderRailWorks
     {
         public static readonly Hook<Action<TrapDisarm>> TrapDisarming = new Hook<Action<TrapDisarm>>("TrapDisarming");
         public static readonly Hook<Action<TrapDisarmResult>> TrapDisarmed = new Hook<Action<TrapDisarmResult>>("TrapDisarmed");
+        // A character spotted a trap (its scan every couple of seconds; the player's included).
+        public static readonly Hook<Action<TrapSpotted>> TrapDetected = new Hook<Action<TrapSpotted>>("TrapDetected");
     }
 
     public static class Traps
@@ -102,6 +114,44 @@ namespace UnderRailWorks.Internal
             return __exception;
         }
 
+        // amc.a(List<ak1>): a character's scan of the tiles around it. Traps not yet spotted by it before, spotted after.
+        static readonly FieldInfo SpottedBy = typeof(ed2).GetField("a", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+        static readonly FieldInfo DetectField = typeof(ed2).GetField("c", BindingFlags.Instance | BindingFlags.Public);
+        static void Scanning(amc __instance, List<ak1> __0, ref List<KeyValuePair<c5x, ed2>> __state)
+        {
+            __state = null;
+            if (!GameEvents.TrapDetected.Any || __0 == null) return;
+            try
+            {
+                var id = ((b0b)__instance.a8()).qe();
+                foreach (var tile in __0)
+                    foreach (var e in tile.Entities)
+                    {
+                        var c = e as c5x; var trap = c == null ? null : c.GetAspect<ed2>();
+                        if (trap == null || ((HashSet<Guid>)SpottedBy.GetValue(trap)).Contains(id)) continue;
+                        (__state ?? (__state = new List<KeyValuePair<c5x, ed2>>())).Add(new KeyValuePair<c5x, ed2>(c, trap));
+                    }
+            }
+            catch (Exception ex) { Log.Write("traps: " + ex.Message); }
+        }
+        static void Scanned(amc __instance, List<KeyValuePair<c5x, ed2>> __state)
+        {
+            if (__state == null) return;
+            try
+            {
+                var id = ((b0b)__instance.a8()).qe();
+                Character who = null;
+                foreach (var kv in __state)
+                {
+                    if (!((HashSet<Guid>)SpottedBy.GetValue(kv.Value)).Contains(id)) continue;
+                    if (who == null) who = Character.Of((b0b)__instance.a8());
+                    var e = new TrapSpotted { Character = who, Position = Character.Of(kv.Key).Position, DetectDifficulty = (int)DetectField.GetValue(kv.Value), DisarmDifficulty = Get(kv.Value) };
+                    GameEvents.TrapDetected.Run(h => h(e));
+                }
+            }
+            catch (Exception ex) { Log.Write("traps: " + ex.Message); }
+        }
+
         static void Detection(efk __0, ref int __result)
         {
             if (!Traps.ModifyDetection.Any) return;
@@ -121,6 +171,7 @@ namespace UnderRailWorks.Internal
             Func<string, HarmonyLib.HarmonyMethod> m = n => new HarmonyLib.HarmonyMethod(typeof(TrapHooks).GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
             harmony.Patch(typeof(ds).GetMethod("fr", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(TimeSpan), typeof(TimeSpan) }, null), prefix: m("Disarming"), finalizer: m("Disarmed"));
             harmony.Patch(typeof(qw).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(efk) }, null), postfix: m("Detection"));
+            harmony.Patch(typeof(amc).GetMethod("a", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(List<ak1>) }, null), prefix: m("Scanning"), postfix: m("Scanned"));
         }
     }
 }
