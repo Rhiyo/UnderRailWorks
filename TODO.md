@@ -24,7 +24,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
   loading them. Wine Mono stands in for .NET Framework in the check today.
 - [x] **Run check-saves.sh from release.sh** (with --play), so no release can ship without it. It builds its own game
   copies from dist/.
-- [ ] **Mods' save data** (works.json and per-mod JSON, when built): the stock game must still load saves that have them.
+- [x] **Mods' save data** (works.json and per-mod JSON, when built): the stock game must still load saves that have them.
 
 ## Housekeeping
 
@@ -55,9 +55,9 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Declarative mod settings: ModConfig (tModLoader's, with our readable ini); UnderRailFixes uses it.
 - [x] UI toolkit (first version): Ui.* controls, UiEvents (HUD, main menu, options), GameEvents.Update, Input;
   examples/HelloUI.
-- [ ] UI toolkit, next: mod keys in the game's key-binding screen, draggable panels, tooltips, text input, more
+- [~] UI toolkit, next (done: key bindings, tooltips, text input, lists, sliders, choices, images, windows; still: draggable panels as a widget): mod keys in the game's key-binding screen, draggable panels, tooltips, text input, more
   attachment points (inventory, dialog, character screen), readable wrappers for dropdowns and sliders outside Options.
-- [ ] Mods' save data: works.json per save, per-mod JSON, data of a missing mod kept, a warning icon on the Load Game
+- [x] Mods' save data: works.json per save, per-mod JSON, data of a missing mod kept, a warning icon on the Load Game
   screen, a backup before saving.
 - [ ] Reload mods without restarting (collectible AssemblyLoadContext, possible on .NET 10).
 - [ ] Debug tools in Works, not in the mod: the draw-order log and render-target dumps (KeyholeDebug today), and a
@@ -67,7 +67,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 ## Opening up the game (one area per slice: patch points, events, names, a real mod, a doc page)
 
 - [x] Drawing (experimental): WorldDraw, Outlines, names; UnderRailFixes uses it.
-- [ ] Items: the proven overlay made real: JSON recipes, icons, text, adding to stores and loot.
+- [x] Items: the proven overlay made real: JSON recipes, icons, text, adding to stores and loot.
 - [ ] Characters, stores, dialogs: the same overlay; their loaders still to find.
 - [ ] Maps: zone overlay, patches on every zone load (visited zones come from the save), cross-zone waypoints, what the
   stock game does with a transition to a missing map.
@@ -87,9 +87,9 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] World, characters, inventory, placements; variables, quests, text, notifications; dialogs; lifecycle events;
   saves kept stock-loadable (placements never saved, mod quests as variables, SaveGuard).
 - [x] Wrap the drawing API in Works types; UnderRailFixes built without the game (pixel-identical).
-- [ ] Stores (merchant stock), status effects, equipment; skill/ability conditions as named helpers.
-- [ ] Dialog started/ended events; zone first-visit flag; combat events tested in game.
-- [ ] New items (the item overlay), new maps.
+- [x] Stores (merchant stock), status effects, equipment; skill/ability conditions as named helpers.
+- [x] Dialog started/ended events; zone first-visit flag; combat events tested in game.
+- [x] New items (the item overlay), new maps.
 - [ ] A save with a completed mod quest and many placements through `check-saves.sh --only`; the stock game
   re-saving a modded save, then Works loading it.
 
@@ -103,7 +103,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [ ] Stealth Lens: show where enemies would notice you (needs detection rules: research).
 - [~] Survey Pins: the Minimap marks merchants; still: pins with notes, workbenches, locked containers.
 - [x] Neural Reallocation: a respec NPC (points refunded to the game's own unspent points).
-- [ ] Workbench Planner: recipes, what can be crafted now (crafting blueprints are code classes: read-only).
+- [ ] Workbench Planner: recipes, what can be crafted now (mods can now add recipes: Crafting.AddRecipe).
 - [ ] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist.
 - [x] HUD Layout: drag the game's HUD parts around, kept relative to an anchor (survives resolution changes) (Works: Input.Mouse, UiElement.X/Y).
 
@@ -137,3 +137,20 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 ## Testing gaps (from 1.x, still open)
 
 - [ ] Real Windows, GOG, the expansions, portrait screens, older Linux distros.
+
+## Built 2026-11-05 (see UnderRailWorks.md for each)
+
+AI hooks (target, actions, turns, flight), cancellable events (trade, containers, taking, dialogs, crafting, equipping,
+leaving a zone), UI widgets, item kinds/uses/values, decimal/string settings, content-pack items/stores/loot/music/
+sounds/recipes, works.reload, docs/API.md, StatBonus for feats and statuses, mod abilities (ability bars), Combat.Damage,
+CharacterDying, allies and followers, MoveTo/TeleportTo, mod crafting recipes, key clashes with the game's keys,
+startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
+
+## Next
+
+- [ ] Fewer allocations per world layer (the wrappers: ~13 MB/s with the keyhole on); a struct or reused view types.
+- [ ] Followers through zone changes (spawns stay in their zone today).
+- [ ] AI weapon choice / reload nodes (not traced).
+- [ ] Journal entries or map pins from mods (the game's notes are saved: needs Works-side storage, like recipes).
+- [ ] A modder's cookbook page (one example per API area) next to docs/API.md.
+- [ ] Real Windows, sound output, Steam achievements through the helper: still untested.
