@@ -820,6 +820,12 @@ crafting passes the stock loader.
 switches it on in the Mods tab. For gameplay rules a player should choose (Hunger has it). Tested: Hunger removed from
 mods.ini -> "starts switched off", Hunger=0 written.
 
+## Moving characters (Nov 2026)
+
+`Character.MoveTo(x, y)` (the movement aspect `ale.a(tile)`: pathfinding at its own speed; not in turn-based combat)
+and `Character.TeleportTo(x, y)` (`a0l.a(c5x, area, position)`, the game's scripted placement). Tested: the player
+teleported (16,1) -> (16,5) and walked back to (16,1).
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

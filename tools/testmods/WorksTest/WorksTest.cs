@@ -20,6 +20,7 @@ public sealed class WorksTest : WorksMod
     ModFeat grit;
     bool aiHold, block, aiFlee;
     Character pet; double petLog, autoWait, autoPoll;
+    int startX, startY;
     readonly System.Collections.Generic.Queue<string> autorun = new System.Collections.Generic.Queue<string>();
     int aiLogs;
     TimeSpan gameTime;
@@ -92,6 +93,13 @@ public sealed class WorksTest : WorksMod
             Log.Info("eat: " + (food == null ? "no food" : food.Name + " uses [" + string.Join(", ", food.Uses) + "], used " + Items.Use(World.Player, food)));
             return "eat";
         });
+        Commands.Add(this, "wt.tp", "wt.tp: teleport the player 4 tiles south", args =>
+        {
+            var p = World.Player; var at = p.Position; startX = (int)Math.Round(at.X); startY = (int)Math.Round(at.Y);
+            var ok = p.TeleportTo(startX, startY + 4); Log.Info("teleport " + ok + ": " + at + " -> " + p.Position); return "tp";
+        });
+        Commands.Add(this, "wt.walk", "wt.walk: walk the player back", args => { var ok = World.Player.MoveTo(startX, startY); Log.Info("walk " + ok + " from " + World.Player.Position); return "walk"; });
+        Commands.Add(this, "wt.where", "wt.where", args => { Log.Info("player at " + World.Player.Position); return "where"; });
         Commands.Add(this, "wt.bag", "wt.bag: the bag's item codes", args => { var t = string.Join(", ", World.Player.Inventory.Items.Select(i => i.Code + " x" + i.Stacks)); Log.Info("bag: " + t); return t; });
         Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
         {

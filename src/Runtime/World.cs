@@ -37,7 +37,7 @@ public struct Exit
     public Color GameColour { get { return ToOtherZone ? World.ZoneExitColour : World.AreaExitColour; } }
 }
 
-public sealed class Character
+public sealed partial class Character
 {
     internal readonly b0b Entity;
     Character(b0b entity) { Entity = entity; }

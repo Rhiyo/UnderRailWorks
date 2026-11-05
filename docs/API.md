@@ -98,8 +98,10 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 ## Cancellable  _(class, Cancellable.cs)_
 
 
-## Character  _(class, World.cs)_
+## Character  _(class, Movement.cs)_
 
+- `bool MoveTo(int x, int y)` — Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it can't take orders (no movement, not on a map) or the tile is outside the area. Not in turn-based combat.
+- `bool TeleportTo(int x, int y)` — Puts it on tile x, y of its area at once (no walking, as the game's scripts move characters between scenes).
 - `bool IsPlayer`
 - `bool IsHostile` — Hostile or unfriendly to the player, not passive (red and orange outlines).
 - `Vector3 Position` — Map position (tiles; fractional while moving).
