@@ -1477,6 +1477,16 @@ A handle on an interface element (one of the game's controls inside).
 - `Color Border`
 - `void Clear()` — Removes everything added to the panel (to rebuild its contents).
 
+## UiRows  _(class, UiWidgets.cs)_
+
+Rows of text with buttons at their right end, in an area of a panel or window (a list of sets, merchants...): Clear and Add again whenever the content changes; the panel itself stays (rebuilding a window mid-click loses the click). rows = UiRows.In(win, 10, win.Top + 4, 440, 28); rows.Clear(); foreach (var m in merchants) rows.Add(m.Name, null, UiRows.Button("Trade", () => Trade.Open(m)));
+
+- `int Count`
+- `static UiRows In(UiElement parent, int x, int y, int width, int rowHeight)`
+- `static RowButton Button(string text, Action click)`
+- `void Clear()`
+- `void Add(string text, Color? colour = null, params RowButton[] buttons)` — A row: its text (cut to what's left of the buttons) in colour (null: the body colour), buttons right-aligned.
+
 ## UiSlider  _(class, UiWidgets.cs)_
 
 - `UiElement View`

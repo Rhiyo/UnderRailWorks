@@ -148,7 +148,6 @@ startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
 
 ## Next
 
-- [ ] Consolidation candidates from the Nov 2026 mod review not done yet: list windows rebuilt by hand (Loadouts, Vendor Directory) vs Ui.List.
 
 - [~] Fewer allocations per world layer: Hook dispatch done (143 -> 124 MB/s); the Layer wrappers can't be reused (UnderRailFixes keeps them for the keyhole redraw).
 - [x] Followers through zone changes (Follow(..., travels: true)).

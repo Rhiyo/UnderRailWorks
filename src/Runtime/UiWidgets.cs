@@ -15,6 +15,45 @@ using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
 {
+    // Rows of text with buttons at their right end, in an area of a panel or window (a list of sets, merchants...):
+    // Clear and Add again whenever the content changes; the panel itself stays (rebuilding a window mid-click loses
+    // the click).
+    //   rows = UiRows.In(win, 10, win.Top + 4, 440, 28);
+    //   rows.Clear(); foreach (var m in merchants) rows.Add(m.Name, null, UiRows.Button("Trade", () => Trade.Open(m)));
+    public sealed class UiRows
+    {
+        readonly UiElement parent; readonly int x, y, width, height;
+        readonly List<UiElement> made = new List<UiElement>();
+        public int Count { get; private set; }
+        UiRows(UiElement parent, int x, int y, int width, int height) { this.parent = parent; this.x = x; this.y = y; this.width = width; this.height = height; }
+        public static UiRows In(UiElement parent, int x, int y, int width, int rowHeight) { return new UiRows(parent, x, y, width, rowHeight); }
+
+        public sealed class RowButton { internal string Text; internal Action Click; }
+        public static RowButton Button(string text, Action click) { return new RowButton { Text = text, Click = click }; }
+
+        public void Clear() { foreach (var e in made) Ui.Remove(e); made.Clear(); Count = 0; }
+
+        // A row: its text (cut to what's left of the buttons) in colour (null: the body colour), buttons right-aligned.
+        public void Add(string text, Color? colour = null, params RowButton[] buttons)
+        {
+            int top = y + Count * height, right = x + width;
+            foreach (var b in (buttons ?? new RowButton[0]).Reverse())
+            {
+                if (b == null) continue;
+                var button = Ui.Button(b.Text, b.Click);
+                right -= button.Width;
+                Ui.Add(parent, button, right, top);
+                made.Add(button);
+                right -= 8;
+            }
+            var label = Ui.Label(text ?? "", Math.Max(20, right - x));
+            Ui.SetColor(label, colour ?? Look.Text);
+            Ui.Add(parent, label, x, top + 4);
+            made.Add(label);
+            Count++;
+        }
+    }
+
     static class Look
     {
         internal static readonly Color Orange = new Color(181, 92, 0), Light = new Color(230, 160, 60), Text = new Color(215, 215, 205), Dark = new Color(12, 12, 12, 225), Hot = new Color(90, 50, 10);

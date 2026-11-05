@@ -1271,6 +1271,8 @@ work (0.1 ms), STA vs MTA, .NET tiered compilation and PGO, exceptions, the Map 
 - Merchant Ledger 1.1 keeps its records in SaveData (one "m:<merchant>" entry each) instead of delimited strings in
   game variables; 1.0 records are moved over at GameStarted and their variables removed. Tested: migrated, saved,
   reloaded, the save loads in the stock game.
+- `UiRows`: rows of text with right-aligned buttons in an area of a window, cleared and refilled in place (the
+  window stays: rebuilding it mid-click lost the click). Loadouts and Vendor Directory use it. Tested in game.
 
 ## Traps (Nov 2026)
 

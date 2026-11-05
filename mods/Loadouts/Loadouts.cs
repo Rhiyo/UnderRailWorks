@@ -8,7 +8,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0")]
 
 public sealed class Loadouts : WorksMod
 {
@@ -16,14 +16,14 @@ public sealed class Loadouts : WorksMod
     Keybind openKey;
     UiElement hud;
     UiWindow panel;
-    readonly List<UiElement> rows = new List<UiElement>();
+    UiRows rows;
     readonly Dictionary<int, Keybind> wearKeys = new Dictionary<int, Keybind>();
 
     public override void Load()
     {
         openKey = Keybinds.Register(this, "open", "Loadouts", Keys.K);     // the game doesn't use K
         for (int i = 1; i <= Sets; i++) wearKeys[i] = Keybinds.Register(this, "wear" + i, "Wear loadout " + i);
-        UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; });
+        UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; rows = null; });
         UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.Update.Add(this, seconds =>
         {
@@ -86,27 +86,20 @@ public sealed class Loadouts : WorksMod
         const int w = 620, h = 36 + Sets * 50;
         panel = Ui.Window(this, "loadouts", "Loadouts: save what you wear, put it back on in one click", w, h);
         if (panel == null) return;
-        panel.Closed += () => panel = null;
+        panel.Closed += () => { panel = null; rows = null; };
         Refresh();
     }
 
     void Refresh()
     {
         if (panel == null) return;
-        foreach (var r in rows) Ui.Remove(r);
+        if (rows == null) rows = UiRows.In(panel, 10, panel.Top + 6, 600, 50);
         rows.Clear();
         for (int i = 1; i <= Sets; i++)
         {
-            int set = i, y = panel.Top + 6 + (i - 1) * 50;
+            int set = i;
             var desc = Data.Get("name" + set);
-            var label = Ui.Label(set + ".  " + (string.IsNullOrEmpty(desc) ? "(empty)" : desc), 340);
-            Ui.SetColor(label, new Color(215, 215, 205));
-            rows.Add(label); Ui.Add(panel, label, 10, y + 4);
-            var wear = Ui.Button("Wear", () => Wear(set));
-            var save = Ui.Button("Save", () => Save(set));
-            rows.Add(wear); rows.Add(save);
-            Ui.Add(panel, wear, 610 - wear.Width, y);
-            Ui.Add(panel, save, 610 - wear.Width - 8 - save.Width, y);
+            rows.Add(set + ".  " + (string.IsNullOrEmpty(desc) ? "(empty)" : desc), null, UiRows.Button("Save", () => Save(set)), UiRows.Button("Wear", () => Wear(set)));
         }
     }
 

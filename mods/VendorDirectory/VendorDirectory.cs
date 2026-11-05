@@ -9,7 +9,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0")]
 
 public sealed class VendorDirectoryConfig : ModConfig
 {
@@ -25,7 +25,7 @@ public sealed class VendorDirectory : WorksMod
     Keybind listKey;
     UiElement hud;
     UiWindow panel;
-    readonly List<UiElement> rows = new List<UiElement>();
+    UiRows rows;
     int shownCount = -1;
     double sinceRefresh;
 
@@ -66,25 +66,20 @@ public sealed class VendorDirectory : WorksMod
             Close();
             panel = Ui.Window(this, "vendors", "Vendors in this zone" + (config.Remote ? " (trading from anywhere)" : ""), w, 40 + Math.Max(1, merchants.Count) * 28);
             if (panel == null) return;
-            panel.Closed += () => { panel = null; rows.Clear(); shownCount = -1; };
+            panel.Closed += () => { panel = null; rows = null; shownCount = -1; };
             shownCount = merchants.Count;
+            rows = UiRows.In(panel, 10, panel.Top + 4, w - 20, 28);
         }
-        foreach (var r in rows) Ui.Remove(r);
         rows.Clear();
-        if (merchants.Count == 0) { var none = Ui.Label("No merchants here.", w - 20); rows.Add(none); Ui.Add(panel, none, 10, panel.Top + 6); }
-        int y = panel.Top + 4;
+        if (merchants.Count == 0) rows.Add("No merchants here.");
         foreach (var m in merchants)
         {
             var merchant = m;
             int tiles = (int)Math.Round((m.Position - player.Position).Length());
             int seen = Variables.Global.Get("vd_" + m.Key, -1);
-            var text = m.Name + "  -  " + tiles + " tiles" + (seen >= 0 ? ", " + seen + " items last time" : ", not visited");
-            var label = Ui.Label(text, w - 110);
-            Ui.SetColor(label, new Color(215, 215, 205));
-            rows.Add(label); Ui.Add(panel, label, 10, y + 4);
             bool canTrade = (config.Remote || tiles <= config.Reach) && !Combat.InCombat;
-            if (canTrade) { var b = Ui.Button("Trade", () => { Close(); Trade.Open(merchant); }); rows.Add(b); Ui.Add(panel, b, w - 95, y); }
-            y += 28;
+            rows.Add(m.Name + "  -  " + Text.Count(tiles, "tile") + (seen >= 0 ? ", " + Text.Count(seen, "item") + " last time" : ", not visited"), null,
+                canTrade ? UiRows.Button("Trade", () => { Close(); Trade.Open(merchant); }) : null);
         }
     }
 
