@@ -974,6 +974,14 @@ its rules.
 mods/CharacterBuilder (startsOff): every CharacterRules number as a Mods-tab setting, defaulting to the game's own.
 Tested: AbilityPoints=10 -> 10 points on the creation screen.
 
+## Followers across zones (Nov 2026)
+
+`Character.Follow(leader, distance, travels: true)`: when the player leaves a zone (the a0l.a prefix, after
+ZoneLeaving), Works notes travelling followers that are its spawns (their Placement: blueprint, setup, name) and their
+health; when the next zone is ready they are spawned again next to the player, following, and
+`GameEvents.FollowerArrived(new, old)` lets mods swap their reference. Still never saved. Beastmaster's companion uses
+it. Tested: called a companion, travelled to lu-c1b: "Rathound arrived with the player", the HUD part still tracks it.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

@@ -219,12 +219,54 @@ public static partial class World
     // Out of combat, a follower that falls more than distance tiles behind is sent (the game's own move order, as its
     // AI moves: ale.a(tile)) to a free tile near its leader; in combat its AI fights as it would. Spawned characters
     // stay in their zone (they are never saved), so a follower is left behind at an exit.
-    sealed class Follow { public Character Who, Leader; public int Distance; public double Wait; public Vector3? OrderedFor; public Vector3 LastSeen; public int Still; }
+    sealed class Follow { public Character Who, Leader; public int Distance; public bool Travels; public double Wait; public Vector3? OrderedFor; public Vector3 LastSeen; public int Still; }
+    // Travelling followers of the player, taken along at a zone change (spawns stay in their zone otherwise).
+    sealed class Traveller { public Placement From; public string Name; public float Health; public int Distance; public Character Old; }
+    static readonly List<Traveller> travelling = new List<Traveller>();
+
+    // The player leaves the zone (GameEvents.ZoneLeaving went through): note the travelling followers.
+    internal static void PackFollowers()
+    {
+        travelling.Clear();
+        foreach (var f in followers.Values.ToList())
+        {
+            if (!f.Travels || f.Who.IsDead || f.Leader == null || !f.Leader.IsPlayer) continue;
+            var p = PlacementOf(f.Who.Entity);
+            if (p == null) continue;     // only Works' spawns can be re-created
+            travelling.Add(new Traveller { From = p, Name = f.Who.Name, Health = f.Who.Health, Distance = f.Distance, Old = f.Who });
+        }
+        if (travelling.Count > 0) Log.Write("follow: " + travelling.Count + " follower(s) come along");
+    }
+
+    // The new zone is ready: the followers next to the player again.
+    internal static void UnpackFollowers()
+    {
+        var list = travelling.ToList(); travelling.Clear();
+        var p = Player;
+        if (p == null || list.Count == 0) return;
+        var at = p.Position;
+        var tiles = FreeTilesNear((int)Math.Round(at.X), (int)Math.Round(at.Y), 3).OrderBy(t => Math.Abs(t.X - at.X) + Math.Abs(t.Y - at.Y)).Skip(1).ToList();
+        for (int i = 0; i < list.Count && i < tiles.Count; i++)
+        {
+            var t = list[i];
+            var id = "spawn:" + (++spawned);
+            var np = new Placement { Id = id, Zone = ZoneId, Area = p.Area.Name, X = tiles[i].X, Y = tiles[i].Y, Blueprint = t.From.Blueprint, Name = t.From.Name,
+                Friendly = t.From.Friendly, Setup = t.From.Setup, Temporary = true };
+            Place(np);
+            np.When = Condition.Code(() => false);
+            var c = Placed(id);
+            if (c == null) continue;
+            try { c.Health = Math.Min(c.MaxHealth, t.Health); } catch { }
+            SetFollow(c, p, t.Distance, true);
+            Log.Write("follow: " + t.Name + " arrived with the player");
+            if (GameEvents.FollowerArrived.Any) GameEvents.FollowerArrived.Run(h => h(c, t.Old));
+        }
+    }
     static readonly Dictionary<b0b, Follow> followers = new Dictionary<b0b, Follow>();     // by entity
-    internal static void SetFollow(Character who, Character leader, int distance)
+    internal static void SetFollow(Character who, Character leader, int distance, bool travels = false)
     {
         if (who == null || who.Entity == null) return;
-        if (leader == null) followers.Remove(who.Entity); else followers[who.Entity] = new Follow { Who = who, Leader = leader, Distance = Math.Max(1, distance) };
+        if (leader == null) followers.Remove(who.Entity); else followers[who.Entity] = new Follow { Who = who, Leader = leader, Distance = Math.Max(1, distance), Travels = travels };
     }
     internal static bool IsFollowing(Character who) { return who != null && who.Entity != null && followers.ContainsKey(who.Entity); }
 
@@ -390,7 +432,7 @@ public static partial class World
     }
 
     // A game is loading or starting: the placed entities belong to the game state being replaced.
-    internal static void ForgetAll() { placed.Clear(); lock (placements) placements.RemoveAll(p => p.Temporary); }
+    internal static void ForgetAll() { placed.Clear(); travelling.Clear(); lock (placements) placements.RemoveAll(p => p.Temporary); }
 
     internal static void Forget(c1a zone)
     {

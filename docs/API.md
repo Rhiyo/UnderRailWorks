@@ -108,6 +108,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `bool IsHostile` — Hostile or unfriendly to the player, not passive (red and orange outlines).
 - `Vector3 Position` — Map position (tiles; fractional while moving).
 - `void Follow(Character leader, int distance = 3)` — Keeps near leader (within distance tiles) out of combat; null stops it. For spawned allies, pets, escorts.
+- `void Follow(Character leader, int distance, bool travels)` — travels: a spawned follower of the player comes along to other zones (spawned again next to the player, with its health; GameEvents.FollowerArrived gives the new character). Never saved: a loaded game has none.
 - `void StopFollowing()`
 - `bool IsFollowing`
 - `Area Area`
@@ -465,6 +466,7 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<Character>> TradeOpened = new Hook<Action<Character>>("TradeOpened")` — The barter screen opened with a merchant.
 - `static readonly Hook<Action<string>> CharacterExporting = new Hook<Action<string>>("CharacterExporting")` — A character died. The player character is about to be exported (path: the .char being written): write what should travel with it into CharacterData. And a new game started with an imported character: its CharacterData is there now.
 - `static readonly Hook<Action> CharacterImported = new Hook<Action>("CharacterImported")`
+- `static readonly Hook<Action<Character, Character>> FollowerArrived = new Hook<Action<Character, Character>>("FollowerArrived")` — A travelling follower arrived in the new zone with the player: (the new character, the one left behind).
 - `static readonly Hook<Action<Character>> CharacterDied = new Hook<Action<Character>>("CharacterDied")`
 - `static readonly Hook<Action<Character, Character>> CharacterDying = new Hook<Action<Character, Character>>("CharacterDying")` — Just before the game handles a death: the character still has its status effects (the game clears them while it dies: measured, none left at CharacterDied) and gear. Killer: who dealt the blow, when known.
 - `static readonly Hook<Action> CombatStarted = new Hook<Action>("CombatStarted")` — Combat started / ended.

@@ -53,6 +53,9 @@ public sealed partial class Character
     public Vector3 Position { get { return Entities.MapPosition(Entity); } }
     // Keeps near leader (within distance tiles) out of combat; null stops it. For spawned allies, pets, escorts.
     public void Follow(Character leader, int distance = 3) { World.SetFollow(this, leader, distance); }
+    // travels: a spawned follower of the player comes along to other zones (spawned again next to the player, with its
+    // health; GameEvents.FollowerArrived gives the new character). Never saved: a loaded game has none.
+    public void Follow(Character leader, int distance, bool travels) { World.SetFollow(this, leader, distance, travels); }
     public void StopFollowing() { World.SetFollow(this, null, 0); }
     public bool IsFollowing { get { return World.IsFollowing(this); } }
     public Area Area { get { return Area.Of(Entities.AreaOf(Entity)); } }

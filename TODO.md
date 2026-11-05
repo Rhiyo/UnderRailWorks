@@ -149,7 +149,7 @@ startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
 ## Next
 
 - [ ] Fewer allocations per world layer (the wrappers: ~13 MB/s with the keyhole on); a struct or reused view types.
-- [ ] Followers through zone changes (spawns stay in their zone today).
+- [x] Followers through zone changes (Follow(..., travels: true)).
 - [ ] AI weapon choice / reload nodes (not traced).
 - [x] Map markers from mods (Markers; the Minimap draws them). Journal entries: still open.
 - [x] A modder's cookbook (docs/Cookbook.md, compiled and run).

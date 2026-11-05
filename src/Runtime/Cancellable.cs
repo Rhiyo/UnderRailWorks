@@ -44,11 +44,13 @@ namespace UnderRailWorks.Internal
         // a0l.a(character, destination, ...): queues the game's ChangeZone workflow (exits and scripts alike).
         static bool Leave(c5x __0, c2w __1)
         {
-            if (!GameEvents.ZoneLeaving.Any || __0 == null || !__0.IsPlayer || __1 == null) return true;
+            if (__0 == null || !__0.IsPlayer || __1 == null) return true;
+            if (!GameEvents.ZoneLeaving.Any) { World.PackFollowers(); return true; }
             try
             {
                 var e = new ZoneLeave { From = World.ZoneId, To = __1.b(), Entry = __1.c() };
                 GameEvents.ZoneLeaving.Run(h => h(e));
+                if (!e.Cancel) World.PackFollowers();
                 return !e.Cancel;
             }
             catch (Exception ex) { Log.Write("zone leave: " + ex.Message); return true; }

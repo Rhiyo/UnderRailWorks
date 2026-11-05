@@ -49,6 +49,8 @@ public static partial class GameEvents
     // into CharacterData. And a new game started with an imported character: its CharacterData is there now.
     public static readonly Hook<Action<string>> CharacterExporting = new Hook<Action<string>>("CharacterExporting");
     public static readonly Hook<Action> CharacterImported = new Hook<Action>("CharacterImported");
+    // A travelling follower arrived in the new zone with the player: (the new character, the one left behind).
+    public static readonly Hook<Action<Character, Character>> FollowerArrived = new Hook<Action<Character, Character>>("FollowerArrived");
     public static readonly Hook<Action<Character>> CharacterDied = new Hook<Action<Character>>("CharacterDied");
     // Just before the game handles a death: the character still has its status effects (the game clears them while
     // it dies: measured, none left at CharacterDied) and gear. Killer: who dealt the blow, when known.
@@ -152,6 +154,7 @@ static class Saves
         Log.Write("saves: zone loaded: " + id + (first ? " (first visit)" : ""));
         Run("placing characters", () => World.SpawnPlacements(zone, id));
         Run("imported character", CharacterFiles.ZoneReady);
+        Run("followers", World.UnpackFollowers);
         // The game rebuilt the player's stats while loading, before the player was known: once more now, so mods'
         // Stats.Modify rules (which test IsPlayer, mod skills...) are in.
         if (Stats.Modify.Any) Run("player stats", () => { if (World.Player != null) Stats.Refresh(World.Player); });

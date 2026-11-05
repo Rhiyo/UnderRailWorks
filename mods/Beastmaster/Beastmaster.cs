@@ -34,7 +34,8 @@ public sealed class Beastmaster : WorksMod
         call.Used += (user, target) => Call(user);
         config.Changed += () => { call.ApCost = config.ApCost; call.Cooldown = config.Cooldown; };
         GameEvents.Update.Add(this, s => Tick());
-        GameEvents.ZoneLoaded.Add(this, (zone, first) => companion = null);     // spawns stay in their zone
+        GameEvents.FollowerArrived.Add(this, (now, old) => { if (old == companion) companion = now; });
+        GameEvents.GameLoaded.Add(this, () => companion = null);     // spawns are never saved
         GameEvents.CharacterDying.Add(this, (who, killer) => { if (who == companion) { Notify.OverPlayer(T("fell")); companion = null; } });
         UiEvents.HudCreated.Add(this, root =>
         {
@@ -59,7 +60,7 @@ public sealed class Beastmaster : WorksMod
         if (tile == null) { Notify.OverPlayer(T("noRoom")); return; }
         companion = World.Spawn(config.Blueprint, tile.Value.X, tile.Value.Y, SpawnSide.Ally);
         if (companion == null) { Notify.OverPlayer(T("noRoom")); return; }
-        companion.Follow(user, 2);
+        companion.Follow(user, 2, true);     // comes along to other zones
         leaveAt = GameClock.Turns + config.Turns;
         Notify.Over(companion, T("called"), new Color(230, 160, 60));
         Log.Info("called " + companion.Name + " at " + tile.Value);
