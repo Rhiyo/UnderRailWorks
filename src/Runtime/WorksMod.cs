@@ -11,7 +11,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
 
-public abstract class WorksMod
+public abstract partial class WorksMod
 {
     public ModInfo Info { get; internal set; }
     public string Id { get { return Info.Id; } }

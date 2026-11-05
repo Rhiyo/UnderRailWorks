@@ -12,33 +12,43 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
 
+// Where a handler runs among a hook's handlers (tModLoader runs by load order only; BepInEx/Harmony have priorities).
+public enum HookOrder { First = 0, Early = 1, Normal = 2, Late = 3, Last = 4 }
+
 public abstract class HookBase<T> where T : class
 {
     readonly string name;
     T[] handlers = new T[0];
     string[] owners = new string[0];
+    int[] orders = new int[0];
     readonly Dictionary<T, int> failures = new Dictionary<T, int>();
     const int MaxFailures = 10;
     internal HookBase(string name) { this.name = name; }
 
     public bool Any { get { return handlers.Length > 0; } }
 
-    public void Add(WorksMod mod, T handler) { Add(mod.Id, handler); }
+    public void Add(WorksMod mod, T handler) { Add(mod.Id, handler, HookOrder.Normal); }
+    // order: where among the handlers this one runs (First before the rest...); the same order keeps load order.
+    public void Add(WorksMod mod, T handler, HookOrder order) { Add(mod.Id, handler, order); }
     // mod: the mod's id, for the log if the handler fails.
-    public void Add(string mod, T handler)
+    public void Add(string mod, T handler) { Add(mod, handler, HookOrder.Normal); }
+    public void Add(string mod, T handler, HookOrder order)
     {
-        var h = new List<T>(handlers) { handler };
-        var o = new List<string>(owners) { mod };
-        handlers = h.ToArray(); owners = o.ToArray();
+        int at = 0;
+        while (at < orders.Length && orders[at] <= (int)order) at++;     // after every handler of the same or an earlier order
+        var h = new List<T>(handlers); h.Insert(at, handler);
+        var o = new List<string>(owners); o.Insert(at, mod);
+        var r = new List<int>(orders); r.Insert(at, (int)order);
+        handlers = h.ToArray(); owners = o.ToArray(); orders = r.ToArray();
     }
 
     public void Remove(T handler)
     {
         int i = Array.IndexOf(handlers, handler);
         if (i < 0) return;
-        var h = new List<T>(handlers); var o = new List<string>(owners);
-        h.RemoveAt(i); o.RemoveAt(i);
-        handlers = h.ToArray(); owners = o.ToArray();
+        var h = new List<T>(handlers); var o = new List<string>(owners); var r = new List<int>(orders);
+        h.RemoveAt(i); o.RemoveAt(i); r.RemoveAt(i);
+        handlers = h.ToArray(); owners = o.ToArray(); orders = r.ToArray();
     }
 
     // Each handler in turn until call returns true; a throwing handler is removed.
@@ -51,6 +61,7 @@ public abstract class HookBase<T> where T : class
             catch (Exception ex)
             {
                 string mod = i < owners.Length ? owners[i] : "?";
+                ModErrors.Report(mod, name, ex);
                 int n; failures.TryGetValue(list[i], out n); failures[list[i]] = ++n;
                 if (n >= MaxFailures) { Remove(list[i]); failures.Remove(list[i]); Log.Write("mods: " + mod + ": its " + name + " handler failed " + n + " times and was removed: " + ex.Message); }
                 else if (n <= 3) Log.Write("mods: " + mod + ": its " + name + " handler failed (" + n + "): " + ex);

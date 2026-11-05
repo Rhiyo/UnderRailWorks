@@ -200,10 +200,10 @@ static class Saves
     // --- Lifecycle -----------------------------------------------------------------------------------------------
 
     static void SaveStarting(string __0) { Log.Write("saves: saving " + __0); if (GameEvents.Saving.Any) GameEvents.Saving.Run(h => h(__0)); }
-    static void SaveDone(string __0) { Run("re-applying placements", World.ReapplyAll); if (GameEvents.Saved.Any) GameEvents.Saved.Run(h => h(__0)); }
-    static void NewGameCreated() { World.ForgetAll(); if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); }
+    static void SaveDone(string __0) { Run("writing mod save data", () => SaveFiles.Save(__0)); Run("re-applying placements", World.ReapplyAll); if (GameEvents.Saved.Any) GameEvents.Saved.Run(h => h(__0)); }
+    static void NewGameCreated() { SaveFiles.NewGame(); World.ForgetAll(); if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); }
 
-    static void Loading(string __0) { loading = true; World.ForgetAll(); Log.Write("saves: loading " + __0); }
+    static void Loading(string __0) { loading = true; SaveFiles.Load(__0); World.ForgetAll(); Log.Write("saves: loading " + __0); }
 
     static Exception LoadFinished(Exception __exception)
     {

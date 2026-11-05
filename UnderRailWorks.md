@@ -563,6 +563,21 @@ From `~/UnderRailWorks-research/specs/clock-items-crafting.md` (not committed):
   slot's icon field `CP:I` empty. **Not verified:** using an item from a quick slot in the headless runner (neither
   the key nor a click used it).
 
+## Save data files, translations, mod APIs, hook order, error reports (Nov 2026)
+
+- `SaveData.Of(mod)` / `WorksMod.SaveData`: structured per-game data (strings, bools, numbers, lists, dictionaries)
+  in `Saves/<save>/UnderRailWorks.json` (folder: `d5x.d(name)`), written after each save, read when one loads,
+  cleared on a new game; sections of mods not installed are kept. The stock game never reads it. `WorksMod.Data`
+  (plain variables inside the save) stays for small values. Tested: written, restored by a quickload.
+- `WorksMod.T(key, args)` / `Translations`: `Mods/<mod>/i18n/<language>.json`; the language is the game's
+  (`aji.a.a`, the Localization folder name; null: "english"), falling back to english.json, then the key.
+- `Mods.Provide(mod, api)`, `Mods.Api<T>(id)`, `Mods.Call(id, method, args)`, `Mods.Event(name)` / `Raise`.
+- `HookOrder` (First, Early, Normal, Late, Last) on every hook's `Add`.
+- A failing handler is always logged (whatever Log= says), counted on the mod's card in the Mods tab, and the player
+  is told once per mod per session in the game's log.
+- mod.json: `incompatible` (a mod that loads with an incompatible one is skipped with the reason), `homepage`,
+  `issues`, `license`, `game`; `icon.png` (ModInfo.Icon).
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

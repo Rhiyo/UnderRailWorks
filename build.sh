@@ -97,7 +97,7 @@ mod TheStranger "$HERE/build/Mods" "$HERE/examples/TheStranger"
 rm -rf "$HERE/build/Mods/TheProspector"; cp -r "$HERE/examples/TheProspector" "$HERE/build/Mods/TheProspector"
 # WorksTest (test keys, never shipped): into build/Mods.
 mod WorksTest "$HERE/build/Mods" "$HERE/tools/testmods/WorksTest"
-rm -rf "$HERE/build/Mods/WorksTest/content"; cp -r "$HERE/tools/testmods/WorksTest/content" "$HERE/build/Mods/WorksTest/"
+rm -rf "$HERE/build/Mods/WorksTest/content"; cp -r "$HERE/tools/testmods/WorksTest/content" "$HERE/build/Mods/WorksTest/"; cp -r "$HERE/tools/testmods/WorksTest/i18n" "$HERE/build/Mods/WorksTest/"
 
 # The .NET 10 launcher (installed as underrail.exe; src/Launcher) and the Windows .NET 10 runtime it runs the game on
 # (Microsoft.NETCore.App + Microsoft.WindowsDesktop.App, from Microsoft's releases, each checked against the SHA-512

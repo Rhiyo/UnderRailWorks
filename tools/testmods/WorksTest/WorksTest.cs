@@ -12,14 +12,22 @@ public sealed class WorksTest : WorksMod
 {
     UiTextBox box;
     int detections, instants, suspicions;
+    bool failNow;
     TimeSpan gameTime;
     bool blockUse;
+    public override void PostLoad() { Log.Info("cross-mod call: " + Mods.Call("WorksTest", "Echo", "hi") + ", typed: " + Mods.Api<TestApi>("WorksTest").Echo("there")); }
     public override void Load()
     {
         GameEvents.StatusApplying.Add(this, c => { Log.Info("status applying " + c.Code + " on " + (c.Character == null ? "?" : c.Character.Name)); if (c.Code == "Hidden" && Data.GetBool("noHide")) c.Cancel = true; });
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
         GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));
         GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
+        Log.Info("translation: " + T("hello", "player") + " / missing: " + T("nope"));
+        Mods.Provide(this, new TestApi());
+        GameEvents.GameLoaded.Add(this, () => Log.Info("order: last"), HookOrder.Last);
+        GameEvents.GameLoaded.Add(this, () => Log.Info("order: first"), HookOrder.First);
+        GameEvents.GameLoaded.Add(this, () => Log.Info("save data counter after load: " + SaveData.Get("counter", 0) + ", list " + string.Join("|", ((System.Collections.IEnumerable)(SaveData.Get("list") ?? new object[0])).Cast<object>())));
+        GameEvents.Update.Add(this, s => { if (failNow) { failNow = false; throw new InvalidOperationException("test failure"); } });
         GameEvents.GameTimeAdvanced.Add(this, d => { gameTime += d; });
         GameEvents.ItemUsing.Add(this, u => { Log.Info("using " + u.Item + " (" + u.Action + ") by " + (u.User == null ? "?" : u.User.Name) + (blockUse ? ": blocked" : "")); if (blockUse) u.Cancel = true; });
         GameEvents.ItemUsed.Add(this, u => Log.Info("used " + u.Item.Name + " by " + (u.User == null ? "?" : u.User.Name) + " on " + (u.Target ?? "nothing")));
@@ -90,6 +98,8 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.P) && Input.Down(Keys.LeftControl)) { var pp = World.Player.Position; var v = World.Characters.Where(c => !c.IsPlayer && !c.IsHostile && c.CanTalk).OrderBy(c => (c.Position - pp).Length()).FirstOrDefault(); World.Player.SetBaseSkill("Pickpocketing", 120); Log.Info("pickpocket " + v + ": " + Stealing.Pickpocket(World.Player, v)); }
             if (Input.Pressed(Keys.C) && Input.Down(Keys.LeftControl) && !Input.Down(Keys.LeftShift)) { World.Player.SetBaseSkill("Tailoring", 40); Log.Info("blueprints: " + Crafting.All.Count + ", known " + Crafting.Known.Count + "; learn net: " + Crafting.Learn("throwingNet") + "; scraps: " + World.Player.Inventory.Add("components\\scraps\\fabricscraps", 60) + "; known now " + string.Join(", ", Crafting.Known.Select(k => k.Name))); }
             if (Input.Pressed(Keys.Q) && Input.Down(Keys.LeftControl)) { var b = World.Player.Inventory.Items.FirstOrDefault(i => i.Code == "med.bandage"); Log.Info("bandage " + (b == null ? "none" : b.Name + " [" + Items.DebugKind(b) + "]") + " to quick slot: " + (b != null && World.Player.Equipment.ToQuickSlot(b)) + "; quick: " + string.Join(", ", World.Player.Equipment.QuickSlots.Select(i => i == null ? "-" : i.Name))); }
+            if (Input.Pressed(Keys.D) && Input.Down(Keys.LeftControl)) { int c = SaveData.Get("counter", 0) + 1; SaveData.Set("counter", c); SaveData.Set("list", new System.Collections.Generic.List<object> { "a", 2.0, true }); Log.Info("save data counter = " + c); }
+            if (Input.Pressed(Keys.F) && Input.Down(Keys.LeftControl)) failNow = true;
             if (Input.Pressed(Keys.G) && Input.Down(Keys.LeftControl)) Log.Info("clock: world " + GameClock.WorldTime + ", turn " + GameClock.TurnTime + " (" + GameClock.Turns.ToString("0.0") + " turns), paused " + GameClock.Paused + ", ticks summed " + gameTime);
             if (Input.Pressed(Keys.U) && Input.Down(Keys.LeftControl)) { blockUse = !blockUse; Log.Info("block item use: " + blockUse); }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
@@ -145,4 +155,9 @@ public sealed class WorksTest : WorksMod
         GameEvents.CombatEnded.Add(this, () => Log.Info("combat ended"));
         GameEvents.CharacterDied.Add(this, c => Log.Info("died: " + (c == null ? "?" : c.Name)));
     }
+}
+
+public sealed class TestApi
+{
+    public string Echo(string text) { return "echo " + text; }
 }

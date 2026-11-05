@@ -98,5 +98,53 @@ public static class Json
             }
         }
     }
+
+    // Writes the same shapes back: dictionaries, lists/arrays, strings, numbers, bools, null.
+    public static string Write(object value, bool indent = true)
+    {
+        var sb = new StringBuilder();
+        Write(sb, value, indent ? 0 : -1);
+        return sb.ToString();
+    }
+
+    static void Write(StringBuilder sb, object v, int depth)
+    {
+        string nl = depth < 0 ? "" : "\n" + new string(' ', (depth + 1) * 2), end = depth < 0 ? "" : "\n" + new string(' ', depth * 2);
+        int next = depth < 0 ? -1 : depth + 1;
+        if (v == null) sb.Append("null");
+        else if (v is string) Quote(sb, (string)v);
+        else if (v is bool) sb.Append((bool)v ? "true" : "false");
+        else if (v is double || v is float || v is int || v is long || v is decimal || v is short || v is byte || v is uint || v is ulong)
+            sb.Append(Convert.ToDouble(v).ToString("R", CultureInfo.InvariantCulture));
+        else if (v is System.Collections.IDictionary)
+        {
+            var d = (System.Collections.IDictionary)v; bool first = true;
+            sb.Append('{');
+            foreach (System.Collections.DictionaryEntry e in d) { if (!first) sb.Append(','); first = false; sb.Append(nl); Quote(sb, Convert.ToString(e.Key, CultureInfo.InvariantCulture)); sb.Append(depth < 0 ? ":" : ": "); Write(sb, e.Value, next); }
+            if (!first) sb.Append(end);
+            sb.Append('}');
+        }
+        else if (v is System.Collections.IEnumerable)
+        {
+            bool first = true;
+            sb.Append('[');
+            foreach (var e in (System.Collections.IEnumerable)v) { if (!first) sb.Append(','); first = false; sb.Append(nl); Write(sb, e, next); }
+            if (!first) sb.Append(end);
+            sb.Append(']');
+        }
+        else Quote(sb, Convert.ToString(v, CultureInfo.InvariantCulture));
+    }
+
+    static void Quote(StringBuilder sb, string s)
+    {
+        sb.Append('"');
+        foreach (var c in s)
+        {
+            if (c == '"') sb.Append("\\\""); else if (c == '\\') sb.Append("\\\\");
+            else if (c == '\n') sb.Append("\\n"); else if (c == '\r') sb.Append("\\r"); else if (c == '\t') sb.Append("\\t");
+            else if (c < ' ') sb.Append("\\u").Append(((int)c).ToString("x4")); else sb.Append(c);
+        }
+        sb.Append('"');
+    }
 }
 }

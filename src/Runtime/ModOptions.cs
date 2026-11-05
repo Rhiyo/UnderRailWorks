@@ -248,6 +248,9 @@ public static class ModOptions
         // A missing requirement shows on the Requires line (in red); other reasons on a line of their own.
         bool unmet = mod.Requires.Any(d => Describe(d, true) != null);
         if (mod.Enabled && mod.Error != null && !(unmet && mod.Error.StartsWith("needs "))) Text(options, page, "   " + Capital(mod.Error), Bad);
+        if (mod.Failures > 0) Text(options, page, "   Errors this session: " + mod.Failures + " (last: " + mod.LastFailure + "); see UnderRailWorks.log", Bad);
+        var links = new[] { mod.Homepage, mod.License == null ? null : "Licence: " + mod.License, mod.Game == null ? null : "Made for UnderRail " + mod.Game }.Where(l => l != null).ToList();
+        if (links.Count > 0) Text(options, page, "   " + string.Join("   ", links), Quiet);
         if (!string.IsNullOrEmpty(mod.Description))
         {
             // Wrapped to the page (a long description was cut at the page's edge).

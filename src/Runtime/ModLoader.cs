@@ -1,7 +1,9 @@
 // UnderRailWorks: loads mods from Mods\<folder>\ in the game folder (64-bit mode only).
 // Each mod may have a mod.json manifest (readable JSON; everything optional):
 //   { "id": "UnderRailFixes", "name": "UnderRailFixes", "version": "2.0.0", "author": "...", "description": "...",
-//     "works": "1.0", "requires": ["OtherMod@1.2"], "optional": ["SomeMod"], "sortAfter": [], "sortBefore": [] }
+//     "works": "0.9", "requires": ["OtherMod@1.2"], "optional": ["SomeMod"], "sortAfter": [], "sortBefore": [],
+//     "incompatible": ["Rival@2.0"], "homepage": "https://...", "issues": "https://...", "license": "MIT", "game": "1.3.1.2" }
+// icon.png in the folder is shown in the Mods tab.
 // works: the Works API version the mod was built for (WorksApi.Version: same major, at least that minor).
 // As tModLoader's build.txt: requires = modReferences (must be present, on and at least that version, and is loaded
 // first), optional = weakReferences (loaded first when present), sortAfter / sortBefore = load order only.
@@ -51,6 +53,16 @@ public sealed class ModInfo
     public List<ModDependency> Optional { get; set; } = new List<ModDependency>();
     public List<string> SortAfter { get; set; } = new List<string>();
     public List<string> SortBefore { get; set; } = new List<string>();
+    public List<ModDependency> Incompatible { get; set; } = new List<ModDependency>();
+    public string Homepage { get; set; }
+    public string Issues { get; set; }
+    public string License { get; set; }
+    public string Game { get; set; }
+    // The mod's icon (icon.png in its folder), or null.
+    public string Icon { get { var f = Path.Combine(Folder, "icon.png"); return File.Exists(f) ? f : null; } }
+    // Handlers of this mod that failed while the game ran (HookBase), for the Mods tab.
+    public int Failures { get; internal set; }
+    public string LastFailure { get; internal set; }
 
     internal static Version ParseVersion(string s)
     {
@@ -159,6 +171,11 @@ public static class ModLoader
             m.Optional = list("optional").Select(ModDependency.Parse).ToList();
             m.SortAfter = list("sortAfter");
             m.SortBefore = list("sortBefore");
+            m.Incompatible = list("incompatible").Select(ModDependency.Parse).ToList();
+            m.Homepage = str("homepage");
+            m.Issues = str("issues");
+            m.License = str("license");
+            m.Game = str("game");     // the game versions it was made for, e.g. "1.3.1.2" (shown, not enforced)
         }
         catch (Exception ex) { m.Error = "mod.json: " + ex.Message; }
         return m;
@@ -178,6 +195,15 @@ public static class ModLoader
                 {
                     m.Error = "built for UnderRailWorks API " + m.Works.ToString(2) + " (this is " + WorksApi.Version.ToString(2) + ")";
                     changed = true;
+                }
+            foreach (var m in all.Where(m => m.Enabled && m.Error == null))
+                foreach (var d in m.Incompatible)
+                {
+                    var other = all.FirstOrDefault(x => x.Enabled && x.Error == null && x != m && x.Id.Equals(d.Id, StringComparison.OrdinalIgnoreCase) && (d.Min == null || (x.Version != null && x.Version >= d.Min)));
+                    if (other == null) continue;
+                    m.Error = "incompatible with " + other.Name + " (switch one off)";
+                    changed = true;
+                    break;
                 }
             foreach (var m in all.Where(m => m.Enabled && m.Error == null))
                 foreach (var d in m.Requires)
