@@ -25,7 +25,7 @@ static class StockCheck
             for (int i = 1; i < args.Length; i++)
             {
                 var files = new List<string>();
-                if (Directory.Exists(args[i])) foreach (var f in new[] { "global.dat", "chunk0.dat", "info.dat" }) { var p = Path.Combine(args[i], f); if (File.Exists(p)) files.Add(p); }
+                if (Directory.Exists(args[i])) foreach (var f in new[] { "global.dat", "chunk0.dat", "info.dat", "config.dat" }) { var p = Path.Combine(args[i], f); if (File.Exists(p)) files.Add(p); }
                 else files.Add(args[i]);
                 foreach (var path in files)
                 {

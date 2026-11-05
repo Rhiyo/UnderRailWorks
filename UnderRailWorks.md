@@ -1237,3 +1237,23 @@ biggest risk of going 64-bit only), GOG.
 - (Settled) Names: `UnderRailWorks.dll`, `UnderRailWorks-Patcher`; Works starts at 1.0.0, the UnderRailFixes mod at 2.0.0; a 1.x install is detected and replaced.
 - The manifest format, and how per-mod settings look in the Mods tab.
 - How Harmony patches behave across game updates, and how mods state which game versions they support.
+
+## Lost key presses at 120 FPS: the GPU hit test (Nov 2026)
+
+Symptom: with `FrameRateFix=1` / `MaxFps=120`, key presses were often lost while the cursor rested over the world or a
+window above it (in test runs 1 in 10 got through). Measured, layer by layer:
+- Wine delivered every key to the game thread, but the game read events only every 160-570 ms: a press and its
+  release came in the same poll, and FNA never saw the key down.
+- The polls were rare because each game update took 10-30 ms (normally 0.2 ms). With a fixed 120 Hz timestep (8.3 ms
+  per update) FNA never caught up: up to 60 updates per frame (its 500 ms cap), a frame every half second.
+- The time was all in the world view's hover hit test (a7m.a(int, int, out bool), from eux.d1 -> ci3.ag5 -> mv.ag5 ->
+  a7m.a(x, y)): with Sprite Target Mask (VS:M) off it reads each layer's pixel under the cursor back from the GPU
+  (`Texture2D.GetData`), which stalls on FNA. How long depends on the GPU queue, so some sessions were fine, about half
+  were slow. It runs whenever the world view counts as moused over, windows above it included.
+- The test runs started without config.dat. The game turns the mask on for new configs only under Wine, and its check
+  (`SteamHelper_IsRunningOnWine`) isn't exported by the game's SteamHelper.dll, so it never fires. The player's own
+  config.dat had VS:M on: 0 of 24 presses lost.
+
+Fix: ConfigDefaults turns the mask on for a new config.dat (the game's own setting, stock-readable). Fresh sessions:
+5 of 5 healthy, 0 of 30 presses lost. Ruled out on the way (measured): mods (all off: still lost), Works' per-frame
+work (0.1 ms), STA vs MTA, .NET tiered compilation and PGO, exceptions, the Map window, Movable Windows.

@@ -507,6 +507,7 @@ static class UiHooks
         Group("stealth", () => StealthHooks.Install(harmony));
         Group("mod windows", () => UiWindows.Install(harmony));
         Group("game windows", () => WindowSideHooks.Install(harmony));
+        Group("config defaults", () => ConfigDefaults.Install(harmony));
         Group("assets", () => AssetStore.Install(harmony));
         Group("clock, items, crafting, stealing", () => ActivityHooks.Install(harmony));
         Group("item definitions and tooltips", () => ItemHooks.Install(harmony));

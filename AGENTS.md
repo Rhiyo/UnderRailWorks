@@ -428,6 +428,11 @@ the code changed, the bad tile moved by exactly one tile.
   `bym.a`; mcs crashes (CS0584) or picks wrongly on some of them.
 - The test copy and the Steam game share one Proton prefix, so **a test build writes the player's real config.dat
   and saves**. Check what a change writes before testing it there (see the rule on files the game writes).
+- **A fresh config.dat is not the player's**: test runs start without one, and the game then had Sprite Target Mask
+  off (its Wine check never fires), so the world's hover hit test read pixels back from the GPU: 10-30 ms per update,
+  lost key presses at 120 FPS. Works now turns the mask on for new configs (ConfigDefaults). When input or timing looks
+  wrong, measure update times first (UnderRailWorks.md, "Lost key presses at 120 FPS"), and try the player's config
+  (`launch.sh --config`).
 
 ## Testing
 
