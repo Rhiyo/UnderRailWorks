@@ -153,6 +153,8 @@ namespace UnderRailWorks.Internal
         {
             Texture2D t;
             if (files.TryGetValue(path, out t) && t != null && !t.IsDisposed) return t;
+            DateTime failedAt;     // a missing or broken picture: tried again at most every 10 s (it may appear), logged once
+            if (failed.TryGetValue(path, out failedAt) && (DateTime.UtcNow - failedAt).TotalSeconds < 10) return null;
             var g = Device;
             if (g == null) return null;
             try
@@ -164,11 +166,16 @@ namespace UnderRailWorks.Internal
                 for (int i = 0; i < px.Length; i++) { var c = px[i]; if (c.A < 255) px[i] = new Color(c.R * c.A / 255, c.G * c.A / 255, c.B * c.A / 255, c.A); }
                 t.SetData(px);
                 t.Name = path;
-                files[path] = t; ours.Add(t);
+                files[path] = t; ours.Add(t); failed.Remove(path);
                 return t;
             }
-            catch (Exception ex) { Log.Write("assets: " + path + ": " + ex.Message); files[path] = null; return null; }
+            catch (Exception ex)
+            {
+                if (!failed.ContainsKey(path)) Log.Write("assets: " + path + ": " + ex.Message);
+                failed[path] = DateTime.UtcNow; files.Remove(path); return null;
+            }
         }
+        static readonly Dictionary<string, DateTime> failed = new Dictionary<string, DateTime>(StringComparer.OrdinalIgnoreCase);
 
         internal static SoundEffect LoadSound(string path)
         {

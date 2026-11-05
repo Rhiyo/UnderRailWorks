@@ -1,4 +1,4 @@
-// UnderRailWorks: a mod's own settings, in Mods\<mod>\settings.ini (readable text, like UnderrailFix.ini).
+// UnderRailWorks: a mod's own settings, in Mods\<mod>\settings.ini (readable text, like UnderRailWorks.ini).
 // The mod passes its defaults as ini text (with comments) on first use; the file is written from them when missing,
 // and later edits keep the file's lines and comments.
 using System;

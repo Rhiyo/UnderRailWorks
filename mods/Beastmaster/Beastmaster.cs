@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.1")]
+[assembly: System.Reflection.AssemblyVersion("1.0.2")]
 
 public sealed class BeastmasterConfig : ModConfig
 {
@@ -56,7 +56,7 @@ public sealed class Beastmaster : WorksMod
     void Call(Character user)
     {
         var at = user.Position;
-        var tile = World.FreeTilesNear((int)at.X, (int)at.Y, 3).OrderBy(t => Math.Abs(t.X - at.X) + Math.Abs(t.Y - at.Y)).Skip(1).Cast<Point?>().FirstOrDefault();
+        var tile = World.FreeTilesNear((int)at.X, (int)at.Y, 3).Cast<Point?>().FirstOrDefault();     // nearest first; the player's own tile is taken
         if (tile == null) { Notify.OverPlayer(T("noRoom")); return; }
         companion = World.Spawn(config.Blueprint, tile.Value.X, tile.Value.Y, SpawnSide.Ally);
         if (companion == null) { Notify.OverPlayer(T("noRoom")); return; }

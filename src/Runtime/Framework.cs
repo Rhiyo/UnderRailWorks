@@ -122,6 +122,7 @@ namespace UnderRailWorks
         static readonly Dictionary<string, object> apis = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
         static readonly Dictionary<string, Hook<Action<object>>> events = new Dictionary<string, Hook<Action<object>>>(StringComparer.OrdinalIgnoreCase);
 
+        // Is that mod loaded (the same as ModLoader.IsLoaded).
         public static bool IsLoaded(string id) { return ModLoader.IsLoaded(id); }
 
         // Publishes this mod's API object (call in Load). Others get it by the mod's id.

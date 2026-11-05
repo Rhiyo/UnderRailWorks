@@ -144,6 +144,13 @@ public static partial class World
         }
     }
 
+    // Living characters in the current zone within radius tiles of a point (distance on the map, levels ignored),
+    // nearest first (the player included if in range; filter with Where). at: e.g. World.Player.Position.
+    public static IList<Character> CharactersNear(Vector3 at, float radius)
+    {
+        return Characters.Select(c => new { c, d = Vector2.Distance(new Vector2(c.Position.X, c.Position.Y), new Vector2(at.X, at.Y)) }).Where(x => x.d <= radius).OrderBy(x => x.d).Select(x => x.c).ToList();
+    }
+
     // The character under the mouse in the world (null: none, or not a character): the one the game outlines white.
     // (The world view mv is a dnn; dnn.an2() is what the mouse is over.)
     public static Character Hovered

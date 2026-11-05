@@ -1,4 +1,4 @@
-// Runtime fixes called from the patched game (see Installer.cs). Every entry point checks UnderrailFix.ini,
+// Runtime fixes called from the patched game (see Installer.cs). Every entry point checks UnderRailWorks.ini,
 // so a switched-off fix behaves exactly like the stock code it replaced.
 // UnderrailDisplayModes adds the monitor's display modes to the game's resolution table (efw). The built-in
 // resolutions are kept; extra modes get synthetic DisplayResolution values (ModeKey: width << 16 | height).
@@ -524,7 +524,7 @@ public static class UnderrailDropdownScroll
 }
 
 // The resolution field of the game's video settings (cnt.a) passes through here on its way in and out of config.dat.
-// ResolutionFix=1: the game runs at UnderrailFix.ini's Width/Height, menu changes go to the ini, and config.dat keeps
+// ResolutionFix=1: the game runs at UnderRailWorks.ini's Width/Height, menu changes go to the ini, and config.dat keeps
 // whatever it already held. ResolutionFix=0: config.dat as usual. Either way config.dat only ever gets values the
 // unmodified game knows, so turning the fix off or removing it never leaves an unreadable config behind.
 public static class ResolutionStore

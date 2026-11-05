@@ -15,14 +15,16 @@ public abstract partial class WorksMod
 {
     public ModInfo Info { get; internal set; }
     public string Id { get { return Info.Id; } }
-    // Lines in UnderrailFix.log, marked with the mod's id (with Log=1 in UnderrailFix.ini; errors always).
+    // Lines in UnderRailWorks.log, marked with the mod's id (with Log=1 in UnderRailWorks.ini; errors always).
     public ModLog Log { get; internal set; }
     // A Harmony instance named after the mod, for patching the game where Works has no hook yet.
     public Harmony Harmony { get; internal set; }
-    // The mod's settings.ini in its folder (defaults: SettingsDefaults, written on first start).
-    // This mod's data for the current game (saved with it as plain values).
+    // This mod's plain values for the current game, inside the game's own save (its global variables). For anything
+    // else (lists, dictionaries, more than a few values) use SaveData.Of(mod), kept next to the save.
     public ModData Data { get { return data ?? (data = new ModData(Id)); } }
     ModData data;
+    // The mod's settings.ini as raw keys (defaults: SettingsDefaults, written on first start). GetConfig is the typed
+    // way, with the mod's page in Options -> Mods.
     public ModSettings Settings { get { return ModSettings.For(Id, SettingsDefaults); } }
     protected virtual string SettingsDefaults { get { return null; } }
 

@@ -1004,7 +1004,7 @@ A mod's own data for the current game, kept with the save as plain values (the g
 
 ## Mods  _(class, Framework.cs)_
 
-- `static bool IsLoaded(string id)`
+- `static bool IsLoaded(string id)` — Is that mod loaded (the same as ModLoader.IsLoaded).
 - `static void Provide(WorksMod mod, object api)` — Publishes this mod's API object (call in Load). Others get it by the mod's id.
 - `static T Api<T>(string modId) where T : class` — Another mod's API as an interface or class both mods compile against (a small shared DLL, or the providing mod's own DLL as a reference). Null if the mod isn't loaded or provides none (call from PostLoad or later).
 - `static object Call(string modId, string method, params object[] args)` — Calls a public method of another mod's API by name, without referencing its DLL (tModLoader's Mod.Call). Returns its result, or null if the mod, its API or the method is missing.
@@ -1507,10 +1507,10 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `SaveData CharacterData` — This mod's data about the player character: saved with the game, carried into exported characters and imports.
 - `ModInfo Info`
 - `string Id`
-- `ModLog Log` — Lines in UnderrailFix.log, marked with the mod's id (with Log=1 in UnderrailFix.ini; errors always).
+- `ModLog Log` — Lines in UnderRailWorks.log, marked with the mod's id (with Log=1 in UnderRailWorks.ini; errors always).
 - `Harmony Harmony` — A Harmony instance named after the mod, for patching the game where Works has no hook yet.
-- `ModData Data` — The mod's settings.ini in its folder (defaults: SettingsDefaults, written on first start). This mod's data for the current game (saved with it as plain values).
-- `ModSettings Settings`
+- `ModData Data` — This mod's plain values for the current game, inside the game's own save (its global variables). For anything else (lists, dictionaries, more than a few values) use SaveData.Of(mod), kept next to the save.
+- `ModSettings Settings` — The mod's settings.ini as raw keys (defaults: SettingsDefaults, written on first start). GetConfig is the typed way, with the mod's page in Options -> Mods.
 - `T GetConfig<T>() where T : ModConfig` — The mod's ModConfig class (ModConfig.cs), loaded from settings.ini on first use.
 - `virtual void Load()`
 - `virtual void PostLoad()`
@@ -1522,6 +1522,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 ## World  _(class, Characters.cs)_
 
 - `static IList<Character> Characters` — Every living character in the current zone (all its areas), the player included.
+- `static IList<Character> CharactersNear(Vector3 at, float radius)` — Living characters in the current zone within radius tiles of a point (distance on the map, levels ignored), nearest first (the player included if in range; filter with Where). at: e.g. World.Player.Position.
 - `static Character Hovered` — The character under the mouse in the world (null: none, or not a character): the one the game outlines white. (The world view mv is a dnn; dnn.an2() is what the mouse is over.)
 - `static IList<Container> Containers` — Every container in the current zone (crates, lockers, corpses...).
 - `static string ZoneId` — The current zone's id, for Placement.Zone (null outside a game).

@@ -1,6 +1,6 @@
 // A "Fixes" tab in the game's Options, with a group (heading, rows) for each fix that is switched on. It is built at the end
 // of t1.h (where t1 builds its tabs), with t1's own row builder and dropdown factory through reflection, so it looks
-// like the game's tabs. Accept (end of t1.d) writes the values to UnderrailFix.ini, and they apply at once: zoom
+// like the game's tabs. Accept (end of t1.d) writes the values to UnderRailWorks.ini, and they apply at once: zoom
 // limits are read every frame; scale, insets and the default zoom need the interface laid out again, which is done
 // the way the game does it when Interface Size changes (bl9.b + ps.anc), after the game has applied its own options.
 using System;
