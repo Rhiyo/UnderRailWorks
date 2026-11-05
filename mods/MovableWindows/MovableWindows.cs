@@ -1,25 +1,19 @@
 // Movable Windows: an UnderRailWorks mod. The game's windows with a title bar (inventory, notes, crafting, map,
-// oddities, psi, combat stats, barter, containers) can be dragged by their title bar. Each opens where you last left
-// it (a setting; kept relative to the nearest screen edge, so it survives resolution changes); right-click a title bar to put that window back where the game places it. Clicking a window brings it to the front. Built from
-// Works' API only (Windows.OpenWindows, Input mouse, Ui, Settings).
+// oddities, psi, combat stats, barter, containers) can be dragged by their title bar, and clicking a window brings it
+// to the front. Windows open where the game puts them. The game closes the windows on one side of the screen when
+// another opens there (they'd overlap); a window you moved is out of the way, so it stays open (OpenWindow.StaysOpen)
+// until you close it. Right-click a title bar to put the window back: it then closes with its side again. Built from
+// Works' API only (Windows.OpenWindows, Input mouse, Ui).
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.1.0")]
-
-public sealed class MovableWindowsConfig : ModConfig
-{
-    [Header("Movable Windows")]
-    [Label("Windows open where you left them"), Tooltip("Off: they open where the game puts them (you can still drag them while open).")]
-    public bool Remember = true;
-}
+[assembly: System.Reflection.AssemblyVersion("1.2.0")]
 
 public sealed class MovableWindows : WorksMod
 {
-    MovableWindowsConfig config;
     readonly HashSet<UiElement> seen = new HashSet<UiElement>();
     readonly Dictionary<UiElement, Point> gamePlace = new Dictionary<UiElement, Point>();
     OpenWindow dragging;
@@ -27,27 +21,23 @@ public sealed class MovableWindows : WorksMod
 
     public override void Load()
     {
-        config = GetConfig<MovableWindowsConfig>();
         UiEvents.HudCreated.Add(this, root => { seen.Clear(); gamePlace.Clear(); dragging = null; });
         GameEvents.Update.Add(this, seconds =>
         {
             if (!Hud.Exists) return;
             var hud = Hud.Root;
             var open = Windows.OpenWindows;
-            // Newly opened windows: where the game put them (for right-click), then where the player left this kind.
+            // Newly opened windows: where the game put them (for right-click).
             seen.RemoveWhere(e => !open.Any(w => w.Element == e));
             foreach (var w in open)
-            {
-                if (!seen.Add(w.Element)) continue;
-                gamePlace[w.Element] = new Point(w.Element.X, w.Element.Y);
-                if (config.Remember) Restore(w, hud);
-            }
+                if (seen.Add(w.Element)) gamePlace[w.Element] = new Point(w.Element.X, w.Element.Y);
+            foreach (var e in gamePlace.Keys.Where(e => !seen.Contains(e)).ToList()) gamePlace.Remove(e);
             var m = Input.Mouse;
             // A click anywhere on a window brings it in front of the others.
             if (Input.MousePressed(MouseButton.Left) || Input.MousePressed(MouseButton.Right))
             {
                 var hit = WindowAt(open, m);
-                if (hit != null && hit != open[open.Count - 1]) { Ui.ToFront(hit.Element); open = Windows.OpenWindows; }
+                if (hit != null && hit.Element != open[open.Count - 1].Element) { Ui.ToFront(hit.Element); open = Windows.OpenWindows; }
             }
             if (dragging == null && Input.MousePressed(MouseButton.Left))
             {
@@ -58,20 +48,24 @@ public sealed class MovableWindows : WorksMod
             {
                 if (!open.Any(w => w.Element == dragging.Element)) { dragging = null; return; }     // closed meanwhile
                 Place(dragging, new Point(windowStart.X + m.X - dragStart.X, windowStart.Y + m.Y - dragStart.Y), hud);
-                if (!Input.MouseDown(MouseButton.Left))
-                {
-                    var place = Ui.Place(dragging.Element);
-                    if (place != null) Settings.Set(Key(dragging), place);
-                    dragging = null;
-                }
+                Point o;     // moved away from the game's place: it stays open when another window opens on its side
+                if (gamePlace.TryGetValue(dragging.Element, out o) && (dragging.Element.X != o.X || dragging.Element.Y != o.Y)) dragging.StaysOpen = true;
+                if (!Input.MouseDown(MouseButton.Left)) dragging = null;
             }
             if (Input.MousePressed(MouseButton.Right))
             {
                 var w = TitleAt(open, m);
                 Point o;
-                if (w != null && gamePlace.TryGetValue(w.Element, out o)) { Ui.Move(w.Element, o.X, o.Y); Settings.Set(Key(w), ""); }
+                if (w != null && gamePlace.TryGetValue(w.Element, out o)) { Ui.Move(w.Element, o.X, o.Y); w.StaysOpen = false; }
             }
         });
+    }
+
+    // The topmost window under the mouse.
+    static OpenWindow WindowAt(IList<OpenWindow> open, Point m)
+    {
+        for (int i = open.Count - 1; i >= 0; i--) if (open[i].Element.Bounds.Contains(m)) return open[i];
+        return null;
     }
 
     // The topmost window whose title bar (not its close button) is under the mouse.
@@ -87,49 +81,11 @@ public sealed class MovableWindows : WorksMod
         return null;
     }
 
-    // The topmost window under the mouse.
-    static OpenWindow WindowAt(IList<OpenWindow> open, Point m)
-    {
-        for (int i = open.Count - 1; i >= 0; i--) if (open[i].Element.Bounds.Contains(m)) return open[i];
-        return null;
-    }
-
     // Moved, but kept on screen: at least part of the title bar stays reachable.
     static void Place(OpenWindow w, Point at, UiElement hud)
     {
         int x = Math.Max(60 - w.Element.Width, Math.Min(hud.Width - 60, at.X));
         int y = Math.Max(0, Math.Min(hud.Height - w.TitleHeight, at.Y));
         Ui.Move(w.Element, x, y);
-    }
-
-    // Kept relative to the nearest screen edge or the centre (Ui.Place), so it survives resolution and interface-scale
-    // changes; version 1.0's per-size pixel entries ("Inventory@2560x720=x,y") are converted on first use.
-    static string Key(OpenWindow w) { return "at." + w.Kind; }
-
-    void Restore(OpenWindow w, UiElement hud)
-    {
-        var place = Settings.Get(Key(w));
-        if (string.IsNullOrEmpty(place))
-        {
-            var prefix = w.Kind + "@";
-            foreach (var k in Settings.Keys.Where(k => k.StartsWith(prefix)).ToList())
-            {
-                Point at; var size = k.Substring(prefix.Length).Split('x'); int sw, sh;
-                if (!TryParse(Settings.Get(k), out at) || size.Length != 2 || !int.TryParse(size[0], out sw) || !int.TryParse(size[1], out sh)) continue;
-                place = Ui.Place(at.X, at.Y, w.Element.Width, w.Element.Height, sw, sh);
-                if (sw == hud.Width && sh == hud.Height) break;
-            }
-            if (string.IsNullOrEmpty(place)) return;
-            Settings.Set(Key(w), place);
-        }
-        Ui.Restore(w.Element, place);
-    }
-    static bool TryParse(string s, out Point p)
-    {
-        p = Point.Zero;
-        var parts = (s ?? "").Split(',');
-        int x, y;
-        if (parts.Length != 2 || !int.TryParse(parts[0], out x) || !int.TryParse(parts[1], out y)) return false;
-        p = new Point(x, y); return true;
     }
 }

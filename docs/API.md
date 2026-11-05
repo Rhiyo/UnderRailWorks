@@ -1064,6 +1064,7 @@ An open window of the game with a title bar (a9t: the title, the close button at
 - `Window Kind`
 - `UiElement Element`
 - `int TitleHeight` — The title bar's height (interface units): the strip at the top, the close button at its right end.
+- `bool StaysOpen` — Opening a window closes the others on its side of the screen (inventory, map, psi on the left; crafting, notes, oddities, combat stats on the right). While true, this one stays open then; it still closes with its own button or key. Until the window closes (each opening is a new window).
 
 ## Outcome  _(class, Dialogs.cs)_
 

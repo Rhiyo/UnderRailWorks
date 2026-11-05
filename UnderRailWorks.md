@@ -1004,7 +1004,7 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | VendorDirectory | F6: the zone's merchants, nearest first, Trade from the list (in reach, or anywhere as a setting) | World.Characters, Stock, Trade.Open, TradeOpened |
 | FairTrade | merchants' buy markup and sell price as settings (proven on the barter screen: 750 -> 375 at 50%) | Prices hooks |
 | NeuralReallocation | a placed neurotechnician resets skills or abilities for charons; the points are the game's own unspent points, placed on its level-up screen (tested: 120 refunded + 40 for level 2 = 160 on the screen) | Character skills/abilities/points, dynamic dialog, Inventory |
-| MovableWindows | the game's titled windows dragged by their title bar, reopened where left (a setting), right-click a title to put it back; per HUD size | Windows.OpenWindows, Input mouse, Settings |
+| MovableWindows | the game's titled windows dragged by their title bar, clicked to the front; a moved window stays open when another opens on its side (dka.c/d close a side's windows); right-click a title to put it back | Windows.OpenWindows, OpenWindow.StaysOpen, Ui.ToFront, Input mouse |
 | Loadouts | three gear sets per game, saved with the save; Wear swaps from the bag, not in combat | Equipment, WorksMod.Data, Keybinds (unbound by default), UiPanel.Clear |
 | Pacing | XP per level, XP earned, extra skill / feat / ability points per level | Progression (ModifyXpNeeded, ModifyExperience, ModifyLevelPoints) |
 | WatchfulEyes | opening a container that isn't yours names who would see a theft; optional: no lock picking in view of a guard | ContainerOpened, Container.Owned / IsOwner / Witnesses, Locks.ModifyAttempt (Force) |

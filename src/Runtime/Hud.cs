@@ -305,6 +305,14 @@ public sealed class OpenWindow
     public UiElement Element { get; internal set; }
     // The title bar's height (interface units): the strip at the top, the close button at its right end.
     public int TitleHeight { get; internal set; }
+    // Opening a window closes the others on its side of the screen (inventory, map, psi on the left; crafting, notes,
+    // oddities, combat stats on the right). While true, this one stays open then; it still closes with its own button
+    // or key. Until the window closes (each opening is a new window).
+    public bool StaysOpen
+    {
+        get { object x; return WindowSideHooks.Kept.TryGetValue(Element.Control, out x); }
+        set { WindowSideHooks.Kept.Remove(Element.Control); if (value) WindowSideHooks.Kept.Add(Element.Control, null); }
+    }
 }
 
 public static class Windows
@@ -370,6 +378,87 @@ public static class Windows
         OptionsCancel = typeof(t1).GetMethod("b", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(object), typeof(b25) }, null);
 
     static void Call(ps screen, string name) { typeof(ps).GetMethod(name, Type.EmptyTypes).Invoke(screen, null); }
+}
+
+// dka.c() / dka.d(): the game closing the windows on the left / right before opening one there (the per-window close
+// methods they call are one-liners the JIT inlines, so they can't be hooked). While they run, the controller of a
+// window that StaysOpen (LocaleSubInterfaceController: m_b its state, y5.c = open; c its window) reads as closed, so
+// its close does nothing; the state is put back afterwards.
+static class WindowSideHooks
+{
+    internal static readonly System.Runtime.CompilerServices.ConditionalWeakTable<euz, object> Kept = new System.Runtime.CompilerServices.ConditionalWeakTable<euz, object>();
+    const BindingFlags Inst = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+    static readonly Type ControllerType = typeof(TimelapseVertigo.Game.Controllers.LocaleSubInterfaceController<,>);
+    // dka's window controllers, and their state / window fields (declared on the generic base, per instantiation).
+    static readonly List<FieldInfo> Controllers = typeof(dka).GetFields(Inst).Where(f => Controller(f.FieldType) != null).ToList();
+    static readonly Dictionary<Type, FieldInfo[]> StateAndWindow = new Dictionary<Type, FieldInfo[]>();
+
+    static Type Controller(Type t)
+    {
+        for (; t != null; t = t.BaseType) if (t.IsGenericType && t.GetGenericTypeDefinition() == ControllerType) return t;
+        return null;
+    }
+    static FieldInfo[] Fields(Type t)
+    {
+        FieldInfo[] f;
+        if (!StateAndWindow.TryGetValue(t, out f))
+        {
+            var b = Controller(t);
+            const BindingFlags d = Inst | BindingFlags.DeclaredOnly;
+            f = StateAndWindow[t] = new[] { b.GetField("m_b", d) ?? b.GetField("b", d), b.GetField("c", d) };
+        }
+        return f;
+    }
+
+    // Other callers of c() / d() close everything as the game does: the HUD rebuild (anc) and the five others (dialogs
+    // and full-screen interactions; their signatures below).
+    static int closingAll;
+    static void ClosingAll() { closingAll++; }
+    static Exception ClosedAll(Exception __exception) { closingAll--; return __exception; }
+
+    static void Clearing(dka __instance, ref List<object> __state)
+    {
+        __state = null;
+        if (closingAll > 0) return;
+        try
+        {
+            foreach (var cf in Controllers)
+            {
+                var controller = cf.GetValue(__instance);
+                if (controller == null) continue;
+                var f = Fields(controller.GetType());
+                var window = f[1].GetValue(controller) as euz;
+                object x;
+                if (window == null || !Kept.TryGetValue(window, out x) || (y5)f[0].GetValue(controller) != y5.c) continue;
+                f[0].SetValue(controller, y5.a);
+                (__state ?? (__state = new List<object>())).Add(controller);
+            }
+        }
+        catch (Exception ex) { Log.Write("windows: " + ex.Message); }
+    }
+
+    static Exception Cleared(List<object> __state, Exception __exception)
+    {
+        if (__state != null) foreach (var c in __state) try { Fields(c.GetType())[0].SetValue(c, y5.c); } catch (Exception ex) { Log.Write("windows: " + ex.Message); }
+        return __exception;
+    }
+
+    internal static void Install(HarmonyLib.Harmony harmony)
+    {
+        Func<string, HarmonyLib.HarmonyMethod> m = n => new HarmonyLib.HarmonyMethod(typeof(WindowSideHooks).GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
+        foreach (var side in new[] { "c", "d" })
+            harmony.Patch(typeof(dka).GetMethod(side, Inst, null, Type.EmptyTypes, null), prefix: m("Clearing"), finalizer: m("Cleared"));
+        var all = new[] {
+            typeof(dka).GetMethod("anc", Inst, null, Type.EmptyTypes, null),
+            typeof(dka).GetMethod("am3", Inst, null, new[] { typeof(string) }, null),
+            typeof(dka).GetMethod("am8", Inst, null, new[] { typeof(b0b), typeof(object), typeof(csy) }, null),
+            typeof(dka).GetMethod("a", Inst, null, new[] { typeof(c5x), typeof(c7j) }, null),
+            typeof(dka).GetMethod("a", Inst, null, new[] { typeof(c5x), typeof(wv) }, null),
+            typeof(dka).GetMethod("a", Inst, null, new[] { typeof(c5x), typeof(object), typeof(b14), typeof(int), typeof(Microsoft.Xna.Framework.Point?), typeof(string) }, null) };
+        foreach (var x in all)
+            if (x == null) Log.Write("windows: a close-everything method is missing"); else harmony.Patch(x, prefix: m("ClosingAll"), finalizer: m("ClosedAll"));
+        Log.Write("windows: " + Controllers.Count + " window controllers");
+    }
 }
 
 public static class Trade

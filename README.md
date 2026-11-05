@@ -26,7 +26,7 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   - Scanner: point at a creature for its level, health, attitude, resistances per damage type and detection.
   - Field Medic: after a fight, if you're hurt, uses a bandage (or a health hypo when too hurt) from your bag.
   - Merchant Ledger: every merchant's stock and prices written down when you trade; L searches them all.
-  - Movable Windows: drag the inventory, notes, crafting, map... by their title bar; they open where you left them.
+  - Movable Windows: drag the inventory, notes, crafting, map... by their title bar; click a window to bring it to the front. A window you moved stays open when another opens on its side.
   - Status Board: health, status effects by name with turns left, and AP/MP in combat, on the HUD.
   - Neural Reallocation: a neurotechnician at South Gate Station resets your skills or abilities for charons.
 
