@@ -843,6 +843,12 @@ teleported (16,1) -> (16,5) and walked back to (16,1).
   on or the follower stopped). Checked safe by the review: mod blueprints never reach a save (only the selected
   blueprint's name string, which the stock game ignores), CheckGameKeys runs after config.dat's bindings.
 
+## Ambushes (Nov 2026)
+
+mods/Ambushes (startsOff): on returning to a zone, a chance of a pack (World.Spawn PlayerOnly, 5-8 tiles away,
+gathered round one tile); clearing it gives experience; an `ambush` console command. Tested: 3 rathounds sprang, the
+station's guards stayed out, killing all three gave 100 XP ("You gain 100 XP for clearing an ambush").
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
