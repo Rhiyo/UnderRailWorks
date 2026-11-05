@@ -53,6 +53,10 @@ namespace UnderRailWorks
         {
             if (value != null && !(value is string || value is bool || value is double || value is float || value is int || value is long || value is System.Collections.IEnumerable))
                 throw new ArgumentException("save data holds strings, bools, numbers, lists and dictionaries, not " + value.GetType().Name);
+            // Kept in the shape JSON reads it back in (lists as List<object>, numbers as double), so Get answers the same
+            // before and after a save is loaded (a typed list read as List<object> came back null in the same session).
+            if (value is int || value is long || value is float) value = Convert.ToDouble(value, CultureInfo.InvariantCulture);
+            else if (value is System.Collections.IEnumerable && !(value is string)) value = Json.Parse(Json.Write(value, false));
             Section[key] = value;
         }
         public bool Has(string key) { return Section.ContainsKey(key); }

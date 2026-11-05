@@ -853,8 +853,10 @@ station's guards stayed out, killing all three gave 100 XP ("You gain 100 XP for
 
 `Markers.Add(mod, id, zone, x, y, label, colour, area)` / `Remove` / `Of(mod)` / `All` / `Here`, `Markers.Changed`: kept
 in each mod's per-save data (`works_markers`), so per game and never in the game's files. The Minimap draws `Here` as
-diamonds, on its edge in the marker's direction when farther away ("Show markers"). Trap: SaveData returns a value
-as it was stored this session (a typed list) or as JSON read it back (List<object>): read lists as IEnumerable. Tested:
+diamonds, on its edge in the marker's direction when farther away ("Show markers"). Found here: SaveData returned a
+value as it was stored this session (a typed list) but as JSON read it back after a load (List<object>), so the same
+Get gave null before and a list after. `SaveData.Set` now stores the JSON shape at once (lists as List<object>,
+dictionaries as Dictionary<string, object>, numbers as double). Tested:
 a near marker on the map, a far one on the edge, both back after quicksave + quickload.
 
 ## The test mods (Nov 2026)
