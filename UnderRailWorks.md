@@ -679,6 +679,14 @@ HasFeat checks).
 Ai.Acting) most player actions can be refused. Not cancellable yet: equipping (the slots are generic `ItemSlot<T>`
 setters), leaving a zone. Tested: trade, container and dialog refused.
 
+## UI widgets (Nov 2026)
+
+`Ui.Image(texture, w, h)`, `Ui.Tooltip(element, text)` (after 0.5 s, wrapped, kept on screen), `Ui.List(w, h, row)`
+-> `UiList` (Items, Selection, Selected, wheel scroll, scroll bar), `Ui.Slider(w, min, max, value)` -> `UiSlider`
+(Step, Changed, drag or click), `Ui.Choice(w, options, index)` -> `UiChoice` (click / right-click, Changed). Drawn
+with `Ui.Custom` in the game's colours; input in Works' update (weak references, so a removed widget costs nothing).
+Tested in a mod window: all five.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

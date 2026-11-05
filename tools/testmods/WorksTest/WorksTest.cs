@@ -67,6 +67,20 @@ public sealed class WorksTest : WorksMod
         GameEvents.ContainerOpening.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked container"); } });
         GameEvents.DialogStarting.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked dialog " + e.Name); } });
         Commands.Add(this, "wt.block", "wt.block: refuse trades, containers, dialogs", args => { block = true; return "blocking"; });
+        Commands.Add(this, "wt.ui", "wt.ui: a window with the UI widgets", args =>
+        {
+            var win = Ui.Window(this, "widgets", "Widgets", 520, 300);
+            Ui.Add(win, Ui.Image(Assets.Texture(this, "art/pic.png"), 96, 96), 10, win.Top + 4);
+            var list = Ui.List(200, 200, 20); list.Items = Enumerable.Range(1, 30).Select(i => "Row " + i).ToList(); list.Selected += i => Log.Info("list selected " + i);
+            Ui.Add(win, list.View, 120, win.Top + 4);
+            var slider = Ui.Slider(160, 0, 100, 25); slider.Step = 5; slider.Changed += v => Log.Info("slider " + v);
+            Ui.Add(win, slider.View, 340, win.Top + 30);
+            var choice = Ui.Choice(160, new[] { "Easy", "Normal", "Hard" }, 1); choice.Changed += i => Log.Info("choice " + i);
+            Ui.Add(win, choice.View, 340, win.Top + 70);
+            var b = Ui.Button("Hover me", () => { }); Ui.Tooltip(b, "A tooltip from a mod, wrapped if it is long enough to need it.");
+            Ui.Add(win, b, 340, win.Top + 110);
+            return "window";
+        });
         Commands.Add(this, "wt.lever", "wt.lever: the player uses the test lever", args => { Commands.CloseConsole(); return "use: " + World.Use(World.Player, "wt_lever"); });
         Commands.Add(this, "wt.glow", "wt.glow: the test status on the player", args => { glow.Apply(World.Player, 40); Commands.CloseConsole(); return "glow on: " + glow.Has(World.Player); });
         glow.OnTick += (who, stacks) => Log.Info("glow tick on " + who.Name + " (" + stacks + ")");
