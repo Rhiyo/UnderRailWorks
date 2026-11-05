@@ -120,6 +120,20 @@ namespace UnderRailWorks
             return s;
         }
 
+        // A small button of any size drawn in the game's colours (Ui.Button is the game's own, at its own sizes).
+        public static UiElement SmallButton(string text, int width, int height, Action click)
+        {
+            UiElement e = null;
+            e = Custom(width, height, c =>
+            {
+                var b = c.Bounds; bool hot = Ui.IsHot(e);
+                c.Fill(b, hot ? Look.Hot : Look.Dark); c.Frame(b, hot ? Look.Light : Look.Orange);
+                c.Text(text, b.X + (b.Width - Ui.TextWidth(text)) / 2, b.Y + (b.Height - 16) / 2, Look.Light);
+            });
+            Widgets.Buttons.Add(new KeyValuePair<WeakReference, Action>(new WeakReference(e), click));
+            return e;
+        }
+
         // A button that steps through options on click (right-click: back).
         public static UiChoice Choice(int width, IList<string> options, int index = 0)
         {
@@ -143,6 +157,7 @@ namespace UnderRailWorks.Internal
     {
         internal static readonly Dictionary<UiElement, string> Tooltips = new Dictionary<UiElement, string>();
         internal static readonly List<WeakReference> Lists = new List<WeakReference>(), Sliders = new List<WeakReference>(), Choices = new List<WeakReference>();
+        internal static readonly List<KeyValuePair<WeakReference, Action>> Buttons = new List<KeyValuePair<WeakReference, Action>>();
         static UiElement tipFor, tipPanel;
         static double hovered;
 
@@ -167,6 +182,13 @@ namespace UnderRailWorks.Internal
                 if (s.Dragging) { s.Set(s.Min + (s.Max - s.Min) * Math.Max(0, Math.Min(1, (m.X - b.X - 5) / (double)Math.Max(1, b.Width - 10)))); if (!Input.MouseDown(MouseButton.Left)) s.Dragging = false; } }
             foreach (var w in Choices.ToList()) { var c = w.Target as UiChoice; if (c == null) { Choices.Remove(w); continue; } if (!Ui.IsHot(c.Element)) continue;
                 if (Input.MousePressed(MouseButton.Left)) c.Next(1); else if (Input.MousePressed(MouseButton.Right)) c.Next(-1); }
+            if (Input.MousePressed(MouseButton.Left))
+                foreach (var kv in Buttons.ToList())
+                {
+                    var b = kv.Key.Target as UiElement;
+                    if (b == null) { Buttons.Remove(kv); continue; }
+                    if (Ui.IsHot(b)) { try { kv.Value(); } catch (Exception ex) { var mod = ModErrors.ModOf(kv.Value.Method.DeclaringType); if (mod != null) ModErrors.Report(mod, "a button", ex); else Log.Write("ui: button: " + ex.Message); } }
+                }
             Tooltip(seconds, m);
         }
 
@@ -190,7 +212,7 @@ namespace UnderRailWorks.Internal
 
         static bool Attached(UiElement e)
         {
-            for (euz c = e.Control; c != null; c = c.Parent) if (c == (euz)Hud.Current || c == (euz)UiHooks.CurrentOptions) return true;
+            for (euz c = e.Control; c != null; c = c.Parent) { if (c == (euz)Hud.Current || c == (euz)UiHooks.CurrentOptions) return true; if (c.Parent == null) return Ui.IsScreen(c); }
             return false;
         }
 

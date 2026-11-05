@@ -22,6 +22,7 @@ public sealed class WorksTest : WorksMod
     Character pet; double petLog, autoWait, autoPoll;
     int startX, startY;
     bool statsOn;
+    ModBaseAbility luck; ModSkill survival;
     readonly System.Collections.Generic.Queue<string> autorun = new System.Collections.Generic.Queue<string>();
     int aiLogs;
     TimeSpan gameTime;
@@ -116,6 +117,9 @@ public sealed class WorksTest : WorksMod
             CharacterRules.AbilityPointsAtCreation = 8; CharacterRules.AbilityMaxAtCreation = 12; CharacterRules.AbilityMinAtCreation = 1; CharacterRules.SkillPointsAtCreation = 150;
             Log.Info("rules: test rules on");
         }
+        luck = CustomStats.AddBaseAbility(this, "luck", "Luck", "Fortune favours you.");
+        survival = CustomStats.AddSkill(this, "survival", "Survival", "Foraging, tracking, enduring.", new System.Collections.Generic.Dictionary<string, float> { { "Constitution", 1f }, { "Perception", 0.5f } });
+        CustomStats.Changed.Add(this, () => Log.Info("custom stats: Luck " + luck.Value + ", Survival " + survival.Base + " [" + survival.Value + "]"));
         Feats.AddBonuses(this, "nimble", StatBonus.Skill("Stealth", 13));
         Feats.SetRequirements(this, "nimble", new FeatRequirements { Level = 9, Abilities = { ["Agility"] = 12 } });
         Commands.Add(this, "wt.featmod", "wt.featmod", args => { var p = World.Player; Log.Info("feats " + string.Join(",", p.Feats) + "; stealth " + p.Skill("Stealth") + " (base " + p.BaseSkill("Stealth") + "); desc set " + Feats.SetDescription(this, "nimble", "Changed by WorksTest: +13 stealth.")); return "featmod"; });
@@ -141,6 +145,8 @@ public sealed class WorksTest : WorksMod
             Log.Info("synergy: Throwing " + before + " -> " + p.Skill("Throwing") + " (Melee base " + p.BaseSkill("Melee") + ")");
             return "syn";
         });
+        Commands.Add(this, "wt.surv", "wt.surv [n]: show / set Survival", args => { if (args.Length > 0) survival.Base = int.Parse(args[0]); Log.Info("survival now " + survival.Base + " [" + survival.Value + "]"); return "surv"; });
+        Commands.Add(this, "wt.xp", "wt.xp: enough experience for a level", args => { World.Player.GiveExperience(5000, "testing"); return "xp"; });
         Commands.Add(this, "wt.gear", "wt.gear: what the player wears and carries", args =>
         {
             var p = World.Player;

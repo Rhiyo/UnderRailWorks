@@ -254,6 +254,22 @@ The game's content, listed for modders: item paths with their codes and names, c
 - `static ModRecipe AddRecipe(WorksMod mod, string id, string name, string category, string result, params RecipeSlot[] slots)` — category: Weapons, Armor, Grenades, Ammo, Medicine, Traps, Devices, Processing. result: an item path.
 - `static IList<ModRecipe> ModRecipes`
 
+## CustomStat  _(class, CustomStats.cs)_
+
+- `string Id`
+- `string Name`
+- `string Description`
+- `int Base` — The player's points in it (what was spent).
+- `abstract int Value`
+
+## CustomStats  _(class, CustomStats.cs)_
+
+- `static IList<ModBaseAbility> Abilities`
+- `static IList<ModSkill> SkillsAdded`
+- `static ModBaseAbility AddBaseAbility(WorksMod mod, string id, string name, string description, int start = 5)` — A new base ability (start: its value for a new character; the game's start at 5).
+- `static ModSkill AddSkill(WorksMod mod, string id, string name, string description, IDictionary<string, float> abilities = null)` — A new skill; abilities: the game's (Strength...) or mod abilities (their id), with weights as the game's (1, 0.5...).
+- `static readonly Hook<Action> Changed = new Hook<Action>("CustomStatsChanged")` — After a value changed (the character screen, a mod).
+
 ## DamagePart  _(class, Combat.cs)_
 
 - `string Type`
@@ -826,6 +842,10 @@ A map tile (ak1), as the world pass hands it to the tile-extras step.
 - `double CooldownLeft` — Turns left before it can be used again (0: ready).
 - `string Use(Character target = null)` — Uses it as the player would (the checks, AP and cooldown included). Returns why not, or null when done.
 
+## ModBaseAbility  _(class, CustomStats.cs)_
+
+- `override int Value`
+
 ## ModConfig  _(class, ModConfig.cs)_
 
 - `ModInfo Mod`
@@ -972,6 +992,10 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `bool Bool(string key, bool fallback)`
 - `int Int(string key, int fallback, int min, int max)`
 - `void Set(string key, string value)` — Changes the value now and in the file.
+
+## ModSkill  _(class, CustomStats.cs)_
+
+- `override int Value` — Points x (1 + the best related ability's weight x the game's factor for its value), as the game's skills.
 
 ## ModStatus  _(class, ModStatus.cs)_
 
@@ -1324,6 +1348,7 @@ What a tile holds, as a map would show it.
 - `static void Tooltip(UiElement element, string text)` — Text shown next to the mouse while it rests on element (half a second).
 - `static UiList List(int width, int height, int rowHeight = 20)` — A scrolling list of text rows: the mouse wheel scrolls, a click selects.
 - `static UiSlider Slider(int width, double min, double max, double value)` — A slider from min to max (drag or click; the value is drawn on it).
+- `static UiElement SmallButton(string text, int width, int height, Action click)` — A small button of any size drawn in the game's colours (Ui.Button is the game's own, at its own sizes).
 - `static UiChoice Choice(int width, IList<string> options, int index = 0)` — A button that steps through options on click (right-click: back).
 - `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD (null if there is no HUD). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one.
 

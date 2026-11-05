@@ -174,6 +174,43 @@ public sealed class Cookbook : WorksMod
     }
     #endregion
 
+    #region Character rules: points at creation and per level, the ability range at creation
+    void RulesExample()
+    {
+        CharacterRules.AbilityPointsAtCreation = 7;     // the game: 5
+        CharacterRules.AbilityMaxAtCreation = 12;       // the game: 10
+        CharacterRules.SkillPointsPerLevel = 45;        // the game: 40
+    }
+    #endregion
+
+    #region Stat formulas: bonuses during the game's stat rebuild, skill weights, the game's feats
+    void StatFormulas()
+    {
+        Stats.Modify.Add(this, r => { if (r.Character.IsPlayer && r.Character.Ability("Strength") >= 8) r.Add(StatBonus.CarryCapacity(25)); });
+        Skills.SetAbilities(this, "Throwing", new System.Collections.Generic.Dictionary<string, float> { { "Dexterity", 1f }, { "Strength", 0.5f } });
+        Feats.AddBonuses(this, "nimble", StatBonus.Skill("Stealth", 5));
+        Feats.SetRequirements(this, "nimble", new FeatRequirements { Level = 4, Abilities = { ["Agility"] = 8 } });
+    }
+    #endregion
+
+    #region New abilities and skills: an "Other" tab on the character screen, points from the game's counters
+    void NewStats()
+    {
+        var luck = CustomStats.AddBaseAbility(this, "luck", "Luck", "Fortune favours you.");
+        var survival = CustomStats.AddSkill(this, "survival", "Survival", "Foraging and tracking.",
+            new System.Collections.Generic.Dictionary<string, float> { { "Constitution", 1f }, { luck.Id, 0.5f } });
+        Stats.Modify.Add(this, r => { if (r.Character.IsPlayer) r.Add(StatBonus.Health(survival.Value / 5)); });
+    }
+    #endregion
+
+    #region Exported characters: data that travels with an export into a new game
+    void Exports()
+    {
+        GameEvents.CharacterExporting.Add(this, path => CharacterData.Set("title", "the Hunter"));
+        GameEvents.CharacterImported.Add(this, () => Notify.OverPlayer("Welcome back, " + CharacterData.Get<string>("title")));
+    }
+    #endregion
+
     #region Other mods: offer an API, call another's (optional dependencies stay optional)
     public interface IGreeter { string Greet(string name); }
     sealed class Greeter : IGreeter { public string Greet(string name) { return "Hello, " + name; } }

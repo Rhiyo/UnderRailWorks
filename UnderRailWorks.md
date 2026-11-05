@@ -925,6 +925,25 @@ With the helper working, a test run's game found the running Steam client by its
 game folder (InitSteam -> 1 with no Steam environment): the test copies have no steam_appid.txt now (run-underrail's
 launch.sh removes it unless WITH_STEAM=1; check-saves.sh no longer copies it). Measured: InitSteam -> 0 in test runs.
 
+## New abilities and skills (Nov 2026)
+
+The game's abilities and skills are fixed lists of its own classes inside the character (bn2 / ech), saved in saves
+and exports, so mod ones are Works' own (player only): `CustomStats.AddBaseAbility(mod, id, name, desc, start)` /
+`AddSkill(mod, id, name, desc, {ability: weight})` -> `Base` (points, in the mod's CharacterData: saved, exported,
+imported) and `Value` (a skill: points x (1 + best weight x the game's ability factor `c2h.d`), abilities game or mod).
+The character screen (`iw`) gets an "Other" tab after the game's (postfix `iw.c()`): +/- spend the game's own ability /
+skill points (the counters' setters `e3q.b(int)` / `d(int)`, which raise the change events; the game's Base / Skills
+tabs' refresh `a()` is called so their "remaining" stays right), creation range from CharacterRules, the game's
+per-level skill cap `csn.a(level)`; Cancel (`amm.a(cku.b)` on the screen) restores the values it opened with, as the
+game restores its points. The game's "spend all points" checks count them. Effects are the mods' (Stats.Modify...).
+Tested: creation (Luck 5 -> 8, Survival capped at 15 at level 1), level up (Survival +5 then Cancel -> 0 and 40 points
+back; +10 and the rest on game skills, a feat, Accept), quicksave, changed to 99 (value 107 with Constitution),
+quickload -> 10; the save passes the stock loader.
+New: `Ui.SmallButton(text, w, h, click)`; `Ui.IsShown` also accepts the game's current screen (bcm.aau / aaw / aa0),
+so widgets work outside the HUD and Options (the character screen at creation).
+Traps: `amm.a(cku)` is the base window's close (patch it there, filter on iw); the character screen's tabs are added
+in `iw.c()`, not `e()`.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

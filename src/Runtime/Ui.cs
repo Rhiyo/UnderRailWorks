@@ -208,8 +208,17 @@ public static partial class Ui
         {
             if (!c.Visible) return false;
             if (c == (euz)Hud.Current || c == (euz)UiHooks.CurrentOptions) return true;
+            if (c.Parent == null) return IsScreen(c);
         }
         return false;
+    }
+
+    // A top-level control the game shows now: its current screen (bcm.aau(): the main menu, the character screen at
+    // creation, the in-game screen...) or its other layers (aaw / aa0).
+    internal static bool IsScreen(euz top)
+    {
+        var screens = bpo.GetService<bcm>();
+        return screens != null && (top == screens.aau() || top == screens.aaw() || top == screens.aa0());
     }
     // The mouse is on it per the game (topmost, shown). Works' own elements (Ui.Custom) know from the game's
     // MouseEnter/Leave; others by their bounds.
@@ -511,6 +520,7 @@ static class UiHooks
         Group("stats", () => StatHooks.Install(harmony));
         Group("feat changes", () => FeatRegistry.Install(harmony));
         Group("character rules", () => CharacterRuleHooks.Install(harmony));
+        Group("custom stats", () => CustomStatsTab.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 
