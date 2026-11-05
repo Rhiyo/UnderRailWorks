@@ -315,24 +315,4 @@ public static class UiScaleFix
         return x >= 0 && y >= 0 && x < (screenW > 0 ? screenW : int.MaxValue) && y < (screenH > 0 ? screenH : int.MaxValue);
     }
 }
-
-// The world's hit test for characters and objects (a7m.a(x, y, out bool): which layer is under the mouse) compares
-// the mouse, in the interface's coordinates, with layers laid out in the world view's own coordinates. Stock, the view
-// is at 0,0 and they are the same; with insets Works moves the view (FullScreen), and hovering or clicking a
-// character missed by the inset (measured: view at -384,0 at 2560x720 with 30% insets). The mouse is moved into the
-// view's coordinates here. (Floor clicks have their own fix: FloorOrigin.)
-static class WorldHitTest
-{
-    internal static void Install(HarmonyLib.Harmony harmony)
-    {
-        var hit = typeof(a7m).GetMethods(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).First(x => x.Name == "a" && x.ReturnType == typeof(b0b) && x.GetParameters().Length == 3);
-        harmony.Patch(hit, prefix: new HarmonyLib.HarmonyMethod(typeof(WorldHitTest).GetMethod("Local", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
-    }
-
-    static void Local(a7m __instance, ref int __0, ref int __1)
-    {
-        var at = UnderrailDropdownScroll.LocationOf(__instance);
-        __0 -= UnderrailDropdownScroll.X(at); __1 -= UnderrailDropdownScroll.Y(at);
-    }
-}
 }

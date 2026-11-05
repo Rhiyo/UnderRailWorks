@@ -481,11 +481,11 @@ is being dragged, sized to the game's buttons at every tier. Tested at 3584x1440
 game outlines white), `Character.Resistances` (`efk.Defense.af()[DamageType]`: `du2.a()` threshold, `du2.c()`
 resistance), `Character.Detection`. Tested at 3584x1440 and 2560x720 with insets: the Scanner shows an SGS Sentry's
 level, health, attitude, detection and resistances.
-**Bug found and fixed while testing it:** with insets, hovering or clicking a character missed. The world's hit test
-`a7m.a(x, y, out bool)` compares the mouse (interface coordinates) with layers in the world view's own coordinates;
-stock the view is at 0,0, Works moves it by the inset (measured: -384,0 at 2560x720 with 30%). `WorldHitTest` moves
-the mouse into the view's coordinates (floor clicks had their own fix, FloorOrigin). My earlier "hover never works
-headless" was wrong: the test copy had insets, and one target sat under the Quest Tracker panel.
+**Retracted (Nov 2026):** a "fix" here (`WorldHitTest`, shifting the mouse by the world view's inset offset in
+`a7m.a(x, y, out bool)`) broke hovering and talking to NPCs with insets: the game's hit test was right all along.
+Measured afterwards with a sweep over a stationary sentry and turret: with the shift 0 of 12 points hit, without it
+11 of 12. The "proof" had been clicks aimed at the wrong pixels that the shift moved onto a character 384 pixels
+away. Rule: verify a hit-test change with a sweep over a target that doesn't move, with and without the change.
 
 ## API packaging; what Works writes into saves (Nov 2026)
 

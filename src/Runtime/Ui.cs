@@ -482,7 +482,6 @@ static class UiHooks
         Group("usable objects", () => UseHooks.Install(harmony));
         Group("AI", () => AiHooks.Install(harmony));
         Group("cancellable events", () => CancelHooks.Install(harmony));
-        Group("world hit test with insets", () => WorldHitTest.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 
