@@ -29,7 +29,7 @@ namespace UnderRailWorks
         public int First { get; set; }
         internal int RowHeight;
         public event Action<int> Selected;
-        internal void Select(int i) { Selection = i; var s = Selected; if (s != null) s(i); }
+        internal void Select(int i) { Selection = i; Widgets.Raise(Selected, i); }
     }
 
     public sealed class UiSlider
@@ -46,7 +46,7 @@ namespace UnderRailWorks
         {
             v = Math.Max(Min, Math.Min(Max, Step > 0 ? Math.Round((v - Min) / Step) * Step + Min : v));
             if (v == Value) return;
-            Value = v; var c = Changed; if (c != null) c(v);
+            Value = v; Widgets.Raise(Changed, v);
         }
     }
 
@@ -57,7 +57,7 @@ namespace UnderRailWorks
         public IList<string> Options { get; internal set; }
         public int Index { get; set; }
         public event Action<int> Changed;
-        internal void Next(int step) { if (Options.Count == 0) return; Index = ((Index + step) % Options.Count + Options.Count) % Options.Count; var c = Changed; if (c != null) c(Index); }
+        internal void Next(int step) { if (Options.Count == 0) return; Index = ((Index + step) % Options.Count + Options.Count) % Options.Count; Widgets.Raise(Changed, Index); }
     }
 
     public static partial class Ui
@@ -87,7 +87,7 @@ namespace UnderRailWorks
                     var r = new Rectangle(b.X + 2, b.Y + 2 + i * l.RowHeight, b.Width - 10, l.RowHeight);
                     int index = l.First + i;
                     if (index == l.Selection) c.Fill(r, Look.Orange * 0.6f);
-                    else if (r.Contains(m)) c.Fill(r, Look.Hot);
+                    else if (Ui.IsHot(l.Element) && r.Contains(m)) c.Fill(r, Look.Hot);
                     c.Text(l.Items[index], r.X + 4, r.Y + Math.Max(0, (l.RowHeight - 16) / 2), Look.Text);
                 }
                 if (l.Items.Count > rows)
@@ -112,7 +112,7 @@ namespace UnderRailWorks
                 double f = s.Max > s.Min ? (s.Value - s.Min) / (s.Max - s.Min) : 0;
                 int x = b.X + (int)Math.Round(f * (b.Width - 10));
                 c.Fill(new Rectangle(b.X, b.Center.Y - 2, x - b.X + 5, 4), Look.Orange);
-                c.Fill(new Rectangle(x, b.Y + 2, 10, b.Height - 4), b.Contains(Input.Mouse) || s.Dragging ? Look.Light : Look.Orange);
+                c.Fill(new Rectangle(x, b.Y + 2, 10, b.Height - 4), Ui.IsHot(s.Element) || s.Dragging ? Look.Light : Look.Orange);
                 var t = s.Value.ToString(s.Step >= 1 ? "0" : "0.##");
                 c.Text(t, b.Right - Ui.TextWidth(t) - 2, b.Y - 16, Look.Text);
             });
@@ -126,7 +126,7 @@ namespace UnderRailWorks
             var ch = new UiChoice { Options = options ?? new List<string>(), Index = index };
             ch.Element = Custom(width, 24, c =>
             {
-                var b = c.Bounds; bool hot = b.Contains(Input.Mouse);
+                var b = c.Bounds; bool hot = Ui.IsHot(ch.Element);
                 c.Fill(b, hot ? Look.Hot : Look.Dark); c.Frame(b, Look.Orange);
                 var t = ch.Options.Count == 0 ? "" : "< " + ch.Options[Math.Max(0, Math.Min(ch.Index, ch.Options.Count - 1))] + " >";
                 c.Text(t, b.X + (b.Width - Ui.TextWidth(t)) / 2, b.Y + 4, Look.Light);
@@ -146,18 +146,26 @@ namespace UnderRailWorks.Internal
         static UiElement tipFor, tipPanel;
         static double hovered;
 
-        static bool Live(UiElement e) { return e != null && e.Control.Parent != null && e.Visible; }
+        static bool Live(UiElement e) { return e != null && Ui.IsShown(e); }
+
+        // A mod's handler failing doesn't stop the other widgets (or repeat every frame unnoticed).
+        internal static void Raise<T>(Action<T> handler, T value)
+        {
+            if (handler == null) return;
+            foreach (Action<T> h in handler.GetInvocationList())
+                try { h(value); } catch (Exception ex) { var mod = ModErrors.ModOf(h.Method.DeclaringType); if (mod != null) ModErrors.Report(mod, "a widget's handler", ex); else Log.Write("ui: widget handler: " + ex.Message); }
+        }
 
         internal static void Tick(double seconds)
         {
             var m = Input.Mouse;
-            foreach (var w in Lists.ToList()) { var l = w.Target as UiList; if (l == null) { Lists.Remove(w); continue; } if (!Live(l.Element)) continue; var b = l.Element.Bounds; if (!b.Contains(m)) continue;
+            foreach (var w in Lists.ToList()) { var l = w.Target as UiList; if (l == null) { Lists.Remove(w); continue; } if (!Ui.IsHot(l.Element)) continue; var b = l.Element.Bounds;
                 if (Input.Wheel != 0) l.First = Math.Max(0, l.First - Input.Wheel * 3);
                 if (Input.MousePressed(MouseButton.Left)) { int i = l.First + (m.Y - b.Y - 2) / l.RowHeight; if (i >= 0 && i < l.Items.Count) l.Select(i); } }
             foreach (var w in Sliders.ToList()) { var s = w.Target as UiSlider; if (s == null) { Sliders.Remove(w); continue; } if (!Live(s.Element)) { s.Dragging = false; continue; } var b = s.Element.Bounds;
-                if (Input.MousePressed(MouseButton.Left) && b.Contains(m)) s.Dragging = true;
+                if (Input.MousePressed(MouseButton.Left) && Ui.IsHot(s.Element)) s.Dragging = true;
                 if (s.Dragging) { s.Set(s.Min + (s.Max - s.Min) * Math.Max(0, Math.Min(1, (m.X - b.X - 5) / (double)Math.Max(1, b.Width - 10)))); if (!Input.MouseDown(MouseButton.Left)) s.Dragging = false; } }
-            foreach (var w in Choices.ToList()) { var c = w.Target as UiChoice; if (c == null) { Choices.Remove(w); continue; } if (!Live(c.Element) || !c.Element.Bounds.Contains(m)) continue;
+            foreach (var w in Choices.ToList()) { var c = w.Target as UiChoice; if (c == null) { Choices.Remove(w); continue; } if (!Ui.IsHot(c.Element)) continue;
                 if (Input.MousePressed(MouseButton.Left)) c.Next(1); else if (Input.MousePressed(MouseButton.Right)) c.Next(-1); }
             Tooltip(seconds, m);
         }
@@ -165,7 +173,8 @@ namespace UnderRailWorks.Internal
         static void Tooltip(double seconds, Point m)
         {
             UiElement over = null;
-            foreach (var kv in Tooltips.ToList()) { if (kv.Key.Control.Parent == null) { Tooltips.Remove(kv.Key); continue; } if (kv.Key.Visible && kv.Key.Bounds.Contains(m)) over = kv.Key; }
+            // Elements no longer under a live screen are dropped (closed windows, old HUDs): nothing keeps them alive.
+            foreach (var kv in Tooltips.ToList()) { if (!Attached(kv.Key)) { Tooltips.Remove(kv.Key); continue; } if (Ui.IsHot(kv.Key)) over = kv.Key; }
             if (over != tipFor) { tipFor = over; hovered = 0; Hide(); }
             if (over == null) return;
             hovered += seconds;
@@ -177,6 +186,12 @@ namespace UnderRailWorks.Internal
             tipPanel = Ui.Custom(w, h, c => { c.Fill(c.Bounds, new Color(8, 8, 8, 235)); c.Frame(c.Bounds, Look.Orange); for (int i = 0; i < lines.Count; i++) c.Text(lines[i], c.Bounds.X + 8, c.Bounds.Y + 4 + i * 18, Look.Text); });
             int x = Math.Min(root.Width - w - 4, m.X + 16), y = Math.Min(root.Height - h - 4, m.Y + 20);
             Ui.Add(root, tipPanel, Math.Max(0, x), Math.Max(0, y));
+        }
+
+        static bool Attached(UiElement e)
+        {
+            for (euz c = e.Control; c != null; c = c.Parent) if (c == (euz)Hud.Current || c == (euz)UiHooks.CurrentOptions) return true;
+            return false;
         }
 
         static void Hide() { if (tipPanel != null) Ui.Remove(tipPanel); tipPanel = null; }

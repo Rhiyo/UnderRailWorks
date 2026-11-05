@@ -40,6 +40,22 @@ public sealed class ModSettings
         return s;
     }
 
+    // Reads the file again (works.reload: the player edited it). True when it was read.
+    internal bool ReadAgain()
+    {
+        try
+        {
+            if (!File.Exists(Path)) return false;
+            var lines = File.ReadAllLines(Path);
+            values.Clear();
+            Parse(lines);
+            Changes++;
+            return true;
+        }
+        catch (Exception ex) { Log.Write("mods: " + Mod + ": settings: " + ex.Message); return false; }
+    }
+    internal static IEnumerable<ModSettings> Every { get { return All.Values.ToList(); } }
+
     void Parse(IEnumerable<string> lines)
     {
         foreach (string raw in lines)

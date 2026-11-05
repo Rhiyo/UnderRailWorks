@@ -60,7 +60,8 @@ mod() {
     if [ -d "$src" ]; then set -- "$src"/*.cs; else set -- "$src"; fi
     mcs -nologo -optimize+ -target:library -out:"$into/$name/$name.dll" -r:"$FNA" -r:"$WORKS" -r:System.Core.dll "$@"
     local dir="$src"; [ -d "$dir" ] || dir="$(dirname "$src")"
-    cp "$dir/mod.json" "$into/$name/"
+    # mod.json and everything else the mod ships (sounds, pictures, i18n/, content/...): all but the source.
+    if [ -d "$src" ]; then (cd "$src" && find . -type f ! -name '*.cs' ! -name 'settings.ini' -exec cp --parents {} "$into/$name/" \;); else cp "$dir/mod.json" "$into/$name/"; fi
 }
 cp "$CECIL" "$OUT/"
 
@@ -85,7 +86,7 @@ cp "$FNA" "$OUT64/"
 cp "$HERE"/lib/fna/x64/*.dll "$OUT64/x64/"
 
 # The shipped mods, into dist's Mods/.
-for m in UnderRailFixes Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
+for m in UnderRailFixes Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic BountyHunter; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
 cp "$HERE/mods/FieldMedic/treat.wav" "$OUT/Mods/FieldMedic/"
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
 mod HelloUI "$HERE/build/Mods" "$HERE/examples/HelloUI"

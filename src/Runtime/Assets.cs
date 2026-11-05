@@ -201,12 +201,14 @@ namespace UnderRailWorks.Internal
         }
 
         // --- Replacing the game's textures --------------------------------------------------------------------------
-        // Reads every mod picture again from disk (works.reload): the files may have changed.
+        // Reads every mod picture again from disk (works.reload): the files may have changed. Only loaded mods' packs, as
+        // at startup. The old textures aren't disposed (the game's caches may still draw them this frame): a developer
+        // command, a few MB per reload; a pack file deleted since keeps its old picture until a restart.
         internal static void ReloadFiles()
         {
             files.Clear(); icons.Clear();
             foreach (var p in replaced.Values) if (p.File != null) p.Texture = null;
-            foreach (var mod in ModLoader.Mods.Where(m => m.Loaded || m.Instance == null)) ScanTexturePack(mod);
+            foreach (var mod in ModLoader.Mods.Where(m => m.Loaded)) ScanTexturePack(mod);
             dirty = true;
         }
 

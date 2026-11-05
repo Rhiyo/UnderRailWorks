@@ -27,8 +27,8 @@ namespace UnderRailWorks
         public string Id { get; internal set; }
         public string Name { get; internal set; }
         public string Description { get; internal set; }
-        public int ApCost { get; internal set; }
-        public int Cooldown { get; internal set; }          // in turns (5 s of game time out of combat)
+        public int ApCost { get; set; }
+        public int Cooldown { get; set; }          // in turns (5 s of game time out of combat)
         public AbilityTarget Target { get; internal set; }
         public int Range { get; set; }                      // tiles, for Character targets (0: any distance)
         public Keybind Key { get; internal set; }
@@ -122,11 +122,12 @@ namespace UnderRailWorks.Internal
                 var shown = Abilities.All.Where(a => a.Mod == bar.Key && a.IsAvailable(p)).ToList();
                 bar.Value.Visible = shown.Count > 0 && Hud.Visible;
             }
+            if (Hud.Hidden || GameClock.Paused) return;     // menus, the character sheet, dialogs, the pause: no abilities
             foreach (var a in Abilities.All)
             {
                 if (!a.IsAvailable(p)) continue;
                 UiElement icon;
-                bool clicked = icons.TryGetValue(a, out icon) && icon.Visible && icon.Bounds.Contains(Input.Mouse) && Input.MousePressed(MouseButton.Left);
+                bool clicked = icons.TryGetValue(a, out icon) && Ui.IsHot(icon) && Input.MousePressed(MouseButton.Left);
                 if (!clicked && !a.Key.Pressed) continue;
                 if (clicked && a.Target == AbilityTarget.Character) { Say(a.Name + ": point at a target and press " + Keybinds.Name(a.Key.Key)); continue; }
                 var why = a.Use(a.Target == AbilityTarget.Character ? World.Hovered : null);
@@ -165,7 +166,7 @@ namespace UnderRailWorks.Internal
         static void Draw(UiCanvas c, ModAbility a)
         {
             var b = c.Bounds;
-            bool hot = b.Contains(Input.Mouse);
+            UiElement el; bool hot = icons.TryGetValue(a, out el) && Ui.IsHot(el);
             c.Fill(b, new Color(30, 30, 30, 230));
             if (a.Icon != null && !a.Icon.IsDisposed) c.DrawTexture(a.Icon, new Rectangle(b.X + 2, b.Y + 2, b.Width - 4, b.Height - 4), Color.White);
             else c.Text(a.Name.Length > 3 ? a.Name.Substring(0, 3) : a.Name, b.X + 6, b.Y + 13, Color.White);

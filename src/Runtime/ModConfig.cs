@@ -41,6 +41,8 @@ public abstract class ModConfig
     public ModInfo Mod { get; internal set; }
     // Bumped whenever values change (load, Accept), so code reading settings per frame can keep its own copy.
     public int Changes { get; private set; }
+    // After the values changed (Accept in the Mods tab, works.reload): for code that copies settings elsewhere.
+    public event Action Changed;
 
     // After Accept wrote new values.
     public virtual void OnChanged() { }
@@ -169,6 +171,8 @@ public abstract class ModConfig
         }
         Changes++;
         try { OnChanged(); } catch (Exception ex) { Log.Write("mods: " + Mod.Id + ": OnChanged failed: " + ex); }
+        var c = Changed;
+        if (c != null) try { c(); } catch (Exception ex) { ModErrors.Report(Mod.Id, "settings changed", ex); }
 
     }
 

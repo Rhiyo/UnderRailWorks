@@ -95,9 +95,15 @@ namespace UnderRailWorks.Internal
         // The inventory screen asks the target control ye(source, item) before it moves anything (c69.a: take from the
         // source, put into the target, the old item back): refusing there leaves both where they were. (Refusing in the
         // data slot's own check lost the item: the screen had already taken it out of the bag.)
+        // ye is also asked every frame for the cursor's feedback while dragging and by the auto-equip scan: mods are
+        // asked only during the move itself (c69.a), once per attempt.
+        static int moving;
+        static void MoveStart() { moving++; }
+        static Exception MoveEnd(Exception __exception) { moving--; return __exception; }
+
         static void CanDrop(object __instance, coh __1, ref bool __result)
         {
-            if (!__result || !GameEvents.Equipping.Any || __1 == null || World.Player == null) return;
+            if (moving == 0 || !__result || !GameEvents.Equipping.Any || __1 == null || World.Player == null) return;
             var t = __instance.GetType();
             if (!t.IsGenericType || t.GetGenericTypeDefinition() != typeof(TimelapseVertigo.UI.Controls.PlayerGearItemSlotControl<>)) return;
             try
@@ -116,6 +122,7 @@ namespace UnderRailWorks.Internal
             harmony.Patch(typeof(dka).GetMethods(any).First(x => x.Name == "amw" && x.GetParameters().Length == 2), prefix: m("Trade"));
             harmony.Patch(typeof(c7j).GetMethod("mz", any, null, new[] { typeof(c5x), typeof(string) }, null), prefix: m("Open"));
             harmony.Patch(typeof(c7j).GetMethod("kj", any, null, new[] { typeof(dbi), typeof(coh), typeof(object) }, null), prefix: m("Take"));
+            harmony.Patch(typeof(c69).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(ebk), typeof(ebk), typeof(coh), typeof(bool) }, null), prefix: m("MoveStart"), finalizer: m("MoveEnd"));
             harmony.Patch(typeof(TimelapseVertigo.UI.Controls.FreeItemSlotControl<coh>).GetMethod("ye", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(ebk), typeof(coh) }, null), postfix: m("CanDrop"));
             harmony.Patch(typeof(a0l).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(c5x), typeof(c2w), typeof(int), typeof(Microsoft.Xna.Framework.Point?) }, null), prefix: m("Leave"));
             harmony.Patch(typeof(ahu).GetMethod("i", BindingFlags.Instance | BindingFlags.Public, null, Type.EmptyTypes, null), prefix: m("Craft"));

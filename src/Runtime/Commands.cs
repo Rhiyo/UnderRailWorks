@@ -91,6 +91,7 @@ namespace UnderRailWorks
                 AssetStore.ReloadFiles();
                 Translations.Forget();
                 int n = 0;
+                foreach (var s in ModSettings.Every) s.ReadAgain();     // the files first: Reload reads from these
                 foreach (var c in ModConfig.All) { c.Reload(); n++; }
                 return "reloaded pictures and translations, settings of " + n + " mods";
             });

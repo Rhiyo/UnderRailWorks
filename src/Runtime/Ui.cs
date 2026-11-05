@@ -200,6 +200,26 @@ public static partial class Ui
         }
         return int.TryParse(text, out at);     // an old pixel position
     }
+    // On screen now: it and every parent visible, up to the live HUD or Options screen (a closed window's children
+    // are still attached to the window, so their own flags say nothing).
+    public static bool IsShown(UiElement element)
+    {
+        for (euz c = element == null ? null : element.Control; c != null; c = c.Parent)
+        {
+            if (!c.Visible) return false;
+            if (c == (euz)Hud.Current || c == (euz)UiHooks.CurrentOptions) return true;
+        }
+        return false;
+    }
+    // The mouse is on it per the game (topmost, shown). Works' own elements (Ui.Custom) know from the game's
+    // MouseEnter/Leave; others by their bounds.
+    public static bool IsHot(UiElement element)
+    {
+        if (!IsShown(element)) return false;
+        var cc = element.Control as UiCustomControl;
+        return cc != null ? cc.MouseOver : element.Bounds.Contains(Input.Mouse);
+    }
+
     public static void Resize(UiElement element, int width, int height) { element.Control.Size = new esj(width, height); }
     public static void Show(UiElement element, bool visible) { element.Visible = visible; }
     public static void SetText(UiElement element, string text) { element.Control.Text = text; }
@@ -340,6 +360,10 @@ public sealed class UiCanvas
 
 sealed class UiCustomControl : euz
 {
+    // The game's own hit testing says the mouse is on it (topmost: not through a window above it).
+    internal bool MouseOver;
+    protected override void ik(object A_0, b25 A_1) { MouseOver = true; base.ik(A_0, A_1); }
+    protected override void nr(object A_0, b25 A_1) { MouseOver = false; base.nr(A_0, A_1); }
     readonly Action<UiCanvas> draw;
     readonly UiCanvas canvas = new UiCanvas();
     bool failed;

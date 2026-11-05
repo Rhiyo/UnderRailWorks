@@ -70,10 +70,17 @@ namespace UnderRailWorks
 
         static readonly Dictionary<string, Dictionary<string, string>> loaded = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
         internal static void Forget() { loaded.Clear(); }
+        static readonly HashSet<string> warned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         public static string Get(WorksMod mod, string key, params object[] args)
         {
-            string text = Lookup(mod.Info.Folder, Language, key) ?? Lookup(mod.Info.Folder, "english", key) ?? key;
+            string text = Lookup(mod.Info.Folder, Language, key) ?? Lookup(mod.Info.Folder, "english", key) ?? Lookup(mod.Info.Folder, "en", key);
+            if (text == null)
+            {
+                if (warned.Add(mod.Id) && Directory.Exists(Path.Combine(mod.Info.Folder, "i18n")))
+                    Log.Write("i18n: " + mod.Id + ": no text for \"" + key + "\" in i18n/" + (Language == "english" ? "" : Language + ".json or i18n/") + "english.json (shown: the key)");
+                text = key;
+            }
             if (args == null || args.Length == 0) return text;
             try { return string.Format(CultureInfo.InvariantCulture, text, args); } catch (FormatException) { return text; }
         }
@@ -199,6 +206,13 @@ namespace UnderRailWorks.Internal
     static class ModErrors
     {
         static readonly HashSet<string> told = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        // The mod whose code a type is (by assembly), for errors in plain delegates; null for Works' own.
+        internal static string ModOf(Type t)
+        {
+            if (t == null) return null;
+            var m = ModLoader.Mods.FirstOrDefault(x => x.Instance != null && x.Instance.GetType().Assembly == t.Assembly);
+            return m == null ? null : m.Id;
+        }
         internal static void Report(string mod, string hook, Exception ex)
         {
             try

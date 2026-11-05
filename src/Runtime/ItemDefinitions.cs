@@ -162,10 +162,31 @@ namespace UnderRailWorks
         }
         // Quality tier 0 (junk) .. 5 (the game's cr1), and how worn it is (0..1; 1 for items without durability).
         public int Tier { get { return Game.Definition == null ? 0 : (int)Game.Definition.bc(); } }
-        public double Condition { get { var max = Game.MaxDurability; return max <= 0 ? 1 : Math.Max(0, Math.Min(1, Game.Durability / max)); } }
+        public double Condition
+        {
+            get
+            {
+                // Only gear wears (the game checks durability on worn and wielded items, skipping indestructible ones, a9());
+                // other items keep MaxDurability at 1 and Durability at 0, which isn't "broken".
+                var d = Game.Definition;
+                var k = Kind;
+                if (d == null || d.a9() || (k != ItemKind.Weapon && k != ItemKind.Armor && k != ItemKind.Shield)) return 1;
+                var max = Game.MaxDurability;
+                return max <= 0 ? 1 : Math.Max(0, Math.Min(1, Game.Durability / max));
+            }
+        }
         // A plain value kept on this one item (saved with it; the stock game keeps and ignores it). Primitive values.
         public object GetValue(string key) { var p = Game.CustomProperties; return p == null || !p.HasProperty(key) ? null : p[key]; }
-        public void SetValue(string key, object value) { if (value == null) Game.CustomProperties.RemoveProperty(key); else Game.CustomProperties[key] = value; }
+        // Saved inside the item (II:CP), so the stock game reads it back: only plain values (a number, bool, string,
+        // DateTime, Guid); anything else would make the save unloadable without the mod.
+        public void SetValue(string key, object value)
+        {
+            if (value == null) { Game.CustomProperties.RemoveProperty(key); return; }
+            var t = value.GetType();
+            if (!(t.IsPrimitive || t == typeof(string) || t == typeof(decimal) || t == typeof(DateTime) || t == typeof(Guid)))
+                throw new ArgumentException("Item.SetValue: only plain values (numbers, bool, string, DateTime, Guid), not " + t.FullName);
+            Game.CustomProperties[key] = value;
+        }
         public ItemDefinition Definition { get { return Game.Definition == null ? null : new ItemDefinition(Game.Definition); } }
         // This one item gets its own copy of the definition (as crafted items have), to edit without touching others.
         // Saved whole, with stock types only: the stock game shows it as edited.

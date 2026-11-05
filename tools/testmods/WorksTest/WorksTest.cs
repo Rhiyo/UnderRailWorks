@@ -18,7 +18,7 @@ public sealed class WorksTest : WorksMod
     ModStatus glow;
     AreaTrigger trigger;
     ModFeat grit;
-    bool aiHold, block;
+    bool aiHold, block, aiFlee;
     int aiLogs;
     TimeSpan gameTime;
     bool blockUse;
@@ -52,13 +52,14 @@ public sealed class WorksTest : WorksMod
         Ai.ChooseTarget.Add(this, c => { if (++aiLogs < 12) Log.Info("ai: " + c.Npc + " targets " + c.Chosen); return null; });
         Ai.TakingTurn.Add(this, t => { if (aiHold && !t.Npc.Name.Contains("Rathound")) { t.EndTurn = true; if (++aiLogs < 30) Log.Info("ai: held " + t.Npc); } });
         Ai.Acting.Add(this, a => Log.Info("ai: " + a.Npc + " uses " + a.Action));
-        Ai.ShouldFlee.Add(this, f => { if (aiHold && f.Npc.Name.Contains("Rathound")) { if (++aiLogs < 40) Log.Info("ai: rathound flees (game: " + f.Fleeing + ")"); return true; } return null; });
-        var wind = Abilities.Add(this, "wind", "Second Wind", "Heals 20 health.", "art/wind.png", cooldown: 3, key: Microsoft.Xna.Framework.Input.Keys.F6);
+        Ai.ShouldFlee.Add(this, f => { if (aiFlee && f.Npc.Name.Contains("Rathound")) { if (++aiLogs < 40) Log.Info("ai: rathound flees (game: " + f.Fleeing + ")"); return true; } return null; });
+        var wind = Abilities.Add(this, "wind", "Second Wind", "Heals 20 health.", "art/wind.png", cooldown: 3, key: Microsoft.Xna.Framework.Input.Keys.F9);
         wind.Used += (user, target) => { user.Health += 20; Log.Info("ability: second wind, health " + user.Health); };
-        var zap = Abilities.Add(this, "zap", "Zap", "10 damage to the target.", "art/zap.png", apCost: 15, cooldown: 2, target: AbilityTarget.Character, key: Microsoft.Xna.Framework.Input.Keys.F7);
+        var zap = Abilities.Add(this, "zap", "Zap", "10 damage to the target.", "art/zap.png", apCost: 15, cooldown: 2, target: AbilityTarget.Character, key: Microsoft.Xna.Framework.Input.Keys.F10);
         zap.Range = 12;
         bool zapped = false;
         Combat.TurnStarted.Add(this, c => { if (!aiHold || zapped || !c.IsPlayer) return; zapped = true;
+            Log.Info("turn start: paused " + GameClock.Paused + ", in TB combat " + GameClock.InTurnBasedCombat);
             int before = Combat.ActionPoints(c); var why = zap.Use(c); Log.Info("ability in combat: AP " + before + " -> " + Combat.ActionPoints(c) + (why == null ? "" : " (" + why + ")") + "; again: " + zap.Use(c)); });
         zap.Used += (user, target) => { var before = target.Health; var dealt = Combat.Damage(target, 10, "Electricity", user); Log.Info("ability: zap " + target.Name + " for " + dealt + ", health " + before + " -> " + target.Health); };
         Commands.Add(this, "wt.slay", "wt.slay: 500 damage to the nearest live rathound", args =>
@@ -69,6 +70,7 @@ public sealed class WorksTest : WorksMod
             Log.Info("slay: " + dealt + " damage, dead " + r.IsDead);
             return "slay " + dealt;
         });
+        Commands.Add(this, "wt.flee", "wt.flee: rathounds flee", args => { aiFlee = true; return "fleeing"; });
         Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
         {
             aiHold = true; Commands.CloseConsole();
@@ -87,6 +89,14 @@ public sealed class WorksTest : WorksMod
         Commands.Add(this, "wt.travel", "wt.travel: World.Travel to lu-c1b", args => "travel: " + World.Travel("lu-c1b", "entry"));
         GameEvents.DialogStarting.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked dialog " + e.Name); } });
         Commands.Add(this, "wt.block", "wt.block: refuse trades, containers, dialogs", args => { block = true; return "blocking"; });
+        Commands.Add(this, "wt.uiclose", "wt.uiclose: the widgets window, then closed", args =>
+        {
+            var win = Ui.Window(this, "widgets2", "Widgets", 520, 300);
+            var list = Ui.List(200, 200, 20); list.Items = Enumerable.Range(1, 30).Select(i => "Row " + i).ToList(); list.Selected += i => Log.Info("closed list selected " + i);
+            Ui.Add(win, list.View, 120, win.Top + 4);
+            win.Close();
+            return "closed";
+        });
         Commands.Add(this, "wt.ui", "wt.ui: a window with the UI widgets", args =>
         {
             var win = Ui.Window(this, "widgets", "Widgets", 520, 300);
@@ -251,7 +261,8 @@ public sealed class WorksTest : WorksMod
         GameEvents.ExperienceGained.Add(this, xp => Log.Info("XP +" + xp));
         GameEvents.CombatStarted.Add(this, () => Log.Info("combat started"));
         GameEvents.CombatEnded.Add(this, () => Log.Info("combat ended"));
-        GameEvents.CharacterDied.Add(this, c => Log.Info("died: " + (c == null ? "?" : c.Name)));
+        GameEvents.CharacterDied.Add(this, c => Log.Info("died: " + (c == null ? "?" : c.Name + " statuses [" + string.Join(", ", c.StatusEffects.Select(s => s.Code)) + "]")));
+        GameEvents.CharacterDying.Add(this, (c, killer) => Log.Info("dying: " + c.Name + " killed by " + (killer == null ? "?" : killer.Name) + " statuses [" + string.Join(", ", c.StatusEffects.Select(s => s.Code)) + "]"));
     }
 }
 

@@ -34,7 +34,7 @@ public sealed class HudLayout : WorksMod
     static readonly HudPart[] GameParts = (HudPart[])Enum.GetValues(typeof(HudPart));
 
     // One movable part: the game's (by HudPart) or a mod's (by its name).
-    sealed class Part { public string Name; public UiElement Element; public HudAnchor Natural; }
+    sealed class Part { public string Name, OldName; public UiElement Element; public HudAnchor Natural; }
 
     internal static bool Changed;
     HudLayoutConfig config;
@@ -61,7 +61,7 @@ public sealed class HudLayout : WorksMod
         Hud.PartAdded.Add(this, part =>
         {
             if (hud == null) return;
-            originals["mod:" + part.Name] = new Point(part.DefaultX, part.DefaultY);
+            originals["mod:" + part.Key] = new Point(part.DefaultX, part.DefaultY);
             Apply(ModPart(part));
         });
         GameEvents.Update.Add(this, seconds =>
@@ -129,7 +129,7 @@ public sealed class HudLayout : WorksMod
     {
         // A mod's anchor, else the one its default place suggests.
         var natural = p.Anchor ?? Ui.AnchorOfPlace(Ui.Place(p.DefaultX, p.DefaultY, p.Element.Width, p.Element.Height, hud.Width, hud.Height));
-        return new Part { Name = "mod:" + p.Name, Element = p.Element, Natural = natural };
+        return new Part { Name = "mod:" + p.Key, OldName = "mod:" + p.Name, Element = p.Element, Natural = natural };
     }
 
     // The anchor a part takes where it is now: per axis its natural one, unless its centre is in the opposite third
@@ -174,6 +174,14 @@ public sealed class HudLayout : WorksMod
     void Apply(Part p)
     {
         var saved = Settings.Get(Key(p.Name));
+        // Before mod parts were keyed by mod ("mod:Minimap" -> "mod:Minimap/Minimap"): take the old entries over.
+        if (string.IsNullOrEmpty(saved) && p.OldName != null && !string.IsNullOrEmpty(Settings.Get(Key(p.OldName))))
+        {
+            saved = Settings.Get(Key(p.OldName));
+            Settings.Set(Key(p.Name), saved);
+            var anchor = Settings.Get(AnchorKey(p.OldName));
+            if (!string.IsNullOrEmpty(anchor)) Settings.Set(AnchorKey(p.Name), anchor);
+        }
         if (string.IsNullOrEmpty(saved)) saved = Legacy(p);
         if (!string.IsNullOrEmpty(saved)) Ui.Restore(p.Element, saved);
     }
@@ -183,11 +191,11 @@ public sealed class HudLayout : WorksMod
     string Legacy(Part p)
     {
         string best = null;
-        foreach (var k in Settings.Keys.Where(k => k.StartsWith(p.Name + "@")))
+        foreach (var k in Settings.Keys.Where(k => k.StartsWith(p.Name + "@") || (p.OldName != null && k.StartsWith(p.OldName + "@"))))
         {
             var v = Settings.Get(k);
             Point at; int w, h;
-            if (string.IsNullOrEmpty(v) || !TryParse(v, out at) || !Size(k.Substring(p.Name.Length + 1), out w, out h)) continue;
+            if (string.IsNullOrEmpty(v) || !TryParse(v, out at) || !Size(k.Substring(k.IndexOf('@') + 1), out w, out h)) continue;
             var place = Ui.Place(at.X, at.Y, p.Element.Width, p.Element.Height, w, h);
             best = place;
             if (w == hud.Width && h == hud.Height) break;
@@ -362,7 +370,7 @@ public sealed class HudLayout : WorksMod
     // Where a part goes back to: the game's own place (read before any change), or the mod's default.
     Point Default(Part p)
     {
-        var mod = p.Name.StartsWith("mod:") ? Hud.ModParts.FirstOrDefault(m => "mod:" + m.Name == p.Name) : null;
+        var mod = p.Name.StartsWith("mod:") ? Hud.ModParts.FirstOrDefault(m => "mod:" + m.Key == p.Name) : null;
         return mod != null ? new Point(mod.DefaultX, mod.DefaultY) : new Point(p.Element.X, p.Element.Y);
     }
     static bool TryParse(string s, out Point p)

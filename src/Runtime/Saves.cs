@@ -46,6 +46,9 @@ public static partial class GameEvents
     public static readonly Hook<Action<Character>> TradeOpened = new Hook<Action<Character>>("TradeOpened");
     // A character died.
     public static readonly Hook<Action<Character>> CharacterDied = new Hook<Action<Character>>("CharacterDied");
+    // Just before the game handles a death: the character still has its status effects (the game clears them while
+    // it dies: measured, none left at CharacterDied) and gear. Killer: who dealt the blow, when known.
+    public static readonly Hook<Action<Character, Character>> CharacterDying = new Hook<Action<Character, Character>>("CharacterDying");
     // Combat started / ended.
     public static readonly Hook<Action> CombatStarted = new Hook<Action>("CombatStarted");
     public static readonly Hook<Action> CombatEnded = new Hook<Action>("CombatEnded");
@@ -81,7 +84,7 @@ static class Saves
         // Trade: dka.amw(player, merchant) opens barter.
         harmony.Patch(typeof(dka).GetMethods(any).First(x => x.Name == "amw" && x.GetParameters().Length == 2), postfix: m("TradeHook"));
         // Death: amc.a(cwt attack, bool shattered).
-        harmony.Patch(typeof(amc).GetMethod("a", any, null, new[] { typeof(cwt), typeof(bool) }, null), postfix: m("Died"));
+        harmony.Patch(typeof(amc).GetMethod("a", any, null, new[] { typeof(cwt), typeof(bool) }, null), prefix: m("Dying"), postfix: m("Died"));
         // Combat: crp.ahn (start) / crp.ahr (end); crp.ahg() = in combat.
         harmony.Patch(typeof(crp).GetMethod("ahn", any), prefix: m("CombatBefore"), postfix: m("CombatStartedHook"));
         harmony.Patch(typeof(crp).GetMethod("ahr", any), prefix: m("CombatEnding"));
@@ -257,6 +260,23 @@ static class Saves
         if (GameEvents.ExperienceGained.Any && __instance.aa() is e3q) GameEvents.ExperienceGained.Run(h => h(__0));
     }
 
+    static void Dying(amc __instance, cwt __0)
+    {
+        if (!GameEvents.CharacterDying.Any || __instance.aa() == null) return;     // (Dead is already set by the blow)
+        try
+        {
+            var c = Character.Of(__instance.a8());
+            // The blow's attacker is recorded by value (ap9: name, faction, Uid): found again by Uid among the zone's characters.
+            Character killer = null;
+            if (__0 != null && __0.i != null && __0.i.d != Guid.Empty)
+            {
+                var uid = __0.i.d;
+                killer = World.Characters.FirstOrDefault(x => x.GameData != null && x.GameData.Uid == uid);
+            }
+            GameEvents.CharacterDying.Run(h => h(c, killer));
+        }
+        catch (Exception ex) { Log.Write("dying: " + ex.Message); }
+    }
     static void Died(amc __instance) { if (GameEvents.CharacterDied.Any) { var c = Character.Of(__instance.a8()); GameEvents.CharacterDied.Run(h => h(c)); } }
 
     static void CombatBefore(crp __instance, out bool __state) { __state = __instance.ahg(); }

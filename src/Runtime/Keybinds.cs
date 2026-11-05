@@ -52,7 +52,13 @@ public static class Keybinds
         var saved = mod.Settings.Get(k2.SettingKey);
         k2.Key = saved != null && Enum.TryParse(saved, true, out key) ? key : defaultKey;
         var clash = all.FirstOrDefault(k => k.Key != Keys.None && k.Key == k2.Key);
-        if (clash != null) Log.Write("keys: " + k2.ModName + " (" + k2.Label + ") and " + clash.ModName + " (" + clash.Label + ") both use " + k2.Key + ": change one in Options -> Controls");
+        if (clash != null && saved == null)
+        {
+            // Two mods' defaults: the first keeps it, this one starts unbound (one key, one action).
+            Log.Write("keys: " + k2.ModName + " (" + k2.Label + ") wanted " + k2.Key + ", already " + clash.ModName + "'s (" + clash.Label + "): unbound, set one in Options -> Controls");
+            k2.Key = Keys.None;
+        }
+        else if (clash != null) Log.Write("keys: " + k2.ModName + " (" + k2.Label + ") and " + clash.ModName + " (" + clash.Label + ") both use " + k2.Key + ": change one in Options -> Controls");
         all.Add(k2);
         return k2;
     }

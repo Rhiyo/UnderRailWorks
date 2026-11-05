@@ -45,7 +45,7 @@ public sealed class ModPage
     {
         public oz Slider;
         public double Scale = 1;     // a decimal setting: the game's slider holds value / Scale as whole numbers
-        public override string Value { get { return UnderrailOptions.Moved(Slider) ? (Scale == 1 ? Slider.l().ToString() : (Slider.l() * Scale).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture)) : Was; } }
+        public override string Value { get { return UnderrailOptions.Moved(Slider) ? (Scale == 1 ? Slider.l().ToString(System.Globalization.CultureInfo.InvariantCulture) : Math.Round(Slider.l() * Scale, 10).ToString("0.##########", System.Globalization.CultureInfo.InvariantCulture)) : Was; } }
         public override void Show(string v)
         {
             double n;
@@ -97,7 +97,7 @@ public sealed class ModPage
     {
         int v = Settings.Int(key, fallback, min, max);
         var slider = UnderrailOptions.SliderRow(Options, Page, "works." + mod + "." + key, label, v, min, max, step);
-        if (slider != null) bindings.Add(new Slide { Key = key, Was = v.ToString(), Slider = slider });
+        if (slider != null) bindings.Add(new Slide { Key = key, Was = v.ToString(System.Globalization.CultureInfo.InvariantCulture), Slider = slider });
     }
 
     // A decimal setting (float/double fields): the game's slider counts in steps of step.

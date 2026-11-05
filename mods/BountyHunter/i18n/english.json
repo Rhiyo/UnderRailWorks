@@ -1,0 +1,12 @@
+{
+  "ability.name": "Mark Target",
+  "ability.desc": "Marks a hostile for 6 turns: -10 dodge and evasion. Kill it while marked for a bounty.",
+  "status.name": "Marked",
+  "status.desc": "A bounty is on this one's head.",
+  "feat.name": "Headhunter",
+  "feat.desc": "Bounties pay 50% more. +5 detection.",
+  "paid": "Bounty: {0} charons for {1}",
+  "notHostile": "Only hostiles carry bounties",
+  "ledger": "Bounty ledger",
+  "total": "Collected: {0} charons from {1} kills"
+}

@@ -104,9 +104,15 @@ public static class Hud
     static void AddPart(WorksMod mod, string name, UiElement element, HudAnchor? anchor, int x, int y)
     {
         if (Current == null || element == null) return;
-        modParts.RemoveAll(p => p.Name == name || p.Element.Control.Parent == null);
         var part = new HudModPart { Name = name, Mod = mod == null ? "" : mod.Id, Element = element, DefaultX = x, DefaultY = y, Anchor = anchor };
-        if (anchor != null) { var old = asked.FirstOrDefault(a => a.Key == name); asked.Remove(old); asked.Add(new KeyValuePair<string, Point>(name, new Point(x, y))); }
+        modParts.RemoveAll(p => p.Key == part.Key || p.Element.Control.Parent == null);
+        if (anchor != null)
+        {
+            // Keeps its place in the stack when rebuilt (first-add order), with the position it asks for now.
+            int at = asked.FindIndex(a => a.Key == part.Key);
+            var entry = new KeyValuePair<string, Point>(part.Key, new Point(x, y));
+            if (at >= 0) asked[at] = entry; else asked.Add(entry);
+        }
         Ui.Add(Root, element, x, y);
         part.AutoX = x; part.AutoY = y;
         modParts.Add(part);
@@ -167,7 +173,7 @@ public static class Hud
     static void Flow(HudAnchor anchor)
     {
         var parts = modParts.Where(p => p.Anchor == anchor && p.Element.Control.Parent != null)
-            .OrderBy(p => asked.FindIndex(a => a.Key == p.Name)).ToList();
+            .OrderBy(p => asked.FindIndex(a => a.Key == p.Key)).ToList();
         var root = Root;
         int rw = root == null ? 0 : root.Width, rh = root == null ? 0 : root.Height;
         int col = (int)anchor % 3;
@@ -182,7 +188,7 @@ public static class Hud
             bool moved = e.X != p.AutoX || e.Y != p.AutoY;     // the player put it somewhere
             if (!e.Visible) continue;
             if (moved) { placed.Add(new Rectangle(e.X, e.Y, e.Width, e.Height)); continue; }
-            var a = asked.FirstOrDefault(k => k.Key == p.Name).Value;
+            var a = asked.FirstOrDefault(k => k.Key == p.Key).Value;
             var r = Clear(new Rectangle(a.X, a.Y, e.Width, e.Height), placed, up, col, rw, rh);
             if (r.X != e.X || r.Y != e.Y) Ui.Move(e, r.X, r.Y);
             p.AutoX = r.X; p.AutoY = r.Y; p.DefaultX = r.X; p.DefaultY = r.Y;
@@ -218,7 +224,7 @@ public static class Hud
     internal static void FlowTick()
     {
         if (Current == null || modParts.Count == 0) return;
-        var state = string.Join("|", modParts.Where(p => p.Anchor != null).Select(p => p.Name + (p.Element.Visible ? "+" : "-") + p.Element.Width + "x" + p.Element.Height))
+        var state = string.Join("|", modParts.Where(p => p.Anchor != null).Select(p => p.Key + (p.Element.Visible ? "+" : "-") + p.Element.Width + "x" + p.Element.Height))
             + "#" + string.Join("|", ((HudPart[])Enum.GetValues(typeof(HudPart))).Select(h => { var e = Get(h); return e == null ? "" : (e.Visible ? "+" : "-") + e.X + "," + e.Y; }));     // the game's parts shown, hidden or laid out
         if (state == flowState) return;
         flowState = state;
@@ -271,6 +277,8 @@ public sealed class HudModPart
 {
     public string Name { get; internal set; }       // e.g. "Minimap"
     public string Mod { get; internal set; }        // the mod's id
+    // Unique across mods ("Minimap/Minimap", "BountyHunter/Abilities"): two mods may use the same part name.
+    public string Key { get { return Mod + "/" + Name; } }
     public UiElement Element { get; internal set; }
     public int DefaultX { get; internal set; }      // where the mod put it
     public int DefaultY { get; internal set; }

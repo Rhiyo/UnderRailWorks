@@ -416,6 +416,7 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<string, QuestState>> QuestChanged = new Hook<Action<string, QuestState>>("QuestChanged")` — A quest changed state (started, completed, failed): its id and new state.
 - `static readonly Hook<Action<Character>> TradeOpened = new Hook<Action<Character>>("TradeOpened")` — The barter screen opened with a merchant.
 - `static readonly Hook<Action<Character>> CharacterDied = new Hook<Action<Character>>("CharacterDied")` — A character died.
+- `static readonly Hook<Action<Character, Character>> CharacterDying = new Hook<Action<Character, Character>>("CharacterDying")` — Just before the game handles a death: the character still has its status effects (the game clears them while it dies: measured, none left at CharacterDied) and gear. Killer: who dealt the blow, when known.
 - `static readonly Hook<Action> CombatStarted = new Hook<Action>("CombatStarted")` — Combat started / ended.
 - `static readonly Hook<Action> CombatEnded = new Hook<Action>("CombatEnded")`
 - `static readonly Hook<Action<double>> Update = new Hook<Action<double>>("Update")` — Once per game update; the argument is the time since the last one, in seconds.
@@ -471,6 +472,7 @@ Values: `TopLeft, Top, TopRight, Left, Center, Right, BottomLeft, Bottom, Bottom
 
 - `string Name`
 - `string Mod`
+- `string Key` — Unique across mods ("Minimap/Minimap", "BountyHunter/Abilities"): two mods may use the same part name.
 - `UiElement Element`
 - `int DefaultX`
 - `int DefaultY`
@@ -542,7 +544,7 @@ Values: `TopLeft, Top, TopRight, Left, Center, Right, BottomLeft, Bottom, Bottom
 - `int Tier` — Quality tier 0 (junk) .. 5 (the game's cr1), and how worn it is (0..1; 1 for items without durability).
 - `double Condition`
 - `object GetValue(string key)` — A plain value kept on this one item (saved with it; the stock game keeps and ignores it). Primitive values.
-- `void SetValue(string key, object value)`
+- `void SetValue(string key, object value)` — Saved inside the item (II:CP), so the stock game reads it back: only plain values (a number, bool, string, DateTime, Guid); anything else would make the save unloadable without the mod.
 - `ItemDefinition Definition`
 - `void MakeUnique()` — This one item gets its own copy of the definition (as crafted items have), to edit without touching others. Saved whole, with stock types only: the stock game shows it as edited.
 
@@ -772,6 +774,7 @@ A map tile (ak1), as the world pass hands it to the tile-extras step.
 
 - `ModInfo Mod`
 - `int Changes` — Bumped whenever values change (load, Accept), so code reading settings per frame can keep its own copy.
+- `event Action Changed` — After the values changed (Accept in the Mods tab, works.reload): for code that copies settings elsewhere.
 - `virtual void OnChanged()` — After Accept wrote new values.
 - `void Reload()` — Reads settings.ini again (after Accept wrote it, or after the mod changed values with Settings.Set).
 
@@ -1216,6 +1219,8 @@ What a tile holds, as a map would show it.
 - `static string Place(int x, int y, int width, int height, int parentWidth, int parentHeight)` — The same for a rectangle in a parent of the given size (e.g. to convert positions saved as pixels).
 - `static Point KeepInside(UiElement element, int x, int y)` — Keeps a position for element inside its parent.
 - `static bool Restore(UiElement element, string place)` — Moves element to a place from Place (or an old "x,y"). False if the text isn't one.
+- `static bool IsShown(UiElement element)` — On screen now: it and every parent visible, up to the live HUD or Options screen (a closed window's children are still attached to the window, so their own flags say nothing).
+- `static bool IsHot(UiElement element)` — The mouse is on it per the game (topmost, shown). Works' own elements (Ui.Custom) know from the game's MouseEnter/Leave; others by their bounds.
 - `static void Resize(UiElement element, int width, int height)`
 - `static void Show(UiElement element, bool visible)`
 - `static void SetText(UiElement element, string text)`

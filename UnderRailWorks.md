@@ -744,6 +744,33 @@ f = [csk(type, amount)], i = new ap9(source) })`, as the game's scripted damage 
 through evasion/shields/resistances, the combat log, death and Works' damage events; returns the health taken.
 Tested: 500 to a rathound -> 499 ("evades 1"), died, CharacterDied fired; 10 electricity shown in the combat log.
 
+## Bounty Hunter, and what it (and a review) found (Nov 2026)
+
+Bounty Hunter (mods/BountyHunter) uses an ability with a character target, a mod status with stat penalties on an
+NPC, a feat with requirements and a bonus, death events, money, a window with a list, translations and a decimal
+setting. Tested: mark a rathound (B), kill it, 12 charons paid, ledger (Y) with the translated texts. Found and fixed:
+- **Statuses are gone at CharacterDied** (measured: none left; the game clears them while the character dies). New
+  `GameEvents.CharacterDying(victim, killer)`: a prefix on the same death method (`amc.a(cwt, bool)`; Dead is already
+  set by the blow there); the killer is found by the blow's recorded Uid (`cwt.i.d`).
+- **HUD parts were keyed by name only**: two mods' "Abilities" bars knocked each other out of the stacking.
+  `HudModPart.Key` = mod/name; HUD Layout uses it and takes over entries saved under the old "mod:<name>" keys.
+- **Two mods' default keys**: both actions fired. Now the second mod's action starts unbound (logged); a key the player
+  chose is kept. WorksTest's F6/F7 had clashed with Vendor Directory and Minimap all along.
+- **build.sh's mod() copied only the DLL and mod.json**: now every file but the source (i18n/, art, sounds).
+- i18n: `en.json` accepted for English; a missing text is logged once per mod.
+- `ModConfig.Changed` event; `ModAbility.ApCost` / `Cooldown` settable.
+
+An independent review of the day's code found, all fixed:
+- Widgets and ability icons in closed or hidden windows still took clicks and tooltips; tooltips kept removed
+  elements alive. `Ui.IsShown` (every parent visible up to the live HUD / Options) and `Ui.IsHot` (Works' controls
+  track the game's own MouseEnter/Leave, so a game window above them blocks them too).
+- Ability clicks and keys while the HUD is hidden or the game paused (checked: not paused in turn-based combat).
+- `works.reload` didn't re-read settings.ini (ModSettings.ReadAgain), and scanned switched-off mods' texture packs.
+- `Equipping` was asked every frame while dragging (the cursor's drop check): now only inside the move (`c69.a`).
+- `Item.Condition` was 0 for items without durability; `Item.SetValue` refuses non-plain values (they're saved in the
+  item, II:CP, and would break the save for the stock game); sliders format with the invariant culture (U+2212 minus
+  under ICU); a widget handler that throws is reported for its mod and doesn't stop the others.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
