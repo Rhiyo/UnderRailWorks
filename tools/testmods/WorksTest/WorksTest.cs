@@ -52,6 +52,7 @@ public sealed class WorksTest : WorksMod
         Ai.ChooseTarget.Add(this, c => { if (++aiLogs < 12) Log.Info("ai: " + c.Npc + " targets " + c.Chosen); return null; });
         Ai.TakingTurn.Add(this, t => { if (aiHold && !t.Npc.Name.Contains("Rathound")) { t.EndTurn = true; if (++aiLogs < 30) Log.Info("ai: held " + t.Npc); } });
         Ai.Acting.Add(this, a => Log.Info("ai: " + a.Npc + " uses " + a.Action));
+        Ai.ShouldFlee.Add(this, f => { if (aiHold && f.Npc.Name.Contains("Rathound")) { if (++aiLogs < 40) Log.Info("ai: rathound flees (game: " + f.Fleeing + ")"); return true; } return null; });
         Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
         {
             aiHold = true; Commands.CloseConsole();

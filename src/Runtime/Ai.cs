@@ -7,6 +7,7 @@
 //   Ai.Acting.Add(this, a => { if (a.Action == "Frag Grenade") a.Cancel = true; });
 //   Ai.TakingTurn.Add(this, t => { if (frozen.Contains(t.Npc.Key)) t.EndTurn = true; });
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnderRailWorks.Internal;
@@ -29,6 +30,12 @@ namespace UnderRailWorks
         public bool Cancel { get; set; }                // the NPC doesn't do it (its tree tries something else)
     }
 
+    public sealed class NpcFlight
+    {
+        public Character Npc { get; internal set; }
+        public bool Fleeing { get; internal set; }     // the game's choice
+    }
+
     public sealed class NpcTurn
     {
         public Character Npc { get; internal set; }
@@ -42,6 +49,9 @@ namespace UnderRailWorks
         public static readonly Hook<Func<TargetChoice, Character>> ChooseTarget = new Hook<Func<TargetChoice, Character>>("Ai.ChooseTarget");
         public static readonly Hook<Action<NpcAction>> Acting = new Hook<Action<NpcAction>>("Ai.Acting");
         public static readonly Hook<Action<NpcTurn>> TakingTurn = new Hook<Action<NpcTurn>>("Ai.TakingTurn");
+        // Whether an NPC flees this step (the game's reasons: fear, civilians in danger, Scrambled Cortex). A handler
+        // returns true (flee), false (don't: it fights or acts normally) or null (the game's choice). First answer wins.
+        public static readonly Hook<Func<NpcFlight, bool?>> ShouldFlee = new Hook<Func<NpcFlight, bool?>>("Ai.ShouldFlee");
     }
 }
 
@@ -68,6 +78,32 @@ namespace UnderRailWorks.Internal
                 if (amc == null || World.IsPlaced(pick.Entity)) return;     // Works-placed characters vanish around saves: never a saved target
                 props.a(amc);
                 __result = (abg)Found.GetValue(__instance);
+            }
+            catch (Exception ex) { Log.Write("ai: " + ex.Message); }
+        }
+
+        static readonly FieldInfo Branches = typeof(fh).GetField("a", BindingFlags.Instance | BindingFlags.Public);
+        static readonly FieldInfo Root = typeof(or).GetField("j", BindingFlags.Instance | BindingFlags.NonPublic), Flee = typeof(or).GetField("k", BindingFlags.Instance | BindingFlags.NonPublic);
+
+        // The root selector of the game's combat tactic (or.j, a fh) picks branch or.k to flee.
+        static void Choose(fh __instance, ref abg __result)
+        {
+            if (!Ai.ShouldFlee.Any) return;
+            try
+            {
+                var tactic = __instance.b() as or;
+                if (tactic == null || Root.GetValue(tactic) != __instance) return;
+                var flee = (abg)Flee.GetValue(tactic);
+                var self = tactic.g();
+                if (self == null || flee == null) return;
+                var q = new NpcFlight { Npc = Character.Of(self.a8()), Fleeing = __result == flee };
+                bool? answer = null;
+                Ai.ShouldFlee.RunUntil(h => (answer = h(q)) != null);
+                if (answer == null || answer.Value == q.Fleeing) return;
+                if (answer.Value) { __result = flee; return; }
+                // Not fleeing: the selector's next branch whose condition holds.
+                foreach (var item in (List<arr>)Branches.GetValue(__instance))
+                    if (item.a != flee && (item.b == null || item.b(tactic))) { __result = item.a; return; }
             }
             catch (Exception ex) { Log.Write("ai: " + ex.Message); }
         }
@@ -109,6 +145,7 @@ namespace UnderRailWorks.Internal
         {
             Func<string, HarmonyLib.HarmonyMethod> m = n => new HarmonyLib.HarmonyMethod(typeof(AiHooks).GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
             harmony.Patch(typeof(bq1).GetMethod("f7"), postfix: m("Target"));
+            harmony.Patch(typeof(fh).GetMethod("f7"), postfix: m("Choose"));
             harmony.Patch(typeof(cp).GetMethod("b", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(eu7), typeof(c5x), typeof(object) }, null), prefix: m("Act"));
             harmony.Patch(typeof(e1k).GetMethod("avi", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic), prefix: m("Turn"));
         }

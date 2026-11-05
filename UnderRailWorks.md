@@ -669,7 +669,10 @@ HasFeat checks).
   `Cancel` makes the node fail and the tree try something else), `Ai.TakingTurn` (prefix on `e1k.avi()`: `EndTurn`).
 - `Commands.Execute(line)` runs a console line from code (mods' and Works' commands, else the game's own).
 - Tested: with every NPC but a rathound ending its turn, the rathound targeted and fought the player alone
-  (180 -> 69 health) while the station guards stood by. Not covered: flight, weapon choice.
+  (180 -> 69 health) while the station guards stood by. Not covered: weapon choice.
+- `Ai.ShouldFlee` (true / false / null): postfix on `fh.f7()` when it is a tactic's root selector `or.j`; true picks the
+  flee branch `or.k`, false the selector's next branch whose condition holds. Tested: the same rathound told to flee
+  ran off and never attacked (health stayed 180).
 
 ## Cancellable events (Nov 2026)
 
