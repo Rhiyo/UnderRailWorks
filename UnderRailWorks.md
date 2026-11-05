@@ -1268,6 +1268,9 @@ work (0.1 ms), STA vs MTA, .NET tiered compilation and PGO, exceptions, the Map 
 - Already there, now in the cookbook: `Hud.WhenReady` covers the HUD-created boilerplate.
 - `UiDrag`: an element follows the mouse from a press until release, kept inside its parent or by a Keep rule;
   HUD Layout (parts and its bar) and Movable Windows (title kept reachable) use it. Tested in game.
+- Merchant Ledger 1.1 keeps its records in SaveData (one "m:<merchant>" entry each) instead of delimited strings in
+  game variables; 1.0 records are moved over at GameStarted and their variables removed. Tested: migrated, saved,
+  reloaded, the save loads in the stock game.
 
 ## Traps (Nov 2026)
 

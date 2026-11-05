@@ -1,7 +1,8 @@
 // Merchant Ledger: an UnderRailWorks mod. Every time you trade, the merchant's stock and prices are written down. The
 // ledger (key L, changeable in Options -> Controls) searches everything you've seen: type part of an item's name and it
-// lists who had it, where, and what they asked. Kept in plain game variables, so it belongs to the save and the stock
-// game ignores it. Built from Works' API only (TradeOpened, Character.Stock/Markup, Ui.TextBox, Keybinds, Variables).
+// lists who had it, where, and what they asked. Kept in the mod's save data (next to the save; one entry per merchant).
+// Version 1.0 kept it in game variables ("ml_..."): those are moved over when a game starts. Built from Works' API only
+// (TradeOpened, Character.Stock/Markup, Ui.TextBox, Keybinds, SaveData).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,11 +10,11 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0")]
 
 public sealed class MerchantLedger : WorksMod
 {
-    const string Index = "ml_index";     // merchant ids, comma-separated
+    const string OldIndex = "ml_index";     // 1.0: merchant ids, comma-separated, each "ml_<id>" = "name|zone|item~stacks~price;..."
     const int Shown = 14;
     Keybind openKey;
     UiElement hud;
@@ -30,15 +31,14 @@ public sealed class MerchantLedger : WorksMod
         UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.TradeOpened.Add(this, merchant =>
         {
-            if (merchant == null || !Variables.Global.Available) return;
+            if (merchant == null) return;
             float markup = merchant.Markup;
             var items = merchant.Stock.Where(i => i.Code != ItemCodes.Charons)
-                .Select(i => Clean(i.Name) + "~" + i.Stacks + "~" + (int)Math.Round(i.Value * markup));
-            Variables.Global.Set("ml_" + merchant.Key, Clean(merchant.Name) + "|" + Clean(World.ZoneId ?? "") + "|" + string.Join(";", items));
-            var ids = Ids();
-            if (!ids.Contains(merchant.Key)) { ids.Add(merchant.Key); Variables.Global.Set(Index, string.Join(",", ids)); }
-            Log.Info("recorded " + merchant.Name + ": " + merchant.Stock.Count + " items");
+                .Select(i => (object)new Dictionary<string, object> { { "item", i.Name ?? "" }, { "stacks", i.Stacks }, { "price", (int)Math.Round(i.Value * markup) } }).ToList();
+            SaveData.Set("m:" + merchant.Key, new Dictionary<string, object> { { "name", merchant.Name ?? "" }, { "zone", World.ZoneId ?? "" }, { "items", items } });
+            Log.Info("recorded " + merchant.Name + ": " + items.Count + " items");
         });
+        GameEvents.GameStarted.Add(this, Migrate);
         GameEvents.Update.Add(this, seconds =>
         {
             if (hud == null || !openKey.Pressed) return;
@@ -46,31 +46,59 @@ public sealed class MerchantLedger : WorksMod
         });
     }
 
-    static string Clean(string s) { return (s ?? "").Replace("|", "/").Replace(";", ",").Replace("~", "-"); }
-    static List<string> Ids() { return (Variables.Global.Get<string>(Index, null) ?? "").Split(',').Where(x => x.Length > 0).ToList(); }
-
-    static List<Entry> All()
+    // 1.0's ledger in game variables -> save data (then the variables go: the save no longer carries them).
+    void Migrate()
     {
-        var all = new List<Entry>();
-        foreach (var id in Ids())
+        if (!Variables.Global.Available) return;
+        var index = Variables.Global.Get<string>(OldIndex, null);
+        if (string.IsNullOrEmpty(index)) return;
+        int moved = 0;
+        foreach (var id in index.Split(',').Where(x => x.Length > 0))
         {
             var parts = (Variables.Global.Get<string>("ml_" + id, null) ?? "").Split('|');
-            if (parts.Length < 3) continue;
+            Variables.Global.Remove("ml_" + id);
+            if (parts.Length < 3 || SaveData.Has("m:" + id)) continue;
+            var items = new List<object>();
             foreach (var item in parts[2].Split(';'))
             {
                 var f = item.Split('~');
                 int stacks, price;
                 if (f.Length == 3 && int.TryParse(f[1], out stacks) && int.TryParse(f[2], out price))
-                    all.Add(new Entry { Merchant = parts[0], Zone = parts[1], Item = f[0], Stacks = stacks, Price = price });
+                    items.Add(new Dictionary<string, object> { { "item", f[0] }, { "stacks", stacks }, { "price", price } });
+            }
+            SaveData.Set("m:" + id, new Dictionary<string, object> { { "name", parts[0] }, { "zone", parts[1] }, { "items", items } });
+            moved++;
+        }
+        Variables.Global.Remove(OldIndex);
+        Log.Info("moved " + moved + " merchants from game variables to save data");
+    }
+
+    List<Entry> All()
+    {
+        var all = new List<Entry>();
+        foreach (var key in SaveData.Keys.Where(k => k.StartsWith("m:")))
+        {
+            var m = SaveData.Get<Dictionary<string, object>>(key, null);
+            if (m == null) continue;
+            object items;
+            if (!m.TryGetValue("items", out items) || !(items is List<object>)) continue;
+            foreach (var o in (List<object>)items)
+            {
+                var d = o as Dictionary<string, object>;
+                if (d == null) continue;
+                all.Add(new Entry { Merchant = Str(m, "name"), Zone = Str(m, "zone"), Item = Str(d, "item"), Stacks = Number(d, "stacks"), Price = Number(d, "price") });
             }
         }
         return all;
     }
+    int Merchants() { return SaveData.Keys.Count(k => k.StartsWith("m:")); }
+    static string Str(Dictionary<string, object> d, string k) { object v; return d.TryGetValue(k, out v) && v != null ? Convert.ToString(v) : ""; }
+    static int Number(Dictionary<string, object> d, string k) { object v; try { return d.TryGetValue(k, out v) && v != null ? Convert.ToInt32(v) : 0; } catch { return 0; } }
 
     void Open()
     {
         int w = 560, h = 92 + Shown * 20;
-        int seen = Ids().Count;
+        int seen = Merchants();
         panel = Ui.Window(this, "ledger", "Merchant ledger: " + seen + (seen == 1 ? " merchant" : " merchants") + " seen", w, h);
         if (panel == null) return;
         panel.Closed += () => { panel = null; search = null; rows.Clear(); };
@@ -94,7 +122,7 @@ public sealed class MerchantLedger : WorksMod
         int y = panel.Top + 62;
         if (found.Count == 0)
         {
-            var none = Ui.Label(Ids().Count == 0 ? "Nothing yet: trade with a merchant and their stock is written down." : "No item matches.", 520);
+            var none = Ui.Label(Merchants() == 0 ? "Nothing yet: trade with a merchant and their stock is written down." : "No item matches.", 520);
             rows.Add(none); Ui.Add(panel, none, 10, y);
             return;
         }
