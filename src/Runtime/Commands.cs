@@ -31,6 +31,14 @@ namespace UnderRailWorks
         // Prints a line in the console.
         public static void Print(string text) { try { bdg.a("{0}", text); } catch { } }
 
+        // Runs a console line from code: a mod's or Works' command, else the game's own (e.g. "playerGiveXp 100").
+        public static void Execute(string line)
+        {
+            if (Run(line)) return;
+            try { var c = typeof(bdg).GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).First(m => m.Name == "c" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == typeof(string)); c.Invoke(null, new object[] { line }); }
+            catch (Exception ex) { Log.Write("console: " + line + ": " + ex.Message); }
+        }
+
         internal static bool Run(string line)
         {
             var words = Split(line);

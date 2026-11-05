@@ -480,6 +480,7 @@ static class UiHooks
         Group("loot rules", () => LootHooks.Install(harmony));
         Group("mod statuses", () => ModStatusStore.Install(harmony));
         Group("usable objects", () => UseHooks.Install(harmony));
+        Group("AI", () => AiHooks.Install(harmony));
         Group("world hit test with insets", () => WorldHitTest.Install(harmony));
         Log.Write("ui: hooks in place");
     }

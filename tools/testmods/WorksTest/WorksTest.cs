@@ -18,6 +18,8 @@ public sealed class WorksTest : WorksMod
     ModStatus glow;
     AreaTrigger trigger;
     ModFeat grit;
+    bool aiHold;
+    int aiLogs;
     TimeSpan gameTime;
     bool blockUse;
     public override void PostLoad() { Log.Info("cross-mod call: " + Mods.Call("WorksTest", "Echo", "hi") + ", typed: " + Mods.Api<TestApi>("WorksTest").Echo("there")); }
@@ -47,6 +49,20 @@ public sealed class WorksTest : WorksMod
         grit = Feats.Add(this, "grit", "Works Grit", "A mod feat: you feel tougher. (Requires Strength 3.)", new FeatRequirements { Abilities = { ["Strength"] = 3 } });
         grit.OnGain += who => Log.Info("feat gained by " + who.Name);
         Commands.Add(this, "wt.feat", "wt.feat: give the test feat", args => { Commands.CloseConsole(); return "give: " + Feats.Give(World.Player, grit.Key) + ", has: " + World.Player.HasFeat(grit.Key) + "; feats: " + string.Join(", ", World.Player.Feats); });
+        Ai.ChooseTarget.Add(this, c => { if (++aiLogs < 12) Log.Info("ai: " + c.Npc + " targets " + c.Chosen); return null; });
+        Ai.TakingTurn.Add(this, t => { if (aiHold && !t.Npc.Name.Contains("Rathound")) { t.EndTurn = true; if (++aiLogs < 30) Log.Info("ai: held " + t.Npc); } });
+        Ai.Acting.Add(this, a => Log.Info("ai: " + a.Npc + " uses " + a.Action));
+        Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
+        {
+            aiHold = true; Commands.CloseConsole();
+            var pp = World.Player.Position; var t = World.FreeTilesNear((int)pp.X, (int)pp.Y, 6).Skip(10).FirstOrDefault();
+            return "rathound: " + World.Spawn("creatures\\rathound", t.X, t.Y, true);
+        });
+        GameEvents.ZoneLoaded.Add(this, (zone, first) =>
+        {
+            var auto = System.IO.Path.Combine(Info.Folder, "autorun.txt");
+            if (System.IO.File.Exists(auto)) foreach (var line in System.IO.File.ReadAllLines(auto)) if (line.Trim().Length > 0) { Log.Info("autorun: " + line); Commands.Execute(line); }
+        });
         Commands.Add(this, "wt.lever", "wt.lever: the player uses the test lever", args => { Commands.CloseConsole(); return "use: " + World.Use(World.Player, "wt_lever"); });
         Commands.Add(this, "wt.glow", "wt.glow: the test status on the player", args => { glow.Apply(World.Player, 40); Commands.CloseConsole(); return "glow on: " + glow.Has(World.Player); });
         glow.OnTick += (who, stacks) => Log.Info("glow tick on " + who.Name + " (" + stacks + ")");

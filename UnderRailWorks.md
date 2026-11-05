@@ -661,6 +661,16 @@ passes the stock loader, and loaded with the mod switched off it plays with the 
 Not done: real stat modifiers (`cy()` static effects): a mod feat's effect is the mod's code (events, hooks,
 HasFeat checks).
 
+## NPC AI hooks (Nov 2026)
+
+- `Ai.ChooseTarget` (postfix on the target node `bq1.f7()`: a handler may return another character; Works writes it
+  as the AI's "PrimaryTarget" with the game's `bzv.a(amc)` and takes the "found" branch; never a Works-placed
+  character, which leaves the map around saves), `Ai.Acting` (prefix on `cp.b(proxy, user, target)`, NPCs only:
+  `Cancel` makes the node fail and the tree try something else), `Ai.TakingTurn` (prefix on `e1k.avi()`: `EndTurn`).
+- `Commands.Execute(line)` runs a console line from code (mods' and Works' commands, else the game's own).
+- Tested: with every NPC but a rathound ending its turn, the rathound targeted and fought the player alone
+  (180 -> 69 health) while the station guards stood by. Not covered: flight, weapon choice.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
