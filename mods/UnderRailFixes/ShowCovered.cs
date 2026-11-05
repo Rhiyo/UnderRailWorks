@@ -18,10 +18,6 @@
 //   3. the work target multiplied by the mask's coverage, then put on screen with ShowCoveredTransparency.
 // The targets are screen-sized, so the game's own batch (bc2, with the interface mapping) draws into them exactly where
 // it draws on screen.
-// Windows (Microsoft XNA, the game's Reach profile): render targets and textures may be at most 2048 a side, wrap
-// addressing needs power-of-two textures, and colour and alpha must blend the same way. So on XNA the fills and
-// outlines only run when the screen fits (Fits); the line pattern is drawn as rectangles; every blend state is
-// Reach-safe. The keyhole's render targets stay within 2048 (tiles above that, see Keyhole).
 // Any error while drawing puts the game's drawing state back (batches, render targets, viewport, scissor) and turns the
 // feature off for the session (Broken), rather than risking the game's own drawing.
 using System;
@@ -59,13 +55,9 @@ static class ShowCovered
         Broken = true;
     }
 
-    // Microsoft XNA (Windows, standard download) enforces the game's Reach profile; FNA (Proton, 64-bit) doesn't.
-    static readonly bool Xna = typeof(GraphicsDevice).Assembly.GetName().Name == "Microsoft.Xna.Framework.Graphics";
-    internal static bool Fits(GraphicsDevice g)
-    {
-        if (Interface.CapturingSaveScreenshot(g)) return false;     // its picture isn't screen-sized; the keyhole still shows
-        return !Xna || (g.PresentationParameters.BackBufferWidth <= 2048 && g.PresentationParameters.BackBufferHeight <= 2048);
-    }
+    // The screen-sized targets match what is being drawn: not while the game draws a save's screenshot (its picture
+    // isn't screen-sized; the keyhole still shows).
+    internal static bool Fits(GraphicsDevice g) { return !Interface.CapturingSaveScreenshot(g); }
 
     // Tab would outline this creature (Works' Outlines; the keyhole takes the same characters: stats alone also took
     // explosive barrels and other destructible props).
@@ -227,7 +219,7 @@ static class ShowCovered
         return new RenderTarget2D(g, w, h, false, SurfaceFormat.Color, DepthFormat.None, 0, RenderTargetUsage.PreserveContents);
     }
 
-    // Reach-safe blends (colour and alpha blend the same way).
+    // Blends with colour and alpha blending the same way.
     // Recolours what is already in the target to one colour, keeping its alpha (premultiplied: colour x alpha).
     static readonly BlendState Recolour = new BlendState
     {
@@ -391,7 +383,7 @@ static class ShowCovered
     }
 
     // Line fill: one line in three (1 on, 2 off), one world pixel high (cell screen pixels), drifting down at LineSpeed
-    // world pixels a second. Drawn as rectangles: on Microsoft XNA a tiled 1x3 texture isn't allowed (Reach).
+    // world pixels a second. Drawn as rectangles.
     const double LineSpeed = 3;
     const int LineRows = 3;
     static readonly System.Diagnostics.Stopwatch Clock = System.Diagnostics.Stopwatch.StartNew();
@@ -409,7 +401,7 @@ static class ShowCovered
         EndOwn();
     }
 
-    // Dithered fill: spaced-out dots, two per 4x4 tile (a power of two, so it may be tiled on XNA too), each pattern
+    // Dithered fill: spaced-out dots, two per 4x4 tile, each pattern
     // pixel one world pixel (cell screen pixels), lined up with the screen.
     static Texture2D dots;
     static void Dots(GraphicsDevice g, Rectangle area, int cell)
@@ -466,9 +458,8 @@ static class ShowCovered
 // - Split: from the first layer after such a target, or earlier, from the first standing layer in front of last frame's
 //   hole (InFront: a walking character is drawn on the tile it walks to, after the wall piece on the square it's leaving),
 //   the world pass continues into a front picture instead of the screen (the game's world batch, restarted there with
-//   WorldView.iu as by8 does, so lighting and shaders are unchanged). One screen-sized render target, or on Microsoft XNA
-//   above 2048 (Reach) a grid of tiles of at most 2048 a side (KeyholeTiles=1 forces that anywhere, for testing): each
-//   layer goes into every tile it reaches (ShowCovered.DrawLayer, and TileExtras for WorldView's per-tile extras), the first
+//   WorldView.iu as by8 does, so lighting and shaders are unchanged). One screen-sized render target (kept as a list
+//   of "tiles" from when Microsoft XNA's 2048 limit needed several; now always one): each layer goes into every tile it reaches (ShowCovered.DrawLayer, and TileExtras for WorldView's per-tile extras), the first
 //   time by the game's call, again from its sprite as drawn (chf.avw without avv: a character's composite, by8, isn't
 //   rebuilt). UiScaleFix maps the drawing into the bound target (Into).
 // - Floor drawn after the split near last frame's holes goes onto the screen as the game draws it (AlsoOnScreen), with
@@ -520,11 +511,10 @@ static class Keyhole
     static SpriteBatch batch;
     static Texture2D hole, erase;
     static int holeStrength = -1;
-    const int MaxTile = 2048;
+    const int MaxRadius = 1024;     // the hole's snapshot and mask targets: a circle at most this big
     static int loggedTiles;
-    static readonly bool Xna = typeof(GraphicsDevice).Assembly.GetName().Name == "Microsoft.Xna.Framework.Graphics";
     static readonly RasterizerState Clipped = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
-    // Reach-safe (colour and alpha the same): dest x source alpha, and dest x (1 - source alpha).
+    // Colour and alpha the same: dest x source alpha, and dest x (1 - source alpha).
     static readonly BlendState Multiply = new BlendState
     {
         ColorSourceBlend = Blend.Zero, ColorDestinationBlend = Blend.SourceAlpha,
@@ -587,7 +577,7 @@ static class Keyhole
     {
         var p = Interface.ToPixels(t.Body);
         int radius = Math.Max(16, (int)(p.Height * 0.85f * CoveredSettings.KeyholeSize / 100f));
-        radius = Math.Min(radius, MaxTile / 2);
+        radius = Math.Min(radius, MaxRadius);
         round = new Rectangle(p.Center.X - radius, p.Center.Y - radius, radius * 2, radius * 2);
         return Rectangle.Intersect(round, ScreenRect);
     }
@@ -650,13 +640,12 @@ static class Keyhole
     {
         var g = G;
         var s = ScreenRect;
-        bool tiled = (Xna && (s.Width > MaxTile || s.Height > MaxTile)) || CoveredSettings.KeyholeTiles;
-        int nx = tiled ? (s.Width + MaxTile - 1) / MaxTile : 1, ny = tiled ? (s.Height + MaxTile - 1) / MaxTile : 1;
+        const int nx = 1, ny = 1;     // one screen-sized picture
         int tw = (s.Width + nx - 1) / nx, th = (s.Height + ny - 1) / ny;
         if (nx * ny != loggedTiles)
         {
             loggedTiles = nx * ny;
-            UnderRailFixesMod.Note($"keyhole: front picture in {nx * ny} tile(s) of {tw}x{th}" + (tiled ? (Xna ? " (Microsoft XNA above 2048)" : " (KeyholeTiles=1)") : ""));
+            UnderRailFixesMod.Note($"keyhole: front picture {tw}x{th}");
         }
         int n = 0;
         for (int y = 0; y < ny; y++)
@@ -969,7 +958,7 @@ static class Keyhole
         intoTarget = t; intoAt = new Vector2(area.X, area.Y);
     }
 
-    // destination x source alpha (colour and alpha alike, as XNA's Reach profile needs).
+    // destination x source alpha (colour and alpha alike).
     static readonly BlendState ByAlpha = new BlendState
     {
         ColorSourceBlend = Blend.Zero, ColorDestinationBlend = Blend.SourceAlpha,

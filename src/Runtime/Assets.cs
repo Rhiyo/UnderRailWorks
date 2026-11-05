@@ -158,7 +158,7 @@ namespace UnderRailWorks.Internal
             try
             {
                 using (var s = File.OpenRead(path)) t = Texture2D.FromStream(g, s);
-                // The game's textures are premultiplied (XNA content); a PNG's aren't: premultiply so edges blend right.
+                // The game's textures are premultiplied (its .xnb content); a PNG's aren't: premultiply so edges blend right.
                 var px = new Color[t.Width * t.Height];
                 t.GetData(px);
                 for (int i = 0; i < px.Length; i++) { var c = px[i]; if (c.A < 255) px[i] = new Color(c.R * c.A / 255, c.G * c.A / 255, c.B * c.A / 255, c.A); }
@@ -270,7 +270,7 @@ namespace UnderRailWorks.Internal
             if (t == null) return null;     // graphics not up yet: try again next time
             var icon = new c3i();
             IconSize.SetValue(icon, new esj(33, 33));     // c3i.a: the game's icon cell (bj8.a); a field/method name clash
-            icon.b.Add((abu)PieceCtor.Invoke(new object[] { t, new Rectangle(0, 0, t.Width, t.Height), 1f }));     // abu(Texture2D, Rectangle, float): XNA types
+            icon.b.Add((abu)PieceCtor.Invoke(new object[] { t, new Rectangle(0, 0, t.Width, t.Height), 1f }));     // abu(Texture2D, Rectangle, float)
             icons[name] = icon;
             return icon;
         }

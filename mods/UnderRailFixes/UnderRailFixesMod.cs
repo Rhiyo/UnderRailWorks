@@ -58,8 +58,6 @@ public sealed class FixesConfig : ModConfig
     public int KeyholeTransparency = 75;
     [Label("Keyhole size"), Range(50, 200), Increment(5), Tooltip("The keyhole's size, in percent of the default (about the character's height).")]
     public int KeyholeSize = 100;
-    [Hidden, Tooltip("Testing: 1 = draw the keyhole's front picture in tiles of at most 2048 everywhere.")]
-    public bool KeyholeTiles = false;
     [Hidden, Tooltip("Debugging: 1 = log the layers in each hole every few seconds; 2 = also save the keyhole's pictures once (keyhole-*.png).")]
     public int KeyholeDebug = 0;
 }
@@ -85,7 +83,6 @@ static class CoveredSettings
     internal static int FillTransparency { get { return Math.Max(0, Math.Min(100, Config.ShowCoveredTransparency)); } }
     internal static int KeyholeTransparency { get { return Math.Max(0, Math.Min(100, Config.KeyholeTransparency)); } }
     internal static int KeyholeSize { get { return Math.Max(25, Math.Min(300, Config.KeyholeSize)); } }
-    internal static bool KeyholeTiles { get { return Config.KeyholeTiles; } }
     internal static bool KeyholeDebug { get { return Config.KeyholeDebug >= 1; } }
     internal static bool KeyholeDumps { get { return Config.KeyholeDebug >= 2; } }
 }

@@ -65,7 +65,7 @@ tools/check-release.sh   automated patcher checks (release.sh runs them)
 src/Runtime/*.cs         UnderrailFix.dll: everything the patched game calls
 src/Installer/*.cs       UnderrailFix-Patcher.exe: backup + Cecil patches + uninstall; installs the 64-bit mode,
                          or with --32bit the 32-bit mode
-src/Build/Retarget.cs    build step, see "XNA type identity"
+src/Build/Retarget.cs    build step: build/ref/underrail.exe, the game exe pointed at our FNA.dll, to compile against
 src/Build/GameVersion.cs, ListHooks.cs   release helpers
 src/Bundle/mono.config   dllmap for the bundled Linux patcher
 src/SteamHost/           UnderrailSteamHost.exe, the 32-bit Steam helper for the 64-bit mode
@@ -92,7 +92,7 @@ the files with a script that lists the assembly names in the gzip'd data.
 
 Needs: `mono` + `mcs` + `mkbundle` (Arch: `mono`), Mono.Cecil 0.11 in the GAC
 (`/usr/lib/mono/gac/Mono.Cecil/0.11.1.0__0738eb9f132ed756/`), a stock `underrail.exe` (the build compiles against
-the Steam copy, or its `.backup`), and any Proton install (for `WineMono.FNA.dll`). Paths are at the top of build.sh.
+the Steam copy, or its `.backup`); FNA comes from `tools/fetch-fna.sh` (lib/fna). Paths are at the top of build.sh.
 
 Output `dist/UnderrailFix/`: `UnderrailFix.dll`, `UnderrailFix-Patcher.exe` + `Mono.Cecil.dll` (Windows, .NET
 Framework 4), `underrailfix-patcher` + `linux/` (Linux: mkbundle'd Mono, needs glibc >= 2.29, no AVX), README.md.
@@ -186,6 +186,8 @@ update, run the patcher on a copy first: an `Expect` failure names the patch poi
 
 ### World drawing (Show Covered, the keyhole)
 
+- (History: UnderRailWorks runs only on our FNA, which doesn't enforce Reach; the Reach rules below were for
+  UnderRailFixes 1.x's Microsoft XNA path and no longer apply to Works or its mods.)
 - **Windows / Microsoft XNA uses the Reach profile and enforces it** (the game sets `GraphicsProfile` 0 = Reach in
   `tb`; FNA doesn't enforce it): textures and render targets
   <= 2048 a side, wrap addressing only on power-of-two textures, no separate alpha blend (colour and alpha factors
@@ -211,8 +213,8 @@ update, run the patcher on a copy first: an `Expect` failure names the patch poi
     the first standing piece in front of last frame's hole. "In front" = inside its circle and at least the target's
     square on both map axes (`b0b.d` X and Y, each against `Math.Floor` of the target's): a walking character is drawn
     after the wall piece on the square it's leaving. X + Y alone also took pieces diagonally beside it (a wall running
-    south-west to north-east faded when walking along its front). Only scenery drawn after the target opens a hole. One screen-sized target; on Microsoft XNA above 2048 tiles of at most 2048 (Reach;
-    `KeyholeTiles=1` forces tiles anywhere for testing; a second tile gets a layer via `avw` without `avv`).
+    south-west to north-east faded when walking along its front). Only scenery drawn after the target opens a hole. One screen-sized target (the code keeps a list of
+    "tiles" from the XNA days; there is always one).
   - Floor after the split near last frame's holes goes onto the screen as the game draws it (`AlsoOnScreen`, no depth
     test), with its tile's extras, and only erases in the front picture (`EraseInFront`, Cut blend): drawn normally into
     both, see-through floor (transition red) counted twice. It is never redrawn later. At WorldDone, per hole: cover = standing pieces in the circle in front of the target; behind =
@@ -380,10 +382,10 @@ the code changed, the bad tile moved by exactly one tile.
   `PropertyDefinition` (Cecil) or `GetProperty` (reflection), never by `set_Name`.
 - **Field/method name clashes**: `esj` (size) has fields `c`/`d` and methods `c()`/`d(...)`; C# can't pick, so the
   runtime reads those fields by reflection.
-- **XNA type identity**: the runtime DLL is compiled against FNA (`WineMono.FNA`), then `Retarget.cs` points each
-  XNA type reference at the XNA 4.0 assembly the game references for it, so it binds like the game does (FNA facades
-  under Wine Mono, real XNA on Windows). Calling *game* members whose signatures use XNA types (e.g. setting
-  `euz.Location`, `bnr.a` with `Color?`) doesn't compile (CS0012); use reflection for those.
+- **XNA type identity**: Works and mods compile against `build/ref/underrail.exe` (the game exe pointed at our FNA)
+  and `FNA.dll`, the way the patched game runs. (Before, against Wine Mono's FNA and the stock exe, game members with
+  XNA types in their signatures didn't compile (CS0012) and were called by reflection; some of that reflection is
+  still in the runtime and now optional.)
 - Cecil drops IMAGE_FILE_LARGE_ADDRESS_AWARE; the patcher copies the original COFF characteristics.
 - An exe-loading launcher must not touch game types before loading the patched copy (the stock exe would load).
 - **The Linux patcher must bundle a baseline x86-64 Mono runtime, not the build machine's**: this machine's mono is
@@ -442,8 +444,7 @@ the code changed, the bad tile moved by exactly one tile.
   options tab basics, keep/revert countdown, zoom steps (wheel and buttons equal), save screenshots (1080p view; since the direct 1080p render: 64-bit at 5120x1440),
   window icon under Wayland, Occluded characters in the 64-bit build under Proton (all effects, keyholes for several
   characters, transitions, Tab), the Fixes tab's sliders/tick boxes/scrolling/upward dropdowns.
-- Not yet: Occluded characters and save screenshots in the 32-bit build on Windows (XNA, Reach: fills/outlines only
-  up to a 2048x2048 back buffer, `ShowCovered.Fits`; the keyhole's tiles tested only under FNA with `KeyholeTiles=1`), its performance with many keyholes on a slower GPU, the Frame rate cap dropdown in game, the latest background change in game (picture drawn full-screen/letterboxed while the main menu's
+- Not yet: Occluded characters on real Windows (.NET 10 + FNA), its performance with many keyholes on a slower GPU, the Frame rate cap dropdown in game, the latest background change in game (picture drawn full-screen/letterboxed while the main menu's
   panel stays inset), portrait, the Windows patcher and `DpiAware` on real Windows, the keep/revert countdown in all paths,
   older glibc distros for the Linux patcher, the GOG version, the Expedition / Heavy Duty expansions.
 

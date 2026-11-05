@@ -18,10 +18,9 @@ rm -rf "$HERE/dist" && mkdir -p "$OUT" "$HERE/build"
 # Compile the runtime against the stock game exe (the backup when the local copy is already patched).
 REF="$GAME/underrail.exe"
 [ -f "$GAME/underrail.exe.backup" ] && REF="$GAME/underrail.exe.backup"
-# XNA types come from FNA at compile time; Retarget then points them at the XNA 4.0 assemblies the game uses.
-FNA="$(ls -d "$HOME"/.local/share/Steam/compatibilitytools.d/*/files/share/wine/mono/wine-mono-*/lib/mono/gac/WineMono.FNA/*/WineMono.FNA.dll \
-    /usr/share/steam/compatibilitytools.d/*/files/share/wine/mono/wine-mono-*/lib/mono/gac/WineMono.FNA/*/WineMono.FNA.dll 2>/dev/null | sort -V | tail -1)"
-[ -n "$FNA" ] || { echo "WineMono.FNA.dll not found (comes with any Proton install)" >&2; exit 1; }
+# Our FNA (tools/fetch-fna.sh fills lib/fna once): the game runs on it, and Works and mods compile against it.
+[ -f "$HERE/lib/fna/FNA.dll" ] || "$HERE/tools/fetch-fna.sh"
+FNA="$HERE/lib/fna/FNA.dll"
 # NVorbis 0.8.6 (Ms-PL, no dependencies): the Ogg Vorbis decoder for 64-bit music (Music.cs). Fetched from NuGet
 # once and checked against a known hash, so the repo needn't hold a binary.
 NVORBIS="$HERE/lib/NVorbis.dll"
@@ -45,147 +44,58 @@ echo "$HARMONY_SHA  $HARMONY_PKG" | sha256sum -c --quiet - || { echo "Lib.Harmon
 mkdir -p "$HERE/build/harmony"
 unzip -qo "$HARMONY_PKG" lib/net452/0Harmony.dll lib/net10.0/0Harmony.dll -d "$HERE/build/harmony"
 HARMONY="$HERE/build/harmony/lib/net452/0Harmony.dll"
-# The game's SFML.Net bindings, for the 32-bit music path (the backup when the local copy was patched for 64-bit).
-SFML=""
-for lib in sfmlnet-audio-2 sfmlnet-window-2; do
-    f="$GAME/$lib.dll"; [ -f "$f.backup" ] && f="$f.backup"; SFML="$SFML -r:$f"
-done
-# The runtime: compiled against the game and Wine Mono's FNA (build/fna, what mods compile against), its XNA references
-# pointed at the game's XNA assemblies (build/xna), then at our FNA as UnderRailWorks.dll (below).
-mkdir -p "$HERE/build/fna" "$HERE/build/xna"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/fna/UnderRailWorks.dll" -r:"$REF" -r:"$FNA" -r:"$NVORBIS" -r:"$HARMONY" $SFML -r:System.Core.dll -r:System.Drawing.dll -r:System.Windows.Forms.dll -r:System.Configuration.dll "$HERE"/src/Runtime/*.cs
-cp "$HERE/build/fna/UnderRailWorks.dll" "$HERE/build/xna/UnderRailWorks.dll"
+# A reference copy of the game exe with its XNA references pointed at FNA (src/Build/Retarget.cs): Works and mods
+# compile against it and FNA.dll directly, as the game runs.
+GAMEREF="$HERE/build/ref/underrail.exe"
 mcs -nologo -out:"$HERE/build/Retarget.exe" -r:"$CECIL" -r:System.Core.dll "$HERE/src/Build/Retarget.cs"
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" "$HERE/build/xna/UnderRailWorks.dll" "$REF"
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" "$REF" "$FNA" "$GAMEREF" >/dev/null
+# The runtime (assembly UnderRailWorks), straight into dist.
+WORKS="$OUT/UnderRailWorks.dll"
+mcs -nologo -optimize+ -target:library -out:"$WORKS" -r:"$GAMEREF" -r:"$FNA" -r:"$NVORBIS" -r:"$HARMONY" -r:System.Core.dll -r:System.Drawing.dll -r:System.Windows.Forms.dll -r:System.Configuration.dll "$HERE"/src/Runtime/*.cs
+# A mod: against FNA and Works only, never the game (a mod that uses Works' API can't reach the game's scrambled names,
+# which change between game versions; any it used would fail to compile here). mod <name> <into> <source dir or file>
+mod() {
+    local name="$1" into="$2" src="$3"
+    mkdir -p "$into/$name"
+    if [ -d "$src" ]; then set -- "$src"/*.cs; else set -- "$src"; fi
+    mcs -nologo -optimize+ -target:library -out:"$into/$name/$name.dll" -r:"$FNA" -r:"$WORKS" -r:System.Core.dll "$@"
+    local dir="$src"; [ -d "$dir" ] || dir="$(dirname "$src")"
+    cp "$dir/mod.json" "$into/$name/"
+}
 cp "$CECIL" "$OUT/"
 
 # Harmony next to the game (its .NET 10 build). The examples (HelloWorks, HelloItems, BrokenMod: throws on load) are
 # built into build/Mods for testing, not shipped.
 cp "$HERE/build/harmony/lib/net10.0/0Harmony.dll" "$OUT/"
 mkdir -p "$HERE/build/Mods/HelloWorks" "$HERE/build/Mods/BrokenMod"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/Mods/HelloWorks/HelloWorks.dll" -r:"$REF" -r:"$HARMONY" "$HERE/examples/HelloWorks/HelloWorks.cs"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/Mods/HelloWorks/HelloWorks.dll" -r:"$GAMEREF" -r:"$HARMONY" "$HERE/examples/HelloWorks/HelloWorks.cs"
 # HelloItems (the item overlay spike) also into build/ only: its item file is made from the player's own game data.
 mkdir -p "$HERE/build/Mods/HelloItems"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/Mods/HelloItems/HelloItems.dll" -r:"$REF" -r:"$HARMONY" "$HERE/examples/HelloItems/HelloItems.cs"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/Mods/HelloItems/HelloItems.dll" -r:"$GAMEREF" -r:"$HARMONY" "$HERE/examples/HelloItems/HelloItems.cs"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/Mods/BrokenMod/BrokenMod.dll" -r:"$HARMONY" "$HERE/examples/BrokenMod/BrokenMod.cs"
 
-# The 64-bit mode: a copy of the runtime pointed at FNA, FNA.dll with its native libraries in x64/ (tools/fetch-fna.sh
-# fills lib/fna once), the music decoder and the 32-bit Steam helper.
+# The game's libraries: FNA.dll with its native libraries in x64/, the music decoder and the 32-bit Steam helper.
 OUT64="$OUT"
 mkdir -p "$OUT64/x64"
 cp "$NVORBIS" "$OUT64/"
 # The helper also runs GOG Galaxy for the GOG version: compiled against the game's GalaxyCSharp.dll (loaded from the game
 # folder at run time, only on GOG).
 mcs -nologo -optimize+ -platform:x86 -out:"$OUT64/UnderrailSteamHost.exe" -r:"$GAME/GalaxyCSharp.dll" "$HERE/src/SteamHost/SteamHost.cs"
-[ -f "$HERE/lib/fna/FNA.dll" ] || "$HERE/tools/fetch-fna.sh"
-cp "$HERE/lib/fna/FNA.dll" "$OUT64/"
+cp "$FNA" "$OUT64/"
 cp "$HERE"/lib/fna/x64/*.dll "$OUT64/x64/"
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna "$HERE/build/xna/UnderRailWorks.dll" "$OUT64/FNA.dll" "$OUT/UnderRailWorks.dll"
 
-# The UnderRailFixes mod (Occluded characters): built against Works and FNA only, like every shipped mod, then
-# pointed at our FNA.
-mkdir -p "$OUT/Mods/UnderRailFixes"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/UnderRailFixes.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/UnderRailFixes/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/UnderRailFixes.dll" "$OUT64/FNA.dll" "$OUT/Mods/UnderRailFixes/UnderRailFixes.dll"
-cp "$HERE/mods/UnderRailFixes/mod.json" "$OUT/Mods/UnderRailFixes/"
-# The Minimap mod, shipped in Mods/. Built against Works and FNA only, not the game: a mod that uses Works' API can't
-# reach the game's scrambled names (they change between game versions), and any it used would fail to compile here.
-mkdir -p "$OUT/Mods/Minimap"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/Minimap.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/Minimap/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/Minimap.dll" "$OUT/FNA.dll" "$OUT/Mods/Minimap/Minimap.dll" >/dev/null
-cp "$HERE/mods/Minimap/mod.json" "$OUT/Mods/Minimap/"
-# Quest Tracker, shipped in Mods/, built like the Minimap (Works and FNA only).
-mkdir -p "$OUT/Mods/QuestTracker"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/QuestTracker.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/QuestTracker/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/QuestTracker.dll" "$OUT/FNA.dll" "$OUT/Mods/QuestTracker/QuestTracker.dll" >/dev/null
-cp "$HERE/mods/QuestTracker/mod.json" "$OUT/Mods/QuestTracker/"
-# Word Gets Around, shipped in Mods/ (Works and FNA only).
-mkdir -p "$OUT/Mods/WordGetsAround"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/WordGetsAround.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/WordGetsAround/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/WordGetsAround.dll" "$OUT/FNA.dll" "$OUT/Mods/WordGetsAround/WordGetsAround.dll" >/dev/null
-cp "$HERE/mods/WordGetsAround/mod.json" "$OUT/Mods/WordGetsAround/"
-mkdir -p "$OUT/Mods/DifficultyDial"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/DifficultyDial.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/DifficultyDial/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/DifficultyDial.dll" "$OUT/FNA.dll" "$OUT/Mods/DifficultyDial/DifficultyDial.dll" >/dev/null
-cp "$HERE/mods/DifficultyDial/mod.json" "$OUT/Mods/DifficultyDial/"
-mkdir -p "$OUT/Mods/AfterActionReport"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/AfterActionReport.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/AfterActionReport/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/AfterActionReport.dll" "$OUT/FNA.dll" "$OUT/Mods/AfterActionReport/AfterActionReport.dll" >/dev/null
-cp "$HERE/mods/AfterActionReport/mod.json" "$OUT/Mods/AfterActionReport/"
-mkdir -p "$OUT/Mods/ContractBoard"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/ContractBoard.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/ContractBoard/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/ContractBoard.dll" "$OUT/FNA.dll" "$OUT/Mods/ContractBoard/ContractBoard.dll" >/dev/null
-cp "$HERE/mods/ContractBoard/mod.json" "$OUT/Mods/ContractBoard/"
-mkdir -p "$OUT/Mods/HudLayout"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/HudLayout.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/HudLayout/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/HudLayout.dll" "$OUT/FNA.dll" "$OUT/Mods/HudLayout/HudLayout.dll" >/dev/null
-cp "$HERE/mods/HudLayout/mod.json" "$OUT/Mods/HudLayout/"
-mkdir -p "$OUT/Mods/VendorDirectory"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/VendorDirectory.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/VendorDirectory/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/VendorDirectory.dll" "$OUT/FNA.dll" "$OUT/Mods/VendorDirectory/VendorDirectory.dll" >/dev/null
-cp "$HERE/mods/VendorDirectory/mod.json" "$OUT/Mods/VendorDirectory/"
-mkdir -p "$OUT/Mods/FairTrade"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/FairTrade.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/FairTrade/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/FairTrade.dll" "$OUT/FNA.dll" "$OUT/Mods/FairTrade/FairTrade.dll" >/dev/null
-cp "$HERE/mods/FairTrade/mod.json" "$OUT/Mods/FairTrade/"
-mkdir -p "$OUT/Mods/NeuralReallocation"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/NeuralReallocation.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/NeuralReallocation/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/NeuralReallocation.dll" "$OUT/FNA.dll" "$OUT/Mods/NeuralReallocation/NeuralReallocation.dll" >/dev/null
-cp "$HERE/mods/NeuralReallocation/mod.json" "$OUT/Mods/NeuralReallocation/"
-mkdir -p "$OUT/Mods/MovableWindows"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/MovableWindows.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/MovableWindows/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/MovableWindows.dll" "$OUT/FNA.dll" "$OUT/Mods/MovableWindows/MovableWindows.dll" >/dev/null
-cp "$HERE/mods/MovableWindows/mod.json" "$OUT/Mods/MovableWindows/"
-mkdir -p "$OUT/Mods/MerchantLedger"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/MerchantLedger.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/MerchantLedger/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/MerchantLedger.dll" "$OUT/FNA.dll" "$OUT/Mods/MerchantLedger/MerchantLedger.dll" >/dev/null
-cp "$HERE/mods/MerchantLedger/mod.json" "$OUT/Mods/MerchantLedger/"
-mkdir -p "$OUT/Mods/StatusBoard"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/StatusBoard.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/StatusBoard/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/StatusBoard.dll" "$OUT/FNA.dll" "$OUT/Mods/StatusBoard/StatusBoard.dll" >/dev/null
-cp "$HERE/mods/StatusBoard/mod.json" "$OUT/Mods/StatusBoard/"
-mkdir -p "$OUT/Mods/Loadouts"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/Loadouts.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/Loadouts/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/Loadouts.dll" "$OUT/FNA.dll" "$OUT/Mods/Loadouts/Loadouts.dll" >/dev/null
-cp "$HERE/mods/Loadouts/mod.json" "$OUT/Mods/Loadouts/"
-mkdir -p "$OUT/Mods/Pacing"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/Pacing.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/Pacing/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/Pacing.dll" "$OUT/FNA.dll" "$OUT/Mods/Pacing/Pacing.dll" >/dev/null
-cp "$HERE/mods/Pacing/mod.json" "$OUT/Mods/Pacing/"
-mkdir -p "$OUT/Mods/WatchfulEyes"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/WatchfulEyes.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/WatchfulEyes/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/WatchfulEyes.dll" "$OUT/FNA.dll" "$OUT/Mods/WatchfulEyes/WatchfulEyes.dll" >/dev/null
-cp "$HERE/mods/WatchfulEyes/mod.json" "$OUT/Mods/WatchfulEyes/"
-mkdir -p "$OUT/Mods/ThePit"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/ThePit.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/ThePit/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/ThePit.dll" "$OUT/FNA.dll" "$OUT/Mods/ThePit/ThePit.dll" >/dev/null
-cp "$HERE/mods/ThePit/mod.json" "$OUT/Mods/ThePit/"
-mkdir -p "$OUT/Mods/Scanner"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/Scanner.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE"/mods/Scanner/*.cs
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/Scanner.dll" "$OUT/FNA.dll" "$OUT/Mods/Scanner/Scanner.dll" >/dev/null
-cp "$HERE/mods/Scanner/mod.json" "$OUT/Mods/Scanner/"
+# The shipped mods, into dist's Mods/.
+for m in UnderRailFixes Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
-mkdir -p "$HERE/build/Mods/HelloUI"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloUI.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloUI/HelloUI.cs"
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/HelloUI.dll" "$OUT/FNA.dll" "$HERE/build/Mods/HelloUI/HelloUI.dll" >/dev/null
-cp "$HERE/examples/HelloUI/mod.json" "$HERE/build/Mods/HelloUI/"
+mod HelloUI "$HERE/build/Mods" "$HERE/examples/HelloUI"
 # HelloQuest (quests, dialogs, variables): built without the game, into build/Mods for testing.
-mkdir -p "$HERE/build/Mods/HelloQuest"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/HelloQuest.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/HelloQuest/HelloQuest.cs"
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/HelloQuest.dll" "$OUT/FNA.dll" "$HERE/build/Mods/HelloQuest/HelloQuest.dll" >/dev/null
-cp "$HERE/examples/HelloQuest/mod.json" "$HERE/build/Mods/HelloQuest/"
+mod HelloQuest "$HERE/build/Mods" "$HERE/examples/HelloQuest"
 # TheStranger (a placed character, a dialog and a quest): built without the game, into build/Mods for testing.
-mkdir -p "$HERE/build/Mods/TheStranger"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/TheStranger.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/examples/TheStranger/TheStranger.cs"
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/TheStranger.dll" "$OUT/FNA.dll" "$HERE/build/Mods/TheStranger/TheStranger.dll" >/dev/null
-cp "$HERE/examples/TheStranger/mod.json" "$HERE/build/Mods/TheStranger/"
+mod TheStranger "$HERE/build/Mods" "$HERE/examples/TheStranger"
 # TheProspector: a content pack (JSON only, no code), into build/Mods for testing.
 rm -rf "$HERE/build/Mods/TheProspector"; cp -r "$HERE/examples/TheProspector" "$HERE/build/Mods/TheProspector"
 # WorksTest (test keys, never shipped): into build/Mods.
-mkdir -p "$HERE/build/Mods/WorksTest"
-mcs -nologo -optimize+ -target:library -out:"$HERE/build/WorksTest.dll" -r:"$FNA" -r:"$HERE/build/fna/UnderRailWorks.dll" -r:System.Core.dll "$HERE/tools/testmods/WorksTest/WorksTest.cs"
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" --fna-mod "$HERE/build/WorksTest.dll" "$OUT/FNA.dll" "$HERE/build/Mods/WorksTest/WorksTest.dll" >/dev/null
-cp "$HERE/tools/testmods/WorksTest/mod.json" "$HERE/build/Mods/WorksTest/"
+mod WorksTest "$HERE/build/Mods" "$HERE/tools/testmods/WorksTest"
 rm -rf "$HERE/build/Mods/WorksTest/content"; cp -r "$HERE/tools/testmods/WorksTest/content" "$HERE/build/Mods/WorksTest/"
 
 # The .NET 10 launcher (installed as underrail.exe; src/Launcher) and the Windows .NET 10 runtime it runs the game on

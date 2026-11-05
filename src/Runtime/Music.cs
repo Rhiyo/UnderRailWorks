@@ -1,8 +1,7 @@
-// Background music without SFML, for a 64-bit process (experimental-64bit patch). The game uses SFML only for
-// streamed music, all in one class (bxt): new Music(file), Loop = true, Volume (0-100), Pitch (1 = normal), Status,
-// Play, Stop, Dispose. The patch changes bxt's Music field to object and sends those calls here.
-// 32-bit process: the real SFML Music, exactly as before. 64-bit: the game's 32-bit CSFML/OpenAL/libsndfile can't
-// load, so the .ogg is decoded with NVorbis (managed) and streamed through XNA's DynamicSoundEffectInstance (FNA).
+// Background music without SFML. The game uses SFML only for streamed music, all in one class (bxt): new Music(file),
+// Loop = true, Volume (0-100), Pitch (1 = normal), Status, Play, Stop, Dispose. The patch changes bxt's Music field to
+// object and sends those calls here. The game's 32-bit CSFML/OpenAL/libsndfile can't load in the 64-bit process, so
+// the .ogg is decoded with NVorbis (managed) and streamed through FNA's DynamicSoundEffectInstance.
 using System;
 using Microsoft.Xna.Framework.Audio;
 using UnderRailWorks;
@@ -12,56 +11,46 @@ namespace UnderRailWorks.Internal
 
 public static class FixMusic
 {
-    static bool Native => IntPtr.Size == 4;
-
     public static object Create(string file)
     {
-        if (Native) return new SFML.Audio.Music(file);
         try { return new OggMusic(file); }
         catch (Exception ex) { Log.Write("music: " + file + ": " + ex.Message); return null; }
     }
 
-    // SFML.Audio.SoundStatus values, which the game compares against: Stopped 0, Paused 1, Playing 2.
+    // SFML's SoundStatus values, which the game compares against: Stopped 0, Paused 1, Playing 2.
     public static int Status(object music)
     {
-        if (music is SFML.Audio.Music sf) return (int)sf.Status;
         return music is OggMusic ogg ? ogg.Status : 0;
     }
 
     public static void SetLoop(object music, bool loop)
     {
-        if (music is SFML.Audio.Music sf) sf.Loop = loop;
-        else if (music is OggMusic ogg) ogg.Loop = loop;
+        if (music is OggMusic ogg) ogg.Loop = loop;
     }
 
     public static void SetVolume(object music, float volume)
     {
-        if (music is SFML.Audio.Music sf) sf.Volume = volume;
-        else if (music is OggMusic ogg) ogg.Volume = volume;
+        if (music is OggMusic ogg) ogg.Volume = volume;
     }
 
     public static void SetPitch(object music, float pitch)
     {
-        if (music is SFML.Audio.Music sf) sf.Pitch = pitch;
-        else if (music is OggMusic ogg) ogg.Pitch = pitch;
+        if (music is OggMusic ogg) ogg.Pitch = pitch;
     }
 
     public static void Play(object music)
     {
-        if (music is SFML.Audio.Music sf) sf.Play();
-        else if (music is OggMusic ogg) ogg.Play();
+        if (music is OggMusic ogg) ogg.Play();
     }
 
     public static void Stop(object music)
     {
-        if (music is SFML.Audio.Music sf) sf.Stop();
-        else if (music is OggMusic ogg) ogg.Stop();
+        if (music is OggMusic ogg) ogg.Stop();
     }
 
     public static void Dispose(object music)
     {
-        if (music is SFML.Audio.Music sf) sf.Dispose();
-        else if (music is OggMusic ogg) ogg.Dispose();
+        if (music is OggMusic ogg) ogg.Dispose();
     }
 }
 

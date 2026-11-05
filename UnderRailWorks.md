@@ -759,8 +759,11 @@ biggest risk of going 64-bit only), GOG.
 - [ ] **Events** mods can subscribe to without Harmony: game started, map loaded, frame/update, item created, damage
       dealt, dialog opened, options applied.
 - [ ] **Test the 64-bit mode on real Windows** first: it is now the only mode.
-- [ ] **Build directly against FNA**: compile Works against our `FNA.dll` and drop the 32-bit build, `Retarget.cs`, the
-      XNA Reach code (keyhole tiles, `ShowCovered.Fits`, the 2048 limits) and the `--32bit` option.
+- [x] **Build directly against FNA** (Nov 2026): `Retarget.cs` now only makes `build/ref/underrail.exe`, a copy of the
+      game exe pointed at our `FNA.dll`; Works and every mod compile against that and `FNA.dll`, with no rewriting
+      afterwards (they reference only `FNA`). Wine Mono's FNA, SFML and the music's SFML branch are gone from the build;
+      UnderRailFixes lost its Microsoft XNA / Reach branches (the 2048 limits, `KeyholeTiles`; the keyhole's front
+      picture is always one screen-sized target). The patcher's `--32bit` only prints that there is no such mode.
 - [ ] **Data overlay**: mods add or replace data files from their own `data` folder. Items done in the spike
       (`ez2.b`); next characters, stores, dialogs, maps.
 - [ ] **Data tools**: make and edit the game's data files with its own classes (the spike's item tool), the basis for
