@@ -16,6 +16,7 @@
 //                     "damage": [ { "type", "min", "max" } ], "resistances": { "Heat": [threshold, percent] } } ]
 //   "stores":     [ { "store", "item", "count", "once" } ]     "loot": [ { "item", "chance", "count", "character", "container" } ]
 //   "music":      [ { "replace" | "add": id, "file": ogg } ]   "sounds": [ { "id", "file": wav } ]
+//   "recipes":    [ { "id", "name", "category", "result", "count", "known", "slots": [ { "label", "code"|"codes", "skill", "count", "optional" } ] } ]
 // Conditions (one key each, combinable): flag (+ "is"), atLeast [var, n], equals [var, text], quest + "is"
 // (notstarted/active/completed/failed), money n, has item code + "count", skill / ability name + "min", level n,
 // not {..}, all [..], any [..].
@@ -100,7 +101,8 @@ static class ContentPacks
                         case "loot": count += Each(kv.Value, where, "loot rule", i => LoadLoot(mod, i)); break;
                         case "music": count += Each(kv.Value, where, "song", i => LoadMusic(mod, i)); break;
                         case "sounds": count += Each(kv.Value, where, "sound", i => LoadSound(mod, i)); break;
-                        default: Log.Write("content: " + where + ": unknown section \"" + kv.Key + "\" (text, quests, dialogs, dialogPatches, placements, triggers, items, itemEdits, stores, loot, music, sounds)"); break;
+                        case "recipes": count += Each(kv.Value, where, "recipe", i => LoadRecipe(mod, i)); break;
+                        default: Log.Write("content: " + where + ": unknown section \"" + kv.Key + "\" (text, quests, dialogs, dialogPatches, placements, triggers, items, itemEdits, stores, loot, music, sounds, recipes)"); break;
                     }
                 }
                 catch (Exception ex) { Log.Write("content: " + where + ": " + kv.Key + ": " + ex.Message); }
@@ -281,6 +283,21 @@ static class ContentPacks
 
     // "sounds": [ { "id": "Interface.ButtonClick", "file": "sounds/click.wav" } ]
     static void LoadSound(ModInfo info, Dictionary<string, object> m) { Sound.Replace(Mod(info), Req(m, "id"), Req(m, "file")); }
+
+    // "recipes": [ { "id", "name", "category": "Medicine", "result": item path, "count": 1, "known": true,
+    //   "slots": [ { "label", "code" | "codes": [...], "skill": 0, "count": 1, "optional": false } ] } ]
+    static void LoadRecipe(ModInfo info, Dictionary<string, object> r)
+    {
+        var slots = r.ContainsKey("slots") ? ((List<object>)r["slots"]).Cast<Dictionary<string, object>>().Select(s =>
+        {
+            var codes = s.ContainsKey("codes") ? ((List<object>)s["codes"]).Select(Str).ToArray() : new[] { Req(s, "code") };
+            var slot = RecipeSlot.AnyOf(Req(s, "label"), codes, Int(s, "skill"), Math.Max(1, Int(s, "count")));
+            return s.ContainsKey("optional") && Bool(s["optional"]) ? slot.AsOptional() : slot;
+        }).ToArray() : new RecipeSlot[0];
+        var recipe = Crafting.AddRecipe(Mod(info), Req(r, "id"), Req(r, "name"), Opt(r, "category") ?? "Devices", Req(r, "result"), slots);
+        if (r.ContainsKey("count")) recipe.Count = Math.Max(1, Int(r, "count"));
+        if (r.ContainsKey("known")) recipe.KnownByDefault = Bool(r["known"]);
+    }
 
     static void LoadTrigger(string mod, Dictionary<string, object> t)
     {

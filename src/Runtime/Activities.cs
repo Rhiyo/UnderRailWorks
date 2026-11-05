@@ -71,7 +71,7 @@ namespace UnderRailWorks
         internal Type Type;
     }
 
-    public static class Crafting
+    public static partial class Crafting
     {
         static List<Blueprint> all;
         // Every blueprint in the game (its blueprint classes).

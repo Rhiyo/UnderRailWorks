@@ -84,6 +84,9 @@ public sealed class WorksTest : WorksMod
         });
         GameEvents.Update.Add(this, sec => { if (pet == null) return; petLog -= sec; if (petLog > 0) return; petLog = 3;
             Log.Info("pet at " + pet.Position + ", player at " + World.Player.Position + ", dead " + pet.IsDead); });
+        var kit = Crafting.AddRecipe(this, "fieldkit", "Works Field Kit", "Medicine", "consumables\\medicine\\healthhypo",
+            RecipeSlot.Item("Bandages", "med.bandage", 0, 2), RecipeSlot.Item("Flare", "flare", 0, 1));
+        Commands.Add(this, "wt.bag", "wt.bag: the bag's item codes", args => { var t = string.Join(", ", World.Player.Inventory.Items.Select(i => i.Code + " x" + i.Stacks)); Log.Info("bag: " + t); return t; });
         Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
         {
             aiHold = true; Commands.CloseConsole();

@@ -51,5 +51,9 @@
   ],
   "itemEdits": [ { "path": "consumables\\medicine\\bandage", "description": "Clean cloth strips. The prospector swears by them." } ],
   "stores": [ { "store": "bigbret", "item": "works\\TheProspector\\lucky_pick", "count": 1, "once": true } ],
-  "loot": [ { "character": "Rathound", "item": "components\\scraps\\fabricscraps", "chance": 0.5, "count": 3 } ]
+  "loot": [ { "character": "Rathound", "item": "components\\scraps\\fabricscraps", "chance": 0.5, "count": 3 } ],
+  "recipes": [
+    { "id": "lucky_pick", "name": "Prospector's Lucky Pick", "category": "Weapons", "result": "works\\TheProspector\\lucky_pick",
+      "slots": [ { "label": "Repair kit", "code": "mechanicalRepairKit1", "skill": 10 }, { "label": "Flare", "code": "flare" } ] }
+  ]
 }

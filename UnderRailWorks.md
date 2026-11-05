@@ -789,6 +789,19 @@ An independent review of the day's code found, all fixed:
   present -> stock loader OK, quickload: companion not in the save, cooldown kept.
 - WorksTest's autorun.txt takes `wait <seconds>` lines (whole test sequences without typing in the console).
 
+## Mod recipes (Nov 2026)
+
+`Crafting.AddRecipe(mod, id, name, category, resultPath, RecipeSlot.Item(label, code, skill, count) / AnyOf(...))` ->
+`ModRecipe` (Count, KnownByDefault, Known / Learn / Forget per save in the mod's save data), and a `recipes` section in
+content packs. A game recipe is a blueprint class (`cwp`) known by type in the save (PC1:B), so a mod one learned the
+game's way would break the save for the stock game. Works' blueprint object (one emitted subclass: `cwp`'s abstract
+Name / TechnicalName / Quality / Category getters have obfuscated names, overridden with DefineMethodOverride) is
+added to the crafting window's lists in a postfix on `eed.c()` (its private `i` all, `j` craftable, `k` rows, through
+its own `a(cwp)` / `c(cwp)`); its slots are the game's `cgo(eh0(codes, skill), label, optional, count)` and its result
+`ez2.a(path)`. Crafting is the game's own (component slots, skill checks, components used up, ItemCrafted). Tested: 2
+bandages + 1 flare -> a health hypo (5 -> 3, 3 -> 2, ItemCrafted fired), a JSON recipe for a mod item, a save after
+crafting passes the stock loader.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

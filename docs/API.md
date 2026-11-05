@@ -236,6 +236,8 @@ The game's content, listed for modders: item paths with their codes and names, c
 - `static IList<Blueprint> All` — Every blueprint in the game (its blueprint classes).
 - `static IList<Blueprint> Known` — The blueprints the player knows (e3q.d()).
 - `static bool Learn(string idOrName)` — The player learns a stock blueprint (by id or name), as reading its blueprint item does. Saved with the game (the stock game knows every stock blueprint). False if there's no such blueprint.
+- `static ModRecipe AddRecipe(WorksMod mod, string id, string name, string category, string result, params RecipeSlot[] slots)` — category: Weapons, Armor, Grenades, Ammo, Medicine, Traps, Devices, Processing. result: an item path.
+- `static IList<ModRecipe> ModRecipes`
 
 ## DamagePart  _(class, Combat.cs)_
 
@@ -887,6 +889,18 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `void Set(string key, string value)` — Shows a value in a row (not saved until Accept), e.g. for a reset button.
 - `void MarkChanged()`
 
+## ModRecipe  _(class, Recipes.cs)_
+
+- `string Id`
+- `string Name`
+- `string Category`
+- `string Result`
+- `int Count`
+- `bool KnownByDefault`
+- `bool Known` — Known in the current game (per save; KnownByDefault until learned or forgotten).
+- `void Learn()`
+- `void Forget()`
+
 ## Mods  _(class, Framework.cs)_
 
 - `static bool IsLoaded(string id)`
@@ -1063,6 +1077,12 @@ A character placed by a mod: re-created each time its zone loads, while When hol
 ## QuestState  _(enum, Content.cs)_
 
 Values: `NotStarted, Active, Completed, Failed`
+
+## RecipeSlot  _(class, Recipes.cs)_
+
+- `static RecipeSlot Item(string label, string code, int skill = 0, int count = 1)` — A component by item code (Item.Code, e.g. "syringe"), the crafting skill it needs, how many.
+- `static RecipeSlot AnyOf(string label, string[] codes, int skill = 0, int count = 1)`
+- `RecipeSlot AsOptional()`
 
 ## ReplaceHook<T>  _(class, Hooks.cs)_
 
