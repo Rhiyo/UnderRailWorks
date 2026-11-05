@@ -166,6 +166,8 @@ SH
     chmod +x "$dir/$name" "$dir/linux/$name.bin"
     cp "$HERE/README.md" "$dir/"
 }
+# The API reference (docs/API.md) from the source comments.
+python3 "$HERE/tools/apidoc/apidoc.py" >/dev/null || echo "docs/API.md not written" >&2
 patchers "$OUT" UnderRailWorks-Patcher.exe underrailworks-patcher
 echo "Built $OUT"
 
