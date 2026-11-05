@@ -219,7 +219,7 @@ public static partial class World
     // Out of combat, a follower that falls more than distance tiles behind is sent (the game's own move order, as its
     // AI moves: ale.a(tile)) to a free tile near its leader; in combat its AI fights as it would. Spawned characters
     // stay in their zone (they are never saved), so a follower is left behind at an exit.
-    sealed class Follow { public Character Who, Leader; public int Distance; public double Wait; }
+    sealed class Follow { public Character Who, Leader; public int Distance; public double Wait; public Vector3? OrderedFor; public Vector3 LastSeen; public int Still; }
     static readonly Dictionary<b0b, Follow> followers = new Dictionary<b0b, Follow>();     // by entity
     internal static void SetFollow(Character who, Character leader, int distance)
     {
@@ -240,7 +240,14 @@ public static partial class World
             var a = who.Position; var b = f.Leader.Position;
             if (who.Area.Game != f.Leader.Area?.Game) continue;
             double far = Math.Max(Math.Abs(a.X - b.X), Math.Abs(a.Y - b.Y));
-            if (far <= f.Distance + 1) continue;
+            bool moving = (a - f.LastSeen).Length() > 0.05f;
+            f.LastSeen = a;
+            f.Still = moving ? 0 : f.Still + 1;
+            if (far <= f.Distance + 1) { f.OrderedFor = null; continue; }
+            // An order is a new path (and replaces whatever it was doing): only when the leader has moved on since the
+            // last one, or the follower stopped short (blocked, or arrived where the leader was).
+            if (f.OrderedFor != null && (b - f.OrderedFor.Value).Length() < 2 && f.Still < 2) continue;
+            f.OrderedFor = b;
             var to = FreeTilesNear((int)Math.Round(b.X), (int)Math.Round(b.Y), f.Distance)
                 .OrderBy(t => (t.X - b.X) * (t.X - b.X) + (t.Y - b.Y) * (t.Y - b.Y) + 0.1 * ((t.X - a.X) * (t.X - a.X) + (t.Y - a.Y) * (t.Y - a.Y))).Cast<Point?>().FirstOrDefault();
             var c = who.Entity as c5x;

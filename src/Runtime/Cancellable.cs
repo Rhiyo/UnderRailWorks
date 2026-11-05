@@ -88,31 +88,42 @@ namespace UnderRailWorks.Internal
             var e = new CraftAttempt { Blueprint = bp == null ? null : bp.LocalizedName };
             GameEvents.Crafting.Run(h => h(e));
             if (!e.Cancel) return true;
+            craftRefused = true;
             __result = null;
             return false;
         }
 
-        // The inventory screen asks the target control ye(source, item) before it moves anything (c69.a: take from the
-        // source, put into the target, the old item back): refusing there leaves both where they were. (Refusing in the
-        // data slot's own check lost the item: the screen had already taken it out of the bag.)
-        // ye is also asked every frame for the cursor's feedback while dragging and by the auto-equip scan: mods are
-        // asked only during the move itself (c69.a), once per attempt.
-        static int moving;
-        static void MoveStart() { moving++; }
-        static Exception MoveEnd(Exception __exception) { moving--; return __exception; }
-
-        static void CanDrop(object __instance, coh __1, ref bool __result)
+        // "Craft all" (eed.a(object, b25)) loops while its button is enabled, and the window's refresh (eed.b()) enables it
+        // again while the components are there: refused, nothing is used up, so it would loop forever. After a refused
+        // craft the refresh leaves the button off.
+        static bool craftRefused;
+        static readonly FieldInfo CraftAllButton = typeof(eed).GetField("m_e", BindingFlags.Instance | BindingFlags.NonPublic) ?? typeof(eed).GetField("e", BindingFlags.Instance | BindingFlags.NonPublic);
+        static void Refreshed(eed __instance)
         {
-            if (moving == 0 || !__result || !GameEvents.Equipping.Any || __1 == null || World.Player == null) return;
-            var t = __instance.GetType();
-            if (!t.IsGenericType || t.GetGenericTypeDefinition() != typeof(TimelapseVertigo.UI.Controls.PlayerGearItemSlotControl<>)) return;
+            if (!craftRefused) return;
+            craftRefused = false;
+            var button = CraftAllButton == null ? null : CraftAllButton.GetValue(__instance) as euz;
+            if (button != null) button.Enabled = false;
+        }
+
+        // The inventory screen moves an item with c69.a(source, target, item): it takes the item out of the source
+        // (A_0.yd(), inside the condition) before it asks the target (A_1.ye), so a refusal anywhere inside the move
+        // loses the item (measured: the armour was gone from bag and body). Mods are asked here, before the move starts;
+        // refused, nothing moves. Once per move (the item coming back in a swap isn't asked).
+        static bool Move(ebk __0, ebk __1, coh __2, ref bool __result)
+        {
+            if (!GameEvents.Equipping.Any || __1 == null || __2 == null || World.Player == null) return true;
+            var t = __1.GetType();
+            if (!t.IsGenericType || t.GetGenericTypeDefinition() != typeof(TimelapseVertigo.UI.Controls.PlayerGearItemSlotControl<>)) return true;
             try
             {
-                var e = new EquipAttempt { Character = World.Player, Item = new Item(__1) };
+                var e = new EquipAttempt { Character = World.Player, Item = new Item(__2) };
                 GameEvents.Equipping.Run(h => h(e));
-                if (e.Cancel) __result = false;
+                if (!e.Cancel) return true;
+                __result = false;
+                return false;
             }
-            catch (Exception ex) { Log.Write("equip: " + ex.Message); }
+            catch (Exception ex) { Log.Write("equip: " + ex.Message); return true; }
         }
 
         internal static void Install(HarmonyLib.Harmony harmony)
@@ -122,9 +133,9 @@ namespace UnderRailWorks.Internal
             harmony.Patch(typeof(dka).GetMethods(any).First(x => x.Name == "amw" && x.GetParameters().Length == 2), prefix: m("Trade"));
             harmony.Patch(typeof(c7j).GetMethod("mz", any, null, new[] { typeof(c5x), typeof(string) }, null), prefix: m("Open"));
             harmony.Patch(typeof(c7j).GetMethod("kj", any, null, new[] { typeof(dbi), typeof(coh), typeof(object) }, null), prefix: m("Take"));
-            harmony.Patch(typeof(c69).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(ebk), typeof(ebk), typeof(coh), typeof(bool) }, null), prefix: m("MoveStart"), finalizer: m("MoveEnd"));
-            harmony.Patch(typeof(TimelapseVertigo.UI.Controls.FreeItemSlotControl<coh>).GetMethod("ye", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(ebk), typeof(coh) }, null), postfix: m("CanDrop"));
+            harmony.Patch(typeof(c69).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(ebk), typeof(ebk), typeof(coh), typeof(bool) }, null), prefix: m("Move"));
             harmony.Patch(typeof(a0l).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(c5x), typeof(c2w), typeof(int), typeof(Microsoft.Xna.Framework.Point?) }, null), prefix: m("Leave"));
+            harmony.Patch(typeof(eed).GetMethod("b", BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null), postfix: m("Refreshed"));
             harmony.Patch(typeof(ahu).GetMethod("i", BindingFlags.Instance | BindingFlags.Public, null, Type.EmptyTypes, null), prefix: m("Craft"));
         }
     }

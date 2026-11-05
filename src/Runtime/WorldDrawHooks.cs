@@ -20,18 +20,34 @@ public static class WorldDrawHooks
     public static void Drawn(a7m view, cp9 context, a2f layer, bool shaderPass)
     {
         if (!shaderPass) World.LayerDrawn(layer);
-        if (WorldDraw.LayerStarting.Any) { var v = new WorldView(view); var c = new DrawContext(context); var l = new Layer(layer); WorldDraw.LayerStarting.Run(h => h(v, c, l, shaderPass)); }
+        var hook = WorldDraw.LayerStarting;
+        if (!hook.Any) return;
+        var v = new WorldView(view); var c = new DrawContext(context); var l = new Layer(layer);
+        var list = hook.Snapshot;     // every world layer: no closure per call
+        for (int i = 0; i < list.Length; i++) { long t = hook.Starting(); try { list[i](v, c, l, shaderPass); } catch (Exception ex) { hook.Failed(list, i, ex); } finally { hook.Done(i, t); } }
     }
 
     public static void DrawLayer(a2f layer, cp9 context, bkx view)
     {
-        if (WorldDraw.DrawLayer.Any) { var l = new Layer(layer); var c = new DrawContext(context); var v = new LayerView(view); if (WorldDraw.DrawLayer.Run(h => h(l, c, v))) return; }
+        var hook = WorldDraw.DrawLayer;
+        if (hook.Any)
+        {
+            var l = new Layer(layer); var c = new DrawContext(context); var v = new LayerView(view);
+            var list = hook.Snapshot;
+            for (int i = 0; i < list.Length; i++) { long t = hook.Starting(); try { if (list[i](l, c, v)) return; } catch (Exception ex) { hook.Failed(list, i, ex); } finally { hook.Done(i, t); } }
+        }
         layer.f3(context, view);
     }
 
     public static void TileExtras(a7m view, cp9 context, ak1 tile)
     {
-        if (WorldDraw.DrawTileExtras.Any) { var v = new WorldView(view); var c = new DrawContext(context); var t = new MapTile(tile); if (WorldDraw.DrawTileExtras.Run(h => h(v, c, t))) return; }
+        var hook = WorldDraw.DrawTileExtras;
+        if (hook.Any)
+        {
+            var v = new WorldView(view); var c = new DrawContext(context); var mt = new MapTile(tile);
+            var list = hook.Snapshot;
+            for (int i = 0; i < list.Length; i++) { long t = hook.Starting(); try { if (list[i](v, c, mt)) return; } catch (Exception ex) { hook.Failed(list, i, ex); } finally { hook.Done(i, t); } }
+        }
         WorldDraw.GameTileExtras(view, context, tile);
     }
 

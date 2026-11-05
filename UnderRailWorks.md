@@ -681,11 +681,13 @@ HasFeat checks).
 `Crafting` (`ahu.i`): a handler sets `Cancel`. With the earlier ones (StatusApplying, ItemUsing, Locks.ModifyAttempt,
 Ai.Acting) most player actions can be refused. Tested: trade, container and dialog refused.
 
-- `GameEvents.Equipping` (the player putting an item into a gear or quick slot): a postfix on the slot control's
-  `FreeItemSlotControl<T>.ye(source, item)` ("will you take it?"), only for `PlayerGearItemSlotControl<T>`. The screen
-  (`c69.a`) asks that before it moves anything. **Trap:** refusing in the data slot's own check (`ItemSlot<T>.c`) lost
-  the item: the screen had already taken it out of the bag and put the old item in. Tested: double-click and drag
-  refused, armour stays in the bag, the worn shirt stays on.
+- `GameEvents.Equipping` (the player putting an item into a gear or quick slot): a prefix on the screen's move
+  `c69.a(source, target, item)` when the target is a `PlayerGearItemSlotControl<T>`; refused, the move doesn't start.
+  **Trap, twice:** `c69.a` takes the item out of the source (`A_0.yd()`, inside its condition) *before* it asks the
+  target (`A_1.ye`), so refusing anywhere inside the move loses the item: first in the data slot's check
+  (`ItemSlot<T>.c`), later in the target's `ye` once that was limited to "inside the move" (a screenshot looked right;
+  logging the bag and gear showed the armour gone from both). Verify item moves by listing bag and gear, not by eye.
+  Tested: refused -> armour in the bag, shirt worn; not refused -> armour worn, shirt in the bag.
 - `GameEvents.ZoneLeaving` (From, To, Entry; prefix on `a0l.a(c5x, c2w, int, Point?)`, which every exit and script uses
   to queue the ChangeZone workflow) and `World.Travel(zone, entry)` (the same call). Tested: travel to lu-c1b refused,
   and done without the refusal.
@@ -766,7 +768,7 @@ An independent review of the day's code found, all fixed:
   track the game's own MouseEnter/Leave, so a game window above them blocks them too).
 - Ability clicks and keys while the HUD is hidden or the game paused (checked: not paused in turn-based combat).
 - `works.reload` didn't re-read settings.ini (ModSettings.ReadAgain), and scanned switched-off mods' texture packs.
-- `Equipping` was asked every frame while dragging (the cursor's drop check): now only inside the move (`c69.a`).
+- `Equipping` was asked every frame while dragging (the cursor's drop check): now once, before the move (`c69.a`).
 - `Item.Condition` was 0 for items without durability; `Item.SetValue` refuses non-plain values (they're saved in the
   item, II:CP, and would break the save for the stock game); sliders format with the invariant culture (U+2212 minus
   under ICU); a widget handler that throws is reported for its mod and doesn't stop the others.
@@ -825,6 +827,21 @@ mods.ini -> "starts switched off", Hunger=0 written.
 `Character.MoveTo(x, y)` (the movement aspect `ale.a(tile)`: pathfinding at its own speed; not in turn-based combat)
 and `Character.TeleportTo(x, y)` (`a0l.a(c5x, area, position)`, the game's scripted placement). Tested: the player
 teleported (16,1) -> (16,5) and walked back to (16,1).
+
+## works.perf, hook dispatch, a second review (Nov 2026)
+
+- `works.perf [seconds]`: times every mod's handlers per hook (Stopwatch only while on), then logs the busiest by mod
+  and hook, process allocation (MB/s, via .NET's GC.GetTotalAllocatedBytes by reflection) and GC counts. Measured at
+  2560x720 with the keyhole on: UnderRailFixes ~94 ms/s (its DrawLayer is the keyhole drawing layers into its picture,
+  work the game would do anyway), the game alone allocates ~84 MB/s and does gen2 collections by itself.
+- `Hook.Run` no longer allocates a closure per call, and the per-layer world hooks loop over their handlers directly:
+  process allocation 143 -> 124 MB/s. The wrapper objects per layer remain (~13 MB/s).
+- Second review, fixed: "Craft all" looped forever when a mod refused crafting (eed.a loops while its button is
+  enabled; eed.b() re-enabled it; now a refused craft leaves it off; tested, one refusal, game responsive); a gear
+  swap could lose the item coming back (now asked once, before the move); HUD Layout brought a reset part back from its
+  migrated old keys (old keys cleared after migration); followers re-pathed every 0.5 s (now only when the leader moved
+  on or the follower stopped). Checked safe by the review: mod blueprints never reach a save (only the selected
+  blueprint's name string, which the stock game ignores), CheckGameKeys runs after config.dat's bindings.
 
 ## The test mods (Nov 2026)
 

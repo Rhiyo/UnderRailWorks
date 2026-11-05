@@ -532,6 +532,7 @@ static class UiHooks
         UiWindows.Tick();
         AssetStore.Apply();
         try { World.FollowTick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("follow: " + ex.Message); }
+        try { Profiler.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("perf: " + ex.Message); }
         try { Keybinds.CheckGameKeys(); } catch (Exception ex) { Log.Write("keys: " + ex.Message); }
         try { AbilityBars.Tick(); } catch (Exception ex) { Log.Write("abilities: " + ex.Message); }
         try { Widgets.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("ui: " + ex.Message); }

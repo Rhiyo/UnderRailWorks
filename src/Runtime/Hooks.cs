@@ -7,6 +7,7 @@
 // exception through). With no handlers, the game runs as stock.
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
@@ -18,7 +19,7 @@ public enum HookOrder { First = 0, Early = 1, Normal = 2, Late = 3, Last = 4 }
 public abstract class HookBase<T> where T : class
 {
     readonly string name;
-    T[] handlers = new T[0];
+    protected T[] handlers = new T[0];
     string[] owners = new string[0];
     int[] orders = new int[0];
     readonly Dictionary<T, int> failures = new Dictionary<T, int>();
@@ -57,25 +58,48 @@ public abstract class HookBase<T> where T : class
         var list = handlers;     // a snapshot: handlers may be removed while running
         for (int i = 0; i < list.Length; i++)
         {
+            long started = Profiler.On ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
             try { if (call(list[i])) return true; }
-            catch (Exception ex)
-            {
-                string mod = i < owners.Length ? owners[i] : "?";
-                ModErrors.Report(mod, name, ex);
-                int n; failures.TryGetValue(list[i], out n); failures[list[i]] = ++n;
-                if (n >= MaxFailures) { Remove(list[i]); failures.Remove(list[i]); Log.Write("mods: " + mod + ": its " + name + " handler failed " + n + " times and was removed: " + ex.Message); }
-                else if (n <= 3) Log.Write("mods: " + mod + ": its " + name + " handler failed (" + n + "): " + ex);
-            }
+            catch (Exception ex) { Failed(list, i, ex); }
+            finally { if (started != 0) Profiled(i, started); }
         }
         return false;
     }
+
+    // For hot call sites (every world layer) that loop over the handlers themselves, without a closure per call:
+    //   var list = hook.Snapshot; for (...) { long t = hook.Starting(); try { list[i](a, b); } catch (Exception ex) { hook.Failed(list, i, ex); } finally { hook.Done(i, t); } }
+    internal T[] Snapshot { get { return handlers; } }
+    internal long Starting() { return Profiler.On ? System.Diagnostics.Stopwatch.GetTimestamp() : 0; }
+    internal void Done(int i, long started) { if (started != 0) Profiled(i, started); }
+    void Profiled(int i, long started) { var o = owners; Profiler.Add(i < o.Length ? o[i] : "?", name, System.Diagnostics.Stopwatch.GetTimestamp() - started); }
+
+    internal void Failed(T[] list, int i, Exception ex)
+    {
+        var o = owners;
+        string mod = i < o.Length && ReferenceEquals(list, handlers) ? o[i] : OwnerOf(list[i]);
+        ModErrors.Report(mod, name, ex);
+        int n; failures.TryGetValue(list[i], out n); failures[list[i]] = ++n;
+        if (n >= MaxFailures) { Remove(list[i]); failures.Remove(list[i]); Log.Write("mods: " + mod + ": its " + name + " handler failed " + n + " times and was removed: " + ex.Message); }
+        else if (n <= 3) Log.Write("mods: " + mod + ": its " + name + " handler failed (" + n + "): " + ex);
+    }
+    string OwnerOf(T handler) { var h = handlers; for (int k = 0; k < h.Length; k++) if (h[k] == handler) return owners[k]; return "?"; }
 }
 
 // Every handler runs.
 public sealed class Hook<T> : HookBase<T> where T : class
 {
     internal Hook(string name) : base(name) { }
-    internal void Run(Action<T> call) { Each(h => { call(h); return false; }); }
+    internal void Run(Action<T> call)
+    {
+        var list = handlers;
+        for (int i = 0; i < list.Length; i++)
+        {
+            long started = Starting();
+            try { call(list[i]); }
+            catch (Exception ex) { Failed(list, i, ex); }
+            finally { Done(i, started); }
+        }
+    }
     // Handlers in turn until one returns true (for "first answer wins" hooks).
     internal bool RunUntil(Func<T, bool> call) { return Each(call); }
 }
@@ -86,4 +110,49 @@ public sealed class ReplaceHook<T> : HookBase<T> where T : class
     internal ReplaceHook(string name) : base(name) { }
     internal bool Run(Func<T, bool> call) { return Each(call); }
 }
+}
+
+namespace UnderRailWorks.Internal
+{
+    // works.perf: time spent in each mod's handlers per hook, while switched on.
+    static class Profiler
+    {
+        internal static bool On;
+        static double until, elapsed;
+        static readonly Dictionary<string, long[]> totals = new Dictionary<string, long[]>();     // "mod|hook" -> ticks, calls
+        internal static void Add(string mod, string hook, long ticks)
+        {
+            long[] t;
+            var key = mod + "|" + hook;
+            if (!totals.TryGetValue(key, out t)) totals[key] = t = new long[2];
+            t[0] += ticks; t[1]++;
+        }
+        static long allocStart; static int gc0Start, gc1Start, gc2Start;
+        // .NET's GC.GetTotalAllocatedBytes (not in the Mono reference assemblies the build compiles against).
+        static readonly System.Reflection.MethodInfo TotalAllocated = typeof(GC).GetMethod("GetTotalAllocatedBytes", new[] { typeof(bool) });
+        static long Allocated() { return TotalAllocated == null ? 0 : (long)TotalAllocated.Invoke(null, new object[] { false }); }
+        internal static void Start(double seconds)
+        {
+            totals.Clear(); elapsed = 0; until = seconds; On = true;
+            allocStart = Allocated(); gc0Start = GC.CollectionCount(0); gc1Start = GC.CollectionCount(1); gc2Start = GC.CollectionCount(2);
+        }
+        internal static void Tick(double seconds)
+        {
+            if (!On) return;
+            elapsed += seconds;
+            if (elapsed < until) return;
+            On = false;
+            var freq = (double)System.Diagnostics.Stopwatch.Frequency;
+            var rows = totals.OrderByDescending(kv => kv.Value[0]).Take(15).Select(kv =>
+                kv.Key.Replace("|", ": ") + "  " + (kv.Value[0] * 1000.0 / freq / Math.Max(0.001, elapsed)).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " ms/s, "
+                + kv.Value[1] + " calls").ToList();
+            var byMod = totals.GroupBy(kv => kv.Key.Split('|')[0]).Select(g => new { Mod = g.Key, Ms = g.Sum(kv => kv.Value[0]) * 1000.0 / freq / Math.Max(0.001, elapsed) })
+                .OrderByDescending(x => x.Ms).Select(x => x.Mod + " " + x.Ms.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " ms/s").ToList();
+            Log.Always("perf: " + elapsed.ToString("0.0", System.Globalization.CultureInfo.InvariantCulture) + " s of game; by mod: " + string.Join(", ", byMod));
+            Log.Always("perf: allocated " + ((Allocated() - allocStart) / 1048576.0 / Math.Max(0.001, elapsed)).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture)
+                + " MB/s (whole process), collections gen0 " + (GC.CollectionCount(0) - gc0Start) + ", gen1 " + (GC.CollectionCount(1) - gc1Start) + ", gen2 " + (GC.CollectionCount(2) - gc2Start));
+            foreach (var r in rows) Log.Always("perf:   " + r);
+            Commands.Print("works.perf: " + string.Join("; ", byMod));
+        }
+    }
 }

@@ -100,6 +100,12 @@ public sealed class WorksTest : WorksMod
         });
         Commands.Add(this, "wt.walk", "wt.walk: walk the player back", args => { var ok = World.Player.MoveTo(startX, startY); Log.Info("walk " + ok + " from " + World.Player.Position); return "walk"; });
         Commands.Add(this, "wt.where", "wt.where", args => { Log.Info("player at " + World.Player.Position); return "where"; });
+        Commands.Add(this, "wt.gear", "wt.gear: what the player wears and carries", args =>
+        {
+            var p = World.Player;
+            Log.Info("gear: " + string.Join(", ", p.Equipment.All.Select(kv => kv.Key + "=" + kv.Value.Name)) + " | bag: " + string.Join(", ", p.Inventory.Items.Select(i => i.Name + " x" + i.Stacks)));
+            return "gear";
+        });
         Commands.Add(this, "wt.bag", "wt.bag: the bag's item codes", args => { var t = string.Join(", ", World.Player.Inventory.Items.Select(i => i.Code + " x" + i.Stacks)); Log.Info("bag: " + t); return t; });
         Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
         {
@@ -135,6 +141,7 @@ public sealed class WorksTest : WorksMod
         });
         GameEvents.TradeOpening.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked trade with " + e.Merchant); } });
         GameEvents.ContainerOpening.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked container"); } });
+        GameEvents.Crafting.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked crafting " + e.Blueprint); } });
         GameEvents.Equipping.Add(this, e => { if (block) { e.Cancel = true; Log.Info("blocked equipping " + e.Item.Name); } });
         GameEvents.ZoneLeaving.Add(this, e => { Log.Info("leaving " + e.From + " for " + e.To + "/" + e.Entry); if (block) { e.Cancel = true; Log.Info("blocked leaving"); } });
         Commands.Add(this, "wt.travel", "wt.travel: World.Travel to lu-c1b", args => "travel: " + World.Travel("lu-c1b", "entry"));

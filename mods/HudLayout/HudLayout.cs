@@ -181,6 +181,7 @@ public sealed class HudLayout : WorksMod
             Settings.Set(Key(p.Name), saved);
             var anchor = Settings.Get(AnchorKey(p.OldName));
             if (!string.IsNullOrEmpty(anchor)) Settings.Set(AnchorKey(p.Name), anchor);
+            Settings.Set(Key(p.OldName), ""); Settings.Set(AnchorKey(p.OldName), "");     // taken over: a reset mustn't bring them back
         }
         if (string.IsNullOrEmpty(saved)) saved = Legacy(p);
         if (!string.IsNullOrEmpty(saved)) Ui.Restore(p.Element, saved);
@@ -200,7 +201,11 @@ public sealed class HudLayout : WorksMod
             best = place;
             if (w == hud.Width && h == hud.Height) break;
         }
-        if (best != null) Settings.Set(Key(p.Name), best);
+        if (best != null)
+        {
+            Settings.Set(Key(p.Name), best);
+            foreach (var k in Settings.Keys.Where(k => k.StartsWith(p.Name + "@") || (p.OldName != null && k.StartsWith(p.OldName + "@"))).ToList()) Settings.Set(k, "");     // taken over
+        }
         return best;
     }
 

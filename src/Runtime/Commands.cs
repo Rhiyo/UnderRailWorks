@@ -86,6 +86,12 @@ namespace UnderRailWorks
                 return a[0] + " = " + (Variables.Global.Get<object>(a[0], null) ?? "(unset)");
             });
             Add("UnderRailWorks", "works.mods", "works.mods: the mods and their state", a => string.Join("\n", ModLoader.Mods.Select(m => m.Name + " " + m.VersionText + ": " + (m.Loaded ? "loaded" : m.Enabled ? "not loaded (" + m.Error + ")" : "off") + (m.Failures > 0 ? ", " + m.Failures + " errors" : ""))));
+            Add("UnderRailWorks", "works.perf", "works.perf [seconds]: time each mod's handlers for a while (default 10 s), then list the busiest (also in the log)", a =>
+            {
+                double s = 10; if (a.Length > 0) double.TryParse(a[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out s);
+                Profiler.Start(Math.Max(1, s));
+                return "profiling for " + s + " s";
+            });
             Add("UnderRailWorks", "works.reload", "works.reload: re-reads mods' pictures, texture packs, translations and settings (code needs a restart)", a =>
             {
                 AssetStore.ReloadFiles();
