@@ -20,7 +20,14 @@ if [ -z "${PROTON:-}" ]; then
     PROTON="$(ls -d "$STEAM"/compatibilitytools.d/"$name"*/proton /usr/share/steam/compatibilitytools.d/*/proton 2>/dev/null | head -1)"
 fi
 [ -x "$PROTON" ] || { echo "Set PROTON=/path/to/proton (couldn't find the one in $PFX/version)" >&2; exit 1; }
-export STEAM_COMPAT_DATA_PATH="$PFX" STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM" SteamAppId=250520 SteamGameId=250520
+# Not connected to Steam unless WITH_STEAM=1 (testing Steam integration): Steam mustn't show the user as playing.
+if [ "${WITH_STEAM:-0}" = 1 ]; then
+    export STEAM_COMPAT_DATA_PATH="$PFX" STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM" SteamAppId=250520 SteamGameId=250520
+else
+    mkdir -p "$HOME/.cache/underrail-test/no-steam"
+    export STEAM_COMPAT_DATA_PATH="$PFX" STEAM_COMPAT_CLIENT_INSTALL_PATH="$HOME/.cache/underrail-test/no-steam" PROTONFIXES_DISABLE=1
+    unset SteamAppId SteamGameId
+fi
 export FNA3D_FORCE_DRIVER="${FNA3D_FORCE_DRIVER:-D3D11}" WINEDEBUG="${WINEDEBUG:--all}"
 cd "$GAME"
 echo "UnderRail at ${W}x${H} on ${OW}x${OH} with $PROTON"

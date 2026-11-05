@@ -37,7 +37,9 @@ cp -r "$DIST"/. "$NET10/"
 "$NET10/underrailworks-patcher" "$NET10" >/dev/null
 printf '[UnderRailWorks]\nSettingsVersion=3\nUiInsetX=0\nUiInsetY=0\nLog=1\n' > "$NET10/UnderRailWorks.ini"     # playsave.sh's click positions: no insets
 win() { echo "Z:$(echo "$1" | tr / '\\')"; }
-proton_run() { STEAM_COMPAT_CLIENT_INSTALL_PATH=$STEAM STEAM_COMPAT_DATA_PATH=$PFX WINEDEBUG=-all timeout 900 nice -n 19 python3 "$PROTON" run "$@" >/dev/null 2>&1 || true; }
+# Not connected to Steam (common.sh's STEAM_COMPAT_CLIENT_INSTALL_PATH points at an empty folder unless WITH_STEAM=1):
+# a save check must never show the user as playing.
+proton_run() { STEAM_COMPAT_DATA_PATH=$PFX WINEDEBUG=-all timeout 900 nice -n 19 python3 "$PROTON" run "$@" >/dev/null 2>&1 || true; }
 
 # Tools.
 (cd "$NET10" && mcs -nologo -platform:x86 -out:"$WORK/StockCheck.exe" -r:UnderRail.Game.exe "$HERE/StockCheck.cs")
