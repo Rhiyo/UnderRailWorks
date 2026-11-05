@@ -45,6 +45,10 @@ public static partial class GameEvents
     // The barter screen opened with a merchant.
     public static readonly Hook<Action<Character>> TradeOpened = new Hook<Action<Character>>("TradeOpened");
     // A character died.
+    // The player character is about to be exported (path: the .char being written): write what should travel with it
+    // into CharacterData. And a new game started with an imported character: its CharacterData is there now.
+    public static readonly Hook<Action<string>> CharacterExporting = new Hook<Action<string>>("CharacterExporting");
+    public static readonly Hook<Action> CharacterImported = new Hook<Action>("CharacterImported");
     public static readonly Hook<Action<Character>> CharacterDied = new Hook<Action<Character>>("CharacterDied");
     // Just before the game handles a death: the character still has its status effects (the game clears them while
     // it dies: measured, none left at CharacterDied) and gear. Killer: who dealt the blow, when known.
@@ -147,6 +151,7 @@ static class Saves
         bool first = firstVisit; firstVisit = false;
         Log.Write("saves: zone loaded: " + id + (first ? " (first visit)" : ""));
         Run("placing characters", () => World.SpawnPlacements(zone, id));
+        Run("imported character", CharacterFiles.ZoneReady);
         if (GameEvents.ZoneLoaded.Any) GameEvents.ZoneLoaded.Run(h => h(id, first));
     }
 
@@ -209,9 +214,9 @@ static class Saves
 
     static void SaveStarting(string __0) { Run("recording mod statuses", ModStatusStore.Record); Log.Write("saves: saving " + __0); if (GameEvents.Saving.Any) GameEvents.Saving.Run(h => h(__0)); }
     static void SaveDone(string __0) { Run("writing mod save data", () => SaveFiles.Save(__0)); Run("re-applying placements", World.ReapplyAll); if (GameEvents.Saved.Any) GameEvents.Saved.Run(h => h(__0)); }
-    static void NewGameCreated() { SaveFiles.NewGame(); World.ForgetAll(); if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); }
+    static void NewGameCreated() { SaveFiles.NewGame(); World.ForgetAll(); Run("imported character data", CharacterFiles.NewGame); if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); }
 
-    static void Loading(string __0) { loading = true; SaveFiles.Load(__0); World.ForgetAll(); Log.Write("saves: loading " + __0); }
+    static void Loading(string __0) { loading = true; CharacterFiles.Forget(); SaveFiles.Load(__0); World.ForgetAll(); Log.Write("saves: loading " + __0); }
 
     static Exception LoadFinished(Exception __exception)
     {

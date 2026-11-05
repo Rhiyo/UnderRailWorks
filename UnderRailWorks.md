@@ -866,6 +866,24 @@ a near marker on the map, a far one on the edge, both back after quicksave + qui
 game). Writing it found: `Tooltip.AddLine` needed a colour (now optional), and `UiEvents.HudCreated` misses the HUD
 that already exists when a mod subscribes late: `Hud.WhenReady(mod, build)` runs now and on every rebuild.
 
+## Exported characters (Nov 2026)
+
+The game exports the player at its end (a workflow step, `b7j` -> `d6f.arv()`) as an `ajk` (version, DLC list, the
+player's `e3q`, date) in `My Games/Underrail/Characters/<name>.char`: BinaryFormatter with the save binder, read by a
+new game's Import (`e7u` dialog, `ajk.a(path)`; the creation screen `iw` takes `ajk.a` as its character). So an
+export follows the save rules: the stock game must read it.
+- Around `ajk.b(path)` (writing): `GameEvents.CharacterExporting(path)`, mod statuses stripped (and put back), and the
+  mods' `CharacterData` (a SaveData section per mod, "character:<mod>", saved with the game) written to
+  `<name>.char.works.json`.
+- `ajk.a(path)` postfix reads the side file; when the creation screen takes that character (`iw.a(object, el5)`), its
+  data goes into the new game (the game makes its new-game state before the creation screen), and
+  `GameEvents.CharacterImported` fires when that game's first zone has loaded. Loading a save instead drops it.
+- Mod feats travel inside the .char as their key (the stock game skips unknown keys, as in saves).
+- `World.ExportPlayer()` / `works.export`; `check-saves.sh --only` takes a .char (read as the import reads it).
+- Tested: a player with a mod feat and a mod status exported: the .char has the feat's key, no mod status, no Works
+  types, and the stock game reads it (`asd.char -> ajk`); New Game -> Import -> the mod feat on the Feats tab, and the
+  new game started with the exported CharacterData. Not handled: deleting an export in the dialog leaves its side file.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

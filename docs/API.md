@@ -422,7 +422,9 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<string>> Saved = new Hook<Action<string>>("Saved")`
 - `static readonly Hook<Action<string, QuestState>> QuestChanged = new Hook<Action<string, QuestState>>("QuestChanged")` — A quest changed state (started, completed, failed): its id and new state.
 - `static readonly Hook<Action<Character>> TradeOpened = new Hook<Action<Character>>("TradeOpened")` — The barter screen opened with a merchant.
-- `static readonly Hook<Action<Character>> CharacterDied = new Hook<Action<Character>>("CharacterDied")` — A character died.
+- `static readonly Hook<Action<string>> CharacterExporting = new Hook<Action<string>>("CharacterExporting")` — A character died. The player character is about to be exported (path: the .char being written): write what should travel with it into CharacterData. And a new game started with an imported character: its CharacterData is there now.
+- `static readonly Hook<Action> CharacterImported = new Hook<Action>("CharacterImported")`
+- `static readonly Hook<Action<Character>> CharacterDied = new Hook<Action<Character>>("CharacterDied")`
 - `static readonly Hook<Action<Character, Character>> CharacterDying = new Hook<Action<Character, Character>>("CharacterDying")` — Just before the game handles a death: the character still has its status effects (the game clears them while it dies: measured, none left at CharacterDied) and gear. Killer: who dealt the blow, when known.
 - `static readonly Hook<Action> CombatStarted = new Hook<Action>("CombatStarted")` — Combat started / ended.
 - `static readonly Hook<Action> CombatEnded = new Hook<Action>("CombatEnded")`
@@ -1120,6 +1122,7 @@ The first handler that returns true replaces the game's step.
 ## SaveData  _(class, Framework.cs)_
 
 - `static SaveData Of(WorksMod mod)`
+- `static SaveData CharacterOf(WorksMod mod)` — The mod's data about the player character: saved with the game like SaveData, and carried into an exported character (a side file next to the .char) and back into the game that imports it.
 - `T Get<T>(string key, T fallback = default(T))` — A value: string, bool, a number, a List<object> or a Dictionary<string, object> of those (as Json reads them; numbers come back as double, converted to T where it can).
 - `object Get(string key)`
 - `void Set(string key, object value)`
@@ -1399,6 +1402,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 
 - `string T(string key, params object[] args)` — This mod's text in the player's language (i18n/<language>.json).
 - `SaveData SaveData` — This mod's structured data for the current game.
+- `SaveData CharacterData` — This mod's data about the player character: saved with the game, carried into exported characters and imports.
 - `ModInfo Info`
 - `string Id`
 - `ModLog Log` — Lines in UnderrailFix.log, marked with the mod's id (with Log=1 in UnderrailFix.ini; errors always).
@@ -1425,6 +1429,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static void Despawn(Character c)` — Removes a spawned (or placed) character from the world now.
 - `static IList<Point> FreeTilesNear(int x, int y, int radius)` — Floor tiles in the player's area within radius, nearest first, not taken by a character or a solid object.
 - `static Character Placed(string id)` — The character a placement put in the world (null if it isn't there now).
+- `static bool ExportPlayer()` — Exports the player character as the game does at its end (My Games/Underrail/Characters/<name>.char, for the import button of a new game), with the mods' CharacterData beside it. False outside a game.
 - `static bool Travel(string zone, string entry)` — Sends the player to another zone as an exit does (zone id and entry point, as the game's maps name them, e.g. "lu-c1b", "entry"; the ids are in UnderRailWorks-content.txt). False if there's no player.
 - `static bool Use(Character user, string placementId)` — A character uses a placed object (as clicking it does, without walking there or the game's checks).
 - `static Character Player` — The player's character, as the game finds it (cnk.aqu(): the player's data au2, its entity).

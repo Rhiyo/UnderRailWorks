@@ -46,13 +46,14 @@ proton_run() { STEAM_COMPAT_DATA_PATH=$PFX WINEDEBUG=-all timeout 900 nice -n 19
 cp "$WORK/StockCheck.exe" "$STOCK/"
 DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 nice -n 19 "$DOTNET" build -c Release -p:GAME="$NET10" -o "$WORK/roundtrip" "$HERE/RoundTrip" >/dev/null
 
-# --only DIR...: just the stock side for these save folders (e.g. saves a test run made with mods), then stop.
+# --only DIR|FILE...: just the stock side for these save folders or files (e.g. saves or an exported .char a test run
+# made with mods), then stop.
 if [ "${1:-}" = --only ]; then
     shift; rm -rf "$WORK/only"; mkdir -p "$WORK/only"; for d in "$@"; do cp -r "$d" "$WORK/only/"; done
-    args=(); for a in "$WORK/only/"*/; do args+=("$(win "$a")"); done
+    args=(); for a in "$WORK/only/"*; do args+=("$(win "$a")"); done
     proton_run "$STOCK/StockCheck.exe" "$(win "$WORK/stock-results.txt")" "${args[@]}"
     cat "$WORK/stock-results.txt"
-    python3 -I "$HERE/scan_names.py" "$WORK/only/"*/
+    python3 -I "$HERE/scan_names.py" "$WORK/only/"*
     grep -q "^result: .* 0 failed" "$WORK/stock-results.txt" || { echo "SAVE CHECK FAILED" >&2; exit 1; }
     echo "Save check passed."; exit 0
 fi

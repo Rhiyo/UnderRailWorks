@@ -108,6 +108,8 @@ public sealed class WorksTest : WorksMod
             Log.Info("markers here: " + string.Join(", ", Markers.Here.Select(m => m.Label + "@" + m.X + "," + m.Y)));
             return "marked";
         });
+        GameEvents.CharacterExporting.Add(this, path => { CharacterData.Set("exports", CharacterData.Get<double>("exports") + 1); CharacterData.Set("motto", "made in WorksTest"); Log.Info("exporting to " + path); });
+        GameEvents.CharacterImported.Add(this, () => Log.Info("imported: motto " + CharacterData.Get<string>("motto") + ", exports " + CharacterData.Get<double>("exports")));
         Commands.Add(this, "wt.gear", "wt.gear: what the player wears and carries", args =>
         {
             var p = World.Player;

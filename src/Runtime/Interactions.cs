@@ -74,6 +74,16 @@ namespace UnderRailWorks
 
     public static partial class World
     {
+        // Exports the player character as the game does at its end (My Games/Underrail/Characters/<name>.char, for
+        // the import button of a new game), with the mods' CharacterData beside it. False outside a game.
+        public static bool ExportPlayer()
+        {
+            var game = bpo.GetService<cnk>();
+            if (game == null || Player == null) return false;
+            game.arv();
+            return true;
+        }
+
         // Sends the player to another zone as an exit does (zone id and entry point, as the game's maps name them,
         // e.g. "lu-c1b", "entry"; the ids are in UnderRailWorks-content.txt). False if there's no player.
         public static bool Travel(string zone, string entry)

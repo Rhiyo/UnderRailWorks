@@ -36,6 +36,7 @@ static class StockCheck
                         // As the game reads them: config.dat (ls) and info.dat (a3r, the save list entry, uncompressed).
                         object o = name == "config.dat" ? (object)eoq.DeserializeFromBinaryFileCompressed<ls>(path, dds.a(), true)
                             : name == "info.dat" ? (object)eoq.DeserializeFromBinaryFile<a3r>(path, dds.a(), true)
+                            : name.EndsWith(".char") ? (object)ajk.a(path)     // an exported character, as the import dialog reads it
                             : eoq.DeserializeFromBinaryFileCompressed<object>(path, dds.a(), true);
                         lines.Add("OK   " + label + " -> " + (o == null ? "null" : o.GetType().FullName));
                         ok++;

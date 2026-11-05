@@ -17,6 +17,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Linq;
 using UnderRailWorks.Internal;
 
@@ -24,10 +25,14 @@ namespace UnderRailWorks
 {
     public sealed class SaveData
     {
-        readonly string mod;
+        readonly string mod;     // the section's key in UnderRailWorks.json: the mod id, or "character:<id>" (CharacterData)
         SaveData(string mod) { this.mod = mod; }
         static readonly Dictionary<string, SaveData> stores = new Dictionary<string, SaveData>(StringComparer.OrdinalIgnoreCase);
-        public static SaveData Of(WorksMod mod) { SaveData s; if (!stores.TryGetValue(mod.Id, out s)) stores[mod.Id] = s = new SaveData(mod.Id); return s; }
+        public static SaveData Of(WorksMod mod) { return Store(mod.Id); }
+        // The mod's data about the player character: saved with the game like SaveData, and carried into an exported
+        // character (a side file next to the .char) and back into the game that imports it.
+        public static SaveData CharacterOf(WorksMod mod) { return Store(CharacterFiles.Prefix + mod.Id); }
+        static SaveData Store(string key) { SaveData s; if (!stores.TryGetValue(key, out s)) stores[key] = s = new SaveData(key); return s; }
 
         Dictionary<string, object> Section
         {
@@ -155,6 +160,8 @@ namespace UnderRailWorks
         public string T(string key, params object[] args) { return Translations.Get(this, key, args); }
         // This mod's structured data for the current game.
         public SaveData SaveData { get { return SaveData.Of(this); } }
+        // This mod's data about the player character: saved with the game, carried into exported characters and imports.
+        public SaveData CharacterData { get { return SaveData.CharacterOf(this); } }
     }
 }
 
@@ -227,6 +234,103 @@ namespace UnderRailWorks.Internal
                 if (told.Add(mod)) Notify.Log("Mod " + (info == null ? mod : info.Name) + " had an error (details in UnderRailWorks.log; the mod keeps running).");
             }
             catch { }
+        }
+    }
+}
+
+namespace UnderRailWorks.Internal
+{
+    // Exported characters (My Games/Underrail/Characters/<name>.char: the game's ajk, BinaryFormatter like a save, read
+    // by the stock game's import too): written with no mod statuses on them, and the mods' CharacterData beside them in
+    // <name>.char.works.json; an import brings that data into the new game.
+    static class CharacterFiles
+    {
+        internal const string Prefix = "character:";
+        static readonly FieldInfo CharField = typeof(ajk).GetField("a", BindingFlags.Instance | BindingFlags.Public);     // ajk.a: a field and a method
+        static e3q Char(ajk file) { return CharField.GetValue(file) as e3q; }
+        static string Side(string charFile) { return charFile + ".works.json"; }
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<e3q, Dictionary<string, object>> imported = new System.Runtime.CompilerServices.ConditionalWeakTable<e3q, Dictionary<string, object>>();
+        static Dictionary<string, object> pending; static string pendingName;
+
+        // ajk.b(path): the export is being written.
+        static void Writing(ajk __instance, string __0)
+        {
+            try { if (GameEvents.CharacterExporting.Any) GameEvents.CharacterExporting.Run(h => h(__0)); } catch (Exception ex) { Log.Write("export: " + ex.Message); }
+            try { ModStatusStore.Strip(); } catch (Exception ex) { Log.Write("export: statuses: " + ex.Message); }
+        }
+        static Exception Written(string __0, Exception __exception)
+        {
+            try { ModStatusStore.PutBack(); } catch (Exception ex) { Log.Write("export: statuses: " + ex.Message); }
+            if (__exception != null) return __exception;
+            try
+            {
+                var data = SaveFiles.Current.Where(kv => kv.Key.StartsWith(Prefix, StringComparison.Ordinal) && kv.Value is Dictionary<string, object> && ((Dictionary<string, object>)kv.Value).Count > 0)
+                    .ToDictionary(kv => kv.Key.Substring(Prefix.Length), kv => kv.Value);
+                var side = Side(__0);
+                if (data.Count == 0) { if (File.Exists(side)) File.Delete(side); }
+                else File.WriteAllText(side, Json.Write(new Dictionary<string, object> { { "format", 1.0 }, { "works", FixVersion.Value }, { "character", data } }));
+                Log.Write("export: " + Path.GetFileName(__0) + (data.Count == 0 ? "" : ", character data of " + data.Count + " mods"));
+            }
+            catch (Exception ex) { Log.Write("export: " + ex.Message); }
+            return null;
+        }
+
+        // ajk.a(path): an exported character read (the import dialog's preview and choice).
+        static void Read(string __0, ajk __result)
+        {
+            if (__result == null || Char(__result) == null) return;
+            try
+            {
+                var side = Side(__0);
+                if (!File.Exists(side)) return;
+                var d = Json.Parse(File.ReadAllText(side)) as Dictionary<string, object>;
+                var ch = d == null ? null : d.ContainsKey("character") ? d["character"] as Dictionary<string, object> : null;
+                if (ch == null) return;
+                imported.Remove(Char(__result));
+                imported.Add(Char(__result), ch);
+            }
+            catch (Exception ex) { Log.Write("import: " + Path.GetFileName(__0) + ": " + ex.Message); }
+        }
+
+        // iw.a(object, el5): the creation screen took an imported character (k = the file's e3q).
+        static void Chosen(object __0)
+        {
+            pending = null; pendingName = null;
+            try
+            {
+                var g = __0 == null ? null : __0.GetType().GetField("g", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)?.GetValue(__0) as ajk;
+                Dictionary<string, object> ch;
+                var c = g == null ? null : Char(g);
+                Clear();     // a character chosen before (or none): its data out
+                if (c != null && imported.TryGetValue(c, out ch)) { pending = ch; pendingName = c.Name; Apply(ch); Log.Write("import: " + c.Name + ", character data of " + ch.Count + " mods"); }
+            }
+            catch (Exception ex) { Log.Write("import: " + ex.Message); }
+        }
+
+        // The game makes its new-game state before the creation screen (so before an import is chosen): the data goes in
+        // when the character is chosen, again if a new game's state is made after that, and CharacterImported fires
+        // when that game's first zone has loaded.
+        static void Apply(Dictionary<string, object> ch) { foreach (var kv in ch) SaveFiles.Current[Prefix + kv.Key] = Json.Parse(Json.Write(kv.Value, false)); }
+        static void Clear() { foreach (var k in SaveFiles.Current.Keys.Where(k => k.StartsWith(Prefix, StringComparison.Ordinal)).ToList()) SaveFiles.Current.Remove(k); }
+        internal static void NewGame() { if (pending != null) Apply(pending); }
+        internal static void Forget() { pending = null; pendingName = null; }     // a save loaded instead
+        internal static void ZoneReady()
+        {
+            var ch = pending; pending = null;
+            if (ch == null) return;
+            var p = World.Player;
+            if (p != null && pendingName != null && p.Name != pendingName) { Clear(); Log.Write("import: the new game's character isn't " + pendingName + ": its data dropped"); return; }
+            Log.Write("import: " + pendingName + " started with its character data");
+            if (GameEvents.CharacterImported.Any) GameEvents.CharacterImported.Run(h => h());
+        }
+
+        internal static void Install(HarmonyLib.Harmony harmony)
+        {
+            const BindingFlags any = BindingFlags.Instance | BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
+            Func<string, HarmonyLib.HarmonyMethod> m = n => new HarmonyLib.HarmonyMethod(typeof(CharacterFiles).GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
+            harmony.Patch(typeof(ajk).GetMethod("b", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null), prefix: m("Writing"), finalizer: m("Written"));
+            harmony.Patch(typeof(ajk).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(string) }, null), postfix: m("Read"));
+            harmony.Patch(typeof(iw).GetMethods(any).First(x => x.Name == "a" && x.GetParameters().Length == 2 && x.GetParameters()[1].ParameterType == typeof(el5)), postfix: m("Chosen"));
         }
     }
 }

@@ -507,6 +507,7 @@ static class UiHooks
         Group("AI", () => AiHooks.Install(harmony));
         Group("cancellable events", () => CancelHooks.Install(harmony));
         Group("mod recipes", () => RecipeHooks.Install(harmony));
+        Group("exported characters", () => CharacterFiles.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 
