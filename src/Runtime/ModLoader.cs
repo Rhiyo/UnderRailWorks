@@ -128,6 +128,7 @@ public static class ModLoader
         foreach (var mod in order.Where(m => m.Loaded))
         {
             try { ContentPacks.Load(mod); } catch (Exception ex) { Log.Write("content: " + mod.Id + ": " + ex.Message); }
+            try { AssetStore.ScanTexturePack(mod); } catch (Exception ex) { Log.Write("assets: " + mod.Id + ": " + ex.Message); }
         }
         // PostLoad: after every mod's Load, in the same order.
         foreach (var mod in order.Where(m => m.Loaded && m.Instance != null))

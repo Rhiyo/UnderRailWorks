@@ -107,6 +107,10 @@ World.Place(new Placement { Id = "stranger", Zone = "LU-SouthGateStation-N", Are
     X = 14, Y = 21, Blueprint = "creatures\\generichumans\\foundryworker", Name = "Stranger", Dialog = "stranger/talk" });
 ```
 
+Pictures and sounds: `Assets.Texture` / `Sound`, replacing any game texture (`Assets.Replace`, or with no code a
+`textures/` folder mirroring the game's names: portraits, character sprites, icons, GUI), `Icons.SetItemIcon`,
+`MainMenu.SetBackground`; `Assets.Export` writes a game texture to PNG to start from.
+
 Saves stay loadable by the stock game: placed characters are never saved, mod quests and mod state are kept in plain
 variables. `examples/` has small mods; `mods/UnderRailFixes` is a full one. Docs and a mod template are on the TODO list.
 

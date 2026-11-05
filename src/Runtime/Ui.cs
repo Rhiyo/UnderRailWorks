@@ -471,6 +471,7 @@ static class UiHooks
         Group("containers, loot and locks", () => ContainerHooks.Install(harmony));
         Group("stealth", () => StealthHooks.Install(harmony));
         Group("mod windows", () => UiWindows.Install(harmony));
+        Group("assets", () => AssetStore.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 
@@ -494,6 +495,7 @@ static class UiHooks
     {
         Input.Tick();
         UiWindows.Tick();
+        AssetStore.Apply();
         UnderRailWorks.Hud.FlowTick();
         try { UiTextBox.Poll(); } catch (Exception ex) { Log.Write("ui: " + ex.Message); }
         try { Saves.Tick(); } catch (Exception ex) { Log.Write("saves: " + ex); }

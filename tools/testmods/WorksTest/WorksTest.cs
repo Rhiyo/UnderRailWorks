@@ -18,6 +18,8 @@ public sealed class WorksTest : WorksMod
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
         GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));
         GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
+        if (System.IO.File.Exists(System.IO.Path.Combine(Info.Folder, "art", "menu.png"))) MainMenu.SetBackground(this, "art/menu.png");
+        if (System.IO.File.Exists(System.IO.Path.Combine(Info.Folder, "art", "bandage.png"))) Icons.SetItemIcon(this, "med.bandage", "art/bandage.png");
         Stealth.ModifyInstant.Add(this, d => { if (++instants % 20 == 1) Log.Info("instant check: detection " + d.ObserverDetection + " vs stealth " + d.TargetStealth + ": " + d.Instant + " (overridden to false)"); d.Instant = false; });
         Stealth.ModifyDetection.Add(this, d => { if (++detections % 20 == 1) Log.Info("detection of " + (d.Target == null ? "?" : d.Target.Name) + ": detection " + d.ObserverDetection + " vs stealth " + d.TargetStealth + ", " + d.Distance.ToString("0.0") + "/" + d.SightRange.ToString("0") + " tiles, angle " + d.Angle.ToString("0") + ", light " + d.Light.ToString("0.00") + ", rate " + d.Rate.ToString("0.000")); });
         GameEvents.ContainerOpened.Add(this, (c, who, first) => Log.Info("container opened by " + (who == null ? "?" : who.Name) + (first ? " (first time)" : "") + ": " + string.Join(", ", c.Items.Select(i => i.ToString()))));
@@ -57,7 +59,7 @@ public sealed class WorksTest : WorksMod
             }
             if (Input.Pressed(Keys.V)) { var inv = World.Player.Inventory; inv.Add("armor\\jkktacticalvest", 1); var vest = inv.Items.FirstOrDefault(i => i.Code == "jkkTacticalVest"); Log.Info("vest on: " + (vest != null && World.Player.Equipment.Equip(vest))); }
             if (Input.Pressed(Keys.X)) Log.Info("xp " + World.Player.Experience + " (oddity " + Progression.Oddity + "), level " + World.Player.Level + "; next levels cost " + string.Join(", ", Enumerable.Range(2, 5).Select(l => l + ":" + Progression.XpFor(l))));
-            if (Input.Pressed(Keys.B)) { var lines = Dialogs.StockLines("characters\\bigbret1"); Log.Info("bigbret1: " + lines.Count + " lines"); foreach (var l in lines.Take(12)) Log.Info("  | " + l.Replace("\n", " ").Substring(0, Math.Min(90, l.Length))); }
+            if (Input.Pressed(Keys.B) && !Input.Down(Keys.LeftControl)) { var lines = Dialogs.StockLines("characters\\bigbret1"); Log.Info("bigbret1: " + lines.Count + " lines"); foreach (var l in lines.Take(12)) Log.Info("  | " + l.Replace("\n", " ").Substring(0, Math.Min(90, l.Length))); }
             if (Input.Pressed(Keys.H) && !Input.Down(Keys.LeftControl)) Log.Info("bret dialog with the merchant: " + Dialogs.Start(World.Placed("workstest_merchant"), "characters\\bigbret1"));
             if (Input.Pressed(Keys.C) && Input.Down(Keys.LeftShift))
             {
@@ -70,6 +72,9 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.S) && Input.Down(Keys.LeftControl)) Log.Info("sneak: " + StatusEffects.Apply(World.Player, "stealthMode", 0));
             if (Input.Pressed(Keys.T) && Input.Down(Keys.LeftControl)) Log.Info("pit master: " + Dialogs.Start(World.Placed("pit_master"), "pit/master"));
             if (Input.Pressed(Keys.H) && Input.Down(Keys.LeftControl)) { var h = World.Hovered; Log.Info("hovered: " + (h == null ? "nothing" : h.Name + " at " + h.Position) + ", mouse " + Input.Mouse); }
+            if (Input.Pressed(Keys.L) && Input.Down(Keys.LeftControl)) { System.IO.File.WriteAllLines(System.IO.Path.Combine(Info.Folder, "loaded.txt"), Assets.Loaded); Log.Info("loaded textures: " + Assets.Loaded.Count); }
+            if (Input.Pressed(Keys.E) && Input.Down(Keys.LeftControl)) foreach (var n in new[] { "icons\\systembar", "icons\\meds", "gui\\textures\\systembar", "Portraits\\Male\\ag1_l", "Locale\\Creatures\\pl_ds\\id" }) Log.Info("export " + n + ": " + Assets.Export(n, System.IO.Path.Combine(Info.Folder, "export", n.Replace('\\', '_') + ".png")));
+            if (Input.Pressed(Keys.B) && Input.Down(Keys.LeftControl)) Log.Info("bandage: " + World.Player.Inventory.Add("consumables\\medicine\\bandage", 3));
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }

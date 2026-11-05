@@ -508,6 +508,31 @@ all are the game's own global variables with plain values, which the stock game 
 Placed and spawned characters are never in a save (taken out around saving); mod dialogs, dialog patches, keybinds,
 HUD parts and windows are never saved; mod settings live in `Mods/<mod>/settings.ini`, mods on/off in `mods.ini`.
 
+## Assets: pictures, sounds, texture packs, icons, menu art (Nov 2026)
+
+The game loads every texture by name through one resource manager (`a4q`, the `cne` service: `GetResource<T>(name)`
+-> a cache of `b5s` entries, `c == -1` never expires). Works makes that cache case-insensitive and puts a mod's
+texture into it under the game's name, so the game draws it everywhere it would draw its own; a prefix on a4q's
+private static `a(b5s)` keeps those entries from being disposed. Replacements are applied each update until all are
+in, and before a menu background is built (`czo.a`). Hit-test masks stay the game's (keyed by name), so a sprite
+sheet must keep its layout.
+- `Assets.Texture(mod, file)` (PNG/JPEG, premultiplied on load like the game's content), `Assets.Sound(mod, file)`
+  (WAV), `Assets.Replace(mod, gameAsset, file | texture)`, `Assets.Export(gameAsset, png)` (un-premultiplied, to
+  edit), `Assets.Loaded` (what the game has loaded now: find the texture behind something on screen),
+  `Assets.GameTextures`.
+- **Texture packs without code**: `Mods/<mod>/textures/<game asset path>.png`, e.g.
+  `textures/Portraits/Male/ag1_l.png`, `textures/Locale/Creatures/pl_ds/id.png`.
+- Icons: names like `armors.12` are cells of atlases (`Icons\armors`, 33x33, ten a row) resolved by `ejh.b(name)`;
+  most of the game asks it with the item definition's icon name `bk3.a3()`. `Icons.Register(mod, id, file)` gives a
+  `works:<mod>:<id>` name `ejh.b` answers; `Icons.SetItemIcon(mod, itemCode, file)` makes `a3()` return it for that
+  code. The quick-slot proxy saves the name it copies (`av.i`, `CP:I`, in `ejh.a(av, ...)`): a postfix puts the
+  game's own name back, so saves never hold a mod's icon name (**not yet tested with an item in a quick slot**).
+- `MainMenu.SetBackground(mod, file)`: replaces every main-menu concept art variant (`concept\*mm\<aspect>`); the
+  logo is part of the art. BackgroundFit decides crop or letterbox.
+- Tested in game: the menu background; the bandage's icon in the inventory; a texture pack recolouring the player's
+  HUD portrait and the player's sprite sheet in the world; exports of icon atlases, a portrait, a sprite sheet.
+  Never commit exported game textures: they are the game's files.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
