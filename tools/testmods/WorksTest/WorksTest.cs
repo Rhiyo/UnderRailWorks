@@ -60,7 +60,15 @@ public sealed class WorksTest : WorksMod
         bool zapped = false;
         Combat.TurnStarted.Add(this, c => { if (!aiHold || zapped || !c.IsPlayer) return; zapped = true;
             int before = Combat.ActionPoints(c); var why = zap.Use(c); Log.Info("ability in combat: AP " + before + " -> " + Combat.ActionPoints(c) + (why == null ? "" : " (" + why + ")") + "; again: " + zap.Use(c)); });
-        zap.Used += (user, target) => { target.Health -= 10; Log.Info("ability: zap " + target.Name + ", health " + target.Health); };
+        zap.Used += (user, target) => { var before = target.Health; var dealt = Combat.Damage(target, 10, "Electricity", user); Log.Info("ability: zap " + target.Name + " for " + dealt + ", health " + before + " -> " + target.Health); };
+        Commands.Add(this, "wt.slay", "wt.slay: 500 damage to the nearest live rathound", args =>
+        {
+            var r = World.Characters.Where(c => c.Name.Contains("Rathound") && !c.IsDead).FirstOrDefault();
+            if (r == null) return "no rathound";
+            var dealt = Combat.Damage(r, 500, "Mechanical", World.Player);
+            Log.Info("slay: " + dealt + " damage, dead " + r.IsDead);
+            return "slay " + dealt;
+        });
         Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
         {
             aiHold = true; Commands.CloseConsole();

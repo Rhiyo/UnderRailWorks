@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using TimelapseVertigo.Rules.Combat;
 using Microsoft.Xna.Framework;
 using UnderRailWorks.Internal;
 
@@ -127,6 +128,21 @@ public static class Combat
     }
     static readonly ConstructorInfo CombatLineCtor = typeof(vr).GetConstructors().First(c => c.GetParameters().Length == 5);
     static efk CharacterData(Character c) { var e = c.Entity as c5x; var a = e == null ? null : e.GetAspect<amc>(); return a == null ? null : a.aa(); }
+    // Damage the game's way (as its traps and scripts do: Defense.a with a hit): resistances and thresholds when
+    // resistances is true, shields, the combat log, death, and Works' damage events. type: Mechanical, Heat, Cold,
+    // Electricity, Acid, Energy, Bio. Returns the health it took (0 when dead already or immune).
+    public static int Damage(Character target, int amount, string type = "Mechanical", Character source = null, bool resistances = true)
+    {
+        var data = target == null ? null : target.GameData;
+        if (data == null || amount <= 0) return 0;
+        DamageType dt;
+        if (!Enum.TryParse(type ?? "Mechanical", true, out dt)) throw new ArgumentException("unknown damage type " + type);
+        var src = source == null ? null : source.GameData;
+        var hit = new cwt { b = true, q = resistances, f = new List<csk> { new csk(dt, amount) }, i = src == null ? null : new ap9(src) };
+        var result = data.Defense.a(hit);
+        return result == null ? 0 : result.a.Sum(p => p.Amount);
+    }
+
     public static void Float(Character over, string text, Color? colour = null, bool big = false) { Notify.Over(over, text, colour, big); }
 
     // --- From character data (efk) to Works' Character: a scan of the zone, cached --------------------------------

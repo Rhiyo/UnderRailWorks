@@ -56,6 +56,7 @@ public sealed class Character
     // The colour holding Tab outlines it in (gold for the player, sandy brown if passive, else by attitude).
     public Color OutlineColor { get { return Entities.OutlineColor(Entity); } }
     // --- Character data (efk), as the game's own console commands read and change it ---------------------------
+    internal efk GameData { get { return Data; } }
     efk Data { get { var c = Entities.Character(Entity); return c == null ? null : c.GetAspect<amc>().aa(); } }
     efk Need { get { var d = Data; if (d == null) throw new InvalidOperationException("not a character"); return d; } }
 

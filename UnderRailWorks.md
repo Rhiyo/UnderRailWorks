@@ -737,6 +737,13 @@ turns (`GameClock.Turns`) are stored in the mod's per-save data (`works_ability_
 (no graphics device during Load). Tested: a click healed 90 -> 110 and the second click was refused by the cooldown;
 F7 on a sentry did 10 damage once; in combat 15 AP spent (50 -> 35) and a second use refused.
 
+## Combat.Damage (Nov 2026)
+
+`Combat.Damage(target, amount, type, source, resistances)`: `Defense.a(new cwt { b = true (hit), q = resistances,
+f = [csk(type, amount)], i = new ap9(source) })`, as the game's scripted damage does (bv7, a5e bleeding). Goes
+through evasion/shields/resistances, the combat log, death and Works' damage events; returns the health taken.
+Tested: 500 to a rathound -> 499 ("evades 1"), died, CharacterDied fired; 10 electricity shown in the combat log.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
