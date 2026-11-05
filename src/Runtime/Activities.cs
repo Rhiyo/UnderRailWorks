@@ -49,7 +49,12 @@ namespace UnderRailWorks
         // a grenade is thrown at target), as the game's own AI does: queued as the character's next action, with the AP
         // cost, cooldowns and checks of a normal use. target: the character it is used on (null: the user itself).
         // False if the item has no use or the game refuses it now (e.g. a bandage below 40 % health, in combat).
-        public static bool Use(Character user, Item item, Character target = null)
+        public static bool Use(Character user, Item item, Character target = null) { return UseOn(user, item, target == null ? null : target.Entity); }
+
+        // The same, used on another item: ammo on a weapon (reloads it), a repair kit on armour...
+        public static bool Use(Character user, Item item, Item target) { return UseOn(user, item, target == null ? null : (object)target.Game); }
+
+        static bool UseOn(Character user, Item item, object target)
         {
             var c = user == null ? null : user.Entity as c5x;
             var data = c == null ? null : c.GetAspect<amc>();
@@ -59,7 +64,7 @@ namespace UnderRailWorks
             if (cap == null) return false;
             var proxy = ecf.a(cap, new eru(new Ouroboros.Playfield.References.EntityAspectReference<amc, amc>(data)), item.Game) as eu7;
             if (proxy == null || !proxy.yw()) return false;     // yw(): usable now
-            return cp.b(proxy, c, target == null ? c : target.Entity) != null;
+            return cp.b(proxy, c, target ?? c) != null;
         }
     }
 

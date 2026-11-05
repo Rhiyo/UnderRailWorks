@@ -1296,9 +1296,8 @@ Next time: a save in a zone with map traps (the game's own, placed through c11.a
 
 `GameEvents.Reloading` (cancellable: Character, Weapon, Ammo) and `GameEvents.Reloaded` (after a reload that loaded
 ammo), on the game's reload action nh.fr, which the player and NPCs' AI both use. The weapon is worked out as nh.fr
-does (its mode field: 0 the weapon in hand, 2 the target item, else the action's item). Tested in game: Reloading fires
-(character and ammo right) when the player uses ammo with Items.Use (`wt.gun`, `wt.reload` in WorksTest); that use
-then fails in the game too, because Items.Use targets characters and the ammo's "Reload Weapon" use wants the weapon
-item as its target (mode 1, the action's item was the player entity). The `]` key and clicking the ammo bar didn't
-reload in a headless run either, so Reloaded and a cancel weren't seen yet. Next: Items.Use with an item target, or an
-NPC reloading in combat.
+does (its mode field: 0 the weapon in hand, 2 the target item, else the action's item). `Items.Use(user, item, Item
+target)` uses an item on another item (the game's use call takes any object as its target): ammo on a weapon reloads
+it. Tested in game (`wt.gun`, `wt.reload`): Reloading with the weapon and ammo, Reloaded, the magazine full. Before
+the item overload, Items.Use(ammo) aimed at the player and the game's reload failed (mode 1, no weapon). Not seen yet:
+an NPC reloading in combat; the `]` key and the ammo bar didn't reload in a headless run.
