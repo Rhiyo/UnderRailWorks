@@ -19,7 +19,7 @@ public sealed class WorksTest : WorksMod
     AreaTrigger trigger;
     ModFeat grit;
     bool aiHold, block, aiFlee;
-    Character pet; double petLog, autoWait;
+    Character pet; double petLog, autoWait, autoPoll;
     readonly System.Collections.Generic.Queue<string> autorun = new System.Collections.Generic.Queue<string>();
     int aiLogs;
     TimeSpan gameTime;
@@ -86,6 +86,12 @@ public sealed class WorksTest : WorksMod
             Log.Info("pet at " + pet.Position + ", player at " + World.Player.Position + ", dead " + pet.IsDead); });
         var kit = Crafting.AddRecipe(this, "fieldkit", "Works Field Kit", "Medicine", "consumables\\medicine\\healthhypo",
             RecipeSlot.Item("Bandages", "med.bandage", 0, 2), RecipeSlot.Item("Flare", "flare", 0, 1));
+        Commands.Add(this, "wt.eat", "wt.eat: eat food from the bag", args =>
+        {
+            var food = World.Player.Inventory.Items.FirstOrDefault(i => i.Uses.Contains("Food"));
+            Log.Info("eat: " + (food == null ? "no food" : food.Name + " uses [" + string.Join(", ", food.Uses) + "], used " + Items.Use(World.Player, food)));
+            return "eat";
+        });
         Commands.Add(this, "wt.bag", "wt.bag: the bag's item codes", args => { var t = string.Join(", ", World.Player.Inventory.Items.Select(i => i.Code + " x" + i.Stacks)); Log.Info("bag: " + t); return t; });
         Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
         {
@@ -103,6 +109,13 @@ public sealed class WorksTest : WorksMod
         // autorun.txt: console lines, run once the zone is loaded; "wait <seconds>" pauses (game time keeps going).
         GameEvents.Update.Add(this, sec =>
         {
+            // Also picked up mid-game (checked once a second), for test steps after the load.
+            if ((autoPoll -= sec) <= 0 && World.Player != null)
+            {
+                autoPoll = 1;
+                var auto = System.IO.Path.Combine(Info.Folder, "autorun.txt");
+                if (System.IO.File.Exists(auto)) { foreach (var line in System.IO.File.ReadAllLines(auto)) if (line.Trim().Length > 0) autorun.Enqueue(line.Trim()); System.IO.File.Delete(auto); }
+            }
             if (autoWait > 0) { autoWait -= sec; return; }
             while (autorun.Count > 0)
             {

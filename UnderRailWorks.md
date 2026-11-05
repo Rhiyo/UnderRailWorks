@@ -802,6 +802,18 @@ its own `a(cwp)` / `c(cwp)`); its slots are the game's `cgo(eh0(codes, skill), l
 bandages + 1 flare -> a health hypo (5 -> 3, 3 -> 2, ItemCrafted fired), a JSON recipe for a mod item, a save after
 crafting passes the stock loader.
 
+## Hunger; Item.Uses (Nov 2026)
+
+- `Item.Uses`: the names of the game's capabilities on the item's definition (`Definition.a2()`: "Food" for food,
+  the capability `b0p`...), so mods can tell food from medicine.
+- Hunger (mods/Hunger): satiety drops with GameTimeAdvanced, food (ItemUsed + Uses "Food") refills it, Hungry /
+  Starving mod statuses with StatBonus penalties, a HUD meter, per-save state written in `Saving`, `hunger.set`.
+  Tested: 25 % hungry, 5 % starving (icon, red meter), eating canned fish -> 45 %, status gone; quicksave at 20 %,
+  changed to 90 %, quickload -> 20 % and one Hungry status; the save passes the stock loader, the state is only in
+  UnderRailWorks.json.
+- WorksTest's autorun.txt is also picked up mid-game (checked every second): test steps after the load without the
+  console.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

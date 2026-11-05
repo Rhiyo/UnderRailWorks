@@ -1,0 +1,10 @@
+{
+  "hungry.name": "Hungry",
+  "hungry.desc": "You need to eat. -1 strength, -5 dodge.",
+  "starving.name": "Starving",
+  "starving.desc": "You are starving. -2 strength, -1 agility, -15 dodge.",
+  "meter": "Fed {0}%",
+  "ate": "Fed: {0}%",
+  "nowHungry": "You're getting hungry",
+  "nowStarving": "You're starving"
+}

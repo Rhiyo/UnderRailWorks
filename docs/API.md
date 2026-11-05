@@ -548,7 +548,8 @@ Values: `TopLeft, Top, TopRight, Left, Center, Right, BottomLeft, Bottom, Bottom
 - `ItemKind Kind` — What sort of item it is (from the definition's class).
 - `int Tier` — Quality tier 0 (junk) .. 5 (the game's cr1), and how worn it is (0..1; 1 for items without durability).
 - `double Condition`
-- `object GetValue(string key)` — A plain value kept on this one item (saved with it; the stock game keeps and ignores it). Primitive values.
+- `IList<string> Uses` — A plain value kept on this one item (saved with it; the stock game keeps and ignores it). Primitive values. What it can be used as: the names of the game's capabilities on its definition ("Food", "Medicine"...).
+- `object GetValue(string key)`
 - `void SetValue(string key, object value)` — Saved inside the item (II:CP), so the stock game reads it back: only plain values (a number, bool, string, DateTime, Guid); anything else would make the save unloadable without the mod.
 - `ItemDefinition Definition`
 - `void MakeUnique()` — This one item gets its own copy of the definition (as crafted items have), to edit without touching others. Saved whole, with stock types only: the stock game shows it as edited.

@@ -176,6 +176,16 @@ namespace UnderRailWorks
             }
         }
         // A plain value kept on this one item (saved with it; the stock game keeps and ignores it). Primitive values.
+        // What it can be used as: the names of the game's capabilities on its definition ("Food", "Medicine"...).
+        public IList<string> Uses
+        {
+            get
+            {
+                var d = Game.Definition;
+                var list = d == null ? null : d.a2();
+                return list == null ? new List<string>() : list.Where(kv => kv.Value != null).Select(kv => kv.Value.Name).ToList();
+            }
+        }
         public object GetValue(string key) { var p = Game.CustomProperties; return p == null || !p.HasProperty(key) ? null : p[key]; }
         // Saved inside the item (II:CP), so the stock game reads it back: only plain values (a number, bool, string,
         // DateTime, Guid); anything else would make the save unloadable without the mod.
