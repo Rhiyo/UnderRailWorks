@@ -479,9 +479,13 @@ is being dragged, sized to the game's buttons at every tier. Tested at 3584x1440
 
 `World.Hovered` (the world view's `dnn.an2()`, set each frame in `a7m.ag5` from its layer hit test, the thing the
 game outlines white), `Character.Resistances` (`efk.Defense.af()[DamageType]`: `du2.a()` threshold, `du2.c()`
-resistance), `Character.Detection`. **Not tested in game:** in the headless test runner the game never registers a
-hover at all (no outline, a "no action" cursor, `an2()` null at scale 1 and 1.43), so the Scanner mod needs a test in
-real play.
+resistance), `Character.Detection`. Tested at 3584x1440 and 2560x720 with insets: the Scanner shows an SGS Sentry's
+level, health, attitude, detection and resistances.
+**Bug found and fixed while testing it:** with insets, hovering or clicking a character missed. The world's hit test
+`a7m.a(x, y, out bool)` compares the mouse (interface coordinates) with layers in the world view's own coordinates;
+stock the view is at 0,0, Works moves it by the inset (measured: -384,0 at 2560x720 with 30%). `WorldHitTest` moves
+the mouse into the view's coordinates (floor clicks had their own fix, FloorOrigin). My earlier "hover never works
+headless" was wrong: the test copy had insets, and one target sat under the Quest Tracker panel.
 
 ## API packaging; what Works writes into saves (Nov 2026)
 
