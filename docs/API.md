@@ -156,6 +156,17 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `float Markup`
 - `Variables Variables` — Its own variables (the game's per-character CustomProperties, saved with it).
 
+## CharacterRules  _(class, CharacterRules.cs)_
+
+- `static int AbilityPointsAtCreation` — A new character's unspent points (the game: 5 ability points over abilities starting at 5, 120 skill points, 2 feats).
+- `static int SkillPointsAtCreation`
+- `static int FeatsAtCreation`
+- `static int SkillPointsPerLevel` — Each level (the game: 40 skill points, an ability point every 4 levels, a feat every 2).
+- `static int AbilityPointEveryLevels`
+- `static int FeatEveryLevels`
+- `static int AbilityMinAtCreation` — The range of each ability on the creation screen (the game: 3 to 10).
+- `static int AbilityMaxAtCreation`
+
 ## Combat  _(class, Combat.cs)_
 
 - `static readonly Hook<Action<Character>> TurnStarted = new Hook<Action<Character>>("TurnStarted")`

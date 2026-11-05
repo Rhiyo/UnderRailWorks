@@ -96,6 +96,7 @@ namespace UnderRailWorks.Internal
         {
             Dictionary<string, float> w;
             if (Skills.Synergies.Count == 0 || !Skills.Synergies.TryGetValue(__instance.Name, out w)) return;
+            if (SkillTypes.Count == 0 && __instance.Skills != null) foreach (var sk in __instance.Skills) SkillTypes[sk.Name] = sk.GetType();     // names from a real character's list
             var d = new Dictionary<Type, float>();
             foreach (var kv in w) { Type t; if (SkillTypes.TryGetValue(kv.Key, out t)) d[t] = kv.Value; }
             __result = d;
@@ -109,14 +110,12 @@ namespace UnderRailWorks.Internal
             // fi() / fj() are virtual: patch the base and every skill class that overrides them.
             foreach (var t in typeof(csn).Assembly.GetTypes().Where(t => typeof(csn).IsAssignableFrom(t)))
             {
-                if (!t.IsAbstract)
-                    try { var name = ((csn)Activator.CreateInstance(t, true)).Name; if (name != null) SkillTypes[name] = t; } catch { }
                 var fi = t.GetMethod("fi", inst | BindingFlags.DeclaredOnly, null, Type.EmptyTypes, null);
                 var fj = t.GetMethod("fj", inst | BindingFlags.DeclaredOnly, null, Type.EmptyTypes, null);
                 if (fi != null && !fi.IsAbstract) harmony.Patch(fi, postfix: m("AbilityBonuses"));
                 if (fj != null && !fj.IsAbstract) harmony.Patch(fj, postfix: m("SkillSynergies"));
             }
-            Log.Write("stats: " + SkillTypes.Count + " skills");
+
         }
     }
 }

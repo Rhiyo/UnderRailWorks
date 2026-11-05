@@ -899,6 +899,20 @@ export follows the save rules: the stock game must read it.
   +13, the sheet shows the new text and "Agility 12, Level 9".
 - `Character.Defense` (Dodge, Evasion, Fortitude, Resolve: the Defense tab's values) and `Character.Initiative`.
 
+## Character rules (Nov 2026)
+
+`CharacterRules`: AbilityPointsAtCreation (game 5, over abilities starting at 5), SkillPointsAtCreation (120),
+FeatsAtCreation (2), SkillPointsPerLevel (40), AbilityPointEveryLevels (4, below the level cap), FeatEveryLevels (2),
+AbilityMinAtCreation (3), AbilityMaxAtCreation (10). The game's numbers are `aiy` static readonly fields, which .NET
+compiles into the methods using them, so Works adds differences after the game's steps: postfixes on `e3q.b()`
+(creation) and `e3q.a()` (level up) on the point counters (fields `c`/`d`/`e`: the decompile's `m_c`... are ILSpy's
+renames), `c3p.a()` (the creation screen's "can raise", up to the maximum at level 1) and `e44.a(e3q)` (the creation
+rows' minimum). The results are plain numbers in the save and exports. Tested: 8 points at creation, Strength to 12
+(+ gone), Dexterity to 1 (- gone), 150 skill points.
+**Trap found:** an exception in a postfix goes into the game: the first version (a null field) made New Game do
+nothing, silently. Every rules postfix now catches and logs.
+`Skills.SetSynergies` tested: Throwing 0 -> 15 from Melee (a synergy only adds below the level's skill cap, as the game).
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

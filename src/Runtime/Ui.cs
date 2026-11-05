@@ -510,6 +510,7 @@ static class UiHooks
         Group("exported characters", () => CharacterFiles.Install(harmony));
         Group("stats", () => StatHooks.Install(harmony));
         Group("feat changes", () => FeatRegistry.Install(harmony));
+        Group("character rules", () => CharacterRuleHooks.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 

@@ -111,6 +111,11 @@ public sealed class WorksTest : WorksMod
         });
         GameEvents.CharacterExporting.Add(this, path => { CharacterData.Set("exports", CharacterData.Get<double>("exports") + 1); CharacterData.Set("motto", "made in WorksTest"); Log.Info("exporting to " + path); });
         GameEvents.CharacterImported.Add(this, () => Log.Info("imported: motto " + CharacterData.Get<string>("motto") + ", exports " + CharacterData.Get<double>("exports")));
+        if (System.IO.File.Exists(System.IO.Path.Combine(Info.Folder, "rules.test")))
+        {
+            CharacterRules.AbilityPointsAtCreation = 8; CharacterRules.AbilityMaxAtCreation = 12; CharacterRules.AbilityMinAtCreation = 1; CharacterRules.SkillPointsAtCreation = 150;
+            Log.Info("rules: test rules on");
+        }
         Feats.AddBonuses(this, "nimble", StatBonus.Skill("Stealth", 13));
         Feats.SetRequirements(this, "nimble", new FeatRequirements { Level = 9, Abilities = { ["Agility"] = 12 } });
         Commands.Add(this, "wt.featmod", "wt.featmod", args => { var p = World.Player; Log.Info("feats " + string.Join(",", p.Feats) + "; stealth " + p.Skill("Stealth") + " (base " + p.BaseSkill("Stealth") + "); desc set " + Feats.SetDescription(this, "nimble", "Changed by WorksTest: +13 stealth.")); return "featmod"; });
@@ -127,6 +132,14 @@ public sealed class WorksTest : WorksMod
             Stats.Refresh(p);
             Log.Info("stats after: " + skill + " " + p.Skill(skill) + "; defense dodge " + p.Defense.Dodge);
             return "stats";
+        });
+        Commands.Add(this, "wt.syn", "wt.syn: Stealth gets Melee as a synergy", args =>
+        {
+            var p = World.Player; var before = p.Skill("Throwing");
+            Skills.SetSynergies(this, "Throwing", new System.Collections.Generic.Dictionary<string, float> { { "Melee", 1f } });
+            Stats.Refresh(p); Stats.Refresh(p);
+            Log.Info("synergy: Throwing " + before + " -> " + p.Skill("Throwing") + " (Melee base " + p.BaseSkill("Melee") + ")");
+            return "syn";
         });
         Commands.Add(this, "wt.gear", "wt.gear: what the player wears and carries", args =>
         {
