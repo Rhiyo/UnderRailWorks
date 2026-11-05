@@ -508,6 +508,8 @@ static class UiHooks
         Group("cancellable events", () => CancelHooks.Install(harmony));
         Group("mod recipes", () => RecipeHooks.Install(harmony));
         Group("exported characters", () => CharacterFiles.Install(harmony));
+        Group("stats", () => StatHooks.Install(harmony));
+        Group("feat changes", () => FeatRegistry.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 

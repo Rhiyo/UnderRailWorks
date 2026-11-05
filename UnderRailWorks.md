@@ -884,6 +884,21 @@ export follows the save rules: the stock game must read it.
   types, and the stock game reads it (`asd.char -> ajk`); New Game -> Import -> the mod feat on the Feats tab, and the
   new game started with the exported CharacterData. Not handled: deleting an export in the dialog leaves its side file.
 
+## Stat rules: Stats.Modify, skill weights, the game's feats (Nov 2026)
+
+- `Stats.Modify` (StatRebuild: Character, Add(StatBonus)): a prefix on `efk.bl()` (the rebuild of every stat) adds the
+  handlers' bonuses to the character's effect list `z` (not saved) and a finalizer takes them out again.
+  `Stats.Refresh(c)` rebuilds now. Flat bonuses go in before the game's percentages (+7 dodge showed as +8 with
+  Nimble's percentage), as the game's own.
+- `Skills.SetAbilities(skill, {ability: weight})` / `SetSynergies`: a skill's value is points x (1 + the best related
+  ability's weight x factor); each skill class names those in `fi()` / `fj()`, postfixed for every skill class.
+  Tested: Melee 22 -> 17 with Intelligence x2 instead of its own.
+- The game's feats: `Feats.SetRequirements(key, ...)` (postfix `j0`), `Feats.AddBonuses(key, ...)` (postfix `cy`),
+  `Feats.SetDescription(key, text)`; only the classes of changed feats are patched (when changed; queued before Works'
+  hooks are in). Mod feats' Level requirement now reaches the game (`c6x`). Tested on Nimble: Stealth 16 -> 29 with
+  +13, the sheet shows the new text and "Agility 12, Level 9".
+- `Character.Defense` (Dodge, Evasion, Fortitude, Resolve: the Defense tab's values) and `Character.Initiative`.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

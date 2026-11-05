@@ -54,6 +54,27 @@ namespace UnderRailWorks
             FeatRegistry.Register(f, icon == null ? null : System.IO.Path.Combine(mod.Info.Folder, icon));
             return f;
         }
+        // --- The game's own feats (by key, as Character.Feats lists them; mod feats work too) ----------------------
+        internal static readonly Dictionary<string, FeatRequirements> Requirements = new Dictionary<string, FeatRequirements>(StringComparer.OrdinalIgnoreCase);
+        internal static readonly Dictionary<string, List<StatBonus>> Bonuses = new Dictionary<string, List<StatBonus>>(StringComparer.OrdinalIgnoreCase);
+        // Replaces a feat's requirements (abilities, skills, level) on the level-up screen.
+        public static void SetRequirements(WorksMod mod, string key, FeatRequirements requires) { Requirements[key] = requires ?? new FeatRequirements(); FeatRegistry.Ensure(key, true); }
+        // Adds stat bonuses to what a feat gives while held.
+        public static void AddBonuses(WorksMod mod, string key, params StatBonus[] bonuses)
+        {
+            List<StatBonus> l; if (!Bonuses.TryGetValue(key, out l)) Bonuses[key] = l = new List<StatBonus>();
+            l.AddRange(bonuses ?? new StatBonus[0]);
+            FeatRegistry.Ensure(key, false);
+        }
+        // Its description (the level-up screen and the character sheet).
+        public static bool SetDescription(WorksMod mod, string key, string text)
+        {
+            var feat = ck.a(key);
+            if (feat == null) return false;
+            Text.Set("Feats", feat.wn(), text);
+            return true;
+        }
+
         // Gives a feat (a mod's or the game's, by key) to a character, as the game does (no feat point is spent).
         public static bool Give(Character who, string key)
         {
@@ -81,6 +102,7 @@ namespace UnderRailWorks.Internal
             if (d == null) return list;
             foreach (var kv in d.Requires.Abilities) { var t = FeatRegistry.StatType(kv.Key, true); if (t != null) list.Add(new awr(t, kv.Value)); }
             foreach (var kv in d.Requires.Skills) { var t = FeatRegistry.StatType(kv.Key, false); if (t != null) list.Add(new bap(kv.Value, t)); }
+            if (d.Requires.Level > 0) list.Add(new c6x(d.Requires.Level));     // the game's level requirement
             return list;
         }
         // While held: the bonuses, as the game's own modifiers (efk.bl() collects them from every feat).
@@ -132,7 +154,49 @@ namespace UnderRailWorks.Internal
             return s == null ? null : s.GetType();
         }
 
-        // Gained / lost through any path (the screen, scripts, Feats.Give): an2.d(Type) / an2.b(Type).
-        internal static void Install(HarmonyLib.Harmony harmony) { }
+        static void RequirementsOf(ai8 __instance, ref List<brl> __result)
+        {
+            if (Feats.Requirements.Count == 0) return;
+            FeatRequirements r;
+            if (!Feats.Requirements.TryGetValue(ck.a(__instance.GetType()), out r)) return;
+            var list = new List<brl>();
+            foreach (var kv in r.Abilities) { var t = StatType(kv.Key, true); if (t != null) list.Add(new awr(t, kv.Value)); }
+            foreach (var kv in r.Skills) { var t = StatType(kv.Key, false); if (t != null) list.Add(new bap(kv.Value, t)); }
+            if (r.Level > 0) list.Add(new c6x(r.Level));
+            __result = list;
+        }
+
+        static void BonusesOf(ai8 __instance, ref List<d3e> __result)
+        {
+            if (Feats.Bonuses.Count == 0) return;
+            List<StatBonus> extra;
+            if (!Feats.Bonuses.TryGetValue(ck.a(__instance.GetType()), out extra) || extra.Count == 0) return;
+            var list = __result == null ? new List<d3e>() : new List<d3e>(__result);
+            foreach (var b in extra) list.Add(b.Make());
+            __result = list;
+        }
+
+        // j0 (requirements) and cy (static effects) are virtual: patched where a changed feat's class (or the nearest base
+        // class) declares them, when a mod changes that feat (hundreds of feat classes: never all at startup).
+        static HarmonyLib.Harmony harmony;
+        static readonly HashSet<MethodBase> patched = new HashSet<MethodBase>();
+        static readonly List<KeyValuePair<string, bool>> queued = new List<KeyValuePair<string, bool>>();
+        internal static void Install(HarmonyLib.Harmony h) { harmony = h; foreach (var q in queued) Ensure(q.Key, q.Value); queued.Clear(); }
+        internal static bool Ensure(string key, bool requirements)
+        {
+            if (harmony == null) { queued.Add(new KeyValuePair<string, bool>(key, requirements)); return true; }     // before Works' hooks: done at install
+            var feat = ck.a(key);
+            if (feat == null) { Log.Write("feats: no feat " + key); return false; }
+            const BindingFlags inst = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+            for (var t = feat.GetType(); t != null && typeof(ai8).IsAssignableFrom(t); t = t.BaseType)
+            {
+                var method = requirements ? t.GetMethod("j0", inst, null, Type.EmptyTypes, null) : t.GetMethod("cy", inst, null, new[] { typeof(efk) }, null);
+                if (method == null || method.IsAbstract) continue;
+                if (patched.Add(method))
+                    harmony.Patch(method, postfix: new HarmonyLib.HarmonyMethod(typeof(FeatRegistry).GetMethod(requirements ? "RequirementsOf" : "BonusesOf", BindingFlags.Static | BindingFlags.NonPublic)));
+                return true;
+            }
+            return false;
+        }
     }
 }

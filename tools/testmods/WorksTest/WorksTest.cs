@@ -21,6 +21,7 @@ public sealed class WorksTest : WorksMod
     bool aiHold, block, aiFlee;
     Character pet; double petLog, autoWait, autoPoll;
     int startX, startY;
+    bool statsOn;
     readonly System.Collections.Generic.Queue<string> autorun = new System.Collections.Generic.Queue<string>();
     int aiLogs;
     TimeSpan gameTime;
@@ -110,6 +111,23 @@ public sealed class WorksTest : WorksMod
         });
         GameEvents.CharacterExporting.Add(this, path => { CharacterData.Set("exports", CharacterData.Get<double>("exports") + 1); CharacterData.Set("motto", "made in WorksTest"); Log.Info("exporting to " + path); });
         GameEvents.CharacterImported.Add(this, () => Log.Info("imported: motto " + CharacterData.Get<string>("motto") + ", exports " + CharacterData.Get<double>("exports")));
+        Feats.AddBonuses(this, "nimble", StatBonus.Skill("Stealth", 13));
+        Feats.SetRequirements(this, "nimble", new FeatRequirements { Level = 9, Abilities = { ["Agility"] = 12 } });
+        Commands.Add(this, "wt.featmod", "wt.featmod", args => { var p = World.Player; Log.Info("feats " + string.Join(",", p.Feats) + "; stealth " + p.Skill("Stealth") + " (base " + p.BaseSkill("Stealth") + "); desc set " + Feats.SetDescription(this, "nimble", "Changed by WorksTest: +13 stealth.")); return "featmod"; });
+        Stats.Modify.Add(this, r => { if (statsOn && r.Character.IsPlayer) r.Add(StatBonus.Dodge(7)); });
+        Commands.Add(this, "wt.stats", "wt.stats: a skill before/after re-weighting, dodge bonus", args =>
+        {
+            var p = World.Player;
+            var skill = p.SkillNames.FirstOrDefault(n => p.BaseSkill(n) > 0 && n != "Dodge") ?? "Guns";
+            Log.Info("stats before: " + string.Join(", ", p.SkillNames.Where(n => p.BaseSkill(n) > 0).Select(n => n + " " + p.BaseSkill(n) + "->" + p.Skill(n))) + "; Int " + p.Ability("Intelligence") + "; defense dodge " + p.Defense.Dodge);
+            Stats.Refresh(p);
+            Log.Info("stats plain rebuild: defense dodge " + p.Defense.Dodge + ", " + skill + " " + p.Skill(skill));
+            Skills.SetAbilities(this, skill, new System.Collections.Generic.Dictionary<string, float> { { "Intelligence", 2f } });
+            statsOn = true;
+            Stats.Refresh(p);
+            Log.Info("stats after: " + skill + " " + p.Skill(skill) + "; defense dodge " + p.Defense.Dodge);
+            return "stats";
+        });
         Commands.Add(this, "wt.gear", "wt.gear: what the player wears and carries", args =>
         {
             var p = World.Player;

@@ -102,6 +102,8 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 
 - `bool MoveTo(int x, int y)` — Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it can't take orders (no movement, not on a map) or the tile is outside the area. Not in turn-based combat.
 - `bool TeleportTo(int x, int y)` — Puts it on tile x, y of its area at once (no walking, as the game's scripts move characters between scenes).
+- `DefenseStats Defense`
+- `int Initiative` — Its initiative (efk.Offense ay(): what StatBonus.Initiative changes).
 - `bool IsPlayer`
 - `bool IsHostile` — Hostile or unfriendly to the player, not passive (red and orange outlines).
 - `Vector3 Position` — Map position (tiles; fractional while moving).
@@ -253,6 +255,15 @@ The game's content, listed for modders: item paths with their codes and names, c
 - `int Min`
 - `int Max`
 
+## DefenseStats  _(class, Movement.cs)_
+
+The defense values the character sheet's Defense tab shows (what StatBonus.Dodge / Evasion / Fortitude / Resolve change; not the Dodge and Evasion skills): efk.Defense (nw) v() dodge, z() evasion, ab() fortitude, ae() resolve.
+
+- `int Dodge`
+- `int Evasion`
+- `int Fortitude`
+- `int Resolve`
+
 ## Detection  _(class, Stealth.cs)_
 
 - `Character Target` — The sneaking character, the observer's detection and the target's stealth (as the game counts them), the distance and the observer's sight range in tiles, the angle off the observer's facing (degrees), the light on the target (0 dark .. 1), whether the observer has darkvision.
@@ -368,6 +379,9 @@ Values: `Helmet, Armor, Belt, Boots, Shield, PrimaryWeapon, SecondaryWeapon`
 ## Feats  _(class, Feats.cs)_
 
 - `static ModFeat Add(WorksMod mod, string id, string name, string description, FeatRequirements requires = null, string icon = null, StatBonus[] bonuses = null)` — A new feat on the level-up screen (call in Load). icon: a PNG in the mod's folder (optional).
+- `static void SetRequirements(WorksMod mod, string key, FeatRequirements requires)` — Replaces a feat's requirements (abilities, skills, level) on the level-up screen.
+- `static void AddBonuses(WorksMod mod, string key, params StatBonus[] bonuses)` — Adds stat bonuses to what a feat gives while held.
+- `static bool SetDescription(WorksMod mod, string key, string text)` — Its description (the level-up screen and the character sheet).
 - `static bool Give(Character who, string key)` — Gives a feat (a mod's or the game's, by key) to a character, as the game does (no feat point is spent).
 
 ## GameBatch  _(struct, DrawApi.cs)_
@@ -1131,6 +1145,11 @@ The first handler that returns true replaces the game's step.
 - `IList<string> Keys`
 - `void Clear()` — Everything, e.g. to migrate an older layout (keep a "version" key of your own).
 
+## Skills  _(class, Stats.cs)_
+
+- `static void SetAbilities(WorksMod mod, string skill, IDictionary<string, float> weights)` — Which abilities raise a skill, and how much (the game's weights are 1 or less; the best one counts).
+- `static void SetSynergies(WorksMod mod, string skill, IDictionary<string, float> weights)` — Which other skills add to it (a share of their points, up to the level's cap).
+
 ## Sound  _(class, Audio.cs)_
 
 - `static IList<string> Ids` — Every sound id the game has (e.g. "Interface.ButtonClick").
@@ -1158,6 +1177,16 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 - `static StatBonus CarryCapacity(int amount)`
 - `static StatBonus Psi(int amount)`
 - `static StatBonus PsiRegeneration(int amount)`
+
+## StatRebuild  _(class, Stats.cs)_
+
+- `Character Character`
+- `void Add(StatBonus bonus)`
+
+## Stats  _(class, Stats.cs)_
+
+- `static readonly Hook<Action<StatRebuild>> Modify = new Hook<Action<StatRebuild>>("Stats.Modify")`
+- `static void Refresh(Character c)` — Rebuilds a character's stats now (after a mod's rule changed what its handler would add).
 
 ## StatusChange  _(class, Progress.cs)_
 

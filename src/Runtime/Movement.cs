@@ -31,3 +31,26 @@ namespace UnderRailWorks
         }
     }
 }
+
+namespace UnderRailWorks
+{
+    // The defense values the character sheet's Defense tab shows (what StatBonus.Dodge / Evasion / Fortitude /
+    // Resolve change; not the Dodge and Evasion skills): efk.Defense (nw) v() dodge, z() evasion, ab() fortitude,
+    // ae() resolve.
+    public sealed class DefenseStats
+    {
+        readonly nw d;
+        internal DefenseStats(nw defense) { d = defense; }
+        public int Dodge { get { return d.v(); } }
+        public int Evasion { get { return d.z(); } }
+        public int Fortitude { get { return d.ab(); } }
+        public int Resolve { get { return d.ae(); } }
+    }
+
+    public sealed partial class Character
+    {
+        public DefenseStats Defense { get { var g = GameData; return g == null ? null : new DefenseStats(g.Defense); } }
+        // Its initiative (efk.Offense ay(): what StatBonus.Initiative changes).
+        public int Initiative { get { var g = GameData; return g == null ? 0 : g.Offense.ay(); } }
+    }
+}
