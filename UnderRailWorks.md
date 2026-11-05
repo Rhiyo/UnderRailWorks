@@ -645,8 +645,8 @@ the binary (the decompiler adds `m_` on clashes); every reflected field needs th
 - `Placement.OnUse`: an object placed by a mod runs the handler when used (prefix on `bim.a(c5x, string, bool,
   bool)`); an object without a use of its own gets a plain `bim` (placed entities are never saved). `World.Use(user,
   placementId)`. Stock "device" blueprints (levers, consoles) have no use aspect: their uses come from the maps.
-- Tested: the trigger's enter, a placed lever used through `World.Use` (the handler ran). Not verified: a mouse click
-  on it in the test runner (it was off screen).
+- Tested: the trigger's enter, a placed lever used through `World.Use` and with a real mouse click (the handler ran
+  both times).
 
 ## Mod feats (Nov 2026)
 
