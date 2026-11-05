@@ -913,6 +913,18 @@ rows' minimum). The results are plain numbers in the save and exports. Tested: 8
 nothing, silently. Every rules postfix now catches and logs.
 `Skills.SetSynergies` tested: Throwing 0 -> 15 from Melee (a synergy only adds below the level's skill cap, as the game).
 
+## The Steam helper crashed (Nov 2026)
+
+`UnderrailSteamHost.exe` (the 32-bit helper for Steam / GOG calls in the 64-bit mode) was built with Arch's Mono `mcs`,
+whose mscorlib holds `Queue<T>` (in .NET Framework it is in System.dll): under Wine Mono the helper died loading
+`GalaxyRunner` (TypeLoadException in the game's console log), Works started a new helper for every call and every
+answer was an error, so Steam calls (achievements) never reached Steam. Built now against
+/usr/lib/mono/4.8-api (`-nostdlib`): one helper, InitSteam answers. The same build line is in UnderRailFixes 1.x
+(~/underrail build.sh), which shipped it in v1.0.5-v1.0.10's 64-bit mode.
+With the helper working, a test run's game found the running Steam client by itself through `steam_appid.txt` in the
+game folder (InitSteam -> 1 with no Steam environment): the test copies have no steam_appid.txt now (run-underrail's
+launch.sh removes it unless WITH_STEAM=1; check-saves.sh no longer copies it). Measured: InitSteam -> 0 in test runs.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

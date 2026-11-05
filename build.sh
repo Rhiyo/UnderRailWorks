@@ -81,7 +81,10 @@ mkdir -p "$OUT64/x64"
 cp "$NVORBIS" "$OUT64/"
 # The helper also runs GOG Galaxy for the GOG version: compiled against the game's GalaxyCSharp.dll (loaded from the game
 # folder at run time, only on GOG).
-mcs -nologo -optimize+ -platform:x86 -out:"$OUT64/UnderrailSteamHost.exe" -r:"$GAME/GalaxyCSharp.dll" "$HERE/src/SteamHost/SteamHost.cs"
+# Against .NET Framework's reference assemblies, not Arch's Mono (whose mscorlib has types .NET keeps elsewhere:
+# Queue<T> is in System.dll; built against Mono's, the helper died loading GalaxyRunner under Wine Mono).
+API=/usr/lib/mono/4.8-api
+mcs -nologo -optimize+ -platform:x86 -nostdlib -r:"$API/mscorlib.dll" -r:"$API/System.dll" -r:"$API/System.Core.dll" -out:"$OUT64/UnderrailSteamHost.exe" -r:"$GAME/GalaxyCSharp.dll" "$HERE/src/SteamHost/SteamHost.cs"
 cp "$FNA" "$OUT64/"
 cp "$HERE"/lib/fna/x64/*.dll "$OUT64/x64/"
 

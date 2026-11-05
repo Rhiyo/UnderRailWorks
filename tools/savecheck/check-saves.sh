@@ -30,7 +30,7 @@ for c in "$STOCK" "$NET10"; do
     rm -rf "$c"; mkdir -p "$c"; cp "$ORIG" "$c/underrail.exe"
     for f in "$GAME"/*.dll; do case "$(basename "$f")" in UnderrailFix*.dll|UnderRailWorks.dll|UnderRailLauncher.dll|0Harmony.dll|System.Runtime.Serialization.Formatters.dll|Mono.Cecil.dll|FNA.dll|NVorbis.dll) ;; *) cp "$f" "$c/";; esac; done
     for f in "$GAME"/sfmlnet-*.dll.backup; do [ -f "$f" ] && cp "$f" "$c/$(basename "$f" .backup)"; done
-    cp "$GAME/steam_appid.txt" "$c/" 2>/dev/null || true
+    # No steam_appid.txt: with it the game's Steam API finds the running Steam client by itself (it must never connect).
     ln -s "$GAME/data" "$c/data"
 done
 cp -r "$DIST"/. "$NET10/"
