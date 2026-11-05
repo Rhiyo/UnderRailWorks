@@ -122,6 +122,7 @@ public sealed class Character
     Inventory inventory;
 
     // Its personal attitude to the player (overrides its faction's), as the game's scripts set it.
+    public override string ToString() { try { return Name ?? "?"; } catch { return "?"; } }
     public Attitude AttitudeToPlayer { get { return Attitude; } }
     public void SetAttitudeToPlayer(Attitude attitude)
     {

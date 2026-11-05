@@ -472,6 +472,7 @@ static class UiHooks
         Group("stealth", () => StealthHooks.Install(harmony));
         Group("mod windows", () => UiWindows.Install(harmony));
         Group("assets", () => AssetStore.Install(harmony));
+        Group("clock, items, crafting, stealing", () => ActivityHooks.Install(harmony));
         Log.Write("ui: hooks in place");
     }
 

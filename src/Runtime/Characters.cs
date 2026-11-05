@@ -69,7 +69,7 @@ public static class ItemCodes { public const string Charons = "currency.sc"; }
 
 // Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medicine\\bandage"): the code the game
 // counts and takes items by, and the shown name.
-public static class Items
+public static partial class Items
 {
     public static bool Exists(string path) { return Definition(path) != null; }
     public static string Code(string path) { var d = Definition(path); return d == null ? null : d.a5(); }

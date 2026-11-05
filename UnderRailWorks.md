@@ -533,6 +533,24 @@ sheet must keep its layout.
   HUD portrait and the player's sprite sheet in the world; exports of icon atlases, a portrait, a sprite sheet.
   Never commit exported game textures: they are the game's files.
 
+## Clock, item use, crafting, stealing (Nov 2026)
+
+From `~/UnderRailWorks-research/specs/clock-items-crafting.md` (not committed):
+- `GameClock.WorldTime` (the save screen's play time; restocks and quest timers; runs in real time in combat),
+  `TurnTime` / `Turns` (frozen in turn-based combat but for 5 s per player turn), `Paused` (`ps.ak4()`: dialogs, the
+  menu, the character sheet; not inventory, loot, barter or crafting), `InTurnBasedCombat`;
+  `GameEvents.GameTimeAdvanced(delta)` (`d6f.a(object, c4i)`, once per un-paused frame). The game has no day/night,
+  rest, hunger or fatigue.
+- `Items.Use(user, item, target)`: the item's first capability (`Definition.a2()[0].Value`) through a proxy
+  (`ecf.a`) queued with `cp.b`, as the game's AI uses bandages; AP, cooldowns and the game's checks apply.
+  `GameEvents.ItemUsing` (cancellable; prefix on `cp.a(eu7, c5x, object)`, every user, NPCs too) and `ItemUsed`
+  (postfix on `dea.dt()` of a consumable's action `a62`, the stack already taken).
+- `GameEvents.ItemCrafted` (postfix `ahu.i()`: the blueprint's name, the items).
+- `GameEvents.ItemStolen` / `CaughtStealing` (`rc.a(coh)` / `rc.a()`), `Stealing.ModifySuspicion` (`b87.a(efk,
+  efk, coh, double)`: per item; also the window's preview every frame; caught at 1.5 in all, no dice).
+- Tested: the clocks (world time and the summed ticks agree to the millisecond over 5 s), `Items.Use` on a bandage
+  (90 -> 180 health), the veto, both item events. **Not yet tested in game:** crafting and stealing events.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

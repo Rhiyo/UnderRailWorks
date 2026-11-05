@@ -11,13 +11,22 @@ using UnderRailWorks;
 public sealed class WorksTest : WorksMod
 {
     UiTextBox box;
-    int detections, instants;
+    int detections, instants, suspicions;
+    TimeSpan gameTime;
+    bool blockUse;
     public override void Load()
     {
         GameEvents.StatusApplying.Add(this, c => { Log.Info("status applying " + c.Code + " on " + (c.Character == null ? "?" : c.Character.Name)); if (c.Code == "Hidden" && Data.GetBool("noHide")) c.Cancel = true; });
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
         GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));
         GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
+        GameEvents.GameTimeAdvanced.Add(this, d => { gameTime += d; });
+        GameEvents.ItemUsing.Add(this, u => { Log.Info("using " + u.Item + " (" + u.Action + ") by " + (u.User == null ? "?" : u.User.Name) + (blockUse ? ": blocked" : "")); if (blockUse) u.Cancel = true; });
+        GameEvents.ItemUsed.Add(this, u => Log.Info("used " + u.Item.Name + " by " + (u.User == null ? "?" : u.User.Name) + " on " + (u.Target ?? "nothing")));
+        GameEvents.ItemCrafted.Add(this, c => Log.Info("crafted " + c.Blueprint + ": " + string.Join(", ", c.Items.Select(i => i.ToString()))));
+        GameEvents.ItemStolen.Add(this, t => Log.Info("stole " + t.Item + " from " + (t.Victim == null ? "?" : t.Victim.Name)));
+        GameEvents.CaughtStealing.Add(this, t => Log.Info("caught stealing from " + (t.Victim == null ? "?" : t.Victim.Name)));
+        Stealing.ModifySuspicion.Add(this, t => { if (++suspicions % 60 == 1) Log.Info("suspicion for " + t.Item + ": " + t.Suspicion.ToString("0.00")); });
         if (System.IO.File.Exists(System.IO.Path.Combine(Info.Folder, "art", "menu.png"))) MainMenu.SetBackground(this, "art/menu.png");
         if (System.IO.File.Exists(System.IO.Path.Combine(Info.Folder, "art", "bandage.png"))) Icons.SetItemIcon(this, "med.bandage", "art/bandage.png");
         Stealth.ModifyInstant.Add(this, d => { if (++instants % 20 == 1) Log.Info("instant check: detection " + d.ObserverDetection + " vs stealth " + d.TargetStealth + ": " + d.Instant + " (overridden to false)"); d.Instant = false; });
@@ -75,10 +84,14 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.L) && Input.Down(Keys.LeftControl)) { System.IO.File.WriteAllLines(System.IO.Path.Combine(Info.Folder, "loaded.txt"), Assets.Loaded); Log.Info("loaded textures: " + Assets.Loaded.Count); }
             if (Input.Pressed(Keys.E) && Input.Down(Keys.LeftControl)) foreach (var n in new[] { "icons\\systembar", "icons\\meds", "gui\\textures\\systembar", "Portraits\\Male\\ag1_l", "Locale\\Creatures\\pl_ds\\id" }) Log.Info("export " + n + ": " + Assets.Export(n, System.IO.Path.Combine(Info.Folder, "export", n.Replace('\\', '_') + ".png")));
             if (Input.Pressed(Keys.B) && Input.Down(Keys.LeftControl)) Log.Info("bandage: " + World.Player.Inventory.Add("consumables\\medicine\\bandage", 3));
+            if (Input.Pressed(Keys.W) && Input.Down(Keys.LeftControl)) { World.Player.Health = World.Player.MaxHealth / 2; Log.Info("wounded to " + World.Player.Health); }
+            if (Input.Pressed(Keys.Y) && Input.Down(Keys.LeftControl)) { var b = World.Player.Inventory.Items.FirstOrDefault(i => i.Code == "med.bandage"); Log.Info("use bandage: " + (b != null && Items.Use(World.Player, b))); }
+            if (Input.Pressed(Keys.G) && Input.Down(Keys.LeftControl)) Log.Info("clock: world " + GameClock.WorldTime + ", turn " + GameClock.TurnTime + " (" + GameClock.Turns.ToString("0.0") + " turns), paused " + GameClock.Paused + ", ticks summed " + gameTime);
+            if (Input.Pressed(Keys.U) && Input.Down(Keys.LeftControl)) { blockUse = !blockUse; Log.Info("block item use: " + blockUse); }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
-            if (Input.Pressed(Keys.U)) Log.Info("trade with the test merchant: " + Trade.Open(World.Placed("workstest_merchant")));
+            if (Input.Pressed(Keys.U) && !Input.Down(Keys.LeftControl)) Log.Info("trade with the test merchant: " + Trade.Open(World.Placed("workstest_merchant")));
             if (Input.Pressed(Keys.F11)) { p.GiveExperience(5000, "test"); Log.Info("XP now " + p.Experience + ", level " + p.Level + ", skill points " + p.SkillPoints + ", ability points " + p.AbilityPoints); }
             if (Input.Pressed(Keys.F12))
             {
