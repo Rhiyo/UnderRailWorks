@@ -725,6 +725,18 @@ from the feat's `cy(efk)` (collected by `efk.bl()` while held, never saved); `Mo
 them into the status carrier (stripped from saves with the status). Tested: Strength +2 from a feat and Agility +1
 from a status shown green on the character sheet; a save with both passes the stock loader.
 
+## Mod abilities (Nov 2026)
+
+The game's own abilities (`c3n` and co.) are saved in the character and would crash the stock game, so a mod ability
+is Works' own: `Abilities.Add(mod, id, name, description, icon, apCost, cooldown, target, key)` -> `ModAbility`
+(`Available`, `Range`, `Used(user, target)`, `CooldownLeft`, `Use(target)`). Each mod with abilities gets an ability
+bar (a HUD part "Abilities", anchored bottom, so HUD Layout moves it): icons with AP cost, cooldown count, greyed when
+short of AP, tooltips; a click or the key uses it. Character targets: point at the character and press the key
+(Works never has to swallow a world click). AP is spent in turn-based combat on the player's turn; cooldowns in
+turns (`GameClock.Turns`) are stored in the mod's per-save data (`works_ability_<id>`). Icons load when first drawn
+(no graphics device during Load). Tested: a click healed 90 -> 110 and the second click was refused by the cooldown;
+F7 on a sentry did 10 damage once; in combat 15 AP spent (50 -> 35) and a second use refused.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

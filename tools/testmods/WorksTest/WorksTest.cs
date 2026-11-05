@@ -53,6 +53,14 @@ public sealed class WorksTest : WorksMod
         Ai.TakingTurn.Add(this, t => { if (aiHold && !t.Npc.Name.Contains("Rathound")) { t.EndTurn = true; if (++aiLogs < 30) Log.Info("ai: held " + t.Npc); } });
         Ai.Acting.Add(this, a => Log.Info("ai: " + a.Npc + " uses " + a.Action));
         Ai.ShouldFlee.Add(this, f => { if (aiHold && f.Npc.Name.Contains("Rathound")) { if (++aiLogs < 40) Log.Info("ai: rathound flees (game: " + f.Fleeing + ")"); return true; } return null; });
+        var wind = Abilities.Add(this, "wind", "Second Wind", "Heals 20 health.", "art/wind.png", cooldown: 3, key: Microsoft.Xna.Framework.Input.Keys.F6);
+        wind.Used += (user, target) => { user.Health += 20; Log.Info("ability: second wind, health " + user.Health); };
+        var zap = Abilities.Add(this, "zap", "Zap", "10 damage to the target.", "art/zap.png", apCost: 15, cooldown: 2, target: AbilityTarget.Character, key: Microsoft.Xna.Framework.Input.Keys.F7);
+        zap.Range = 12;
+        bool zapped = false;
+        Combat.TurnStarted.Add(this, c => { if (!aiHold || zapped || !c.IsPlayer) return; zapped = true;
+            int before = Combat.ActionPoints(c); var why = zap.Use(c); Log.Info("ability in combat: AP " + before + " -> " + Combat.ActionPoints(c) + (why == null ? "" : " (" + why + ")") + "; again: " + zap.Use(c)); });
+        zap.Used += (user, target) => { target.Health -= 10; Log.Info("ability: zap " + target.Name + ", health " + target.Health); };
         Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
         {
             aiHold = true; Commands.CloseConsole();

@@ -506,6 +506,7 @@ static class UiHooks
         Input.Tick();
         UiWindows.Tick();
         AssetStore.Apply();
+        try { AbilityBars.Tick(); } catch (Exception ex) { Log.Write("abilities: " + ex.Message); }
         try { Widgets.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("ui: " + ex.Message); }
         try { Triggers.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("triggers: " + ex.Message); }
         UnderRailWorks.Hud.FlowTick();
