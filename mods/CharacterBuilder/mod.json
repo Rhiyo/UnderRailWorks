@@ -1,0 +1,2 @@
+{ "id": "CharacterBuilder", "name": "Character Builder", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9", "startsOff": true,
+  "description": "Change the character-building rules: ability points and range at creation, skill points at creation and per level, how often you get feats and ability points. Applies to new characters and the levels you gain from now on; saves stay readable by the unmodded game." }

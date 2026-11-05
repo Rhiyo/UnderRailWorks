@@ -89,7 +89,7 @@ cp "$FNA" "$OUT64/"
 cp "$HERE"/lib/fna/x64/*.dll "$OUT64/x64/"
 
 # The shipped mods, into dist's Mods/.
-for m in UnderRailFixes Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic BountyHunter Beastmaster Hunger Ambushes Scavenger; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
+for m in UnderRailFixes Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic BountyHunter Beastmaster Hunger Ambushes Scavenger CharacterBuilder; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
 cp "$HERE/mods/FieldMedic/treat.wav" "$OUT/Mods/FieldMedic/"
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
 mod HelloUI "$HERE/build/Mods" "$HERE/examples/HelloUI"

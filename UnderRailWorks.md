@@ -969,6 +969,11 @@ the chance of extra salvage in loot (new `Loot.Add` overload with a chance worke
 Scavenging 80 [86 with the abilities], Mechanics 16 -> 26, rathounds dropping repair kits, scraps and a fusion cell from
 its rules.
 
+## Character Builder (Nov 2026)
+
+mods/CharacterBuilder (startsOff): every CharacterRules number as a Mods-tab setting, defaulting to the game's own.
+Tested: AbilityPoints=10 -> 10 points on the creation screen.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:
