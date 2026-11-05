@@ -615,6 +615,16 @@ args => reply)` is answered in a prefix on `bdg.c(string)` before the game's tab
 `Commands.OpenConsole()`. Built in: `works`, `works.give <path> [n]`, `works.spawn <blueprint> [hostile]`,
 `works.var <name> [value]`, `works.mods`, `works.content`. Tested: works.var and works.mods typed in the console.
 
+## Stores and loot rules (Nov 2026)
+
+- `Stores.AddRestock(mod, store, path, count)` / `AddOnce`: shipments (`d6w` with a `dcw` of the item; unique for
+  once) appended to the store definition the merchant reads afresh on every (re)stock (postfix `c8j.a(string)`). Saved:
+  the delivered items and the shipment name (a string the stock game drops at its next restock).
+- `Loot.Add(mod, (character, container) => bool, path, chance, count)`: appended to the `c9y.c()` list while
+  `ery.mx()` rolls an entity's loot (so the game applies durability and NPC auto-equip); Works' own RNG.
+- Tested: the test merchant (store bigbret) sold the mod's Works Stim x3 and a JKK jacket; a spawned rathound's loot
+  had the rule's Fabric Scraps x7.
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

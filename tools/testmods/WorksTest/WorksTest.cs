@@ -26,6 +26,9 @@ public sealed class WorksTest : WorksMod
         GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
         Items.EditDefinition(this, "consumables\\medicine\\bandage", d => { d.Name = "Field Bandage"; d.Value = 99; });
         stimPath = Items.Define(this, "stim", "consumables\\medicine\\bandage", d => { d.Name = "Works Stim"; d.Description = "A test item defined by a mod."; d.Value = 1234; d.Weight = 0.1; });
+        Stores.AddRestock(this, "bigbret", stimPath, 3);
+        Stores.AddOnce(this, "bigbret", "armor\\jkktacticalvest", 1);
+        Loot.Add(this, (who, box) => who != null && who.Name.Contains("Rathound"), "components\\scraps\\fabricscraps", 1.0, 7);
         Music.Add(this, "workstest", "music/test.ogg");
         Music.Override(this, () => musicOn ? "workstest" : null);
         Items.ModifyTooltip(this, (item, tip) => { tip.AddSeparator(); tip.AddValue("Works", item.Code + (tip.InTrade ? " (trade)" : "")); });
