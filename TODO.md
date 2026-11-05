@@ -149,11 +149,14 @@ startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
 ## Next
 
 
-- [~] Fewer allocations per world layer: Hook dispatch done (143 -> 124 MB/s); the Layer wrappers can't be reused (UnderRailFixes keeps them for the keyhole redraw).
+- [x] Fewer allocations per world layer: hook dispatch done; the wrappers (Layer, WorldView, DrawContext) are structs. Measured
+  again (Nov 2026, works.perf 8 in LU-A1, Sprite Target Mask on): 16 MB/s with no mods, 26 with UnderRailFixes, 33 with
+  the usual set, no gen 2 collections. The 124-143 MB/s earlier were sessions with the mask off (GPU read-back hit test).
 - [x] Followers through zone changes (Follow(..., travels: true)).
 - [x] AI weapon choice: switching is hookable (WeaponSwitching); reloading too (Reloading/Reloaded, nh.fr). Tested in game with the player and an NPC in combat, cancel included; Items.Use on an item.
 - [x] Map markers from mods (Markers; the Minimap draws them). Journal entries: the game's journal is its quest log, which mod quests already fill (Quests, content packs).
 - [x] A modder's cookbook (docs/Cookbook.md, compiled and run).
-- [ ] Real Windows, Steam achievements through the helper: still untested. Sound output: measured from the test run's
+- [ ] Real Windows: untested. Steam: the helper connects (InitSteam -> 1 with WITH_STEAM=1, Nov 2026); unlocking an
+  achievement not tried on purpose (it would change the player's real profile). Sound output: measured from the test run's
   audio sink (Nov 2026): menu music RMS ~3100, in-game music and ambience ~1500 (NVorbis streaming works on .NET 10);
   single sound effects not isolated.
