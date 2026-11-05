@@ -104,7 +104,7 @@ public sealed partial class Item
 public enum SpawnSide { Neutral, Hostile, PlayerOnly }
 
 // A character placed by a mod: re-created each time its zone loads, while When holds; never saved.
-public sealed class Placement
+public sealed partial class Placement
 {
     public string Id { get; set; }                // unique (prefix with the mod id)
     public string Zone { get; set; }              // zone id (World.ZoneId shows the current one)
@@ -246,6 +246,14 @@ public static partial class World
     public static Character Placed(string id) { c5x e; return placed.TryGetValue(id, out e) && e.Area != null ? Character.Of(e) : null; }
 
     internal static bool IsPlaced(b0b e) { return e is c5x && placed.ContainsValue((c5x)e); }
+    internal static b0b PlacedEntity(string id) { c5x e; return placed.TryGetValue(id, out e) && e.Area != null ? e : null; }
+    internal static Placement PlacementOf(b0b e)
+    {
+        if (!(e is c5x)) return null;
+        var kv = placed.FirstOrDefault(x => x.Value == e);
+        if (kv.Key == null) return null;
+        lock (placements) return placements.FirstOrDefault(p => p.Id == kv.Key);
+    }
 
     // The zone was loaded (also when loading a save): spawn its placements whose condition holds.
     internal static void SpawnPlacements(c1a zone, string zoneId)
@@ -290,6 +298,8 @@ public static partial class World
                     if (p.Friendly) { c.Passive = true; c.SetAttitudeToPlayer(Attitude.Neutral); }
                 }
                 if (p.Store != null && !c.IsMerchant) c.MakeMerchant(p.Store);
+                // An object with a mod use but none of its own: a plain use aspect (never saved: placed entities aren't).
+                if (p.OnUse != null && e.GetAspect<bim>() == null) e.SetAspect(new bim(e));
                 if (p.Setup != null) p.Setup(c);
     }
 

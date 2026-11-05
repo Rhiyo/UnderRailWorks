@@ -479,6 +479,7 @@ static class UiHooks
         Group("stores", () => StoreHooks.Install(harmony));
         Group("loot rules", () => LootHooks.Install(harmony));
         Group("mod statuses", () => ModStatusStore.Install(harmony));
+        Group("usable objects", () => UseHooks.Install(harmony));
         Group("world hit test with insets", () => WorldHitTest.Install(harmony));
         Log.Write("ui: hooks in place");
     }
@@ -504,6 +505,7 @@ static class UiHooks
         Input.Tick();
         UiWindows.Tick();
         AssetStore.Apply();
+        try { Triggers.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("triggers: " + ex.Message); }
         UnderRailWorks.Hud.FlowTick();
         try { UiTextBox.Poll(); } catch (Exception ex) { Log.Write("ui: " + ex.Message); }
         try { Saves.Tick(); } catch (Exception ex) { Log.Write("saves: " + ex); }

@@ -638,6 +638,16 @@ and `bl1.yp` (zone) write, puts them back after, records owner / time left / sta
 restored after loading the quicksave; the save passed the stock loader. Field-name trap again: `br5.m_c` is `c` in
 the binary (the decompiler adds `m_` on clashes); every reflected field needs the fallback.
 
+## Area triggers, usable objects (Nov 2026)
+
+- `Triggers.Add(mod, zone, area, tiles, entered, left)` -> `AreaTrigger` (`PlayerOnly`, `Remove`): Works checks
+  where characters stand 5 times a second (the game's own triggers are saved objects of the area: not used).
+- `Placement.OnUse`: an object placed by a mod runs the handler when used (prefix on `bim.a(c5x, string, bool,
+  bool)`); an object without a use of its own gets a plain `bim` (placed entities are never saved). `World.Use(user,
+  placementId)`. Stock "device" blueprints (levers, consoles) have no use aspect: their uses come from the maps.
+- Tested: the trigger's enter, a placed lever used through `World.Use` (the handler ran). Not verified: a mouse click
+  on it in the test runner (it was off screen).
+
 ## The test mods (Nov 2026)
 
 Built to find what the framework lacks (each gap went into Works, never into the mod), all built without the game:

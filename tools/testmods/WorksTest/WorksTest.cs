@@ -16,6 +16,7 @@ public sealed class WorksTest : WorksMod
     string stimPath;
     bool musicOn;
     ModStatus glow;
+    AreaTrigger trigger;
     TimeSpan gameTime;
     bool blockUse;
     public override void PostLoad() { Log.Info("cross-mod call: " + Mods.Call("WorksTest", "Echo", "hi") + ", typed: " + Mods.Api<TestApi>("WorksTest").Echo("there")); }
@@ -31,8 +32,28 @@ public sealed class WorksTest : WorksMod
         Stores.AddOnce(this, "bigbret", "armor\\jkktacticalvest", 1);
         Loot.Add(this, (who, box) => who != null && who.Name.Contains("Rathound"), "components\\scraps\\fabricscraps", 1.0, 7);
         glow = ModStatuses.Define(this, "glow", "Works Glow", "A test status from a mod: +1 to a counter each turn.", "Status.PsiBoost");
+        Commands.Add(this, "wt.probe", "wt.probe: which device blueprints are usable", args =>
+        {
+            var pp = World.Player.Position; var t = World.FreeTilesNear((int)pp.X, (int)pp.Y, 5).Skip(4).FirstOrDefault();
+            var found = new System.Collections.Generic.List<string>();
+            foreach (var bp in new[] { "objects\\devices\\largelever", "objects\\devices\\levery", "objects\\devices\\sfconsole", "objects\\devices\\sfconsole1", "objects\\devices\\powerplantconsoleoff", "objects\\devices\\powerplantconsoleon" })
+            {
+                World.Place(new Placement { Id = "wt_probe_" + found.Count, Zone = World.ZoneId, Area = World.Player.Area.Name, X = t.X, Y = t.Y, Blueprint = bp, OnUse = who => Log.Info("probe used") });
+                found.Add(bp + ": " + World.Use(World.Player, "wt_probe_" + found.Count));
+            }
+            return string.Join("; ", found);
+        });
+        Commands.Add(this, "wt.lever", "wt.lever: the player uses the test lever", args => { Commands.CloseConsole(); return "use: " + World.Use(World.Player, "wt_lever"); });
         Commands.Add(this, "wt.glow", "wt.glow: the test status on the player", args => { glow.Apply(World.Player, 40); Commands.CloseConsole(); return "glow on: " + glow.Has(World.Player); });
         glow.OnTick += (who, stacks) => Log.Info("glow tick on " + who.Name + " (" + stacks + ")");
+        GameEvents.ZoneLoaded.Add(this, (zone, first) =>
+        {
+            var pp = World.Player.Position; int px = (int)pp.X, py = (int)pp.Y;
+            if (trigger != null) trigger.Remove();
+            trigger = Triggers.Add(this, zone, null, new Microsoft.Xna.Framework.Rectangle(px - 1, py - 1, 3, 3), who => Log.Info("trigger: entered by " + who.Name), who => Log.Info("trigger: left by " + who.Name));
+            var t = World.FreeTilesNear(px, py, 4).Skip(3).FirstOrDefault();
+            World.Place(new Placement { Id = "wt_lever", Zone = zone, Area = World.Player.Area.Name, X = t.X, Y = t.Y, Blueprint = "objects\\devices\\lever", OnUse = who => Log.Info("lever used by " + (who == null ? "?" : who.Name)) });
+        });
         Music.Add(this, "workstest", "music/test.ogg");
         Music.Override(this, () => musicOn ? "workstest" : null);
         Items.ModifyTooltip(this, (item, tip) => { tip.AddSeparator(); tip.AddValue("Works", item.Code + (tip.InTrade ? " (trade)" : "")); });
