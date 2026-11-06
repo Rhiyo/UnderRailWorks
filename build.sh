@@ -91,6 +91,8 @@ cp "$HERE"/lib/fna/x64/*.dll "$OUT64/x64/"
 # The shipped mods, into dist's Mods/.
 for m in UnderRailFixes Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic BountyHunter Beastmaster Hunger Ambushes Scavenger CharacterBuilder HousePets; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
 cp "$HERE/mods/FieldMedic/treat.wav" "$OUT/Mods/FieldMedic/"
+# Content packs (JSON only, no code).
+for m in CampfireCooking; do rm -rf "$OUT/Mods/$m"; cp -r "$HERE/mods/$m" "$OUT/Mods/$m"; done
 # HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
 mod HelloUI "$HERE/build/Mods" "$HERE/examples/HelloUI"
 # HelloQuest (quests, dialogs, variables): built without the game, into build/Mods for testing.

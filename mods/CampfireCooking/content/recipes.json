@@ -1,0 +1,10 @@
+{
+  "recipes": [
+    { "id": "hopperSteak", "name": "Cave Hopper Steak", "category": "Processing",
+      "result": "consumables\\food\\cavehoppersteak", "count": 1, "known": true,
+      "slots": [ { "label": "Cave Hopper Meat", "code": "food.hopperMeat" } ] },
+    { "id": "friedTongue", "name": "Fried Siphoner Tongue", "category": "Processing",
+      "result": "consumables\\food\\friedsiphonertongue", "count": 1, "known": true,
+      "slots": [ { "label": "Siphoner Tongue", "code": "siphonerTongue" } ] }
+  ]
+}

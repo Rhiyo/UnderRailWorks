@@ -193,6 +193,13 @@ public sealed class WorksTest : WorksMod
         Commands.Add(this, "wt.asknum", "wt.asknum: Ui.AskNumber 1-20", args => { Commands.CloseConsole(); return "asknum: " + Ui.AskNumber(this, "How many rations?", 1, 20, 5, n => Log.Info("number " + n)); });
         Commands.Add(this, "wt.confirm", "wt.confirm: Ui.Confirm", args => { Commands.CloseConsole(); return "confirm: " + Ui.Confirm(this, "Release Max", "Give Max back to the Core City Housing Corporation? You won't get your charons back, and this can't be undone.", () => Log.Info("confirmed yes"), onNo: () => Log.Info("confirmed no")); });
         Commands.Add(this, "wt.choose", "wt.choose: Ui.Choose with three buttons", args => { Commands.CloseConsole(); return "choose: " + Ui.Choose(this, "Feeding time", "What do you give Biscuit?", i => Log.Info("chose " + i), "Hopper steak", "Raw meat", "Nothing"); });
+        Commands.Add(this, "wt.cook", "wt.cook: 3 Cave Hopper Meat and a Siphoner Tongue, then the crafting window", args =>
+        {
+            Commands.CloseConsole();
+            World.Player.Inventory.Add("consumables\\food\\cavehoppermeat", 3); World.Player.Inventory.Add("components\\bio\\siphonertongue", 1);
+            Log.Info("cook: known " + string.Join(", ", Crafting.Known.Where(k => k.Name.Contains("Steak") || k.Name.Contains("Tongue")).Select(k => k.Name)) + "; window " + Windows.Open(Window.Crafting));
+            return "cook";
+        });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

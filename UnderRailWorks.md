@@ -1384,3 +1384,12 @@ fight instead). The `]` key and the ammo bar didn't reload in a headless run.
   window). `UiPanel.Background` on a window sets its see-through-ness; `Clear` keeps the title and button. Tested at
   2560x720 and 5120x1440 (the player's config): Loadouts, Merchant Ledger, Vendor Directory; close button, drag,
   reopen at the dragged place, Escape. Mod text stays C13b at every interface size (UI.md, Known debt).
+
+## Campfire Cooking (Nov 2026)
+
+`mods/CampfireCooking`: a content pack (JSON only): Cave Hopper Meat -> Cave Hopper Steak, Siphoner Tongue -> Fried
+Siphoner Tongue, known from the start, in the crafting window's Processing tab. The game's own description of the
+meat says it "should not be consumed raw. It's much tastier in the form of a cooked meal", but the base game has no
+recipe for it. Tested: the recipe lists under Processing, the meat goes in its slot, Create makes one steak from one
+meat; the leftover meat stays in the slot until the window closes (the game's crafting panel, ahu.i: leftovers back
+into the slots; ahu.f returns them to the bag), so checking the bag with the window open looks like they were used.
