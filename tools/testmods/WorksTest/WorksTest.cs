@@ -132,6 +132,22 @@ public sealed class WorksTest : WorksMod
             Log.Info("gunner: " + (g == null ? "none" : g.Name + " at " + t));
             return g == null ? "no gunner" : "spawned " + g.Name;
         });
+        Commands.Add(this, "wt.house", "wt.house: travel to the Core City player house", args => "travel: " + World.Travel("cc_ph", "FromOutside"));
+        Commands.Add(this, "wt.leave", "wt.leave: travel out of the house to the residential district", args => "travel: " + World.Travel("cc-res", "FromPlayerHouse"));
+        Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
+        {
+            var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();
+            Log.Info("zoo [" + World.ZoneId + (Combat.InCombat ? ", in combat" : "") + "] " + string.Join("; ", lines));
+            return lines.Count + " characters";
+        });
+        Commands.Add(this, "wt.petplace", "wt.petplace [dx dy name]: a cat placement near the player (re-applied on every load of this zone)", args =>
+        {
+            var p = World.Player; if (p == null) return "no player";
+            int dx = args.Length > 0 ? int.Parse(args[0]) : 3, dy = args.Length > 1 ? int.Parse(args[1]) : 0;
+            string name = args.Length > 2 ? args[2] : null;
+            World.Place(new Placement { Id = "wt_pet_" + dx + "_" + dy + "_" + name, Zone = World.ZoneId, Area = p.Area.Name, X = (int)p.Position.X + dx, Y = (int)p.Position.Y + dy, Blueprint = "creatures\\cat", Name = name });
+            return "placed";
+        });
         Commands.Add(this, "wt.trapslot", "wt.trapslot: the bag's first trap into quick slot 1", args =>
         {
             var p = World.Player; var trap = p == null ? null : p.Inventory.Items.FirstOrDefault(i => i.Code != null && i.Code.StartsWith("trap."));
