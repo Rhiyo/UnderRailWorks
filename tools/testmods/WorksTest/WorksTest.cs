@@ -208,6 +208,10 @@ public sealed class WorksTest : WorksMod
             Log.Info("hurt " + name + ": " + before + " -> " + (c.Area == null ? "gone" : c.Health.ToString()) + " (dealt " + dealt + ")");
             return "hurt";
         });
+        // A new zone: Mods\WorksTest\data\Maps\wt_testzone.uz + _L1.uzl, copied into the test copy from a game zone
+        // (never committed: game files).
+        Zones.Add(this, "wt_testzone", "Works Test Zone", "wa-shop");
+        Commands.Add(this, "wt.zone", "wt.zone: travel to the mod zone wt_testzone", args => "travel: " + World.Travel("wt_testzone", "FromElevator"));
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

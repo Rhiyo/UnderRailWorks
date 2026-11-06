@@ -1093,8 +1093,9 @@ Mods never ship copies of the game's files. Three ways to touch content, all app
    a transition to a missing map is the unknown. Possibly Works removes its additions from zones before each
    save and puts them back after, so saves never hold them. To test.
 
-**To prove next**: the zone loader overlay with one small new zone; adding a transition to an existing zone at load;
-a cross-zone waypoint; what the stock game does with a save that has a transition to a missing zone.
+**Proven (Nov 2026)**: a new zone from a mod's folder (`Zones.Add`, below, "New zones"). **To prove next**: a
+transition placed in an existing zone at load (today: a placed object whose OnUse calls World.Travel works the same
+way for the player); a new zone made from scratch (needs the map editor).
 
 ## How the API grows
 
@@ -1408,3 +1409,24 @@ into the slots; ahu.f returns them to the bag), so checking the bag with the win
   (followers arrive before it).
 - Tested: feeding, taking the dog out (arrived with its dialog), a fatal hit cancelled and the dog home again, the cat
   out and back in after a zone reload (one cat, no duplicate), "go home" inside the house (stayed when the player left).
+
+
+## New zones (Nov 2026)
+
+`Zones.Add(mod, id, name, likeZone)`: a zone from `Mods\<mod>\data\Maps\<id>.uz` + `<id>_L1.uzl` (the game's own
+format; a map editor makes them). `World.Travel(id, waypoint)` takes the player there, to one of the zone's own
+waypoints. How the game loads a zone (traced Nov 2026): the ChangeZone workflow (`di4`) ends in `d6f.arp`, which looks
+the id up in the world index (`SouthUnderrail.world` -> `dse`, a list of `bfc`: id, name, music, locale type, base
+level; `d6f.aq0()`), seeds a first visit by copying `<id>_L1.uzl` into the save's store (`d6f.a(bfc)`: `bmg.a(key,
+path)`), then `bl1.a(id)` reads the static `<id>.uz` from the game's data (`c1a.a(path)`) and the level from the store.
+Works adds the zone to the index (a postfix on `aq0`, details copied from likeZone), seeds the first visit from the
+mod's file, and serves the `.uz` from the mod's folder when the game's data has none (a prefix on `c1a.a`).
+Entry points are the zone's own waypoints (`c1a.g(name)`, case-sensitive). Extra "autolayer" files are only searched
+in the game's folder (`d6f.ars`), not needed for a simple zone.
+
+Tested with a copy of a game zone under a new id (test copy only, never committed): first visit (the zone, its
+characters and waypoint), leaving and coming back (not a first visit: its state came from the save), quicksaves
+inside and after. **Saves:** the stock game refuses a save made inside a mod zone with its own message ("Failed to
+load the saved game. Locale with id 'wt_testzone' not found in the current game"), nothing breaks; a save made after
+leaving the zone loads and plays in the stock game (the zone's level stays in the save, unused). So, as with any mod
+that adds places, a save inside the mod's zone needs the mod.

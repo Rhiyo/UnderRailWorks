@@ -1715,3 +1715,9 @@ The world view (a7m): the map's drawing for one frame.
 
 The player about to leave the zone (an exit, a door between maps, a script, World.Travel). To: the destination zone's id, Entry: the entry point there.
 
+
+## Zones  _(class, Zones.cs)_
+
+- `static void Add(WorksMod mod, string id, string name, string likeZone = null)` — A zone from the mod's data\Maps folder (<id>.uz and <id>_L1.uzl). likeZone: a game zone whose music, locale type and level it takes (null: none). Prefix the id with the mod's id.
+- `static bool IsModZone(string id)` — A zone a mod added (true), so not one of the game's.
+- `static IList<string> Added`
