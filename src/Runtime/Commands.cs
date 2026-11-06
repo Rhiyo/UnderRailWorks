@@ -103,6 +103,7 @@ namespace UnderRailWorks
                 return "reloaded pictures and translations, settings of " + n + " mods";
             });
             Add("UnderRailWorks", "works.dialog", "works.dialog <name>: writes an outline of a game dialog (lines, conditions, effects), e.g. works.dialog characters\\cc_jyles", a => a.Length == 0 ? "which dialog?" : "written: " + (Dialogs.WriteDescription(a[0]) ?? "no such dialog"));
+            Add("UnderRailWorks", "works.split", "works.split: the game's own split-stack popup (for comparing Ui.AskNumber)", a => { CloseConsole(); UiPopups.RawSplit(10); return "split"; });
             Add("UnderRailWorks", "works.content", "works.content: writes UnderRailWorks-content.txt (item paths, blueprints, stores...)", a => "written: " + ContentIndex.Write());
         }
     }

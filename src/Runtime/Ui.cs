@@ -72,6 +72,8 @@ public static partial class Ui
     }
 
     // A text box (the game's own field, c68, as its split-stack dialog sets one up): click it to type; Text reads it.
+    // Asking the player for a name or a number? Don't build a window around this: use Ui.Ask (text) or Ui.AskNumber,
+    // the game's own popups, right at every interface size (UI.md). This is for a field that stays in your own panel.
     public static UiTextBox TextBox(int width, int maxLength = 40)
     {
         var theme = wj.a();

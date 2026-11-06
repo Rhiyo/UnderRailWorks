@@ -1357,3 +1357,14 @@ fight instead). The `]` key and the ammo bar didn't reload in a headless run.
   above the box: the game's frame, fonts, button sizes and screen dim for every interface size. The old window had
   fixed offsets and looked wrong at 5120x1440. The box gets the keyboard on opening and again if a closing
   conversation takes it back. Rules for interface work: UI.md.
+- `Ui.AskNumber` (the split-stack popup `tg`: its slider's range and value set, the "remainder" label hidden),
+  `Ui.Confirm` / `Ui.Choose` (the message box `bnr`, sized from the text measured with its own fonts), all in
+  UiPopups.cs with `Ui.Ask`; console `works.split` shows the game's own split popup for comparison. Tested at
+  2560x720 and at the player's 5120x1440 config: each renders like the game's own and answers with Enter.
+  `Ui.Window` / `Ui.TextBox` comments and the table at the top of docs/API.md point at them.
+- **Occlusion and the game's "unseen" rules** (eg0, the creature layer builder): a stealthed character the player
+  hasn't detected gets no layers at all (not drawn, no outline, not pickable); one only partly detected is drawn
+  but not pickable and gets no outline; characters out of the player's line of sight aren't drawn. Occluded
+  characters and "Select characters behind scenery" only work on outline layers, so they can't reveal or target
+  anything the game hides: they cover what Tab already shows and allows. Hit chances, cover and stealth detection
+  are computed on the map, not from what's on screen.

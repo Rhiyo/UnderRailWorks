@@ -14,10 +14,14 @@ wide after insets) can be clipped, overlapping or tiny elsewhere.
   popup size (`h7`), button size (`h8`), text field height (`h8.d`), fonts (`gm`, text offset `gn`), frame textures
   (`f`, `b8`, `b9`). Place parts from measured sizes (`control.Size`, the font's `LineSpacing`/`MeasureString`), from
   the edges they belong to (e.g. buttons from the bottom-right corner, as the game does), never at fixed numbers.
+- **Asking the player something: use `Ui.Ask` (text), `Ui.AskNumber` (a number), `Ui.Confirm` (yes/no) or
+  `Ui.Choose` (buttons)** (UiPopups.cs). They are the game's own popups, tested at 2560x720 and 5120x1440. Never
+  build a window with a text box or buttons for a question. The table at the top of docs/API.md says what to use when.
 - **Reuse the game's own windows and popups before building one.** Many exist and are already right for every size:
   - `e4u`: the save-name popup (text box, Save/Cancel, screen dimmed, Escape cancels). `Ui.Ask` is built on it.
-  - `tg`: the split-stack popup (a number).
-  - `bnr`: the message / confirmation box with buttons and a countdown (UnderRailFixes 1.x's keep/revert dialog).
+  - `tg`: the split-stack popup (slider + number; no frame, plain-text buttons, as the game draws it). `Ui.AskNumber`.
+  - `bnr`: the message box (title, word-wrapped text, a full-width row per button; size given in base units and
+    scaled by the interface size, `wj.g4`). `Ui.Confirm` / `Ui.Choose` size it from the text with its own fonts.
   - `ec9`: the game's framed pane (base of its popups); `amm` the closable-with-result base.
   Find more with `grep -l 'new c68('` (text boxes) or by their button texts in the decompile.
 - **Centre and clamp against the live screen size** (`bjn.b().aau().Size`, or the HUD root's), at the moment of
