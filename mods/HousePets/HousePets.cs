@@ -135,7 +135,7 @@ public sealed class HousePets : WorksMod
         if (pet == null) return;
         var names = T(pet.Kind == "dog" ? "dogNames" : "catNames").Split(',');
         var kind = T(pet.Kind).ToLowerInvariant();
-        Ui.Ask(this, "name", T("askTitle", kind), T("askQuestion"), pet.Name ?? names[random.Next(names.Length)], name =>
+        Ui.Ask(this, T("askQuestion", kind), pet.Name ?? names[random.Next(names.Length)], name =>
         {
             Saved.Set("name." + number, name);
             var c = World.Placed("housepets_" + number);

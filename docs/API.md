@@ -1133,6 +1133,7 @@ Creature outlines (eg0 builds them while Tab or the reverse-highlight key is hel
 
 - `static bool GameOff` — The game's Character Outlines option is "Never" (no outlines at all, as with Tab).
 - `static void Request(string mod, Func<bool> wanted)` — wanted: checked each frame (e.g. "my effect is on").
+- `static void PickThrough(string mod, Func<bool> wanted)` — Hidden outlines still pick their creature, as Tab's outlines do: the game checks outline layers before the world's and keeps their creature even when a wall comes next (a7m's hit test), so a character behind scenery can be hovered and clicked without Tab. Ask with Request too (no outline, nothing to pick). wanted: checked each frame.
 - `static bool IsHidden(Layer outline)` — Built only because a mod asked: the game doesn't draw it.
 - `static bool Has(LayerSet layers)` — The layer set (bym, new every frame) got an outline this frame: Tab would outline this creature.
 - `static IList<KeyValuePair<Layer, bool>> All(WorldView view)` — This frame's outlines in the game's pass order, with whether each is hidden (taken out of the pass); valid from ShaderPassStarting to ShaderPassDone.
@@ -1472,7 +1473,7 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static UiElement SmallButton(string text, int width, int height, Action click)` — A small button of any size drawn in the game's colours (Ui.Button is the game's own, at its own sizes).
 - `static UiChoice Choice(int width, IList<string> options, int index = 0)` — A button that steps through options on click (right-click: back).
 - `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD (null if there is no HUD). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one.
-- `static UiWindow Ask(WorksMod mod, string id, string title, string question, string initial, Action<string> onAnswer, int maxLength = 30)` — A small window asking for a line of text (a name...): OK or Enter passes the trimmed text to onAnswer (not when empty); Cancel or the close box don't. The text box has the keyboard from the start. Ui.Ask(this, "name", "Name your cat", "What will you call it?", "Whiskers", name => { ... });
+- `static bool Ask(WorksMod mod, string question, string initial, Action<string> onAnswer, string okText = "OK")` — Asks for a line of text (a name...) in the game's own popup, the one that names a save: its frame, text box, buttons and fonts for the current interface size, the screen dimmed behind it, centred. The question goes above the box. OK (or Enter) passes the trimmed text to onAnswer (OK stays disabled while it's empty); Cancel or Escape don't. Letters, digits and spaces, up to 30 (the save popup's rules). False if there's no interface. Ui.Ask(this, "What will you call your dog?", "Rex", name => { ... });
 
 ## UiCanvas  _(class, Ui.cs)_
 

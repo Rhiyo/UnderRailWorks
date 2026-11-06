@@ -21,8 +21,7 @@
   "name": "::Give it a name.::",
   "rename": "::Call it something else.::",
   "leave": "::Leave it be.::",
-  "askTitle": "Name your {0}",
-  "askQuestion": "What will you call it?",
+  "askQuestion": "What will you call your {0}?",
   "named": "Your {0} is now called {1}",
   "catNames": "Whiskers,Rust,Mole,Sprocket,Soot,Biscuit",
   "dogNames": "Rex,Bolt,Scrap,Chomper,Tank,Rivet"

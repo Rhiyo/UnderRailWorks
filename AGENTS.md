@@ -55,6 +55,11 @@ Goal was "drop in, no launch options, delete to remove". Under Proton every no-p
 - A launcher exe that patches in memory worked (an earlier version) but needs a Steam launch option.
 - Shipping a patched exe = redistributing the game. Don't.
 
+## Interface work
+
+Anything the player sees in the interface must work at every resolution, aspect ratio and interface size: read
+[UI.md](UI.md) first (reuse the game's own popups, take sizes from its theme, test at the player's size too).
+
 ## Repository
 
 ```

@@ -1339,3 +1339,21 @@ fight instead). The `]` key and the ammo bar didn't reload in a headless run.
   taken, stock rooms and exits intact), delivery, wandering (the game's idle AI: within the living room and the
   passage by its lockers), the house's plasma patrol (faction playerHouse, Ally) ignoring them, naming, quicksave and
   quickload (names kept). A pet on a tile hemmed in by furniture never moves; the mod picks open tiles.
+
+## Picking characters behind scenery; Ui.Ask on the game's popup (Nov 2026)
+
+- **How the game picks what's under the mouse** (`a7m.a(x, y, out bool)`): every layer drawn with a pick type
+  (`a2f.p`, `dm6`: a none, b interactive, c solid scenery with height) goes into `a7m.y` in drawing order; the test
+  walks it front to back, pixel-exact (`a7m.a(a2f, Point)`: the sprite mask or a GPU readback). Solid scenery (`dm6.c`)
+  ends the search in normal cursor mode, so a character behind a wall can't be picked. Shader-pass layers (Tab's
+  outlines, added after the world) are checked first and their creature is kept even when a wall follows: that's why
+  Tab lets you click through walls. Characters out of the player's line of sight aren't drawn at all, so nothing
+  (Tab included) can pick them.
+- `Outlines.PickThrough(mod, wanted)`: hidden outlines (built for a mod's request, not drawn) go into the pick list as
+  Tab's would. UnderRailFixes: "Select characters behind scenery" (default on, works with the effects off).
+  Tested A/B in the same scene by toggling the setting live (works.reload): a dog behind the living room's front
+  wall, seen through the keyhole, is picked only with the option.
+- `Ui.Ask(mod, question, initial, onAnswer, okText)` now opens the game's save-name popup (`e4u`) with the question
+  above the box: the game's frame, fonts, button sizes and screen dim for every interface size. The old window had
+  fixed offsets and looked wrong at 5120x1440. The box gets the keyboard on opening and again if a closing
+  conversation takes it back. Rules for interface work: UI.md.

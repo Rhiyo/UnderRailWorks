@@ -66,37 +66,67 @@ public static partial class Ui
 
 public static partial class Ui
 {
-    // A small window asking for a line of text (a name...): OK or Enter passes the trimmed text to onAnswer (not when
-    // empty); Cancel or the close box don't. The text box has the keyboard from the start.
-    //   Ui.Ask(this, "name", "Name your cat", "What will you call it?", "Whiskers", name => { ... });
-    public static UiWindow Ask(WorksMod mod, string id, string title, string question, string initial, Action<string> onAnswer, int maxLength = 30)
+    // Asks for a line of text (a name...) in the game's own popup, the one that names a save: its frame, text box,
+    // buttons and fonts for the current interface size, the screen dimmed behind it, centred. The question goes above
+    // the box. OK (or Enter) passes the trimmed text to onAnswer (OK stays disabled while it's empty); Cancel or Escape
+    // don't. Letters, digits and spaces, up to 30 (the save popup's rules). False if there's no interface.
+    //   Ui.Ask(this, "What will you call your dog?", "Rex", name => { ... });
+    public static bool Ask(WorksMod mod, string question, string initial, Action<string> onAnswer, string okText = "OK")
     {
-        var w = Window(mod, id, title, 360, 128);
-        if (w == null) return null;
-        Add(w, Label(question, 340), 10, w.Top + 4);
-        var box = TextBox(340, maxLength);
-        box.Text = initial ?? "";
-        Add(w, box, 10, w.Top + 30);
-        Action ok = () =>
+        var screen = bjn.b() == null ? null : bjn.b().aau();
+        if (screen == null) return false;
+        var popup = new e4u(string.IsNullOrEmpty(initial) ? "<New>" : initial);
+        var ok = AskSave.GetValue(popup) as dak;
+        if (ok != null && okText != null) ok.Text = okText;
+        if (!string.IsNullOrEmpty(question))
         {
-            if (!w.IsOpen) return;
-            var text = box.Text.Trim();
-            w.Close();
+            // The question above the box: the popup grows by a line of the theme's font and its parts move down.
+            var theme = wj.a();
+            string fontName = theme.c() ? ClassicFont.GetValue(null) as string : theme.gm;
+            var font = dr3.a() == null ? null : dr3.a().GetResource<Microsoft.Xna.Framework.Graphics.SpriteFont>(fontName);
+            int margin = 10, lineHeight = font == null ? 22 : font.LineSpacing, width = UnderrailDropdownScroll.W(popup.Size);
+            var label = new avo();
+            LabelFont.Invoke(label, new object[] { fontName });
+            label.a(cab.a);
+            label.Text = question;
+            label.Size = new esj(width - 2 * margin, lineHeight + 4);
+            foreach (euz part in popup.Controls.Cast<euz>().ToList()) UnderrailDropdownScroll.Move(part, part.Location.X, part.Location.Y + lineHeight + margin / 2);
+            popup.Size = new esj(width, UnderrailDropdownScroll.H(popup.Size) + lineHeight + margin / 2);
+            popup.aox(label);
+            UnderrailDropdownScroll.Move(label, margin, margin);
+        }
+        popup.a((EventHandler)((sender, e) =>
+        {
+            var text = popup.e();
             if (text.Length == 0 || onAnswer == null) return;
             try { onAnswer(text); } catch (Exception ex) { Log.Write("mods: " + mod.Id + ": an answer failed: " + ex.Message); }
-        };
-        Add(w, Button("OK", ok), 10, w.Top + 66);
-        Add(w, Button("Cancel", () => w.Close()), 130, w.Top + 66);
-        UiWindows.Answers[w] = ok;
-        w.Closed += () => UiWindows.Answers.Remove(w);
-        box.Focus();
-        return w;
+        }));
+        popup.bj();     // modal, on the interface's root
+        UnderrailDropdownScroll.Move(popup, (UnderrailDropdownScroll.W(screen.Size) - UnderrailDropdownScroll.W(popup.Size)) / 2, (UnderrailDropdownScroll.H(screen.Size) - UnderrailDropdownScroll.H(popup.Size)) / 2);
+        popup.d();      // the box has the keyboard (again over the next frames: a conversation closing meanwhile takes it back)
+        UiWindows.FocusAsk(popup);
+        return true;
     }
+    static readonly System.Reflection.FieldInfo ClassicFont = typeof(egg).GetField("b", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);     // egg.b: a field and a method
+    // e4u's Save button (its fields: c Save, d Cancel, b the text box).
+    static readonly System.Reflection.FieldInfo AskSave = typeof(e4u).GetField("c", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
+        ?? typeof(e4u).GetField("m_c", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly);
 }
 
 static class UiWindows
 {
-    internal static readonly Dictionary<UiWindow, Action> Answers = new Dictionary<UiWindow, Action>();     // Ui.Ask: Enter answers
+    static e4u asking;
+    static int askFrames;
+    static readonly System.Reflection.FieldInfo AskBoxField = typeof(e4u).GetField("b", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly)
+        ?? typeof(e4u).GetField("m_b", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly);
+    internal static void FocusAsk(e4u popup) { asking = popup; askFrames = 30; }
+    static void KeepAskFocus()
+    {
+        if (asking == null) return;
+        var box = AskBoxField == null ? null : AskBoxField.GetValue(asking) as c68;
+        if (asking.Parent == null || box == null || --askFrames <= 0) { asking = null; return; }
+        if (!box.IsFocus) asking.d();
+    }
     internal const int TitleHeight = 22, CloseSize = 16;
     internal static readonly List<UiWindow> Open = new List<UiWindow>();
     static UiWindow dragging;
@@ -130,10 +160,9 @@ static class UiWindows
 
     internal static void Tick()
     {
+        KeepAskFocus();
         Open.RemoveAll(w => !w.IsOpen);
         if (Open.Count == 0) { dragging = null; return; }
-        Action answer;
-        if (Input.Pressed(Keys.Enter) && Answers.TryGetValue(Open[Open.Count - 1], out answer)) { answer(); return; }
         var m = Input.Mouse;
         if (dragging == null && Input.MousePressed(MouseButton.Left))
         {

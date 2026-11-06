@@ -69,6 +69,15 @@ public static class Outlines
     // wanted: checked each frame (e.g. "my effect is on").
     public static void Request(string mod, Func<bool> wanted) { Requests.Add(wanted); }
 
+    // Hidden outlines still pick their creature, as Tab's outlines do: the game checks outline layers before the world's
+    // and keeps their creature even when a wall comes next (a7m's hit test), so a character behind scenery can be
+    // hovered and clicked without Tab. Ask with Request too (no outline, nothing to pick). wanted: checked each frame.
+    public static void PickThrough(string mod, Func<bool> wanted) { PickRequests.Add(wanted); }
+    static readonly List<Func<bool>> PickRequests = new List<Func<bool>>();
+    static bool PickWanted() { foreach (var r in PickRequests) { try { if (r()) return true; } catch { } } return false; }
+    // a7m.y: the layers the hit test checks, in drawing order (List<cy5>; cy5(layer, from the shader pass)).
+    static readonly System.Reflection.FieldInfo HitList = typeof(a7m).GetField("y", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly);
+
     static readonly ConditionalWeakTable<a2f, object> HiddenSet = new ConditionalWeakTable<a2f, object>();
     static readonly ConditionalWeakTable<bym, object> HasSet = new ConditionalWeakTable<bym, object>();
     static readonly object Mark = new object();
@@ -126,6 +135,11 @@ public static class Outlines
         if (all == null || !all.TryGetValue("Outline", out outlines)) return;
         foreach (var o in outlines) list.Add(new KeyValuePair<a2f, bool>(o, IsHidden(o)));
         outlines.RemoveAll(IsHidden);
+        if (HitList != null && PickWanted())
+        {
+            var hits = HitList.GetValue(view) as List<cy5>;
+            if (hits != null) foreach (var kv in list) if (kv.Value) hits.Add(new cy5(kv.Key, true));
+        }
     }
 
     internal static void AfterPass(a7m view)

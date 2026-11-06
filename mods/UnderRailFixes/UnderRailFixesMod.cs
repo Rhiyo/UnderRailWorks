@@ -30,7 +30,9 @@ public sealed class UnderRailFixesMod : WorksMod
         }
         // Outlines for every creature Tab would outline, while the effect is on (Works hides the extra ones; we draw them
         // on the covered part only).
-        Outlines.Request(Name, () => ShowCovered.On);
+        Outlines.Request(Name, () => ShowCovered.On || CoveredSettings.Config.SelectBehindScenery);
+        // Characters behind scenery can be hovered and clicked as if Tab were held.
+        Outlines.PickThrough(Name, () => CoveredSettings.Config.SelectBehindScenery);
         WorldDraw.LayerStarting.Add(this, ShowCovered.Drawn);
         WorldDraw.DrawLayer.Add(this, ShowCovered.DrawLayer);
         WorldDraw.DrawTileExtras.Add(this, ShowCovered.TileExtras);
@@ -58,6 +60,8 @@ public sealed class FixesConfig : ModConfig
     public int KeyholeTransparency = 75;
     [Label("Keyhole size"), Range(50, 200), Increment(5), Tooltip("The keyhole's size, in percent of the default (about the character's height).")]
     public int KeyholeSize = 100;
+    [Label("Select characters behind scenery"), Tooltip("Characters behind walls and other scenery can be hovered and clicked\nwithout holding Tab, as the game allows while Tab is held.\nWorks with the effects off too.")]
+    public bool SelectBehindScenery = true;
     [Hidden, Tooltip("Debugging: 1 = log the layers in each hole every few seconds; 2 = also save the keyhole's pictures once (keyhole-*.png).")]
     public int KeyholeDebug = 0;
 }

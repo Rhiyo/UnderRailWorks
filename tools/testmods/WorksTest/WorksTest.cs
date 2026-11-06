@@ -28,6 +28,8 @@ public sealed class WorksTest : WorksMod
     TimeSpan gameTime;
     bool blockUse;
     public override void PostLoad() { Log.Info("cross-mod call: " + Mods.Call("WorksTest", "Echo", "hi") + ", typed: " + Mods.Api<TestApi>("WorksTest").Echo("there")); }
+    bool logOutlines, hoverWatch;
+    string lastHover;
     public override void Load()
     {
         GameEvents.StatusApplying.Add(this, c => { Log.Info("status applying " + c.Code + " on " + (c.Character == null ? "?" : c.Character.Name)); if (c.Code == "Hidden" && Data.GetBool("noHide")) c.Cancel = true; });
@@ -172,6 +174,20 @@ public sealed class WorksTest : WorksMod
             }
             Log.Info(sb.ToString());
             return "tiles";
+        });
+        Commands.Add(this, "wt.hover", "wt.hover: the character under the mouse", args => { var h = World.Hovered; Log.Info("hovered: " + (h == null ? "none" : h.Name) + " mouse " + Input.Mouse); return "hover"; });
+        Commands.Add(this, "wt.outlines", "wt.outlines: next frame, log the outlines (hidden or not) with their character and bounds", args => { logOutlines = true; return "outlines"; });
+        WorldDraw.ShaderPassStarting.Add(this, view =>
+        {
+            if (!logOutlines) return;
+            logOutlines = false;
+            Log.Info("outlines: " + string.Join("; ", Outlines.All(view).Select(kv => { var c = kv.Key.Owner.Entity.Character; return (c == null ? "?" : c.Name) + (kv.Value ? " hidden" : "") + " " + kv.Key.Bounds; })));
+        });
+        Commands.Add(this, "wt.hoverwatch", "wt.hoverwatch: log the hovered character whenever it changes (every frame, outside the console)", args =>
+        {
+            if (!hoverWatch) { hoverWatch = true; GameEvents.Update.Add(this, sec => { var h = World.Hovered; var n = h == null ? "none" : h.Name; if (n != lastHover) { lastHover = n; Log.Info("hover now: " + n + " mouse " + Input.Mouse); } }); }
+            Commands.CloseConsole();
+            return "watching";
         });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
