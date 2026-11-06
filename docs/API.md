@@ -1491,7 +1491,7 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static UiSlider Slider(int width, double min, double max, double value)` — A slider from min to max (drag or click; the value is drawn on it).
 - `static UiElement SmallButton(string text, int width, int height, Action click)` — A small button of any size drawn in the game's colours (Ui.Button is the game's own, at its own sizes).
 - `static UiChoice Choice(int width, IList<string> options, int index = 0)` — A button that steps through options on click (right-click: back).
-- `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD (null if there is no HUD). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose (buttons). Its title bar and close box are fixed sizes (UI.md, "Known debt"): check it at other interface sizes.
+- `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD (null if there is no HUD). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
 
 ## UiCanvas  _(class, Ui.cs)_
 
@@ -1554,9 +1554,9 @@ A handle on an interface element (one of the game's controls inside).
 
 ## UiPanel  _(class, Ui.cs)_
 
-- `Color Background`
-- `Color Border`
-- `void Clear()` — Removes everything added to the panel (to rebuild its contents).
+- `Color Background` — A panel's fill. On a window (the game's frame) only its alpha counts: how see-through the window is.
+- `Color Border` — A panel's frame colour (windows keep the game's frame).
+- `void Clear()` — Removes everything added to the panel (to rebuild its contents); a window keeps its title and close button.
 
 ## UiRows  _(class, UiWidgets.cs)_
 
@@ -1589,6 +1589,7 @@ Rows of text with buttons at their right end, in an area of a panel or window (a
 
 ## UiWindow  _(class, UiWindow.cs)_
 
+- `int TitleHeight` — The title bar's height at this interface size.
 - `int Top` — Where content starts (below the title bar).
 - `bool IsOpen`
 - `event Action Closed` — Runs once when the window closes (button, Escape, Close, or the HUD going away).

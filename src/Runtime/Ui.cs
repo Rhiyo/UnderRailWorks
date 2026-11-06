@@ -31,7 +31,12 @@ public static partial class Ui
 {
     static readonly PropertyInfo ColorProperty = typeof(avo).GetProperty("Color");
     static readonly MethodInfo StyleButton = typeof(t1).GetMethod("a", BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(dak), typeof(wj) }, null);
-    static readonly FieldInfo DefaultFont = typeof(egg).GetField("aq", BindingFlags.Static | BindingFlags.Public);
+    // Mod text uses one font at every interface size (C13b). The interface size's own text font (wj.fo: C12sb small,
+    // C16sb large, C22sb huge) was tried in Nov 2026 and broke mods that lay text out by fixed line heights (Quest
+    // Tracker, HUD parts, Loadouts' labels): switching needs each mod to measure first (UI.md, Known debt).
+    static readonly FieldInfo DefaultFontField = typeof(egg).GetField("aq", BindingFlags.Static | BindingFlags.Public);
+    internal static string TextFontName() { return DefaultFontField == null ? null : DefaultFontField.GetValue(null) as string; }
+
     static readonly MethodInfo LabelFont = typeof(d7w).GetMethod("a", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null);
     static readonly MethodInfo NewTickBox = typeof(t1).GetMethod("b", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(bool) }, null);
     internal static readonly MethodInfo AbsoluteMethod = typeof(euz).GetMethod("at", Type.EmptyTypes);
@@ -42,7 +47,7 @@ public static partial class Ui
     public static UiElement Label(string text, int width = 300)
     {
         var label = new avo();
-        if (LabelFont != null && DefaultFont != null) LabelFont.Invoke(label, new[] { DefaultFont.GetValue(null) });
+        if (LabelFont != null) LabelFont.Invoke(label, new object[] { TextFontName() });
         label.a(cab.a);     // left
         label.Text = text;
         label.Size = new esj(width, 22);
@@ -79,7 +84,7 @@ public static partial class Ui
         var theme = wj.a();
         var box = new c68();
         box.Size = new esj(width, theme.c() ? 25 : 28);
-        var font = DefaultFont == null ? null : DefaultFont.GetValue(null) as string;
+        var font = TextFontName();
         if (font != null) BoxFont.Invoke(box, new object[] { font });
         if (!theme.c())
         {
@@ -264,7 +269,7 @@ public static partial class Ui
     internal static Microsoft.Xna.Framework.Graphics.SpriteFont DefaultFontFace()
     {
         var resources = dr3.a();
-        var name = DefaultFont == null ? null : DefaultFont.GetValue(null) as string;
+        var name = TextFontName();
         try { return resources == null || name == null ? null : resources.GetResource<Microsoft.Xna.Framework.Graphics.SpriteFont>(name); } catch { return null; }
     }
 
@@ -353,11 +358,17 @@ public sealed class UiDrag
 
 public class UiPanel : UiElement
 {
-    internal UiPanel(UiPanelControl panel) : base(panel) { }
-    public Color Background { get { return ((UiPanelControl)Control).Background; } set { ((UiPanelControl)Control).Background = value; } }
-    public Color Border { get { return ((UiPanelControl)Control).Border; } set { ((UiPanelControl)Control).Border = value; } }
-    // Removes everything added to the panel (to rebuild its contents).
-    public void Clear() { foreach (var child in Control.Controls.ToList()) UnderrailDropdownScroll.Remove(Control, child); }
+    internal UiPanel(euz panel) : base(panel) { }
+    // A panel's fill. On a window (the game's frame) only its alpha counts: how see-through the window is.
+    public Color Background
+    {
+        get { var p = Control as UiPanelControl; return p != null ? p.Background : new Color(12, 12, 12, Control.Color.A); }
+        set { var p = Control as UiPanelControl; if (p != null) p.Background = value; else Control.Color = Color.White * (value.A / 255f); }
+    }
+    // A panel's frame colour (windows keep the game's frame).
+    public Color Border { get { var p = Control as UiPanelControl; return p != null ? p.Border : Color.Transparent; } set { var p = Control as UiPanelControl; if (p != null) p.Border = value; } }
+    // Removes everything added to the panel (to rebuild its contents); a window keeps its title and close button.
+    public void Clear() { foreach (var child in Control.Controls.Cast<euz>().Where(c => !c.IsPrivateComponent).ToList()) UnderrailDropdownScroll.Remove(Control, child); }
 }
 
 // What a custom element draws with, during its draw: everything in interface units, through the game's interface batch

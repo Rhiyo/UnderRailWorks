@@ -1377,3 +1377,10 @@ fight instead). The `]` key and the ammo bar didn't reload in a headless run.
   and light (Dev Log -31), which the game enforces before drawing (above). No source found of an encounter that
   relies on a visible character staying hidden behind scenery; not verified by playing specific encounters.
   Ethereal characters get no outline, so the occlusion features skip them too.
+- `Ui.Window` is now the game's titled window (`a9t`, as the notes window): the interface size's frame, title strip,
+  font and close button (its own button closes it; Works still drags it by the title and closes it with Escape).
+  `height` still counts a 22-high title (content keeps its room; place it from `Top`); the window is widened to fit
+  its title and never shorter than the frame's picture (`a9t.f`, 96: shorter, the frame's middle drew above the
+  window). `UiPanel.Background` on a window sets its see-through-ness; `Clear` keeps the title and button. Tested at
+  2560x720 and 5120x1440 (the player's config): Loadouts, Merchant Ledger, Vendor Directory; close button, drag,
+  reopen at the dragged place, Escape. Mod text stays C13b at every interface size (UI.md, Known debt).

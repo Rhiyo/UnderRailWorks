@@ -35,7 +35,11 @@ wide after insets) can be clipped, overlapping or tiny elsewhere.
 
 ## Known debt
 
-- `Ui.Window` (mod windows: Merchant Ledger, Loadouts, Vendor Directory...) draws its own title bar (22 px) and close
-  box (16 px) at fixed sizes, and mods place their contents at fixed offsets. Fine at the test size; check at the
-  small and huge interface sizes and on 5120x1440 before relying on it, and move it onto `ec9` + theme sizes.
-- `Ui.Label` is 22 px tall whatever the font; size labels from the font instead.
+- `Ui.Window` is the game's titled window (`a9t`: frame, title strip, font and close button of the interface size;
+  at least as wide as its title, at least as tall as the frame's picture, else the frame draws above it). Mods still
+  place their contents at fixed offsets from `Top`; check them at other interface sizes.
+- Mod text (`Ui.Label`, `Ui.TextBox`, canvas text, HUD parts) uses one font at every interface size (C13b), so it
+  stays small on large and huge interfaces. Switching to the interface size's own text font (`wj.fo`) was tried
+  (Nov 2026) and broke mods that assume a line height (Quest Tracker's lines overlapped, "Sec"/"Zap" collided,
+  Loadouts' labels were cut): each mod has to measure its text first (`Ui.TextWidth`, a font line height API), then
+  the font can follow the interface size.

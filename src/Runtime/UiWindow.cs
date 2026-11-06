@@ -1,5 +1,6 @@
-// UnderRailWorks: a standard window for mods: a title bar with the title and a close button, dragged by its title
-// bar, closed by the button or Escape (the topmost one first; the game's menu doesn't open meanwhile), its place
+// UnderRailWorks: a standard window for mods: the game's own titled window (a9t, as its notes and inventory windows:
+// the interface size's frame, title strip, font and close button), dragged by its title bar, closed by the button or
+// Escape (the topmost one first; the game's menu doesn't open meanwhile), its place
 // remembered per mod and kept relative to the screen edges (Ui.Place), so it survives resolution changes.
 //   var w = Ui.Window(this, "ledger", "Merchant ledger", 560, 360);
 //   Ui.Add(w, Ui.Label("..."), 10, w.Top + 8);      // content below the title bar
@@ -18,9 +19,11 @@ public sealed class UiWindow : UiPanel
 {
     internal WorksMod Mod;
     internal string Id;
-    internal UiWindow(UiPanelControl panel) : base(panel) { }
+    internal UiWindow(a9t window) : base(window) { }
+    // The title bar's height at this interface size.
+    public int TitleHeight { get { var w = Control as a9t; return w == null ? 22 : (int)UiWindows.TitleField.GetValue(w); } }
     // Where content starts (below the title bar).
-    public int Top { get { return UiWindows.TitleHeight + 4; } }
+    public int Top { get { return TitleHeight + 4; } }
     public bool IsOpen { get { return Control.Parent != null; } }
     // Runs once when the window closes (button, Escape, Close, or the HUD going away).
     public event Action Closed;
@@ -38,27 +41,28 @@ public static partial class Ui
     // A window on the HUD (null if there is no HUD). id: unique within the mod, for remembering its place. Opening a
     // window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player
     // something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose
-    // (buttons). Its title bar and close box are fixed sizes (UI.md, "Known debt"): check it at other interface sizes.
+    // (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
     public static UiWindow Window(WorksMod mod, string id, string title, int width, int height)
     {
         var hud = Hud.Root;
         if (hud == null) return null;
         var open = UiWindows.Open.FirstOrDefault(o => o.Mod == mod && o.Id == id && o.IsOpen);
         if (open != null) return open;
-        var w = new UiWindow(new UiPanelControl { Size = new esj(width, height) }) { Mod = mod, Id = id };
-        w.Background = new Color(12, 12, 12, 235);
-        var bar = Custom(width, UiWindows.TitleHeight, c => { c.Fill(c.Bounds, new Color(181, 92, 0, 200)); c.Text(title, c.Bounds.X + 6, c.Bounds.Y + 2, new Color(20, 12, 4)); });
-        Add(w, bar, 0, 0);
-        // A small close box (the game's buttons are taller than the title bar); clicks on it are taken in UiWindows.Tick.
-        var close = Custom(UiWindows.CloseSize, UiWindows.CloseSize, c =>
-        {
-            var r = c.Bounds; bool hot = r.Contains(Input.Mouse);
-            c.Fill(r, hot ? new Color(255, 210, 120) : new Color(30, 18, 6));
-            var ink = hot ? new Color(30, 18, 6) : new Color(230, 160, 60);
-            for (int i = 3; i < r.Width - 3; i++) { c.Fill(new Rectangle(r.X + i, r.Y + i, 1, 1), ink); c.Fill(new Rectangle(r.Right - 1 - i, r.Y + i, 1, 1), ink); }
-        });
-        Add(w, close, width - UiWindows.CloseSize - 2, (UiWindows.TitleHeight - UiWindows.CloseSize) / 2);
-        Add(hud, w, (hud.Width - width) / 2, Math.Max(10, hud.Height / 6));
+        var game = new a9t();
+        game.Text = title;
+        var w = new UiWindow(game) { Mod = mod, Id = id };
+        // height: as if the title bar were 22 high (the content keeps its room at every interface size)
+        // at least as wide as its title in the title font (a9t's title label), plus the close button
+        var titleLabel = game.Controls.Cast<euz>().OfType<avo>().FirstOrDefault();
+        var titleFont = titleLabel == null || dr3.a() == null ? null : dr3.a().GetResource<Microsoft.Xna.Framework.Graphics.SpriteFont>(titleLabel.g());
+        if (titleFont != null) width = Math.Max(width, (int)Math.Ceiling(titleFont.MeasureString(title ?? "").X) + titleLabel.Location.X + 2 * w.TitleHeight + 8);
+        // never shorter than the frame's picture (wj.b7, 96 high): below that its middle gets a negative height and draws
+        // above the window
+        var frame = UiWindows.FrameField == null ? (object)null : UiWindows.FrameField.GetValue(game);
+        int minHeight = frame is esj ? UnderrailDropdownScroll.H((esj)frame) + 4 : 100;
+        game.Size = new esj(width, Math.Max(minHeight, height - 22 + w.TitleHeight));
+        game.a((EventHandler<el5>)((sender, e) => w.Close()));     // its own close button
+        Add(hud, w, (hud.Width - UnderrailDropdownScroll.W(game.Size)) / 2, Math.Max(10, hud.Height / 6));
         var place = mod.Settings.Get("window." + id);
         if (!string.IsNullOrEmpty(place)) Restore(w, place);
         UiWindows.Open.Add(w);
@@ -68,7 +72,8 @@ public static partial class Ui
 
 static class UiWindows
 {
-    internal const int TitleHeight = 22, CloseSize = 16;
+    internal static readonly System.Reflection.FieldInfo FrameField = typeof(a9t).GetField("f", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);     // a9t.f: the frame picture's size
+    internal static readonly System.Reflection.FieldInfo TitleField = typeof(a9t).GetField("i", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);     // a9t.i: also a method name
     internal static readonly List<UiWindow> Open = new List<UiWindow>();
     static UiWindow dragging;
     static Point dragStart, windowStart;
@@ -111,8 +116,8 @@ static class UiWindows
             {
                 var b = Open[i].Bounds;
                 if (!b.Contains(m)) continue;
-                if (m.Y < b.Y + TitleHeight && m.X >= b.Right - CloseSize - 4) { Open[i].Close(); return; }
-                if (m.Y < b.Y + TitleHeight) { dragging = Open[i]; dragStart = m; windowStart = new Point(dragging.X, dragging.Y); }
+                int title = Open[i].TitleHeight;
+                if (m.Y < b.Y + title && m.X < b.Right - title) { dragging = Open[i]; dragStart = m; windowStart = new Point(dragging.X, dragging.Y); }
                 break;
             }
         }
