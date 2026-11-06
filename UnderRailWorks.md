@@ -1368,3 +1368,12 @@ fight instead). The `]` key and the ammo bar didn't reload in a headless run.
   characters and "Select characters behind scenery" only work on outline layers, so they can't reveal or target
   anything the game hides: they cover what Tab already shows and allows. Hit chances, cover and stealth detection
   are computed on the map, not from what's on screen.
+- **What the developers intended** (looked up Nov 2026): Dev Log #46 (1.0.1.4) added character outlines "which
+  should improve visibility and make targeting somewhat easier when things are happening behind walls and other
+  obstacles" (https://www.stygiansoftware.com/forums/index.php?topic=2056). In 2012, asked for a Fallout-style
+  transparency bubble, Styg answered that Tab highlights through walls and Z selects the deepest object first: "Not
+  the best solution, though, and I'm currently looking for a better one"
+  (https://stygiansoftware.com/forums/index.php?topic=34.0). Stealth is meant to hide by detection, line of sight
+  and light (Dev Log -31), which the game enforces before drawing (above). No source found of an encounter that
+  relies on a visible character staying hidden behind scenery; not verified by playing specific encounters.
+  Ethereal characters get no outline, so the occlusion features skip them too.
