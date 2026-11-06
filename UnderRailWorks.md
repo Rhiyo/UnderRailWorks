@@ -1393,3 +1393,18 @@ meat says it "should not be consumed raw. It's much tastier in the form of a coo
 recipe for it. Tested: the recipe lists under Processing, the meat goes in its slot, Create makes one steak from one
 meat; the leftover meat stays in the slot until the window closes (the game's crafting panel, ahu.i: leftovers back
 into the slots; ahu.f returns them to the bag), so checking the bag with the window open looks like they were used.
+
+## House Pets 1.1 (Nov 2026)
+
+- Feed a pet (raw Cave Hopper Meat or Campfire Cooking's steak, when carried), take it along ("Come on, you're coming
+  with me": Character.Follow with travels, so it changes areas with the player), send it home ("Go on home now": in
+  the house it stays; elsewhere it leaves and is back in the living room on the next visit). A pet about to drop
+  below a third of its health bolts for home instead (Combat.ModifyIncomingDamage, the blow cancelled). Out-with-the-
+  player is never saved: after a load, or if a pet didn't arrive after a zone change, it's at home.
+- **Works fix:** a follower re-created in the next zone lost its conversation (and store, and OnUse): the new
+  placement copied only blueprint, name, faction and Setup. It now copies Dialog, Store and OnUse too.
+- Trap found: a mod's map of character -> pet went stale after a zone reload (the old character object still there,
+  its entity gone), so "come along" went to a ghost. Check `Character.Area != null` and prune on ZoneLoaded
+  (followers arrive before it).
+- Tested: feeding, taking the dog out (arrived with its dialog), a fatal hit cancelled and the dog home again, the cat
+  out and back in after a zone reload (one cat, no duplicate), "go home" inside the house (stayed when the player left).

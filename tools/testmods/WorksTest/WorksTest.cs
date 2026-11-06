@@ -200,6 +200,14 @@ public sealed class WorksTest : WorksMod
             Log.Info("cook: known " + string.Join(", ", Crafting.Known.Where(k => k.Name.Contains("Steak") || k.Name.Contains("Tongue")).Select(k => k.Name)) + "; window " + Windows.Open(Window.Crafting));
             return "cook";
         });
+        Commands.Add(this, "wt.hurt", "wt.hurt <name> <amount>: damage the named character (Combat.Damage)", args =>
+        {
+            var c = World.Characters.FirstOrDefault(x => x.Name == args[0]);
+            if (c == null) return "none";
+            var before = c.Health; var name = c.Name; var dealt = Combat.Damage(c, int.Parse(args[1]));
+            Log.Info("hurt " + name + ": " + before + " -> " + (c.Area == null ? "gone" : c.Health.ToString()) + " (dealt " + dealt + ")");
+            return "hurt";
+        });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

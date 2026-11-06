@@ -258,7 +258,7 @@ public static partial class World
             var t = list[i];
             var id = "spawn:" + (++spawned);
             var np = new Placement { Id = id, Zone = ZoneId, Area = p.Area.Name, X = tiles[i].X, Y = tiles[i].Y, Blueprint = t.From.Blueprint, Name = t.From.Name,
-                Friendly = t.From.Friendly, Setup = t.From.Setup, Temporary = true };
+                Friendly = t.From.Friendly, Setup = t.From.Setup, Dialog = t.From.Dialog, Store = t.From.Store, OnUse = t.From.OnUse, Temporary = true };
             Place(np);
             np.When = Condition.Code(() => false);
             var c = Placed(id);
