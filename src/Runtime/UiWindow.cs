@@ -64,8 +64,39 @@ public static partial class Ui
     }
 }
 
+public static partial class Ui
+{
+    // A small window asking for a line of text (a name...): OK or Enter passes the trimmed text to onAnswer (not when
+    // empty); Cancel or the close box don't. The text box has the keyboard from the start.
+    //   Ui.Ask(this, "name", "Name your cat", "What will you call it?", "Whiskers", name => { ... });
+    public static UiWindow Ask(WorksMod mod, string id, string title, string question, string initial, Action<string> onAnswer, int maxLength = 30)
+    {
+        var w = Window(mod, id, title, 360, 128);
+        if (w == null) return null;
+        Add(w, Label(question, 340), 10, w.Top + 4);
+        var box = TextBox(340, maxLength);
+        box.Text = initial ?? "";
+        Add(w, box, 10, w.Top + 30);
+        Action ok = () =>
+        {
+            if (!w.IsOpen) return;
+            var text = box.Text.Trim();
+            w.Close();
+            if (text.Length == 0 || onAnswer == null) return;
+            try { onAnswer(text); } catch (Exception ex) { Log.Write("mods: " + mod.Id + ": an answer failed: " + ex.Message); }
+        };
+        Add(w, Button("OK", ok), 10, w.Top + 66);
+        Add(w, Button("Cancel", () => w.Close()), 130, w.Top + 66);
+        UiWindows.Answers[w] = ok;
+        w.Closed += () => UiWindows.Answers.Remove(w);
+        box.Focus();
+        return w;
+    }
+}
+
 static class UiWindows
 {
+    internal static readonly Dictionary<UiWindow, Action> Answers = new Dictionary<UiWindow, Action>();     // Ui.Ask: Enter answers
     internal const int TitleHeight = 22, CloseSize = 16;
     internal static readonly List<UiWindow> Open = new List<UiWindow>();
     static UiWindow dragging;
@@ -101,6 +132,8 @@ static class UiWindows
     {
         Open.RemoveAll(w => !w.IsOpen);
         if (Open.Count == 0) { dragging = null; return; }
+        Action answer;
+        if (Input.Pressed(Keys.Enter) && Answers.TryGetValue(Open[Open.Count - 1], out answer)) { answer(); return; }
         var m = Input.Mouse;
         if (dragging == null && Input.MousePressed(MouseButton.Left))
         {

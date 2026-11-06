@@ -86,6 +86,26 @@ public static partial class Dialogs
         return result;
     }
 
+    // The lines whose options are shown after q: q itself if it has options, else the first lines with options that
+    // its option-less continuation reaches (through junctions and option-less lines; each branch).
+    static List<ad7> OptionsHolders(ad7 q)
+    {
+        if (q.PossibleAnswers.Count > 0 || q.PossibleNextSteps.Count == 0) return new List<ad7> { q };
+        var result = new List<ad7>();
+        var seen = new HashSet<d55> { q };
+        var todo = new Queue<d55>(q.PossibleNextSteps);
+        while (todo.Count > 0 && seen.Count < 50)
+        {
+            var n = todo.Dequeue();
+            if (n == null || !seen.Add(n)) continue;
+            var next = n as ad7;
+            if (next != null && next.PossibleAnswers.Count > 0) { result.Add(next); continue; }
+            if (n is atr) continue;
+            foreach (var step in n.PossibleNextSteps) todo.Enqueue(step);
+        }
+        return result.Count > 0 ? result : new List<ad7> { q };
+    }
+
     static bool Matches(ad7 q, string at)
     {
         if (string.IsNullOrEmpty(at)) return false;
@@ -117,8 +137,14 @@ public static partial class Dialogs
                             if (id.StartsWith("@")) return questions.FirstOrDefault(x => Matches(x, id.Substring(1)));
                             return null;
                         });
-                        q.PossibleAnswers.Add(maker.Option(add.Value));
-                        added++;
+                        // A line without options of its own that goes on (Continue, or straight on) to the line that
+                        // shows them (Jyles' "What room...?" -> an empty line with the rooms): the option goes there. On
+                        // the line itself it would make it a question and the game's own options would never show.
+                        foreach (var holder in OptionsHolders(q))
+                        {
+                            holder.PossibleAnswers.Add(maker.Option(add.Value));
+                            added++;
+                        }
                     }
                 }
                 if (added == 0) Log.Write("dialogs: " + entry.Key + "'s patch of " + __1 + " found no line to add to");

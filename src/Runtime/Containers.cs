@@ -29,6 +29,10 @@ public sealed class Container
     public bool Add(string path, int stacks = 1) { return Containers.AddTo(Items_, path, stacks); }
     public bool Remove(Item item) { return item != null && Items_ != null && Items_.z5(item.Game); }
     public Microsoft.Xna.Framework.Vector3 Position { get { return Entities.MapPosition(Game.a8()); } }
+    // Its shown name (the hover label, e.g. "Locker").
+    public string Name { get { return Entities.Name(Game.a8()); } }
+    // The area it's in (null if not placed).
+    public Area Area { get { return Area.Of(Entities.AreaOf(Game.a8())); } }
     // Opens it for the player now, as a click on it would after walking there (its lock and the game's checks
     // are skipped; owners still notice a theft).
     public bool Open() { var p = World.Player; return p != null && Game.a((c5x)p.Entity, null, true, true); }

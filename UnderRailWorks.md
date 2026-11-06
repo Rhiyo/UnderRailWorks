@@ -1312,3 +1312,30 @@ combat (`wt.gunner`: a hostile Ironhead Gunner next to a player who takes no dam
 an empty rifle and reloads on its first turn; Reloading/Reloaded named the 7.62mm Jaguar and its ammo. Cancelled for
 NPCs (`works.var wt_noreload true`): the AI tries about once a turn and its turn ends normally (no hang; it doesn't
 fight instead). The `]` key and the ammo bar didn't reload in a headless run.
+
+## The player's house; House Pets; dialog outlines; Ui.Ask (Nov 2026)
+
+- **The game's house system** (Core City, zone `cc_ph`, area `cc_ph1`): Jyles at the Core City Housing Corporation
+  (`characters\cc_jyles`, in `cc-res`) sells everything for it. The state is a saved table `cc_ph_houseState`
+  (`PlayerHouseElement` -> value, e.g. `MainFloorDebris` "cleared", `MainFloor_LivingRoom_Rug`
+  "mainFloor_livingRoom_rug_blue"); on entering the zone, `dxt` swaps the furniture tagged with the old and new value
+  in from the hidden layer `cc_ph_l3.uzl`, so furniture ends up in the zone's save. Burglar events and a ninja
+  ambush check the renovation and `loc_cc_ph_securityLevel`.
+- `PlayerHouse`: `Owned`, `Renovated(floor)`, `Element(name)`, `Elements`, `SetElement(name, value)` (only values the
+  game uses: the table is saved), `SecurityLevel`, `HasItem`, `FloorTiles(floor)` (the renovation's debris
+  rectangles), `RoomTiles(room)` (ground floor, measured from walkable tiles: living room x 1-10 y 12-18, kitchen
+  x 1-7 y 7-10, entrance hall x 12-15 y 12-17). Mods add things with placements, never new elements.
+- `Dialogs.Describe(name)` / console `works.dialog <name>`: a readable outline of a game conversation (every line,
+  its conditions, greyed-out conditions and effects by their data tags), written to `UnderRailWorks-dialog-*.txt`.
+- **Fixed in `Dialogs.Patch`:** a line without options of its own that continues to the line showing them (Jyles'
+  "What room do you want to start from?" goes on to an empty line holding the rooms) got the option itself, became a
+  question, and the game's options never showed (and Jyles' dialog can't be closed with Escape: stuck). The option
+  now goes on the line(s) that show the options.
+- `Ui.Ask(mod, id, title, question, initial, onAnswer)`: a small window with a text box that has the keyboard; OK or
+  Enter answers. `UiTextBox.Focus()`. `Container.Name`, `Container.Area`.
+- **House Pets** (mods/HousePets): a "pet" option in Jyles' ground-floor room list (cat 200, dog 350; most 4 pets);
+  pets are kept in the mod's save data and placed in the living room on each visit once the ground floor is
+  renovated; talking to one: pet it, name it (Ui.Ask), rename. Tested in game: buying both through the dialog (money
+  taken, stock rooms and exits intact), delivery, wandering (the game's idle AI: within the living room and the
+  passage by its lockers), the house's plasma patrol (faction playerHouse, Ally) ignoring them, naming, quicksave and
+  quickload (names kept). A pet on a tile hemmed in by furniture never moves; the mod picks open tiles.

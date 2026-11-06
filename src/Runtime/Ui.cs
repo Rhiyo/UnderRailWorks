@@ -299,6 +299,8 @@ public sealed class UiTextBox : UiElement
     public string Text { get { return Control.Text ?? ""; } set { Control.Text = value ?? ""; last = Text; } }
     // After the text changed (checked once per update).
     public event Action<string> Changed;
+    // Gives it the keyboard (typing goes in at once). A click elsewhere gives the keyboard back.
+    public void Focus() { Input.FocusBox(this); }
     internal static void Poll()
     {
         Live.RemoveAll(b => b.Control.Parent == null && b.last == null);
@@ -486,6 +488,16 @@ public static class Input
     // A text field has the keyboard (a mod's text box, the game's own fields, its console): keys are text, not
     // shortcuts. Keybind.Pressed/Down are false meanwhile, as the game's own hotkeys are.
     public static bool Typing { get; private set; }
+
+    internal static void FocusBox(UiTextBox box)
+    {
+        var focusService = bpo.GetService<d1a>();
+        if (focusService == null || box == null) return;
+        var current = focusService.aa7();
+        if (current != null && !UiTextBox.Live.Any(b => b.Control == current)) lastFocus = new WeakReference(current);
+        focusService.aa4(box.Control);
+        Typing = true;
+    }
 
     static euz Root() { var ui = bpo.GetService<bcm>(); return ui == null ? null : ui.aau(); }
     static bool FocusedText(euz c)

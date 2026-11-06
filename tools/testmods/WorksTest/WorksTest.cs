@@ -134,6 +134,45 @@ public sealed class WorksTest : WorksMod
         });
         Commands.Add(this, "wt.house", "wt.house: travel to the Core City player house", args => "travel: " + World.Travel("cc_ph", "FromOutside"));
         Commands.Add(this, "wt.leave", "wt.leave: travel out of the house to the residential district", args => "travel: " + World.Travel("cc-res", "FromPlayerHouse"));
+        Commands.Add(this, "wt.house.set", "wt.house.set <element> <value>: set a house element (applies on the next load of the house)", args => "set: " + PlayerHouse.SetElement(args[0], args.Length > 1 ? args[1] : null));
+        Commands.Add(this, "wt.house.info", "wt.house.info: the house's state", args =>
+        {
+            Log.Info("house: owned " + PlayerHouse.Owned + ", main " + PlayerHouse.Renovated(HouseFloor.Main) + ", upper " + PlayerHouse.Renovated(HouseFloor.Upper) + ", security " + PlayerHouse.SecurityLevel + ", elements " + string.Join(", ", PlayerHouse.Elements.Select(kv => kv.Key + "=" + kv.Value)));
+            return "info";
+        });
+        Commands.Add(this, "wt.money", "wt.money <n>: charons", args => { World.Player.Inventory.AddMoney(int.Parse(args[0])); return "money " + World.Player.Inventory.Money; });
+        Commands.Add(this, "wt.jyles", "wt.jyles: Jyles' conversation with the nearest character", args =>
+        {
+            Commands.CloseConsole();
+            var c = World.Characters.Where(x => !x.IsPlayer).OrderBy(x => Microsoft.Xna.Framework.Vector3.Distance(x.Position, World.Player.Position)).FirstOrDefault();
+            return "jyles: " + (c != null && Dialogs.Start(c, "characters\\cc_jyles"));
+        });
+        Commands.Add(this, "wt.talk", "wt.talk <name> <dialog>: open a dialog with the character of that name", args =>
+        {
+            Commands.CloseConsole();
+            var c = World.Characters.FirstOrDefault(x => x.Name == args[0]);
+            return "talk: " + (c == null ? "none" : c.Name + " " + Dialogs.Start(c, args[1]));
+        });
+        Commands.Add(this, "wt.containers", "wt.containers: the zone's containers, name and place", args =>
+        {
+            Log.Info("containers: " + string.Join("; ", World.Containers.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name))));
+            return "containers";
+        });
+        Commands.Add(this, "wt.goto", "wt.goto x y: teleport the player to a tile", args => "goto: " + World.Player.TeleportTo(int.Parse(args[0]), int.Parse(args[1])));
+        Commands.Add(this, "wt.tiles", "wt.tiles x y r: a map of free floor tiles around x,y (log)", args =>
+        {
+            int x = int.Parse(args[0]), y = int.Parse(args[1]), r = int.Parse(args[2]);
+            var free = new System.Collections.Generic.HashSet<Microsoft.Xna.Framework.Point>(World.FreeTilesNear(x, y, r));
+            var sb = new System.Text.StringBuilder("tiles around " + x + "," + y + " (rows y, columns x from " + (x - r) + "):\n");
+            for (int ty = y - r; ty <= y + r; ty++)
+            {
+                sb.Append(ty.ToString().PadLeft(3)).Append(' ');
+                for (int tx = x - r; tx <= x + r; tx++) sb.Append(tx == x && ty == y ? 'X' : free.Contains(new Microsoft.Xna.Framework.Point(tx, ty)) ? '.' : '#');
+                sb.Append('\n');
+            }
+            Log.Info(sb.ToString());
+            return "tiles";
+        });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

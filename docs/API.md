@@ -218,6 +218,8 @@ A condition on game state, for options, branches and lines.
 - `bool Add(string path, int stacks = 1)` — Adds a stock item by path (it is saved with the container: stock items only).
 - `bool Remove(Item item)`
 - `Microsoft.Xna.Framework.Vector3 Position`
+- `string Name` — Its shown name (the hover label, e.g. "Locker").
+- `Area Area` — The area it's in (null if not placed).
 - `bool Open()` — Opens it for the player now, as a click on it would after walking there (its lock and the game's checks are skipped; owners still notice a theft).
 - `bool Owned` — Someone owns it: taking from it (and, for some, opening it) is theft if you aren't an owner (c3g ownership, c7j's protection mode).
 - `bool IsOwner(Character who)`
@@ -339,8 +341,10 @@ The defense values the character sheet's Defense tab shows (what StatBonus.Dodge
 - `DialogPatch AddOption(string atLine, string text, string goTo, Condition when = null, params Outcome[] effects)` — An option on every stock NPC line whose English text contains atLine (or whose node name is atLine), after the game's own options. when: shown only while it holds.
 - `DialogPatch AddOptionGreyed(string atLine, string text, string goTo, Condition enabledWhen, params Outcome[] effects)` — The same, greyed out unless enabledWhen holds (the game's skill-check look).
 
-## Dialogs  _(class, DialogPatches.cs)_
+## Dialogs  _(class, DialogDescribe.cs)_
 
+- `static string Describe(string dialog)`
+- `static string WriteDescription(string dialog)` — Writes the outline into the game folder; returns the file's path.
 - `static void Patch(WorksMod mod, string dialog, Action<DialogPatch> patch)` — Adds to a stock dialog each time it opens. Several mods may patch the same dialog (in load order).
 - `static IList<string> StockLines(string dialog)` — The NPC lines of a stock dialog (English text), for finding where to patch. Loads it from disk.
 - `static void Define(string name, Action<DialogBuilder> build)` — A conversation, by name (prefix it with the mod's id). The builder runs each time it is opened, so it may read game state (but conditions are the cleaner way).
@@ -512,6 +516,16 @@ Every handler runs.
 Where a handler runs among a hook's handlers (tModLoader runs by load order only; BepInEx/Harmony have priorities).
 
 Values: `First = 0, Early = 1, Normal = 2, Late = 3, Last = 4`
+
+## HouseFloor  _(enum, PlayerHouse.cs)_
+
+Values: `Main, Upper, Lower`
+
+## HouseRoom  _(enum, PlayerHouse.cs)_
+
+Rooms of the ground floor (area cc_ph1), measured from its walkable tiles.
+
+Values: `EntranceHall, LivingRoom, Kitchen`
 
 ## Hud  _(class, Hud.cs)_
 
@@ -1151,6 +1165,22 @@ A character placed by a mod: re-created each time its zone loads, while When hol
 - `Action<Character> Setup`
 - `Action<Character> OnUse` — For objects: using it (the player clicking it) runs this instead of the object's own use.
 
+## PlayerHouse  _(class, PlayerHouse.cs)_
+
+- `const string Zone = "cc_ph"`
+- `const string Area = "cc_ph1"`
+- `const string KeyCode = "key.playerHouse"`
+- `static IDictionary<string, string> Elements` — Each house element (the game's names, e.g. "MainFloor_Kitchen_Table") and its value; empty before the house.
+- `static string Element(string name)` — One element's value (null: not set, or no such element).
+- `static bool SetElement(string name, string value)` — Sets an element as Jyles' orders do (e.g. "MainFloorDebris", "cleared"; null removes it); the house changes the next time its zone loads. Only values the game itself uses: the table is in the game's save, and a value with no furniture tagged for it just removes what was there. False: no game, or no such element.
+- `static IList<string> ElementNames` — The names of all house elements the game knows (whether set or not).
+- `static bool Owned` — The player owns the house: has its keycard, or anything in it was bought.
+- `static bool Renovated(HouseFloor floor)` — A floor renovated by the Housing Corporation (its debris cleared; until then it's rubble).
+- `static Rectangle FloorTiles(HouseFloor floor)` — The tiles of a floor (area cc_ph1) the renovation clears: inside the house, for placing things.
+- `static Rectangle RoomTiles(HouseRoom room)` — A ground-floor room's tiles (area cc_ph1, measured in game: walls around them; doorways lead out).
+- `static int SecurityLevel` — The game's security level for the house (turrets, patrols, cameras); burglars only come below 2.
+- `static bool HasItem(string item)` — Things bought for the house (the values Jyles' orders set, e.g. "securityCameras_installed").
+
 ## Prices  _(class, Hud.cs)_
 
 - `static readonly Hook<Func<Character, float, float>> BuyMarkup = new Hook<Func<Character, float, float>>("BuyMarkup")` — Change what merchants charge: each handler gets the merchant and the markup so far (the game's: about 1.15-3.5, lower with Mercantile) and returns the new one. Read when the barter window opens.
@@ -1442,6 +1472,7 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static UiElement SmallButton(string text, int width, int height, Action click)` — A small button of any size drawn in the game's colours (Ui.Button is the game's own, at its own sizes).
 - `static UiChoice Choice(int width, IList<string> options, int index = 0)` — A button that steps through options on click (right-click: back).
 - `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD (null if there is no HUD). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one.
+- `static UiWindow Ask(WorksMod mod, string id, string title, string question, string initial, Action<string> onAnswer, int maxLength = 30)` — A small window asking for a line of text (a name...): OK or Enter passes the trimmed text to onAnswer (not when empty); Cancel or the close box don't. The text box has the keyboard from the start. Ui.Ask(this, "name", "Name your cat", "What will you call it?", "Whiskers", name => { ... });
 
 ## UiCanvas  _(class, Ui.cs)_
 
@@ -1531,6 +1562,7 @@ Rows of text with buttons at their right end, in an area of a panel or window (a
 
 - `string Text`
 - `event Action<string> Changed` — After the text changed (checked once per update).
+- `void Focus()` — Gives it the keyboard (typing goes in at once). A click elsewhere gives the keyboard back.
 
 ## UiTickBox  _(class, Ui.cs)_
 

@@ -4,7 +4,7 @@
 // and prints with the console's bdg.a(format) (markup: [cmd] [val] [param] [war] [error]).
 //   Commands.Add(this, "heal", "heal [amount]: heals the player", args => { ...; return "healed"; });
 // Works' own: works (lists mods' commands), works.give <item path> [count], works.spawn <blueprint> [hostile],
-// works.var <name> [value], works.mods, works.content (writes UnderRailWorks-content.txt).
+// works.var <name> [value], works.mods, works.content (writes UnderRailWorks-content.txt), works.dialog <name>.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -102,6 +102,7 @@ namespace UnderRailWorks
                 foreach (var c in ModConfig.All) { c.Reload(); n++; }
                 return "reloaded pictures and translations, settings of " + n + " mods";
             });
+            Add("UnderRailWorks", "works.dialog", "works.dialog <name>: writes an outline of a game dialog (lines, conditions, effects), e.g. works.dialog characters\\cc_jyles", a => a.Length == 0 ? "which dialog?" : "written: " + (Dialogs.WriteDescription(a[0]) ?? "no such dialog"));
             Add("UnderRailWorks", "works.content", "works.content: writes UnderRailWorks-content.txt (item paths, blueprints, stores...)", a => "written: " + ContentIndex.Write());
         }
     }
