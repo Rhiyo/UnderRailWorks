@@ -17,7 +17,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("0.3.0")]
+[assembly: System.Reflection.AssemblyVersion("0.4.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -57,7 +57,7 @@ public sealed partial class Coop : WorksMod
     }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(); }
     Listener listener;
     readonly Inbox inbox = new Inbox();
     readonly Dictionary<Peer, Seat> seats = new Dictionary<Peer, Seat>();
@@ -116,6 +116,7 @@ public sealed partial class Coop : WorksMod
             case "BYE": p.Close(); return;
         }
         if (seat == null) { p.Send("BYE", "say HELLO first"); p.Close(); return; }
+        if (w[0] == "LOADED") { HostMirrorMessage(seat, w); return; }
         switch (w[0])
         {
             case "PICK":
@@ -174,6 +175,7 @@ public sealed partial class Coop : WorksMod
         Notify.Log("Co-op: " + seat.Peer.Name + " plays " + r.Name, Say);
         Changed(false);
         seat.Peer.Send("PLAYING", r.Name, (int)at.X, (int)at.Y);
+        SendWorld(seat);
     }
 
     Character SpawnFor(Record r, bool saved)
@@ -232,7 +234,7 @@ public sealed partial class Coop : WorksMod
     {
         switch (w[0])
         {
-            case "_closed": Tell("disconnected from the host"); host = null; playing = false; state = null; Changed(); return;
+            case "_closed": Tell("disconnected from the host"); host = null; playing = false; state = null; LeftWorld(); Changed(); return;
             case "BYE": Tell("the host closed the connection: " + (w.Length > 1 ? w[1] : "")); return;
             case "LIST": hostName = w.Length > 1 ? w[1] : "?"; choices.Clear(); return;
             case "CHAR": choices.Add(new KeyValuePair<string, bool>(w[2], w.Length > 3 && w[3] == "taken")); return;
@@ -245,6 +247,7 @@ public sealed partial class Coop : WorksMod
             case "TURN": Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")"); return;
             case "SAID": Tell(w.Length > 1 ? w[1] : ""); return;
         }
+        MirrorMessage(w);
     }
 
     void Tell(string line)
@@ -297,6 +300,14 @@ public sealed partial class Coop : WorksMod
                 Log.Info(c.Name + ": end turn: " + (ok ? "ended" : "not its turn"));
                 return ok ? "turn ended" : "not your turn";
             }
+            case "ATTACKID":
+            {
+                var target = w.Length > 1 ? Resolve(w[1]) : null;
+                if (target == null || target == c || target.IsDead) return "no such target";
+                bool ok = c.Attack(target);
+                Log.Info(c.Name + ": attack " + target.Name + ": " + (ok ? "attacking" : "refused") + Points(c));
+                return ok ? "attacking " + target.Name : "can't attack now" + (Combat.InCombat && !c.IsTakingTurn ? " (not your turn)" : "");
+            }
             case "STATUS":
             {
                 var cur = Combat.Current;
@@ -332,6 +343,7 @@ public sealed partial class Coop : WorksMod
     {
         Commands.Add(this, "coop.host", "coop.host [port]: let others join this game", Host);
         LoadUi();
+        LoadMirror();
         Commands.Add(this, "coop.stop", "coop.stop: stop hosting (joined characters stay, back to their AI)", a => { if (listener == null) return "not hosting"; StopHosting(); return "stopped"; });
         Commands.Add(this, "coop.who", "coop.who: who is connected and what they play", a =>
         {
@@ -419,6 +431,7 @@ public sealed partial class Coop : WorksMod
                 s.Character = c; CharacterControl.Take(this, c);
                 s.Peer.Send("PLAYING", s.Record.Name, (int)c.Position.X, (int)c.Position.Y);
             }
+            foreach (var s in seats.Values.Where(s => s.Character != null)) SendWorld(s);     // the joiners follow into the new zone
             orphans.RemoveAll(o => o.Character == null || o.Character.Area == null);
         });
         GameEvents.GameStarted.Add(this, () => { if (listener != null) StopHosting(); ReadRecords(); });

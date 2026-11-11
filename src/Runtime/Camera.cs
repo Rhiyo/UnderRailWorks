@@ -11,7 +11,7 @@ using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
 {
-    public static class Camera
+    public static partial class Camera
     {
         static readonly FieldInfo ViewField = typeof(ci3).GetField("m_t", BindingFlags.Instance | BindingFlags.NonPublic) ?? typeof(ci3).GetField("t", BindingFlags.Instance | BindingFlags.NonPublic);
         static readonly FieldInfo ZoomField = typeof(dnn).GetField("y", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);       // dnn.y: also a method name

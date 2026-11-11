@@ -214,6 +214,7 @@ public sealed partial class Coop
     {
         if (host == null) return;
         host.Send("BYE"); host.Close(); host = null; playing = false; state = null; choices.Clear(); hostName = null;
+        LeftWorld();
         Tell("you left");
         Changed();
     }

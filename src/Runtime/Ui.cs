@@ -604,6 +604,7 @@ static class UiHooks
         Group("zones", () => ZoneHooks.Install(harmony));
         Group("new game screen", () => NewGameScreenHooks.Install(harmony));
         Group("control", () => ControlHooks.Install(harmony));
+        Group("remote (orders, simulation)", () => RemoteHooks.Install(harmony));
         Group("assets", () => AssetStore.Install(harmony));
         Group("clock, items, crafting, stealing", () => ActivityHooks.Install(harmony));
         Group("item definitions and tooltips", () => ItemHooks.Install(harmony));

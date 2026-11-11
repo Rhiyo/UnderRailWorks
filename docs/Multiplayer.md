@@ -112,6 +112,23 @@ Tested in game (test zone and Station Alpha, the player in god mode):
 - Works fix found on the way: HUD parts the player had placed were only reserved when the stacking reached them, so
   a later-stacked one (the Layout button) could end up on top of another (Hud.Flow).
 
+## Step 3 so far (2026-11-11, Co-op 0.4): the joiner in the host's world
+
+- When a joiner's character enters (and when the host changes zone), the host saves ("coop-host", Works'
+  SaveGames.SaveNow: cnk.arg) and sends the save's files; the joiner writes them as "coop-join" and loads it
+  (SaveGames.Load). In combat the game doesn't save: the world goes when the fight ends.
+- The joiner's world is frozen (Works' Simulation.Frozen: ix.a and crp.aho skipped). The host sends every character's
+  position, facing, health and death 10 times a second (only changes), matched by the game's entity id (cae.qe(),
+  kept in saves); co-op characters (and characters spawned after the save) are spawned on the joiner from the
+  host's SPAWN line. The joiner's camera follows their character (Camera.Follow).
+- The joiner's clicks (Works' GameEvents.PlayerOrdering, tf.lj) go to the host: walk -> GO x y, attack -> ATTACKID
+  <key>; other orders (talk, use, abilities, exits) are refused for now.
+- Tested with two test copies: join from the main menu, world sent (6 files, 835 KB) and loaded in ~1 s, both games
+  showing the same room and positions; walking out of combat and in combat on its turn; End turn from the joiner;
+  turns going round. Not yet: attacking by clicking an enemy (the spawned Rathounds weren't drawn on either side),
+  walking animation (positions jump 10 times a second), doors/containers/items, the joiner's HUD (it still shows
+  the host's character), zone changes.
+
 ## Plan
 
 1. (done, see above) Spike, no network: in the host's game, a second character controlled by console commands (walk, attack on its

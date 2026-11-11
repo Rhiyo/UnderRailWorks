@@ -349,6 +349,7 @@ public sealed class WorksTest : WorksMod
         });
         Commands.Add(this, "wt.walk", "wt.walk: walk the player back", args => { var ok = World.Player.MoveTo(startX, startY); Log.Info("walk " + ok + " from " + World.Player.Position); return "walk"; });
         Commands.Add(this, "wt.where", "wt.where", args => { Log.Info("player at " + World.Player.Position); return "where"; });
+        Commands.Add(this, "wt.near", "wt.near: characters near the player with map positions and screen boxes", args => { Log.Info("near: " + string.Join("; ", World.CharactersNear(World.Player.Position, 30).Select(c => c.Name + (c.IsDead ? " (dead)" : "") + " at " + c.Position + " screen " + c.ScreenBounds).ToArray())); return "near"; });
         Commands.Add(this, "wt.mark", "wt.mark: markers near and far", args =>
         {
             var at = World.Player.Position;
