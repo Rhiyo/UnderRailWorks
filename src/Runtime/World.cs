@@ -87,6 +87,18 @@ public sealed partial class Character
     public bool IsInCombat { get { if (Need.IsInCombat) return true; var m = Combat.Manager; return m != null && m.ahg() && m.ahu(Data) != null; } }
     public void Kill() { Need.a((cwt)null, (cru)null, false); }
 
+    // How far it sees (tiles): its sheet's SightRange, what its AI's vision uses.
+    public float SightRange { get { return Need.SightRange; } }
+    // Its AI has detected other (the game's own awareness: unaware -> suspicious -> detected; bm6.e). What makes
+    // characters join a fight. False for one without an AI.
+    public bool HasNoticed(Character other)
+    {
+        var me = Entity as c5x; var them = other == null ? null : other.Entity as c5x;
+        var ai = me == null ? null : me.GetAspect<bm6>();
+        var target = them == null ? null : them.GetAspect<amc>();
+        return ai != null && target != null && ai.e(target);
+    }
+
     public float Health { get { return Need.Defense.q().zo(); } set { Need.Defense.q().zp(value); } }
     public float MaxHealth { get { return Need.Defense.q().zm(); } }
     // Damage threshold (flat, subtracted first) and resistance (percent) per damage type, as combat uses them

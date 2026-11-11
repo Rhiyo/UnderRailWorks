@@ -117,6 +117,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `static float TileWidth` — Interface units on screen for half a tile, across and down, at the current zoom (0 without a world view).
 - `static float TileHeight`
 - `static Point ViewSize` — The world view's size (interface units: the screen's world area).
+- `static void Follow(Character c)` — The camera keeps that character in view (as it keeps the player); null: back to the player.
 
 ## Cancellable  _(class, Cancellable.cs)_
 
@@ -125,14 +126,25 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 
 - `string Blueprint` — Its blueprint path, matched by name among the creature blueprints (null: no match). See World.BlueprintFor.
 - `bool IsTakingTurn` — In combat: this character's turn now.
-- `bool Attack(Character target)` — An attack on target with what it holds, as the player's click (the game checks AP, range and line of fire, and refuses with its own message). In combat only on its turn. False: it can't attack now.
+- `bool Attack(Character target)` — An attack on target with what it holds, as the player's click (the game checks AP, range and line of fire, and refuses with its own message). A character in the fight only on its turn; one outside it attacks at once, which brings it into the fight (as the player shooting first). False: it can't attack now.
 - `bool EndTurn()` — Ends its combat turn (as the player's End Turn: leftover AP carries over up to 10). False: not its turn.
-- `bool MoveTo(int x, int y)` — Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it can't take orders (no movement, not on a map) or the tile is outside the area or not floor. In turn-based combat only on its own turn, spending movement points then AP as the player's walk does (it stops when they run out).
+- `bool MoveTo(int x, int y)` — Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it can't take orders (no movement, not on a map) or the tile is outside the area or not floor. In turn-based combat, a character in the fight only on its own turn (one outside it walks as usual), spending movement points then AP as the player's walk does (it stops when they run out).
+- `bool WalkTo(int x, int y)` — As MoveTo, but it keeps going: a walk the game cuts short (another character in the way: the walk step stops when two bodies' footprints meet, and only the player's clicks or an AI would order it again) is ordered again from where it stopped, a few times, until it's there. For characters a mod drives (CharacterControl).
 - `bool TeleportTo(int x, int y)` — Puts it on tile x, y of its area at once (no walking, as the game's scripts move characters between scenes).
 - `DefenseStats Defense`
 - `bool UsingSecondaryWeapon` — In its secondary weapon set now (the game's swap: X). SwitchWeapons() swaps as the key does.
 - `void SwitchWeapons()`
 - `int Initiative` — Its initiative (efk.Offense ay(): what StatBonus.Initiative changes).
+- `bool HasPlayerSheet` — It has a whole player sheet (the player, or a character from SpawnFromCharacterFile).
+- `bool ExportTo(string path)` — Writes its sheet as it is now to a .char file (the game's export format; a new game's Import reads it). False: it has no player sheet.
+- `bool ExportTo(string path, DateTime made)` — With the date the file says it was made (the import dialog shows it): a fixed one gives the same bytes for the same sheet, to tell whether it changed.
+- `string EntityId` — The game's own id for this character: kept in saves, so a loaded copy of the save has the same one (characters mods spawn get a new one each time they're spawned).
+- `int Facing` — Which way it faces: 0 north, 1 north-east ... 7 north-west (map directions).
+- `Point? WalkTarget` — Where it is walking to (the tile of its current walk order), or null (not walking somewhere).
+- `bool IsWalking` — It has a walk order (going somewhere or following someone).
+- `bool UseObject(string entityId)` — Walks to the object with that EntityId (a door, lever, container, computer...) and uses it, as the player's click does. False: no such object here, or it can't be used.
+- `bool TakeExitAt(int x, int y)` — Walks to the zone exit on tile x, y and takes it (as the player's click on an exit). The game then changes zone: for everyone, as when the player leaves. False: no exit there.
+- `bool PlaceAt(Vector3 at, int facing = -1)` — Puts it exactly there (map tiles, fractional allowed) at once, facing that way (-1: as it is).
 - `bool IsPlayer`
 - `bool IsHostile` — Hostile or unfriendly to the player, not passive (red and orange outlines).
 - `Vector3 Position` — Map position (tiles; fractional while moving).
@@ -153,8 +165,10 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `string Faction`
 - `bool Passive`
 - `bool IsDead`
-- `bool IsInCombat`
+- `bool IsInCombat` — In the fight: its own flag, or a combatant in the combat manager's list (characters with a player sheet that aren't the player don't get the flag).
 - `void Kill()`
+- `float SightRange` — How far it sees (tiles): its sheet's SightRange, what its AI's vision uses.
+- `bool HasNoticed(Character other)` — Its AI has detected other (the game's own awareness: unaware -> suspicious -> detected; bm6.e). What makes characters join a fight. False for one without an AI.
 - `float Health`
 - `float MaxHealth`
 - `IDictionary<string, Resistance> Resistances` — Damage threshold (flat, subtracted first) and resistance (percent) per damage type, as combat uses them (efk.Defense.af()[type]: du2.a() threshold, du2.c() resistance fraction). Keys: Mechanical, Heat, Cold, Electricity, Acid, Energy, Bio (the names Combat's damage parts use).
@@ -217,6 +231,8 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `static readonly Hook<Action<IncomingDamage>> ModifyIncomingDamage = new Hook<Action<IncomingDamage>>("ModifyIncomingDamage")` — Change damage before the target's shields, threshold and resistances (every damage source).
 - `static readonly Hook<Action<AttackOutcome>> AttackResolved = new Hook<Action<AttackOutcome>>("AttackResolved")` — After an attack or any damage was applied.
 - `static bool InCombat`
+- `static bool Leave(Character c)` — Takes c out of the fight (as the game removes one who leaves the zone or dies: crp.a(amc), its place in the turn order goes; on its turn the turn ends first). For a character the game brought in that a mod wants out (a co-op partner far from the enemies). False: not in the fight.
+- `static bool Join(Character c)` — Puts c in the fight (starting one if there's none), as the game does for an attacker (crp.ahn(amc): a new fight with it, or it joins the running one and gets its place in the turn order). For characters whose AI doesn't notice enemies itself (a co-op partner a mod drives). False: not a character, dead, or no combat manager.
 - `static Character Current` — Whose turn it is (null outside combat).
 - `static int Round`
 - `static int ActionPoints(Character c)` — A fighter's AP and MP (as the combat panel shows them); 0 outside combat.
@@ -250,6 +266,7 @@ A condition on game state, for options, branches and lines.
 
 ## Container  _(class, Containers.cs)_
 
+- `string EntityId` — The game's id for its object (kept in saves; World.ByEntityId's kind of id).
 - `MapObject Entity`
 - `bool Searched` — Opened before (the game's Inspected flag).
 - `IList<Item> Items`
@@ -412,6 +429,16 @@ The defense values the character sheet's Defense tab shows (what StatBonus.Dodge
 
 Values: `Disarmed, Recovered, Failed, CriticalFailure`
 
+## Door  _(class, Remote.cs)_
+
+A door in the player's area. IsOpen set: opens or closes it at once (passability too), quietly, without its scripts; Toggle: as a character using it would (sound, scripts).
+
+- `string EntityId`
+- `Vector3 Position`
+- `bool IsOpen`
+- `void Toggle()`
+- `bool IsLocked`
+
 ## DrawContext  _(struct, DrawApi.cs)_
 
 The game's draw context (cp9) for the frame.
@@ -456,6 +483,14 @@ Values: `Helmet, Armor, Belt, Boots, Shield, PrimaryWeapon, SecondaryWeapon`
 - `Rectangle Tiles`
 - `bool ToOtherZone`
 - `Color GameColour` — The colour the game draws its tiles in (a23): blue to another area, red to another map.
+
+## Exits  _(class, Party.cs)_
+
+Zone exits (the tiles World.ExitTiles lists) switched off and on. An exit that's off refuses the walk to it (the player's click and Character.TakeExitAt alike). The game's own exits can also be closed by its map scripts (each exit trigger has a condition); this is on top of that.
+
+- `static void Disable(WorksMod mod, string zone, int x, int y)`
+- `static void Enable(string zone, int x, int y)`
+- `static bool IsEnabled(string zone, int x, int y)`
 
 ## FeatRequirements  _(class, Feats.cs)_
 
@@ -515,6 +550,7 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<int>> LevelledUp = new Hook<Action<int>>("LevelledUp")` — The player levelled up (the level-up screen closed without Cancel): the new level.
 - `static readonly Hook<Action<Reload>> Reloading = new Hook<Action<Reload>>("Reloading")` — A character about to reload (Cancel: it doesn't; the action ends without AP spent on loading).
 - `static readonly Hook<Action<Reload>> Reloaded = new Hook<Action<Reload>>("Reloaded")` — A reload went through (ammo loaded).
+- `static readonly Hook<Action<PlayerOrder>> PlayerOrdering = new Hook<Action<PlayerOrder>>("PlayerOrdering")`
 - `static readonly Hook<Action> NewGame = new Hook<Action>("NewGame")` — A new game was created (before character creation).
 - `static readonly Hook<Action> GameLoaded = new Hook<Action>("GameLoaded")` — A save was loaded (the game state, the current zone and the player are there).
 - `static readonly Hook<Action> GameStarted = new Hook<Action>("GameStarted")` — Another game is now the current one: after NewGame and after GameLoaded. Reset a mod's per-game state here (one handler instead of the same reset on both; SaveData already belongs to the new game).
@@ -673,6 +709,7 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 
 ## Inventory  _(class, Characters.cs)_
 
+- `void Put(Item item)` — Puts an item that exists (taken out of a container or another bag: its condition, ammo and stacks kept) into the bag.
 - `IList<Item> Items` — Items in the bag (not equipped ones).
 - `int Count(string code, bool includeGear = false)` — How many of an item (by code, e.g. "currency.sc") the character has, bag and (optionally) gear.
 - `bool Has(string code, int stacks = 1, bool includeGear = false)`
@@ -889,6 +926,7 @@ Loot just rolled for a container or a character (once per entity per game). Add 
 ## MainMenu  _(class, Assets.cs)_
 
 - `static void SetBackground(WorksMod mod, string file)` — The picture behind the main menu (and the other full-screen menus that use the same art: options, loading a game). Works' BackgroundFit setting decides between cropping and letterboxing it.
+- `static void AddButton(WorksMod mod, string text, Action onClick)`
 
 ## MapMarker  _(class, Markers.cs)_
 
@@ -1215,6 +1253,20 @@ A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
 - `int Int(string key, int fallback = 0)`
 - `bool Bool(string key, bool fallback = false)`
 
+## Party  _(class, Party.cs)_
+
+- `static IList<Character> Members` — The player and the characters added (living, in this zone).
+- `static void Add(WorksMod mod, Character c)`
+- `static void Remove(Character c)`
+- `static bool Contains(Character c)`
+- `static void NeedTogether(WorksMod mod, PartyNeed need, string key, float distance = 8)` — That (entering a zone by its id, a conversation by its name, an object by its EntityId; key null: every one) needs every party member within distance tiles of the character doing it.
+- `static void DontNeedTogether(WorksMod mod, PartyNeed need, string key)`
+- `static IList<Character> Missing(Character who, float distance)` — The members farther than distance from who (empty: everyone's there).
+
+## PartyNeed  _(enum, Party.cs)_
+
+Values: `EnterZone, Talk, Use`
+
 ## Placement  _(class, Characters.cs)_
 
 A character placed by a mod: re-created each time its zone loads, while When holds; never saved.
@@ -1248,6 +1300,20 @@ A character placed by a mod: re-created each time its zone loads, while When hol
 - `static Rectangle RoomTiles(HouseRoom room)` — A ground-floor room's tiles (area cc_ph1, measured in game: walls around them; doorways lead out).
 - `static int SecurityLevel` — The game's security level for the house (turrets, patrols, cameras); burglars only come below 2.
 - `static bool HasItem(string item)` — Things bought for the house (the values Jyles' orders set, e.g. "securityCameras_installed").
+
+## PlayerOrder  _(class, Remote.cs)_
+
+The player ordered their character to do something (a click on the world, the attack key). Cancel: it doesn't. Walk: X, Y the tile; Attack / Talk: Target. Walk / Travel: X, Y the tile (Travel: the exit's tile). Attack / Talk: Target. Use: TargetEntityId (a door, lever, container...; also set for Attack and Talk) and X, Y its tile.
+
+- `PlayerOrderKind Kind`
+- `int X`
+- `int Y`
+- `Character Target`
+- `string TargetEntityId`
+
+## PlayerOrderKind  _(enum, Remote.cs)_
+
+Values: `Walk, Attack, Talk, Use, Ability, Travel, Other`
 
 ## Prices  _(class, Hud.cs)_
 
@@ -1325,6 +1391,13 @@ The first handler that returns true replaces the game's step.
 - `IList<string> Keys`
 - `void Clear()` — Everything, e.g. to migrate an older layout (keep a "version" key of your own).
 
+## SaveGames  _(class, Remote.cs)_
+
+- `static bool CanSave` — The game would let the player save now (not in combat, not stopped by a script).
+- `static bool SaveNow(string name)` — Writes the current game into the save folder name now (replacing it). False: not in a game, or no save came out.
+- `static string Folder(string name)` — The save's folder on disk (it may not exist).
+- `static bool Load(string name)` — Loads that save (from the main menu or in game). False: there's no such save, or this game can't load it (another major version, or DLC it doesn't have). The load happens over the next frames.
+
 ## Shot  _(class, ShotBreakdown.cs)_
 
 - `double Chance`
@@ -1333,6 +1406,12 @@ The first handler that returns true replaces the game's step.
 - `double Light`
 - `double IfClose`
 - `double IfLit`
+
+## Simulation  _(class, Remote.cs)_
+
+Frozen: nothing in the zone moves or acts by itself (no walking, attacks, AI, combat turns), while it is still drawn and the UI works: for a world set from elsewhere (PlaceAt, Health).
+
+- `static bool Frozen`
 
 ## Skills  _(class, Stats.cs)_
 
@@ -1415,6 +1494,22 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 
 - `static void AddRestock(WorksMod mod, string store, string itemPath, int count = 1)` — Delivered at every restock of the store (its file name under data/rules/stores, e.g. "bigbret").
 - `static void AddOnce(WorksMod mod, string store, string itemPath, int count = 1)` — Delivered once per game, kept through restocks.
+
+## TalkAs  _(class, TalkAs.cs)_
+
+- `static bool Talk(Character speaker, Character npc, Action<TalkLine> onLine, Action onEnd)` — False: no such characters, the speaker has no player sheet, or a conversation is already going.
+- `static bool IsOpen`
+- `static bool Choose(int index)` — Answers with choice index (as listed in the last line), or -1 to go on / end when it has none.
+- `static void Close()` — Ends the conversation now.
+
+## TalkChoice  _(class, TalkAs.cs)_
+
+
+## TalkLine  _(class, TalkAs.cs)_
+
+- `string Speaker`
+- `string Text`
+- `IList<TalkChoice> Choices` — Empty: the line only goes on (Choose(-1): Continue, or End when it's the last).
 
 ## TargetChoice  _(class, Ai.cs)_
 
@@ -1552,7 +1647,7 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static void SetColor(UiElement label, Color colour)` — A label's text colour.
 - `static IList<string> Wrap(string text, int width)` — Splits text into lines that fit a width (interface units) in the game's interface font (Ui.Label's), at spaces.
 - `static int TextWidth(string text)` — Width of a text in the interface font.
-- `static bool Ask(WorksMod mod, string question, string initial, Action<string> onAnswer, string okText = "OK")` — A line of text, in the save-name popup with the question above the box. OK (or Enter) passes the trimmed text (OK stays disabled while it's empty); Cancel or Escape don't. Letters, digits and spaces, up to 30. Ui.Ask(this, "What will you call your dog?", "Rex", name => { ... });
+- `static bool Ask(WorksMod mod, string question, string initial, Action<string> onAnswer, string okText = "OK", string alsoAllow = null)` — A line of text, in the save-name popup with the question above the box. OK (or Enter) passes the trimmed text (OK stays disabled while it's empty); Cancel or Escape don't. Letters, digits and spaces, up to 30, plus the characters in alsoAllow (".:" for an address, "-'" for names...). Ui.Ask(this, "What will you call your dog?", "Rex", name => { ... });
 - `static bool AskNumber(WorksMod mod, string question, int min, int max, int initial, Action<int> onAnswer, string okText = "OK")` — A number from min to max, in the split-stack popup (slider and a typed number) with the question above. OK or Enter passes it; Cancel or Escape don't. Ui.AskNumber(this, "How many rations?", 1, 20, 5, n => { ... });
 - `static bool Confirm(WorksMod mod, string title, string text, Action onYes, string yes = "Yes", string no = "No", Action onNo = null)` — Yes or no, in the game's message box (title, text, a button per answer). Enter: yes; Escape: no. Ui.Confirm(this, "Release Max", "Give Max to the Housing Corporation? This can't be undone.", () => { ... });
 - `static bool Choose(WorksMod mod, string title, string text, Action<int> onChoice, params string[] buttons)` — One of a few answers (buttons top to bottom) in the game's message box; onChoice gets the button's index. Enter: the first; Escape: the last.
@@ -1562,7 +1657,7 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static UiSlider Slider(int width, double min, double max, double value)` — A slider from min to max (drag or click; the value is drawn on it).
 - `static UiElement SmallButton(string text, int width, int height, Action click)` — A small button of any size drawn in the game's colours (Ui.Button is the game's own, at its own sizes).
 - `static UiChoice Choice(int width, IList<string> options, int index = 0)` — A button that steps through options on click (right-click: back).
-- `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD (null if there is no HUD). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
+- `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD, or on the main menu when it is showing (null otherwise). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
 - `static UiWorldView WorldView(int width, int height, Vector2? centre = null)` — A view of the player's area, width x height, centred on centre (null: the player). Null without a game.
 
 ## UiCanvas  _(class, Ui.cs)_
@@ -1751,6 +1846,12 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static bool ExportPlayer()` — Exports the player character as the game does at its end (My Games/Underrail/Characters/<name>.char, for the import button of a new game), with the mods' CharacterData beside it. False outside a game.
 - `static bool Travel(string zone, string entry)` — Sends the player to another zone as an exit does (zone id and entry point, as the game's maps name them, e.g. "lu-c1b", "entry"; the ids are in UnderRailWorks-content.txt). False if there's no player.
 - `static bool Use(Character user, string placementId)` — A character uses a placed object (as clicking it does, without walking there or the game's checks).
+- `static Character SpawnFromCharacterFile(string path, int x, int y)` — A character built from a .char file as the game builds the player (its look, sheet, inventory), standing at tile x, y of the player's area, facing south. Not the player: its sheet is its own, and its AI runs unless a mod takes it (CharacterControl). Like Spawn it's never saved (taken out around saves) and stays in this zone. Null: no such file, not a player sheet, or no room there.
+- `static bool MakePlayer(Character c)` — This machine's player becomes c (its HUD, inventory and character windows, quick bar, camera, fog of war); the old player's body stays as a character with its own sheet. For a game shown from elsewhere (co-op): saving it here afterwards would save c as the player.
+- `static bool StartNewGame()` — On the main menu: the game's New Game (its rules screen, then character creation, then the first zone), as the menu's button. False: not on the main menu.
+- `static IList<Point> ExitTiles` — The tiles of the player's area with a zone exit (what the player clicks to leave; Character.TakeExitAt).
+- `static IList<Door> Doors` — The doors in the player's area.
+- `static Character ByEntityId(string id)` — The character with this EntityId in the player's area, or null.
 - `static Character Player` — The player's character, as the game finds it (cnk.aqu(): the player's data au2, its entity).
 - `static IList<Character> Visible` — The characters the game drew in the last frame, the player excepted: the ones in sight (stealthed or out of sight characters aren't drawn). Updated at the end of each world pass.
 - `static bool FogOfWar` — The game's fog of war is on: undiscovered parts are hidden under the shroud.

@@ -23,7 +23,6 @@ using UnderRailWorks;
 public sealed partial class Coop : WorksMod
 {
     const int DefaultPort = 27650;
-    const float SightRange = 14;     // tiles: an enemy in a fight this close brings a joined character into it
     const string DefaultBlueprint = "creatures\\generichumans\\jkkgunslinger";
     static readonly Color Say = new Color(120, 200, 255);
 
@@ -418,6 +417,11 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.newfrom", "coop.newfrom <file.char> <name>: join with a character exported earlier (as finishing creation does)", a => { if (host == null || a.Length < 2) return "coop.newfrom <file.char> <name>"; host.Send("NEW", a[1], Convert.ToBase64String(System.IO.File.ReadAllBytes(a[0]))); return "sent"; });
         Commands.Add(this, "coop.talk", "coop.talk <name>: your character talks to that character (nearest of that name)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 80).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0); return t == null ? "nobody called that" : Mine("TALK", t.EntityId); });
         Commands.Add(this, "coop.box", "coop.box <id start>: your character opens that container", a => { var b = a.Length == 0 ? null : World.Containers.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return b == null ? "no such container" : Mine("USE", b.EntityId); });
+        Commands.Add(this, "coop.threats", "coop.threats: for each joined character, the enemies in the fight and who has noticed whom", a =>
+        {
+            var lines = seats.Values.Concat(orphans).Where(x => x.Character != null).Select(x => x.Character.Name + " at " + (int)x.Character.Position.X + "," + (int)x.Character.Position.Y + (x.Character.IsInCombat ? " (in the fight)" : "") + ": " + string.Join("; ", World.CharactersNear(x.Character.Position, 60).Where(e => e != x.Character && e.IsInCombat && e.AttitudeTo(x.Character) == Attitude.Hostile).Select(e => e.Name + " " + (int)Vector2.Distance(new Vector2(e.Position.X, e.Position.Y), new Vector2(x.Character.Position.X, x.Character.Position.Y)) + " tiles" + ", its sight " + e.SightRange + (e.HasNoticed(x.Character) ? ", knows of it" : "")).ToArray())).ToArray();
+            var t = string.Join(" | ", lines); Log.Info("threats: " + t); return t;
+        });
         Commands.Add(this, "coop.status", "coop.status: your character's state", a => Mine("STATUS"));
         Commands.Add(this, "coop.spawn", "coop.spawn [blueprint]: a local test partner next to you (no network)", a =>
         {
@@ -480,10 +484,19 @@ public sealed partial class Coop : WorksMod
             foreach (var s in seats.Values.Concat(orphans).Where(x => x.Character != null && !x.Character.IsDead && x.Character.Area != null).ToList())
             {
                 var c = s.Character;
-                var foe = World.CharactersNear(c.Position, SightRange).FirstOrDefault(e => e != c && e.IsInCombat && e.AttitudeTo(c) == Attitude.Hostile);
+                // In sight, by each one's own sight range (the sheet's SightRange: the player 13, a Rathound Alpha 8, a
+                // Commoner 10): an enemy in the fight close enough to see this character, or that it can see. Walls aren't
+                // counted. (The enemies' AI memory, HasNoticed, isn't sight: a fight that starts tells them about the
+                // player's whole side.)
+                var foe = World.CharactersNear(c.Position, 60).FirstOrDefault(e =>
+                {
+                    if (e == c || !e.IsInCombat || e.AttitudeTo(c) != Attitude.Hostile) return false;
+                    float d = Vector2.Distance(new Vector2(e.Position.X, e.Position.Y), new Vector2(c.Position.X, c.Position.Y));
+                    return d <= e.SightRange || d <= c.SightRange;
+                });
                 if (!c.IsInCombat)
                 {
-                    if (foe != null && Combat.Join(c)) { Log.Info(c.Name + " joins the fight (" + foe.Name + " in sight)"); if (s.Peer != null) s.Peer.Send("SAID", foe.Name + " is in sight: you're in the fight"); }
+                    if (foe != null && Combat.Join(c)) { Log.Info(c.Name + " joins the fight (" + foe.Name + " in sight" + ")"); if (s.Peer != null) s.Peer.Send("SAID", foe.Name + " is in sight: you're in the fight"); }
                 }
                 // The game brings the player's whole side into a fight; one with no enemy in sight that hasn't fought goes back out.
                 else if (foe == null && !engaged.Contains(c) && Combat.Leave(c)) { Log.Info(c.Name + " stays out of the fight (no enemy in sight)"); if (s.Peer != null) s.Peer.Send("SAID", "there's a fight nearby, but no enemy in sight: you're not in it"); }
