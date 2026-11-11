@@ -1549,3 +1549,19 @@ Vendors, Planner). Rules: UI.md, "Sizes".
   zone loads are ignored (the player is a new character object, so standing on the tiles at arrival counts as entering;
   afterwards they're inside and it fires only after stepping off and on). Tested: walking onto 2 tiles in the
   residential district took the player into the mod zone; the minimap showed the strip. Not tested: arriving on one.
+
+## Gauntlet, Grudges, Collector's Checklist; catalogue APIs (Nov 2026)
+
+- `Items.Paths` (every item path), `World.Blueprints` (every entity blueprint), `Progression.StudiedOddities` (the
+  player's `e3q.m_h`: oddity code -> times studied, what the Oddities window counts), `Character.Blueprint`: entities
+  don't keep their blueprint, so a best guess: the creature blueprint whose file name is the character's name in
+  lower case without spaces ("Praetorian Bomber" -> ...\praetorianbomber; "Praetorian Enforcer" matches none).
+- **Gauntlet** (mods/Gauntlet): opt-in challenges in Options -> Mods (damage taken/dealt %, fewer AP, prices %, XP %),
+  a HUD note while any is on. Tested: damage taken 200% (10 -> 20), the note.
+- **Grudges** (mods/Grudges): hostiles alive and hurt when a fight ends are remembered (name, guessed blueprint, zone);
+  entering another zone, with a chance, one is spawned hostile 5+ tiles away with a warning. API for other mods:
+  `Mods.Call("Grudges", "Hold", character)`. Tested through the API (a Praetorian Bomber returned hostile in the
+  player's house); the fight-ending path itself wasn't played through.
+- **Collector's Checklist** (mods/CollectorsChecklist, Home): every oddity, studied ones green with counts, ones in
+  the bag amber, "N of 125 studied". F4 first: Works found it was Bounty Hunter's and left it unbound (logged), so Home.
+- Save check after all of this: 61 of 61 files load in the stock game.

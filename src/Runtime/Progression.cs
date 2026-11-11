@@ -40,7 +40,7 @@ public sealed class XpGain
     public int Amount { get; set; }
 }
 
-public static class Progression
+public static partial class Progression
 {
     public static readonly Hook<Action<XpNeeded>> ModifyXpNeeded = new Hook<Action<XpNeeded>>("ModifyXpNeeded");
     public static readonly Hook<Action<LevelPoints>> ModifyLevelPoints = new Hook<Action<LevelPoints>>("ModifyLevelPoints");

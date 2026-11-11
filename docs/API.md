@@ -121,8 +121,9 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 ## Cancellable  _(class, Cancellable.cs)_
 
 
-## Character  _(class, Movement.cs)_
+## Character  _(class, Catalogue.cs)_
 
+- `string Blueprint` — Its blueprint path, matched by name among the creature blueprints (null: no match). See World.BlueprintFor.
 - `bool MoveTo(int x, int y)` — Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it can't take orders (no movement, not on a map) or the tile is outside the area. Not in turn-based combat.
 - `bool TeleportTo(int x, int y)` — Puts it on tile x, y of its area at once (no walking, as the game's scripts move characters between scenes).
 - `DefenseStats Defense`
@@ -722,6 +723,7 @@ Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medic
 
 - `static bool Use(Character user, Item item, Character target = null)` — A character uses an item from its bag the game's way (the capability its "use" is, e.g. a bandage's treatment; a grenade is thrown at target), as the game's own AI does: queued as the character's next action, with the AP cost, cooldowns and checks of a normal use. target: the character it is used on (null: the user itself). False if the item has no use or the game refuses it now (e.g. a bandage below 40 % health, in combat).
 - `static bool Use(Character user, Item item, Item target)` — The same, used on another item: ammo on a weapon (reloads it), a repair kit on armour...
+- `static IList<string> Paths` — Every item in the game's data (paths as Inventory.Add takes them).
 - `static string DebugKind(Item item)` — The game's class for an item and its quick-slot flag (for tests).
 - `static bool Exists(string path)`
 - `static string Code(string path)`
@@ -1232,8 +1234,9 @@ A character placed by a mod: re-created each time its zone loads, while When hol
 - `static readonly Hook<Func<Character, float, float>> BuyMarkup = new Hook<Func<Character, float, float>>("BuyMarkup")` — Change what merchants charge: each handler gets the merchant and the markup so far (the game's: about 1.15-3.5, lower with Mercantile) and returns the new one. Read when the barter window opens.
 - `static readonly Hook<Func<float, float>> SellFactor = new Hook<Func<float, float>>("SellFactor")` — Change what the player gets for selling: the factor so far (the difficulty's sold item value) -> the new one.
 
-## Progression  _(class, Progression.cs)_
+## Progression  _(class, Catalogue.cs)_
 
+- `static IDictionary<string, int> StudiedOddities` — The oddities the player has studied (item code -> times), as the Oddities window counts them. Empty without a game.
 - `static readonly Hook<Action<XpNeeded>> ModifyXpNeeded = new Hook<Action<XpNeeded>>("ModifyXpNeeded")`
 - `static readonly Hook<Action<LevelPoints>> ModifyLevelPoints = new Hook<Action<LevelPoints>>("ModifyLevelPoints")`
 - `static readonly Hook<Action<XpGain>> ModifyExperience = new Hook<Action<XpGain>>("ModifyExperience")`
@@ -1707,8 +1710,9 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 
 - `static string Get(string key)` — A value from UnderRailWorks.ini (or, for keys that moved, the old UnderrailFix.ini); null if unset.
 
-## World  _(class, Characters.cs)_
+## World  _(class, Catalogue.cs)_
 
+- `static IList<string> Blueprints` — Every entity blueprint (creatures, objects...) as World.Spawn and placements take them.
 - `static IList<Character> Characters` — Every living character in the current zone (all its areas), the player included.
 - `static IList<Character> CharactersNear(Vector3 at, float radius)` — Living characters in the current zone within radius tiles of a point (distance on the map, levels ignored), nearest first (the player included if in range; filter with Where). at: e.g. World.Player.Position.
 - `static Character Hovered` — The character under the mouse in the world (null: none, or not a character): the one the game outlines white. (The world view mv is a dnn; dnn.an2() is what the mouse is over.)

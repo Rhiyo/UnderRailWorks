@@ -104,7 +104,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Survey Pins: the Minimap marks merchants; still: pins with notes, workbenches, locked containers. (done Nov 2026: notes with Insert, locked containers; mods/SurveyPins)
 - [x] Neural Reallocation: a respec NPC (points refunded to the game's own unspent points).
 - [x] Workbench Planner: recipes, what can be crafted now (mods can now add recipes: Crafting.AddRecipe). (done Nov 2026: key D; mods/WorkbenchPlanner)
-- [ ] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist.
+- [x] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist. (done Nov 2026)
 - [x] HUD Layout: drag the game's HUD parts around, kept relative to an anchor (survives resolution changes) (Works: Input.Mouse, UiElement.X/Y).
 
 - [x] Key bindings for mods in the game's Controls tab (Keybinds); every shipped mod moved to it.

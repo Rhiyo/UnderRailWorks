@@ -251,6 +251,8 @@ public sealed class WorksTest : WorksMod
             return "areas";
         });
         Commands.Add(this, "wt.moveto", "wt.moveto x y: the player walks there", args => { Commands.CloseConsole(); return "walk: " + World.Player.MoveTo(int.Parse(args[0]), int.Parse(args[1])); });
+        Commands.Add(this, "wt.blueprints", "wt.blueprints: each character's guessed blueprint", args => { Log.Info("blueprints: " + string.Join("; ", World.Characters.Select(c => c.Name + " -> " + (c.Blueprint ?? "none")))); return "bp"; });
+        Commands.Add(this, "wt.grudge", "wt.grudge <name>: Grudges remembers that character (Mods.Call)", args => { var c = World.Characters.FirstOrDefault(x => x.Name == string.Join(" ", args)); return "grudge: " + Mods.Call("Grudges", "Hold", c); });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

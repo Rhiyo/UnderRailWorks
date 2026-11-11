@@ -1,0 +1,2 @@
+{ "id": "Gauntlet", "name": "Gauntlet", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+  "description": "Opt-in challenge modifiers, all off until you set them in Options -> Mods -> Gauntlet: enemies hit harder, you hit softer, fewer action points, dearer merchants, less experience. A small HUD note lists what's on." }
