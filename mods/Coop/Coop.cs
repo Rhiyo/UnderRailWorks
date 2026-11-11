@@ -17,7 +17,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("0.5.0")]
+[assembly: System.Reflection.AssemblyVersion("0.6.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -26,7 +26,7 @@ public sealed partial class Coop : WorksMod
     static readonly Color Say = new Color(120, 200, 255);
 
     // --- Saved co-op characters ---------------------------------------------------------------------------------
-    sealed class Record { public string Name, Blueprint, Zone; public int X, Y; }
+    sealed class Record { public string Name, Blueprint, Zone, Sheet; public int X, Y; }     // Sheet: the character's .char (base64), made in the game's creation
     List<Record> records = new List<Record>();
 
     void ReadRecords()
@@ -38,7 +38,7 @@ public sealed partial class Coop : WorksMod
         {
             Func<string, string> s = k => { object v; return o.TryGetValue(k, out v) && v != null ? Convert.ToString(v, System.Globalization.CultureInfo.InvariantCulture) : null; };
             Func<string, int> n = k => { double d; return double.TryParse(s(k), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out d) ? (int)d : 0; };
-            records.Add(new Record { Name = s("name"), Blueprint = s("blueprint") ?? DefaultBlueprint, Zone = s("zone"), X = n("x"), Y = n("y") });
+            records.Add(new Record { Name = s("name"), Blueprint = s("blueprint") ?? DefaultBlueprint, Zone = s("zone"), X = n("x"), Y = n("y"), Sheet = s("sheet") });
         }
     }
 
@@ -46,7 +46,7 @@ public sealed partial class Coop : WorksMod
     {
         foreach (var seat in seats.Values) Remember(seat);
         foreach (var o in orphans) Remember(o);
-        SaveData.Of(this).Set("characters", records.Select(r => (object)new Dictionary<string, object> { { "name", r.Name }, { "blueprint", r.Blueprint }, { "zone", r.Zone }, { "x", r.X }, { "y", r.Y } }).ToList());
+        SaveData.Of(this).Set("characters", records.Select(r => (object)new Dictionary<string, object> { { "name", r.Name }, { "blueprint", r.Blueprint }, { "zone", r.Zone }, { "x", r.X }, { "y", r.Y }, { "sheet", r.Sheet } }).ToList());
     }
 
     void Remember(Seat seat)
@@ -54,10 +54,23 @@ public sealed partial class Coop : WorksMod
         var c = seat.Character;
         if (seat.Record == null || c == null || c.IsDead || c.Area == null) return;
         seat.Record.Zone = World.ZoneId; seat.Record.X = (int)Math.Round(c.Position.X); seat.Record.Y = (int)Math.Round(c.Position.Y);
+        var sheet = SheetOf(c);
+        if (sheet != null) seat.Record.Sheet = sheet;
     }
 
+    // A character's sheet as a .char, base64 (null: it has none, or the export failed).
+    string SheetOf(Character c)
+    {
+        if (c == null || !c.HasPlayerSheet) return null;
+        var path = SheetPath("export");
+        try { return c.ExportTo(path, new DateTime(2026, 1, 1)) ? Convert.ToBase64String(System.IO.File.ReadAllBytes(path)) : null; }
+        catch (Exception ex) { Log.Warn("can't export " + c.Name + ": " + ex.Message); return null; }
+    }
+    string SheetPath(string name) { return System.IO.Path.Combine(Info.Folder, "sheets", new string(name.Where(char.IsLetterOrDigit).ToArray()) + ".char"); }
+    string WriteSheet(string name, string base64) { var path = SheetPath(name); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); System.IO.File.WriteAllBytes(path, Convert.FromBase64String(base64)); return path; }
+
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
     Listener listener;
     readonly Inbox inbox = new Inbox();
     readonly Dictionary<Peer, Seat> seats = new Dictionary<Peer, Seat>();
@@ -137,14 +150,15 @@ public sealed partial class Coop : WorksMod
                 if (seat.Character != null) { p.Send("SAID", "you're already playing " + seat.Character.Name); return; }
                 if (name.Length == 0) { p.Send("SAID", "coop.new <name>"); return; }
                 if (records.Any(r => r.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) || (World.Player != null && name.Equals(World.Player.Name, StringComparison.OrdinalIgnoreCase))) { p.Send("SAID", "there is already a " + name); return; }
-                var rec = new Record { Name = name, Blueprint = DefaultBlueprint };
+                var rec = new Record { Name = name, Blueprint = DefaultBlueprint, Sheet = w.Length > 2 && w[2].Length > 0 ? w[2] : null };
                 records.Add(rec);
                 Enter(seat, rec, false);
                 return;
             }
         }
         if (seat.Character == null || seat.Character.IsDead || seat.Character.Area == null) { p.Send("SAID", seat.Character != null && seat.Character.IsDead ? "your character is dead" : "pick a character first"); return; }
-        p.Send("SAID", Act(seat.Character, w));
+        var said = Act(seat.Character, w);
+        if (!string.IsNullOrEmpty(said)) p.Send("SAID", said);
     }
 
     bool Taken(Record r) { return seats.Values.Any(s => s.Record == r); }
@@ -191,7 +205,14 @@ public sealed partial class Coop : WorksMod
             tile = World.FreeTilesNear((int)at.X, (int)at.Y, 4).Where(t => Math.Abs(t.X - at.X) + Math.Abs(t.Y - at.Y) >= 1).OrderBy(t => Math.Abs(t.X - at.X) + Math.Abs(t.Y - at.Y)).FirstOrDefault();
         }
         if (tile == Point.Zero) return null;
-        var c = World.Spawn(r.Blueprint ?? DefaultBlueprint, tile.X, tile.Y, SpawnSide.Ally);
+        Character c;
+        if (r.Sheet != null)
+        {
+            // Made in the game's creation: built as the player is, with its own sheet.
+            try { c = World.SpawnFromCharacterFile(WriteSheet(r.Name, r.Sheet), tile.X, tile.Y); if (c != null) c.Name = r.Name; }
+            catch (Exception ex) { Log.Error("can't build " + r.Name + ": " + ex); c = null; }
+        }
+        else c = World.Spawn(r.Blueprint ?? DefaultBlueprint, tile.X, tile.Y, SpawnSide.Ally);
         if (c == null) return null;
         c.Name = r.Name;
         // The player's own faction: everyone treats it as they treat the player (playerNativeAlly is the force
@@ -247,7 +268,7 @@ public sealed partial class Coop : WorksMod
             case "TURN": Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")"); return;
             case "SAID": Tell(w.Length > 1 ? w[1] : ""); return;
         }
-        MirrorMessage(w);
+        if (!TalkMessage(w)) MirrorMessage(w);
     }
 
     void Tell(string line)
@@ -269,7 +290,7 @@ public sealed partial class Coop : WorksMod
             {
                 int x, y;
                 if (w.Length < 3 || !int.TryParse(w[1], out x) || !int.TryParse(w[2], out y)) return "coop.go x y";
-                bool ok = c.MoveTo(x, y);
+                bool ok = c.WalkTo(x, y);
                 Log.Info(c.Name + ": go " + x + "," + y + ": " + (ok ? "walking" : "refused") + Points(c));
                 return ok ? "walking to " + x + "," + y : "can't walk there now" + (Combat.InCombat && !c.IsTakingTurn ? " (not your turn)" : "");
             }
@@ -292,7 +313,7 @@ public sealed partial class Coop : WorksMod
                 var at = p.Position;
                 var tile = World.FreeTilesNear((int)at.X, (int)at.Y, 3).OrderBy(t => Math.Abs(t.X - at.X) + Math.Abs(t.Y - at.Y)).FirstOrDefault(t => Math.Abs(t.X - at.X) + Math.Abs(t.Y - at.Y) >= 1);
                 if (tile == Point.Zero) return "no room next to " + p.Name;
-                return c.MoveTo(tile.X, tile.Y) ? "walking to " + p.Name : "can't walk there now" + (Combat.InCombat && !c.IsTakingTurn ? " (not your turn)" : "");
+                return c.WalkTo(tile.X, tile.Y) ? "walking to " + p.Name : "can't walk there now" + (Combat.InCombat && !c.IsTakingTurn ? " (not your turn)" : "");
             }
             case "END":
             {
@@ -324,6 +345,8 @@ public sealed partial class Coop : WorksMod
                 if (ok) Notify.Log("Co-op: " + c.Name + " is heading for the exit: everyone goes along", Say);
                 return ok ? "heading for the exit (everyone goes along)" : "can't take that exit now";
             }
+            case "TALK": return w.Length > 1 ? Talk(c, w[1]) : "talk to whom?";
+            case "DLGPICK": return w.Length > 1 ? Pick(c, w[1]) : "";
             case "STATUS":
             {
                 var cur = Combat.Current;
@@ -377,6 +400,8 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.attack", "coop.attack <name>: your character attacks the nearest one of that name", a => Mine(new[] { "ATTACK" }.Concat(a).ToArray()));
         Commands.Add(this, "coop.end", "coop.end: ends your character's combat turn", a => Mine("END"));
         Commands.Add(this, "coop.door", "coop.door <id start>: your character uses that door (wt.doors lists them)", a => { var d = a.Length == 0 ? null : World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return d == null ? "no such door" : Mine("USE", d.EntityId); });
+        Commands.Add(this, "coop.newfrom", "coop.newfrom <file.char> <name>: join with a character exported earlier (as finishing creation does)", a => { if (host == null || a.Length < 2) return "coop.newfrom <file.char> <name>"; host.Send("NEW", a[1], Convert.ToBase64String(System.IO.File.ReadAllBytes(a[0]))); return "sent"; });
+        Commands.Add(this, "coop.talk", "coop.talk <name>: your character talks to that character (nearest of that name)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 80).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0); return t == null ? "nobody called that" : Mine("TALK", t.EntityId); });
         Commands.Add(this, "coop.status", "coop.status: your character's state", a => Mine("STATUS"));
         Commands.Add(this, "coop.spawn", "coop.spawn [blueprint]: a local test partner next to you (no network)", a =>
         {

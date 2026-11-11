@@ -10,16 +10,43 @@ namespace UnderRailWorks
     public sealed partial class Character
     {
         // Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it
-        // can't take orders (no movement, not on a map) or the tile is outside the area or not floor. In turn-based combat only on its
-        // own turn, spending movement points then AP as the player's walk does (it stops when they run out).
+        // can't take orders (no movement, not on a map) or the tile is outside the area or not floor. In turn-based combat, a
+        // character in the fight only on its own turn (one outside it walks as usual), spending movement points then AP as the player's walk does (it stops when they run out).
         public bool MoveTo(int x, int y)
         {
             var c = Entity as c5x;
             var move = c == null ? null : c.GetAspect<ale>();
             var area = Area;
-            if (move == null || area == null || x < 0 || y < 0 || x >= area.Width || y >= area.Height || (GameClock.InTurnBasedCombat && !IsTakingTurn)) return false;
+            if (move == null || area == null || x < 0 || y < 0 || x >= area.Width || y >= area.Height || (GameClock.InTurnBasedCombat && IsInCombat && !IsTakingTurn)) return false;
             if (area.KindAt(x, y, false) != TileKind.Floor) return false;     // a wall or nothing to stand on: the game would quietly not walk
             return move.a(Areas.Tile(area.Game, x, y), 0.0, 1, 0, true) != null;
+        }
+
+        // As MoveTo, but it keeps going: a walk the game cuts short (another character in the way: the walk step stops
+        // when two bodies' footprints meet, and only the player's clicks or an AI would order it again) is ordered again
+        // from where it stopped, a few times, until it's there. For characters a mod drives (CharacterControl).
+        public bool WalkTo(int x, int y)
+        {
+            if (!MoveTo(x, y)) return false;
+            lock (Walks) Walks[this] = new Walk { X = x, Y = y };
+            return true;
+        }
+        internal sealed class Walk { public int X, Y, Tries; public double Idle; }
+        internal static readonly System.Collections.Generic.Dictionary<Character, Walk> Walks = new System.Collections.Generic.Dictionary<Character, Walk>();
+        internal static void WalkTick(double seconds)
+        {
+            if (Walks.Count == 0) return;
+            lock (Walks)
+                foreach (var kv in Walks.ToList())
+                {
+                    var c = kv.Key; var w = kv.Value;
+                    var at = c.Position;
+                    if (c.IsDead || c.Area == null || (Math.Abs(at.X - w.X) < 0.6f && Math.Abs(at.Y - w.Y) < 0.6f)) { Walks.Remove(c); continue; }
+                    if (c.IsWalking) { w.Idle = 0; continue; }
+                    if ((w.Idle += seconds) < 0.3) continue;
+                    w.Idle = 0;
+                    if (++w.Tries > 6 || !c.MoveTo(w.X, w.Y)) Walks.Remove(c);
+                }
         }
 
         // Puts it on tile x, y of its area at once (no walking, as the game's scripts move characters between scenes).

@@ -10,6 +10,20 @@ using UnderRailWorks;
 
 public sealed class WorksTest : WorksMod
 {
+    Character clone;
+    double menuPoll;
+    string Clone(string path)
+    {
+        {
+            var at = World.Player.Position;
+            var t = World.FreeTilesNear((int)at.X, (int)at.Y, 3).FirstOrDefault(p => p.X != (int)at.X || p.Y != (int)at.Y);
+            clone = World.SpawnFromCharacterFile(path, t.X, t.Y);
+            if (clone == null) return "spawn failed";
+            clone.Name = "Clone"; clone.Health = clone.MaxHealth / 3;
+            Log.Info("clone at " + clone.Position + " sheet " + clone.HasPlayerSheet + " hp " + clone.Health + "/" + clone.MaxHealth + " player " + clone.IsPlayer);
+            return "clone";
+        }
+    }
     UiTextBox box;
     int detections, instants, suspicions;
     bool failNow;
@@ -351,6 +365,15 @@ public sealed class WorksTest : WorksMod
         Commands.Add(this, "wt.where", "wt.where", args => { Log.Info("player at " + World.Player.Position); return "where"; });
         Commands.Add(this, "wt.doors", "wt.doors: the doors near the player", args => { var p = World.Player.Position; Log.Info("doors: " + string.Join("; ", World.Doors.Where(d => Math.Abs(d.Position.X - p.X) + Math.Abs(d.Position.Y - p.Y) < 25).Select(d => d.EntityId.Substring(0, 8) + " at " + d.Position + (d.IsOpen ? " open" : " closed") + (d.IsLocked ? " locked" : "")).ToArray())); return "doors"; });
         Commands.Add(this, "wt.exits", "wt.exits: zone exit tiles in this area", args => { Log.Info("exits: " + string.Join(" ", World.ExitTiles.Select(t => t.X + "," + t.Y).ToArray())); return "exits"; });
+        Commands.Add(this, "wt.clone", "wt.clone: a copy of the player from a .char, next to it", args =>
+        {
+            var path = System.IO.Path.Combine(Info.Folder, "clone.char");
+            try { if (!World.Player.ExportTo(path)) return "export failed"; } catch (Exception ex) { Log.Info("export: " + (ex.InnerException ?? ex)); return "export threw"; }
+            Log.Info("exported " + new System.IO.FileInfo(path).Length + " bytes");
+            try { return Clone(path); } catch (Exception ex) { Log.Info("spawn: " + (ex.InnerException ?? ex)); return "spawn threw"; }
+        });
+        Commands.Add(this, "wt.clonefrom", "wt.clonefrom <path>", args => Clone(args[0]));
+        Commands.Add(this, "wt.becomeclone", "wt.becomeclone: the clone becomes the player", args => { var ok = World.MakePlayer(clone); Log.Info("make player: " + ok + "; player is " + World.Player.Name + " hp " + World.Player.Health); return "ok"; });
         Commands.Add(this, "wt.toggledoor", "wt.toggledoor <id start>", args => { var d = World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(args[0])); if (d == null) return "none"; d.Toggle(); Log.Info("door " + args[0] + " now " + (d.IsOpen ? "open" : "closed")); return "ok"; });
         Commands.Add(this, "wt.near", "wt.near: characters near the player with map positions and screen boxes", args => { Log.Info("near: " + string.Join("; ", World.CharactersNear(World.Player.Position, 30).Select(c => c.Name + (c.IsDead ? " (dead)" : "") + " at " + c.Position + " screen " + c.ScreenBounds).ToArray())); return "near"; });
         Commands.Add(this, "wt.mark", "wt.mark: markers near and far", args =>
@@ -430,6 +453,13 @@ public sealed class WorksTest : WorksMod
                 autoPoll = 1;
                 var auto = System.IO.Path.Combine(Info.Folder, "autorun.txt");
                 if (System.IO.File.Exists(auto)) { foreach (var line in System.IO.File.ReadAllLines(auto)) if (line.Trim().Length > 0) autorun.Enqueue(line.Trim()); System.IO.File.Delete(auto); }
+            }
+            // menurun.txt: the same, picked up on the main menu (no game loaded).
+            if (World.Player == null && (menuPoll -= sec) <= 0)
+            {
+                menuPoll = 1;
+                var menu = System.IO.Path.Combine(Info.Folder, "menurun.txt");
+                if (System.IO.File.Exists(menu)) { foreach (var line in System.IO.File.ReadAllLines(menu)) if (line.Trim().Length > 0) autorun.Enqueue(line.Trim()); System.IO.File.Delete(menu); }
             }
             if (autoWait > 0) { autoWait -= sec; return; }
             while (autorun.Count > 0)

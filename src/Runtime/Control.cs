@@ -101,8 +101,33 @@ namespace UnderRailWorks.Internal
             if (ai != null && TurnClock != null) try { TurnClock.SetValue(ai, null); } catch { }
         }
 
+        // Walking past others. A walk step (bpr.fr) stops for good where its body's footprint meets another character's
+        // (the collision handler's kq says characters collide) and waits there; the player and the AI get round it by
+        // ordering again, a mod's character doesn't. So while a controlled character steps, the player and other
+        // controlled characters don't stop it; in a frozen world (positions set from elsewhere) nobody stops anybody.
+        [ThreadStatic] static b0b stepping;
+        static void StepStarting(bpr __instance) { var m = __instance.l(); stepping = m == null ? null : m.a8(); }
+        static void StepDone() { stepping = null; }
+        static void Passable(b0b __0, ref bool? __result)
+        {
+            var m = stepping;
+            var other = __0 as c5x;
+            if (m == null || other == null || other == m || other.GetAspect<amc>() == null) return;
+            if (Simulation.Frozen) { __result = false; return; }
+            bool mine, theirs;
+            lock (CharacterControl.Taken) { mine = CharacterControl.Taken.ContainsKey(m); theirs = CharacterControl.Taken.ContainsKey(other); }
+            if (mine && (other.IsPlayer || theirs)) __result = false;
+        }
+
         internal static void Install(HarmonyLib.Harmony harmony)
         {
+            var step = typeof(bpr).GetMethod("fr", Any, null, new[] { typeof(TimeSpan), typeof(TimeSpan) }, null);
+            if (step != null) harmony.Patch(step, prefix: new HarmonyLib.HarmonyMethod(typeof(ControlHooks).GetMethod("StepStarting", BindingFlags.Static | BindingFlags.NonPublic)), finalizer: new HarmonyLib.HarmonyMethod(typeof(ControlHooks).GetMethod("StepDone", BindingFlags.Static | BindingFlags.NonPublic)));
+            foreach (var t in typeof(a7o).Assembly.GetTypes().Where(t => typeof(a7o).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract))
+            {
+                var kq = t.GetMethod("kq", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(b0b) }, null);
+                if (kq != null) harmony.Patch(kq, postfix: new HarmonyLib.HarmonyMethod(typeof(ControlHooks).GetMethod("Passable", BindingFlags.Static | BindingFlags.NonPublic)));
+            }
             harmony.Patch(typeof(bm6).GetMethod("r7", Any, null, new[] { typeof(eds) }, null), prefix: new HarmonyLib.HarmonyMethod(typeof(ControlHooks).GetMethod("Step", BindingFlags.Static | BindingFlags.NonPublic)));
             Log.Write("control: hooks in place (awareness " + (Awareness != null) + ", turn clock " + (TurnClock != null) + ")");
         }

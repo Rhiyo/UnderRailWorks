@@ -92,7 +92,14 @@ public sealed partial class Coop
                     if (selected < 1) { Tell(selected == 0 ? "that's the host's character" : "select a character first"); return; }
                     host.Send("PICK", selected);
                 });
-                button("New character...", () => Ui.Ask(this, "Your new character's name", "", name => { if (!string.IsNullOrEmpty(name) && host != null) host.Send("NEW", name.Trim()); }, "Create"));
+                button("New character...", () =>
+                {
+                    // Made in the game's own creation (a new game on this machine, left as soon as it starts).
+                    if (World.Player != null) { Tell("new characters are made from the main menu: go there (Escape -> main menu) and use Join a Game"); return; }
+                    creating = true;
+                    Tell("make your character; you'll join " + (hostName ?? "the host") + " when it's done");
+                    if (!World.StartNewGame()) { creating = false; Tell("couldn't open character creation"); }
+                });
                 button("Leave", Leave);
                 break;
             case "play":

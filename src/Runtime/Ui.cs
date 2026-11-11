@@ -605,6 +605,7 @@ static class UiHooks
         Group("new game screen", () => NewGameScreenHooks.Install(harmony));
         Group("control", () => ControlHooks.Install(harmony));
         Group("remote (orders, simulation)", () => RemoteHooks.Install(harmony));
+        Group("talking as another character", () => TalkHooks.Install(harmony));
         Group("assets", () => AssetStore.Install(harmony));
         Group("clock, items, crafting, stealing", () => ActivityHooks.Install(harmony));
         Group("item definitions and tooltips", () => ItemHooks.Install(harmony));
@@ -649,6 +650,8 @@ static class UiHooks
         UiWindows.Tick();
         AssetStore.Apply();
         try { World.FollowTick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("follow: " + ex.Message); }
+        try { Character.WalkTick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("walk: " + ex.Message); }
+        try { TalkHooks.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("talk: " + ex.Message); }
         try { Profiler.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("perf: " + ex.Message); }
         try { Keybinds.CheckGameKeys(); } catch (Exception ex) { Log.Write("keys: " + ex.Message); }
         try { AbilityBars.Tick(); } catch (Exception ex) { Log.Write("abilities: " + ex.Message); }

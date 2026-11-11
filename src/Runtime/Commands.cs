@@ -89,6 +89,14 @@ namespace UnderRailWorks
                 return a[0] + " = " + (Variables.Global.Get<object>(a[0], null) ?? "(unset)");
             });
             Add("UnderRailWorks", "works.mods", "works.mods: the mods and their state", a => string.Join("\n", ModLoader.Mods.Select(m => m.Name + " " + m.VersionText + ": " + (m.Loaded ? "loaded" : m.Enabled ? "not loaded (" + m.Error + ")" : "off") + (m.Failures > 0 ? ", " + m.Failures + " errors" : ""))));
+            Add("UnderRailWorks", "works.body", "works.body <name>: a character's footprint and size (debugging)", a =>
+            {
+                var c = World.Player == null || a.Length == 0 ? null : World.CharactersNear(World.Player.Position, 100).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0);
+                if (c == null) return "nobody";
+                var e = c.Entity; var z = typeof(b0b).GetField("z").GetValue(e);
+                var line = c.Name + ": footprint " + (z == null ? "none" : z.ToString()) + ", size " + e.Size + ", sheet " + c.HasPlayerSheet;
+                Log.Write(line); return line;
+            });
             Add("UnderRailWorks", "works.export", "works.export: export the player character (for a new game's Import)", a => World.ExportPlayer() ? "exported" : "[error]no game");
             Add("UnderRailWorks", "works.perf", "works.perf [seconds]: time each mod's handlers for a while (default 10 s), then list the busiest (also in the log)", a =>
             {

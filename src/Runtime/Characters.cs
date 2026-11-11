@@ -247,6 +247,19 @@ public static partial class World
     }
     static int spawned;
 
+    // A character made in code (not from a blueprint) treated as a Spawn: taken out around saves, forgotten with the zone.
+    internal static void Adopt(Character c, string name)
+    {
+        var e = c.Entity as c5x;
+        var zone = ZoneId; var area = c.Area;
+        if (e == null || zone == null || area == null) return;
+        var id = "spawn:" + (++spawned);
+        var p = new Placement { Id = id, Zone = zone, Area = area.Name, X = (int)c.Position.X, Y = (int)c.Position.Y, Blueprint = name, Temporary = true };
+        p.When = Condition.Code(() => false);
+        lock (placements) placements.Add(p);
+        placed[id] = e;
+    }
+
     // --- Followers -----------------------------------------------------------------------------------------------
     // Out of combat, a follower that falls more than distance tiles behind is sent (the game's own move order, as its
     // AI moves: ale.a(tile)) to a free tile near its leader; in combat its AI fights as it would. Spawned characters

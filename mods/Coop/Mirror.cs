@@ -8,7 +8,8 @@
 // aren't in the save: they go by "c:<name>" and the joiner's game spawns its own copy.
 // Messages, host to joiner: WORLD, FILE <path> <base64>..., WORLDEND, YOU <key>,
 // POS <key> <x> <y> <z> <facing> <health> <dead>, WALK <key> <x> <y> (walking there: the joiner's copy walks too),
-// DOOR <id> <0|1>, DEAD <key>, GONE <key>, SPAWN <key> <blueprint> <hostile> <name> (before a character's first POS).
+// DOOR <id> <0|1>, DEAD <key>, GONE <key>, SHEET <key> <.char base64> (a co-op character's sheet: its body is built from
+// it, and the joiner's own becomes the player there), SPAWN <key> <blueprint> <hostile> <name> (before a character's first POS).
 // Joiner to host: LOADED, ATTACKID <key>, USE <id>, EXIT <x> <y> (and GO x y).
 using System;
 using System.Collections.Generic;
@@ -58,7 +59,27 @@ public sealed partial class Coop
         });
     }
 
-    double mirrorTimer;
+    double mirrorTimer, sheetTimer;
+
+    // Each joined character's sheet, sent again when it changed (XP, items, skills...), checked every 5 s out of combat.
+    void HostSheets(double dt)
+    {
+        if ((sheetTimer -= dt) > 0 || Combat.InCombat) return;
+        sheetTimer = 5;
+        foreach (var seat in seats.Values.Concat(orphans).Where(x => x.Character != null && x.Record != null && x.Record.Sheet != null).ToList())
+        {
+            // What a change worth a new sheet looks like (the sheet's bytes change all the time: its fog of war, clocks).
+            var c = seat.Character;
+            var sign = c.Level + "|" + c.Experience + "|" + string.Join(",", c.Inventory.Items.Select(i => i.Name + "x" + i.Stacks).OrderBy(x => x).ToArray());
+            if (seat.LastSign == null) { seat.LastSign = sign; continue; }
+            if (sign == seat.LastSign) continue;
+            seat.LastSign = sign;
+            var sheet = SheetOf(c);
+            if (sheet == null) continue;
+            seat.Record.Sheet = sheet;
+            foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null)) s.Peer.Send("SHEET", "c:" + seat.Record.Name, sheet);
+        }
+    }
     readonly Dictionary<string, Character> known = new Dictionary<string, Character>();     // what each key was, to tell dead from gone
     void HostMirror(double dt)
     {
@@ -114,6 +135,7 @@ public sealed partial class Coop
                 var text = string.Join(" ", l.Value.Skip(2).Select(o => Convert.ToString(o, CultureInfo.InvariantCulture)).ToArray());
                 string old;
                 if (s.Sent.TryGetValue(l.Key, out old) && old == text) continue;
+                if (old == null && l.Key.StartsWith("c:")) { var r = records.FirstOrDefault(x => x.Name == l.Key.Substring(2)); if (r != null && r.Sheet != null) s.Peer.Send("SHEET", l.Key, r.Sheet); }
                 if (old == null) { var c = who[l.Key]; s.Peer.Send("SPAWN", l.Key, l.Key.StartsWith("c:") ? BlueprintOf(c.Name) : c.Blueprint ?? "", c.IsHostile ? 1 : 0, c.Name); }
                 s.Sent[l.Key] = text;
                 s.Peer.Send(l.Value);
@@ -129,7 +151,7 @@ public sealed partial class Coop
     }
 
     // --- Joiner -------------------------------------------------------------------------------------------------
-    bool receiving, loading, inWorld;
+    bool receiving, loading, inWorld, creating;
     string myKey;
     readonly Dictionary<string, Character> spawned = new Dictionary<string, Character>();
     readonly Dictionary<string, string[]> spawnInfo = new Dictionary<string, string[]>();
@@ -168,7 +190,7 @@ public sealed partial class Coop
                 if (!inWorld || w.Length < 4) return;
                 Character c; int x, y;
                 if (!spawned.TryGetValue(w[1], out c)) c = w[1].StartsWith("c:") ? null : World.ByEntityId(w[1]);
-                if (c != null && int.TryParse(w[2], out x) && int.TryParse(w[3], out y)) c.MoveTo(x, y);
+                if (c != null && int.TryParse(w[2], out x) && int.TryParse(w[3], out y)) c.WalkTo(x, y);
                 return;
             }
             case "DOOR":
@@ -192,6 +214,21 @@ public sealed partial class Coop
             }
             case "YOU": myKey = w.Length > 1 ? w[1] : null; FollowMe(); return;
             case "SPAWN": if (w.Length > 2) spawnInfo[w[1]] = w; return;
+            case "SHEET":
+            {
+                if (w.Length < 3) return;
+                sheets[w[1]] = w[2];
+                Character old;
+                if (!inWorld || !spawned.TryGetValue(w[1], out old) || old.Area == null) return;
+                // A new sheet (XP, items...): a new body from it where the old one stands.
+                var at = old.Position;
+                var c = SpawnSheet(w[1], (int)Math.Round(at.X), (int)Math.Round(at.Y));
+                if (c == null) return;
+                c.PlaceAt(at, old.Facing);
+                if (w[1] == myKey) { World.MakePlayer(c); followed = c; Build(); }
+                World.Despawn(old);
+                return;
+            }
             case "POS":
                 if (!inWorld) { if (loading) early.Add(w); return; }
                 Place(w);
@@ -226,6 +263,7 @@ public sealed partial class Coop
         string[] info;
         spawnInfo.TryGetValue(key, out info);
         bool coop = key.StartsWith("c:");
+        if (coop && sheets.ContainsKey(key)) return SpawnSheet(key, (int)Math.Round(P(pos[2])), (int)Math.Round(P(pos[3])));
         var blueprint = info != null && info[2].Length > 0 ? info[2] : coop ? DefaultBlueprint : null;
         if (blueprint == null) return null;     // not found by name: can't be shown
         bool hostile = info != null && info.Length > 3 && info[3] == "1";
@@ -238,6 +276,20 @@ public sealed partial class Coop
         return c;
     }
 
+    readonly Dictionary<string, string> sheets = new Dictionary<string, string>();
+    Character SpawnSheet(string key, int x, int y)
+    {
+        string sheet;
+        if (!sheets.TryGetValue(key, out sheet)) return null;
+        Character c = null;
+        try { c = World.SpawnFromCharacterFile(WriteSheet("mirror-" + key.Substring(2), sheet), x, y); }
+        catch (Exception ex) { Log.Error("can't build " + key + ": " + ex); }
+        if (c == null) return null;
+        spawned[key] = c;
+        Log.Info("mirror: " + c.Name + " placed (own sheet)");
+        return c;
+    }
+
     static float P(string s) { float f; return float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out f) ? f : 0; }
 
     Character followed;
@@ -246,7 +298,9 @@ public sealed partial class Coop
         Character c;
         if (myKey == null || !spawned.TryGetValue(myKey, out c) || c == followed) return;
         followed = c;
-        Camera.Follow(c);
+        // A character with its own sheet becomes this machine's player (HUD, inventory, camera); else the camera follows.
+        if (c.HasPlayerSheet && World.MakePlayer(c)) Build();
+        else Camera.Follow(c);
     }
 
     // The host's world is loaded here: frozen, then set from the host.
@@ -266,12 +320,22 @@ public sealed partial class Coop
     {
         receiving = loading = inWorld = false;
         Simulation.Frozen = false;
-        myKey = null; followed = null; spawned.Clear(); early.Clear();
+        myKey = null; followed = null; spawned.Clear(); early.Clear(); sheets.Clear();
     }
 
     void LoadMirror()
     {
-        GameEvents.Update.Add(this, dt => { if (listener != null) HostMirror(dt); });
+        GameEvents.Update.Add(this, dt => { if (listener != null) { HostMirror(dt); HostSheets(dt); } });
+        // A character made in the game's creation for co-op: when its new game's first zone is there, it goes to the host.
+        GameEvents.ZoneLoaded.Add(this, (zone, first) =>
+        {
+            if (!creating || host == null || host.Closed || World.Player == null) return;
+            creating = false;
+            var sheet = SheetOf(World.Player);
+            if (sheet == null) { Tell("couldn't export your character"); return; }
+            host.Send("NEW", World.Player.Name, sheet);
+            Tell("sending " + World.Player.Name + " to the host...");
+        });
         GameEvents.ZoneLoaded.Add(this, (zone, first) => { if (loading && host != null) Arrived(); });
         // The joiner's orders go to the host: walking and attacking for now.
         GameEvents.PlayerOrdering.Add(this, o =>
@@ -289,7 +353,12 @@ public sealed partial class Coop
                 }
                 case PlayerOrderKind.Use: if (o.TargetEntityId != null) host.Send("USE", o.TargetEntityId); break;
                 case PlayerOrderKind.Travel: host.Send("EXIT", o.X, o.Y); break;
-                case PlayerOrderKind.Talk: Tell("talking isn't relayed in co-op yet"); break;
+                case PlayerOrderKind.Talk:
+                {
+                    var key = o.Target == null ? o.TargetEntityId : spawned.Where(kv => kv.Value == o.Target).Select(kv => kv.Key).FirstOrDefault() ?? o.Target.EntityId;
+                    if (key != null) host.Send("TALK", key);
+                    break;
+                }
                 default: Tell("abilities aren't relayed in co-op yet"); break;
             }
         });
