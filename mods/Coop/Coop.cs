@@ -22,6 +22,7 @@ using UnderRailWorks;
 public sealed partial class Coop : WorksMod
 {
     const int DefaultPort = 27650;
+    const float SightRange = 14;     // tiles: an enemy in a fight this close brings a joined character into it
     const string DefaultBlueprint = "creatures\\generichumans\\jkkgunslinger";
     static readonly Color Say = new Color(120, 200, 255);
 
@@ -72,6 +73,7 @@ public sealed partial class Coop : WorksMod
     // --- Host ---------------------------------------------------------------------------------------------------
     sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
     Listener listener;
+    readonly HashSet<Character> engaged = new HashSet<Character>();     // attacked or attacking in this fight: stays in it
     readonly Inbox inbox = new Inbox();
     readonly Dictionary<Peer, Seat> seats = new Dictionary<Peer, Seat>();
     readonly List<Seat> orphans = new List<Seat>();     // joiners who left: their character stays, passing its turns
@@ -451,6 +453,32 @@ public sealed partial class Coop : WorksMod
             var seat = seats.Values.FirstOrDefault(s => s.Character == c);
             if (seat != null) { seat.Peer.Send("TURN", Combat.ActionPoints(c), Combat.MovementPoints(c)); Log.Info(c.Name + "'s turn (" + seat.Peer.Name + ")" + Points(c)); }
             else if (orphans.Any(o => o.Character == c)) { c.EndTurn(); Log.Info(c.Name + "'s turn passed (no player)"); }
+        });
+        // Joined characters are only in a fight as anyone would be: when they attack or are attacked, or an enemy in the
+        // fight is within sight of them (Works' Combat.Join; their AI, which would notice, is held). Otherwise they walk
+        // and act in real time while the others fight.
+        double fightTimer = 0;
+        GameEvents.CombatEnded.Add(this, () => engaged.Clear());
+        GameEvents.Update.Add(this, dt =>
+        {
+            if (listener == null || !Combat.InCombat || (fightTimer -= dt) > 0) return;
+            fightTimer = 0.5;
+            foreach (var s in seats.Values.Concat(orphans).Where(x => x.Character != null && !x.Character.IsDead && x.Character.Area != null).ToList())
+            {
+                var c = s.Character;
+                var foe = World.CharactersNear(c.Position, SightRange).FirstOrDefault(e => e != c && e.IsInCombat && e.AttitudeTo(c) == Attitude.Hostile);
+                if (!c.IsInCombat)
+                {
+                    if (foe != null && Combat.Join(c)) { Log.Info(c.Name + " joins the fight (" + foe.Name + " in sight)"); if (s.Peer != null) s.Peer.Send("SAID", foe.Name + " is in sight: you're in the fight"); }
+                }
+                // The game brings the player's whole side into a fight; one with no enemy in sight that hasn't fought goes back out.
+                else if (foe == null && !engaged.Contains(c) && Combat.Leave(c)) { Log.Info(c.Name + " stays out of the fight (no enemy in sight)"); if (s.Peer != null) s.Peer.Send("SAID", "there's a fight nearby, but no enemy in sight: you're not in it"); }
+            }
+        });
+        Combat.AttackResolved.Add(this, o =>
+        {
+            foreach (var s in seats.Values.Concat(orphans).Where(x => x.Character != null && !x.Character.IsDead))
+                if (o.Target == s.Character || o.AttackerName == s.Character.Name) { engaged.Add(s.Character); if (!s.Character.IsInCombat) Combat.Join(s.Character); }
         });
         Combat.AttackResolved.Add(this, o =>
         {

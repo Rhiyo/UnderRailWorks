@@ -82,7 +82,9 @@ public sealed partial class Character
     public string Faction { get { return Need.FactionId; } set { Need.FactionId = value; } }
     public bool Passive { get { return Need.Passive; } set { Need.Passive = value; } }
     public bool IsDead { get { var d = Data; return d != null && d.Dead; } }
-    public bool IsInCombat { get { return Need.IsInCombat; } }
+    // In the fight: its own flag, or a combatant in the combat manager's list (characters with a player sheet that
+    // aren't the player don't get the flag).
+    public bool IsInCombat { get { if (Need.IsInCombat) return true; var m = Combat.Manager; return m != null && m.ahg() && m.ahu(Data) != null; } }
     public void Kill() { Need.a((cwt)null, (cru)null, false); }
 
     public float Health { get { return Need.Defense.q().zo(); } set { Need.Defense.q().zp(value); } }

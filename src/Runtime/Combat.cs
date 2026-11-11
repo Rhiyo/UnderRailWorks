@@ -96,6 +96,34 @@ public static partial class Combat
 
     internal static crp Manager { get { return bpo.GetService<d02>() as crp; } }
     public static bool InCombat { get { var m = Manager; return m != null && m.ahg(); } }
+    // Takes c out of the fight (as the game removes one who leaves the zone or dies: crp.a(amc), its place in the turn
+    // order goes; on its turn the turn ends first). For a character the game brought in that a mod wants out (a co-op
+    // partner far from the enemies). False: not in the fight.
+    public static bool Leave(Character c)
+    {
+        var m = Manager;
+        var e = c == null ? null : c.Entity as c5x;
+        var a = e == null ? null : e.GetAspect<amc>();
+        if (m == null || a == null || !m.ahg() || m.ahu(a.aa()) == null || Remove == null) return false;
+        if (c.IsTakingTurn) c.EndTurn();
+        Remove.Invoke(m, new object[] { a });
+        return true;
+    }
+    static readonly System.Reflection.MethodInfo Remove = typeof(crp).GetMethod("a", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null, new[] { typeof(amc) }, null);
+
+    // Puts c in the fight (starting one if there's none), as the game does for an attacker (crp.ahn(amc): a new fight
+    // with it, or it joins the running one and gets its place in the turn order). For characters whose AI doesn't
+    // notice enemies itself (a co-op partner a mod drives). False: not a character, dead, or no combat manager.
+    public static bool Join(Character c)
+    {
+        var m = Manager;
+        var e = c == null ? null : c.Entity as c5x;
+        var a = e == null ? null : e.GetAspect<amc>();
+        if (m == null || a == null || c.IsDead) return false;
+        if (c.IsInCombat) return true;
+        m.ahn(a, false);
+        return true;
+    }
     // Whose turn it is (null outside combat).
     public static Character Current { get { var m = Manager; var e = m == null || !m.ahg() ? null : m.ahe(); var f = Fighter(e); return f == null ? null : Character.Of(f.a8()); } }
     public static int Round { get; internal set; }
