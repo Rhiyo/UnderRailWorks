@@ -19,6 +19,7 @@
 // - Simulation: c1a ticks the zone's action manager ix.a(total, delta) (movement steps, attacks, every entity's
 //   aspects including the AI), and bl1 ticks combat (crp.aho). Frozen skips both; drawing and the UI go on.
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Xna.Framework;
@@ -34,6 +35,48 @@ namespace UnderRailWorks
         public string EntityId { get { return Entity.qe().ToString(); } }
         // Which way it faces: 0 north, 1 north-east ... 7 north-west (map directions).
         public int Facing { get { return (int)Entity.VisualDirection; } }
+        // Where it is walking to (the tile of its current walk order), or null (not walking somewhere).
+        public Point? WalkTarget
+        {
+            get
+            {
+                var c = Entity as c5x;
+                var walker = c == null ? null : c.GetAspect<ny>(); var order = walker == null ? null : walker.a() as djk;
+                var tile = order == null ? null : order.fm() as ak1;
+                return tile == null ? (Point?)null : tile.Location;
+            }
+        }
+        // It has a walk order (going somewhere or following someone).
+        public bool IsWalking { get { var c = Entity as c5x; var w = c == null ? null : c.GetAspect<ny>(); return w != null && w.a() is em1; } }
+
+        // Walks to the object with that EntityId (a door, lever, container, computer...) and uses it, as the player's click
+        // does. False: no such object here, or it can't be used.
+        public bool UseObject(string entityId)
+        {
+            var c = Entity as c5x; var area = Area; Guid g;
+            var move = c == null ? null : c.GetAspect<ale>();
+            if (move == null || area == null || !Guid.TryParse(entityId, out g)) return false;
+            var target = area.Game.a(g) as c5x;
+            var use = target == null ? null : target.GetAspect<bim>();
+            if (use == null) return false;
+            return move.b(target, use.t(), 1, use.y()) != null;
+        }
+
+        // Walks to the zone exit on tile x, y and takes it (as the player's click on an exit). The game then changes zone:
+        // for everyone, as when the player leaves. False: no exit there.
+        public bool TakeExitAt(int x, int y)
+        {
+            var c = Entity as c5x; var area = Area;
+            var move = c == null ? null : c.GetAspect<ale>();
+            if (move == null || area == null || x < 0 || y < 0 || x >= area.Width || y >= area.Height) return false;
+            var tile = Areas.Tile(area.Game, x, y);
+            var triggers = tile.a(typeof(b0j));
+            if (triggers == null || triggers.Count == 0) triggers = tile.a(typeof(cdo));
+            if (triggers == null || triggers.Count == 0) return false;
+            move.a(tile, triggers[0]);
+            return true;
+        }
+
         // Puts it exactly there (map tiles, fractional allowed) at once, facing that way (-1: as it is).
         public bool PlaceAt(Vector3 at, int facing = -1)
         {
@@ -45,8 +88,54 @@ namespace UnderRailWorks
         }
     }
 
+    // A door in the player's area. IsOpen set: opens or closes it at once (passability too), quietly, without its
+    // scripts; Toggle: as a character using it would (sound, scripts).
+    public sealed class Door
+    {
+        internal readonly c5x Entity; internal readonly cnb Aspect;
+        internal Door(c5x e, cnb a) { Entity = e; Aspect = a; }
+        public string EntityId { get { return Entity.qe().ToString(); } }
+        public Vector3 Position { get { return Entities.MapPosition(Entity); } }
+        public bool IsOpen { get { return Aspect.q(); } set { if (Aspect.q() != value) Aspect.d(value); } }
+        public void Toggle() { Aspect.b(!Aspect.q()); }
+        public bool IsLocked { get { var l = Entity.GetAspect<d2b>(); return l != null && l.n(); } }
+    }
+
     public static partial class World
     {
+        // The tiles of the player's area with a zone exit (what the player clicks to leave; Character.TakeExitAt).
+        public static IList<Point> ExitTiles
+        {
+            get
+            {
+                var p = Player; var area = p == null ? null : p.Area;
+                var list = new List<Point>();
+                if (area == null) return list;
+                for (int x = 0; x < area.Width; x++)
+                    for (int y = 0; y < area.Height; y++)
+                    {
+                        var t = Areas.Tile(area.Game, x, y);
+                        if (t == null) continue;
+                        var a = t.a(typeof(b0j)); var b = a != null && a.Count > 0 ? a : t.a(typeof(cdo));
+                        if (b != null && b.Count > 0) list.Add(new Point(x, y));
+                    }
+                return list;
+            }
+        }
+
+        // The doors in the player's area.
+        public static IList<Door> Doors
+        {
+            get
+            {
+                var p = Player; var area = p == null ? null : p.Area;
+                var list = new List<Door>();
+                if (area == null) return list;
+                foreach (var e in area.Game.Entities.OfType<c5x>()) { var d = e.GetAspect<bim>() as cnb; if (d != null) list.Add(new Door(e, d)); }
+                return list;
+            }
+        }
+
         // The character with this EntityId in the player's area, or null.
         public static Character ByEntityId(string id)
         {
@@ -75,12 +164,15 @@ namespace UnderRailWorks
     public enum PlayerOrderKind { Walk, Attack, Talk, Use, Ability, Travel, Other }
     // The player ordered their character to do something (a click on the world, the attack key). Cancel: it doesn't.
     // Walk: X, Y the tile; Attack / Talk: Target.
+    // Walk / Travel: X, Y the tile (Travel: the exit's tile). Attack / Talk: Target. Use: TargetEntityId (a door, lever,
+    // container...; also set for Attack and Talk) and X, Y its tile.
     public sealed class PlayerOrder : Cancellable
     {
         public PlayerOrderKind Kind { get; internal set; }
         public int X { get; internal set; }
         public int Y { get; internal set; }
         public Character Target { get; internal set; }
+        public string TargetEntityId { get; internal set; }
     }
 
     public static partial class GameEvents
@@ -139,16 +231,44 @@ namespace UnderRailWorks.Internal
                 else if (__0 is c5o) o.Kind = PlayerOrderKind.Talk;
                 else if (__0 is buw) o.Kind = PlayerOrderKind.Use;
                 else if (__0 is du) o.Kind = PlayerOrderKind.Ability;
-                else if (__0 is f3) o.Kind = PlayerOrderKind.Travel;
-                var e = target as c5x;
-                if (e != null && e.GetAspect<amc>() != null) o.Target = Character.Of(e);
+                else if (__0 is f3) { o.Kind = PlayerOrderKind.Travel; var t = target as ak1; if (t != null) { o.X = t.Location.X; o.Y = t.Location.Y; } }
+                var e = target as b0b;
+                if (e != null)
+                {
+                    o.TargetEntityId = e.qe().ToString();
+                    var m = Entities.MapPosition(e); if (o.Kind == PlayerOrderKind.Use) { o.X = (int)Math.Round(m.X); o.Y = (int)Math.Round(m.Y); }
+                    var ch = e as c5x;
+                    if (ch != null && ch.GetAspect<amc>() != null) o.Target = Character.Of(ch);
+                }
                 GameEvents.PlayerOrdering.Run(h => h(o));
                 return !o.Cancel;
             }
             catch (Exception ex) { Log.Write("player order: " + ex.Message); return true; }
         }
 
-        static bool Tick() { return !Simulation.Frozen; }
+        static bool Combat() { return !Simulation.Frozen; }
+
+        // ix.a with the world frozen: only walking runs (the walk orders em1 and their steps qy / bpr / dnf / bsz), so a
+        // character told to walk (MoveTo) walks with the game's own animation and speed; everything else (AI, attacks,
+        // triggers, every entity's aspects) waits. The rest is ix.a's own loop.
+        static bool Tick(ix __instance, TimeSpan __0, TimeSpan __1)
+        {
+            if (!Simulation.Frozen) return true;
+            var list = __instance.g8();
+            foreach (var item in list.ToList())
+            {
+                if (item.c) continue;
+                var a = item.a;
+                if (!(a is em1 || a is qy || a is bpr || a is dnf || a is bsz)) continue;
+                var r = a.n(__0, __1);
+                if (r != dc4.b && !item.c)
+                {
+                    if (item.b == atp.a || (r == dc4.e && item.b == atp.c)) list.Remove(item);
+                    else a.v(__instance);
+                }
+            }
+            return false;
+        }
 
         internal static void Install(HarmonyLib.Harmony harmony)
         {
@@ -156,7 +276,7 @@ namespace UnderRailWorks.Internal
             Func<string, HarmonyLib.HarmonyMethod> m = n => new HarmonyLib.HarmonyMethod(typeof(RemoteHooks).GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
             harmony.Patch(typeof(tf).GetMethod("lj", Any, null, new[] { typeof(bad) }, null), prefix: m("Order"));
             harmony.Patch(typeof(ix).GetMethod("a", Any, null, new[] { typeof(TimeSpan), typeof(TimeSpan) }, null), prefix: m("Tick"));
-            harmony.Patch(typeof(crp).GetMethod("aho", Any, null, new[] { typeof(e6d) }, null), prefix: m("Tick"));
+            harmony.Patch(typeof(crp).GetMethod("aho", Any, null, new[] { typeof(e6d) }, null), prefix: m("Combat"));
             Log.Write("remote: hooks in place");
         }
     }

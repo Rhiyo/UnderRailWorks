@@ -349,6 +349,9 @@ public sealed class WorksTest : WorksMod
         });
         Commands.Add(this, "wt.walk", "wt.walk: walk the player back", args => { var ok = World.Player.MoveTo(startX, startY); Log.Info("walk " + ok + " from " + World.Player.Position); return "walk"; });
         Commands.Add(this, "wt.where", "wt.where", args => { Log.Info("player at " + World.Player.Position); return "where"; });
+        Commands.Add(this, "wt.doors", "wt.doors: the doors near the player", args => { var p = World.Player.Position; Log.Info("doors: " + string.Join("; ", World.Doors.Where(d => Math.Abs(d.Position.X - p.X) + Math.Abs(d.Position.Y - p.Y) < 25).Select(d => d.EntityId.Substring(0, 8) + " at " + d.Position + (d.IsOpen ? " open" : " closed") + (d.IsLocked ? " locked" : "")).ToArray())); return "doors"; });
+        Commands.Add(this, "wt.exits", "wt.exits: zone exit tiles in this area", args => { Log.Info("exits: " + string.Join(" ", World.ExitTiles.Select(t => t.X + "," + t.Y).ToArray())); return "exits"; });
+        Commands.Add(this, "wt.toggledoor", "wt.toggledoor <id start>", args => { var d = World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(args[0])); if (d == null) return "none"; d.Toggle(); Log.Info("door " + args[0] + " now " + (d.IsOpen ? "open" : "closed")); return "ok"; });
         Commands.Add(this, "wt.near", "wt.near: characters near the player with map positions and screen boxes", args => { Log.Info("near: " + string.Join("; ", World.CharactersNear(World.Player.Position, 30).Select(c => c.Name + (c.IsDead ? " (dead)" : "") + " at " + c.Position + " screen " + c.ScreenBounds).ToArray())); return "near"; });
         Commands.Add(this, "wt.mark", "wt.mark: markers near and far", args =>
         {

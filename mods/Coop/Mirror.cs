@@ -7,7 +7,9 @@
 // Characters are matched by the game's own id (kept in the save). Co-op characters are spawned by the mod, so they
 // aren't in the save: they go by "c:<name>" and the joiner's game spawns its own copy.
 // Messages, host to joiner: WORLD, FILE <path> <base64>..., WORLDEND, YOU <key>,
-// POS <key> <x> <y> <z> <facing> <health> <dead>, SPAWN <key> <blueprint> <hostile> <name> (before a character's first POS). Joiner to host: LOADED, ATTACKID <key> (and GO x y).
+// POS <key> <x> <y> <z> <facing> <health> <dead>, WALK <key> <x> <y> (walking there: the joiner's copy walks too),
+// DOOR <id> <0|1>, DEAD <key>, GONE <key>, SPAWN <key> <blueprint> <hostile> <name> (before a character's first POS).
+// Joiner to host: LOADED, ATTACKID <key>, USE <id>, EXIT <x> <y> (and GO x y).
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -57,6 +59,7 @@ public sealed partial class Coop
     }
 
     double mirrorTimer;
+    readonly Dictionary<string, Character> known = new Dictionary<string, Character>();     // what each key was, to tell dead from gone
     void HostMirror(double dt)
     {
         foreach (var s in seats.Values.Where(s => s.WorldPending && s.Character != null).ToList()) if (SaveGames.CanSave) SendWorld(s);
@@ -76,6 +79,35 @@ public sealed partial class Coop
             who[key] = c;
             lines.Add(new KeyValuePair<string, object[]>(key, new object[] { "POS", key, F(at.X), F(at.Y), F(at.Z), c.Facing, (int)Math.Round(c.Health), c.IsDead ? 1 : 0 }));
         }
+        var walks = new Dictionary<string, string>();
+        foreach (var c in everyone) { var key = KeyOf(c); var t = c.WalkTarget; if (key != null) walks[key] = t == null ? "" : t.Value.X + " " + t.Value.Y; }
+        var doors = World.Doors.ToDictionary(d => d.EntityId, d => d.IsOpen ? "1" : "0");
+        foreach (var s in watching)
+        {
+            foreach (var kv in walks)
+            {
+                string old;
+                if (s.Walks.TryGetValue(kv.Key, out old) && old == kv.Value) continue;
+                s.Walks[kv.Key] = kv.Value;
+                if (kv.Value.Length > 0 && s.Sent.ContainsKey(kv.Key)) { var xy = kv.Value.Split(' '); s.Peer.Send("WALK", kv.Key, xy[0], xy[1]); }
+            }
+            foreach (var kv in doors)
+            {
+                string old;
+                if (s.Doors.TryGetValue(kv.Key, out old) && old == kv.Value) continue;
+                s.Doors[kv.Key] = kv.Value;
+                s.Peer.Send("DOOR", kv.Key, kv.Value);
+            }
+        }
+        // Characters no longer listed: dead (World's lists skip the dead), or gone from the area.
+        foreach (var s in watching)
+            foreach (var key in s.Sent.Keys.Where(k => !who.ContainsKey(k)).ToList())
+            {
+                Character was; known.TryGetValue(key, out was);
+                s.Peer.Send(was != null && was.IsDead ? "DEAD" : "GONE", key);
+                s.Sent.Remove(key); s.Walks.Remove(key);
+            }
+        foreach (var kv in who) known[kv.Key] = kv.Value;
         foreach (var s in watching)
             foreach (var l in lines)
             {
@@ -93,7 +125,7 @@ public sealed partial class Coop
 
     void HostMirrorMessage(Seat seat, string[] w)
     {
-        if (w[0] == "LOADED") { seat.InWorld = true; seat.Sent.Clear(); seat.Peer.Send("YOU", "c:" + (seat.Character == null ? "" : seat.Character.Name)); Log.Info(seat.Peer.Name + " is in the world"); }
+        if (w[0] == "LOADED") { seat.InWorld = true; seat.Sent.Clear(); seat.Walks.Clear(); seat.Doors.Clear(); seat.Peer.Send("YOU", "c:" + (seat.Character == null ? "" : seat.Character.Name)); Log.Info(seat.Peer.Name + " is in the world"); }
     }
 
     // --- Joiner -------------------------------------------------------------------------------------------------
@@ -131,6 +163,33 @@ public sealed partial class Coop
                 if (SaveGames.Load(JoinSave)) { loading = true; Tell("loading the host's world"); }
                 else Tell("couldn't load the host's world (a different game version or DLC?)");
                 return;
+            case "WALK":
+            {
+                if (!inWorld || w.Length < 4) return;
+                Character c; int x, y;
+                if (!spawned.TryGetValue(w[1], out c)) c = w[1].StartsWith("c:") ? null : World.ByEntityId(w[1]);
+                if (c != null && int.TryParse(w[2], out x) && int.TryParse(w[3], out y)) c.MoveTo(x, y);
+                return;
+            }
+            case "DOOR":
+            {
+                if (!inWorld || w.Length < 3) return;
+                var d = World.Doors.FirstOrDefault(x => x.EntityId == w[1]);
+                if (d != null) d.IsOpen = w[2] == "1";
+                return;
+            }
+            case "DEAD":
+            case "GONE":
+            {
+                if (!inWorld || w.Length < 2) return;
+                Character c;
+                bool ours = spawned.TryGetValue(w[1], out c);
+                if (!ours && !w[1].StartsWith("c:")) c = World.ByEntityId(w[1]);
+                if (c == null) return;
+                if (w[0] == "DEAD") { if (!c.IsDead) c.Kill(); }
+                else if (ours) { World.Despawn(c); spawned.Remove(w[1]); }
+                return;
+            }
             case "YOU": myKey = w.Length > 1 ? w[1] : null; FollowMe(); return;
             case "SPAWN": if (w.Length > 2) spawnInfo[w[1]] = w; return;
             case "POS":
@@ -154,7 +213,9 @@ public sealed partial class Coop
         float x = P(w[2]), y = P(w[3]), z = P(w[4]);
         int facing; int.TryParse(w[5], out facing);
         var at = c.Position;
-        if (Math.Abs(at.X - x) > 0.001f || Math.Abs(at.Y - y) > 0.001f || Math.Abs(at.Z - z) > 0.001f || c.Facing != facing) c.PlaceAt(new Vector3(x, y, z), facing);
+        // Walking here (the host's WALK): its own walk carries it; set only when it's far off (a different path).
+        float off = Math.Abs(at.X - x) + Math.Abs(at.Y - y);
+        if (c.IsWalking ? off > 3f : (off > 0.001f || Math.Abs(at.Z - z) > 0.001f || c.Facing != facing)) c.PlaceAt(new Vector3(x, y, z), facing);
         int hp; if (int.TryParse(w[6], out hp) && !c.IsDead && Math.Abs(c.Health - hp) >= 1) c.Health = hp;
         if (w[7] == "1" && !c.IsDead) c.Kill();
         if (key == myKey) FollowMe();
@@ -226,7 +287,10 @@ public sealed partial class Coop
                     if (key != null) host.Send("ATTACKID", key);
                     break;
                 }
-                default: Tell("in co-op you can walk and attack for now"); break;
+                case PlayerOrderKind.Use: if (o.TargetEntityId != null) host.Send("USE", o.TargetEntityId); break;
+                case PlayerOrderKind.Travel: host.Send("EXIT", o.X, o.Y); break;
+                case PlayerOrderKind.Talk: Tell("talking isn't relayed in co-op yet"); break;
+                default: Tell("abilities aren't relayed in co-op yet"); break;
             }
         });
     }

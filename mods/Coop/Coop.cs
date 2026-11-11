@@ -17,7 +17,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("0.4.0")]
+[assembly: System.Reflection.AssemblyVersion("0.5.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -57,7 +57,7 @@ public sealed partial class Coop : WorksMod
     }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(); }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
     Listener listener;
     readonly Inbox inbox = new Inbox();
     readonly Dictionary<Peer, Seat> seats = new Dictionary<Peer, Seat>();
@@ -308,6 +308,22 @@ public sealed partial class Coop : WorksMod
                 Log.Info(c.Name + ": attack " + target.Name + ": " + (ok ? "attacking" : "refused") + Points(c));
                 return ok ? "attacking " + target.Name : "can't attack now" + (Combat.InCombat && !c.IsTakingTurn ? " (not your turn)" : "");
             }
+            case "USE":
+            {
+                var door = w.Length > 1 ? World.Doors.FirstOrDefault(d => d.EntityId == w[1]) : null;
+                if (door != null && door.IsLocked && !door.IsOpen) return "that door is locked";
+                bool ok = w.Length > 1 && c.UseObject(w[1]);
+                Log.Info(c.Name + ": use " + (w.Length > 1 ? w[1] : "?") + ": " + (ok ? "going" : "refused"));
+                return ok ? "using it" : "can't use that now" + (Combat.InCombat && !c.IsTakingTurn ? " (not your turn)" : "");
+            }
+            case "EXIT":
+            {
+                int x, y;
+                bool ok = w.Length > 2 && int.TryParse(w[1], out x) && int.TryParse(w[2], out y) && c.TakeExitAt(x, y);
+                Log.Info(c.Name + ": exit " + (w.Length > 2 ? w[1] + "," + w[2] : "?") + ": " + (ok ? "going" : "refused"));
+                if (ok) Notify.Log("Co-op: " + c.Name + " is heading for the exit: everyone goes along", Say);
+                return ok ? "heading for the exit (everyone goes along)" : "can't take that exit now";
+            }
             case "STATUS":
             {
                 var cur = Combat.Current;
@@ -360,6 +376,7 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.go", "coop.go x y: your character walks to tile x, y", a => Mine(new[] { "GO" }.Concat(a).ToArray()));
         Commands.Add(this, "coop.attack", "coop.attack <name>: your character attacks the nearest one of that name", a => Mine(new[] { "ATTACK" }.Concat(a).ToArray()));
         Commands.Add(this, "coop.end", "coop.end: ends your character's combat turn", a => Mine("END"));
+        Commands.Add(this, "coop.door", "coop.door <id start>: your character uses that door (wt.doors lists them)", a => { var d = a.Length == 0 ? null : World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return d == null ? "no such door" : Mine("USE", d.EntityId); });
         Commands.Add(this, "coop.status", "coop.status: your character's state", a => Mine("STATUS"));
         Commands.Add(this, "coop.spawn", "coop.spawn [blueprint]: a local test partner next to you (no network)", a =>
         {

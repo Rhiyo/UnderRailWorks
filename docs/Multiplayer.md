@@ -129,6 +129,26 @@ Tested in game (test zone and Station Alpha, the player in god mode):
   walking animation (positions jump 10 times a second), doors/containers/items, the joiner's HUD (it still shows
   the host's character), zone changes.
 
+## Step 3, round 1 (2026-11-11, Co-op 0.5)
+
+- Walking: the host sends WALK <key> <tile> when a character's walk order changes (Character.WalkTarget: the current
+  djk's tile); the joiner's copy walks there itself, so it moves with the game's own animation and speed. The frozen
+  world now runs walking only (Simulation.Frozen: ix.a runs em1 / qy / bpr / dnf / bsz, nothing else). Positions
+  only snap when the copy is more than 3 tiles off or stands still somewhere else. Measured: Claude's position on
+  the joiner went 31.7 -> 32.3 -> 33.4 -> 34 over a second, the walking frame showing.
+- Attacking by clicking an enemy: works (hit for 27, both sides told).
+- Deaths: World's character lists skip the dead, so the host remembers what it sent and sends DEAD / GONE.
+- Doors: the host sends DOOR <id> <0|1> on change; the joiner sets it (Door.IsOpen: b0e.d, passability too).
+  Clicking a door, lever, container... sends USE <id>; the host's character walks there and uses it
+  (Character.UseObject: ale.b, as the player's click). Locked doors are refused with a message. Containers open
+  for the host's NPC without a window; the joiner doesn't see their contents yet.
+- Exits: clicking an exit sends EXIT x y; the host's character walks there and takes it (Character.TakeExitAt:
+  ale.a(tile, trigger), as the player's click). The game then changes zone for everyone (a0l.a starts ChangeZone
+  for any character); joined characters are spawned next to the host and the world is sent again. Tested: cc-res
+  -> cc_ph, the joiner reloaded in 2 s.
+- Seen: a co-op character walking a long way through corridors as an NPC got stuck on the host (both copies agreed
+  on where); its health resets when it's spawned again in a new zone.
+
 ## Plan
 
 1. (done, see above) Spike, no network: in the host's game, a second character controlled by console commands (walk, attack on its
