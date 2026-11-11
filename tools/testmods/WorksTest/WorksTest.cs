@@ -223,6 +223,12 @@ public sealed class WorksTest : WorksMod
             var g = World.Spawn("creatures\\generichumans\\ironheadgunner", int.Parse(args[0]), int.Parse(args[1]), SpawnSide.Hostile);
             return "gunner: " + (g == null ? "none" : g.Name);
         });
+        Commands.Add(this, "wt.cam", "wt.cam [x y]: log the camera (and move it to x y)", args =>
+        {
+            if (args.Length >= 2) Camera.Centre = new Microsoft.Xna.Framework.Vector2(float.Parse(args[0]), float.Parse(args[1]));
+            Log.Info("camera " + Camera.Centre + " zoom " + Camera.Zoom + " tile " + Camera.TileWidth + "x" + Camera.TileHeight + " view " + Camera.ViewSize + "; player " + World.Player.Position + " screen " + World.Player.ScreenBounds);
+            return "cam";
+        });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

@@ -1500,3 +1500,11 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   same picture (shroud, exits, merchants, characters, markers with hover labels), by default the whole area centred
   (an isometric W x H area spans W + H tiles across), or a fixed span around the player (setting). Tested in South
   Gate Station North.
+- `Camera` (Camera.cs): `Centre` (the map position the world view is centred on, tiles: the camera `a3u` position
+  `t1()/t2()`; setting it moves the view as right-drag scrolling does), `Zoom` (`dnn.y`), `TileWidth/Height` (half a
+  tile on screen at this zoom: the world view's `a7m.as` x zoom), `ViewSize`. Measured: centre (16.5, 1.5) with the
+  player at (16, 1), tile 64x32 at zoom 1.33.
+- **Minimap 1.3** (like an area map in Baldur's Gate): a white box shows what the screen is looking at (the screen's
+  rectangle maps to a rectangle on the isometric minimap: one map step is Camera.TileWidth on screen and k2 pixels
+  there); left-click or drag on the minimap or the large map moves the view there (the player doesn't move);
+  right-click the minimap opens the large map. Tested both maps in South Gate Station North.

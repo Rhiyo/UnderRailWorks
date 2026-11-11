@@ -3,6 +3,8 @@
 // game's shroud): floors, walls, props, doors, exits in the game's transition colours,
 // the player as a gold dot and the characters the player can currently see as dots in the colour holding Tab gives
 // them (the game's own outline colours). Characters the game isn't drawing (out of sight, stealthed) are not shown.
+// A white box shows what the screen is looking at; left-click or drag on the map to look elsewhere (as an area map
+// does); right-click the minimap for a large map of the whole area (same box, same clicks).
 // It is rebuilt a few times a second, not every frame. Settings: Options -> Mods -> Minimap settings.
 // Built from Works' API only (World, Area, Character, Ui.Custom): it compiles without the game, so no scrambled names.
 using System;
@@ -13,7 +15,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.2.0")]
+[assembly: System.Reflection.AssemblyVersion("1.3.0")]
 
 public sealed class MinimapConfig : ModConfig
 {
@@ -50,6 +52,8 @@ public sealed class Minimap : WorksMod
     UiPanel panel;
     readonly MapPicture map = new MapPicture(), large = new MapPicture();
     UiWindow largeWindow;
+    UiElement mapView, largeView;
+    MapPicture dragging;
     double sinceDraw;
     List<Character> merchants = new List<Character>();
     IList<MapMarker> markers = new List<MapMarker>();
@@ -70,8 +74,15 @@ public sealed class Minimap : WorksMod
             if (panel == null) return;
             if (Relayout) { Relayout = false; Build(); return; }
             if (toggleKey.Pressed) { hidden = panel.Visible; Ui.Show(panel, !hidden); }     // kept across HUD rebuilds (loads, resolution changes)
-            // A click on the minimap opens the large map (and closes it again).
-            if (panel.Visible && Input.MousePressed(MouseButton.Left) && Ui.IsHot(panel)) { if (largeWindow != null && largeWindow.IsOpen) largeWindow.Close(); else OpenLarge(); }
+            // Like an area map: left-click (or drag) on the map looks there; right-click on the minimap opens the large map.
+            if (panel.Visible && Input.MousePressed(MouseButton.Right) && Ui.IsHot(panel)) { if (largeWindow != null && largeWindow.IsOpen) largeWindow.Close(); else OpenLarge(); }
+            if (Input.MousePressed(MouseButton.Left))
+                dragging = panel.Visible && mapView != null && Ui.IsHot(mapView) ? map : largeWindow != null && largeWindow.IsOpen && largeView != null && Ui.IsHot(largeView) ? large : null;
+            if (dragging != null)
+            {
+                if (!Input.MouseDown(MouseButton.Left)) dragging = null;
+                else { LookAt(dragging, dragging == map ? mapView : largeView); sinceDraw = 1; }
+            }
             sinceDraw += seconds;
             if (!panel.Visible || sinceDraw < 0.25) return;
             sinceDraw = 0;
@@ -90,6 +101,15 @@ public sealed class Minimap : WorksMod
         });
     }
 
+    // Moves the view to the map position under the mouse on a picture.
+    static void LookAt(MapPicture picture, UiElement view)
+    {
+        if (view == null) return;
+        var b = view.Bounds; var m = Input.Mouse;
+        var at = picture.ToMap((m.X - b.X) * (float)picture.Width / b.Width, (m.Y - b.Y) * (float)picture.Height / b.Height);
+        if (at != null) Camera.Centre = at;
+    }
+
     // The large map: the same picture over more of the area, in a window (drag it by the title, Escape closes it).
     void OpenLarge()
     {
@@ -97,7 +117,8 @@ public sealed class Minimap : WorksMod
         largeWindow = Ui.Window(this, "large", "Map: " + (World.Player != null && World.Player.Area != null ? World.Player.Area.Name : ""), w, h);
         if (largeWindow == null) return;
         int ph = h - largeWindow.Top - 8;
-        Ui.Add(largeWindow, Ui.Custom(w - 16, ph, large.Draw), 8, largeWindow.Top + 2);
+        largeView = Ui.Custom(w - 16, ph, large.Draw);
+        Ui.Add(largeWindow, largeView, 8, largeWindow.Top + 2);
         large.Resize(w - 16, ph);
         largeWindow.Closed += () => largeWindow = null;
         sinceDraw = 1;
@@ -110,7 +131,8 @@ public sealed class Minimap : WorksMod
         int w = config.Size, h = config.Size / 2 + 12;
         panel = Ui.Panel(w, h);
         panel.Background = new Color(8, 8, 8) * (config.Opacity / 100f);
-        Ui.Add(panel, Ui.Custom(w - 8, h - 8, map.Draw), 4, 4);
+        mapView = Ui.Custom(w - 8, h - 8, map.Draw);
+        Ui.Add(panel, mapView, 4, 4);
         map.Resize(w - 8, h - 8);
         // Clear of the HUD's own parts (interface units, the same at every interface scale): the portrait and the icon bar
         // at the top, the side bar and the menu buttons in the bottom corners; the bottom edge level with the action bar's.
@@ -198,7 +220,34 @@ sealed class MapPicture
         if (markers != null)
             foreach (var mk in markers) labels.Add(new KeyValuePair<Point, string>(Diamond(new Vector3(mk.X, mk.Y, 0), cx, cy, k2, mk.Colour), mk.Label));
         Dot(at, cx, cy, k2, player.OutlineColor, 3);     // the player last, on top (gold, as Tab)
+        lastCx = cx; lastCy = cy; lastK2 = k2;
+        ViewBox(cx, cy, k2);
     }
+
+    // What the screen shows: a white box. The world and the map share their isometric layout, so the screen's rectangle
+    // is a rectangle here too: one map step moves Camera.TileWidth units on screen and k2 pixels here.
+    void ViewBox(float cx, float cy, float k2)
+    {
+        var c = Camera.Centre; var view = Camera.ViewSize; float tw0 = Camera.TileWidth;
+        if (c == null || tw0 <= 0 || view.X == 0) return;
+        float dx = c.Value.X - cx, dy = c.Value.Y - cy, s = k2 / tw0;
+        int mx = (int)Math.Round(tw / 2f + (dx - dy) * k2), my = (int)Math.Round(th / 2f + (dx + dy) * k2 / 2);
+        int hw = (int)Math.Round(view.X / 2f * s), hh = (int)Math.Round(view.Y / 2f * s);
+        for (int x = mx - hw; x <= mx + hw; x++) { Put(x, my - hh, Color.White); Put(x, my + hh, Color.White); }
+        for (int y = my - hh; y <= my + hh; y++) { Put(mx - hw, y, Color.White); Put(mx + hw, y, Color.White); }
+    }
+    void Put(int x, int y, Color c) { if (x >= 0 && y >= 0 && x < tw && y < th) pixels[y * tw + x] = c; }
+
+    // The map position under a picture pixel (the inverse of the drawing), for clicks.
+    float lastCx, lastCy, lastK2;
+    public Vector2? ToMap(float px, float py)
+    {
+        if (lastK2 <= 0) return null;
+        float u = (px - tw / 2f) / lastK2, v = 2 * (py - th / 2f) / lastK2;
+        return new Vector2(lastCx + (u + v) / 2 - 0.5f, lastCy + (v - u) / 2 - 0.5f);
+    }
+    public int Width { get { return tw; } }
+    public int Height { get { return th; } }
 
     static readonly Color Merchant = new Color(225, 175, 60);
     void Square(Vector3 map, float cx, float cy, float k2, Color colour)

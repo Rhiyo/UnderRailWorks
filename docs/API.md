@@ -110,6 +110,14 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `string Name`
 - `string Category`
 
+## Camera  _(class, Camera.cs)_
+
+- `static Vector2? Centre` — The map position the view is centred on (tiles), or null (no world view). Setting it moves the view there.
+- `static float Zoom` — The zoom (1 = 100%).
+- `static float TileWidth` — Interface units on screen for half a tile, across and down, at the current zoom (0 without a world view).
+- `static float TileHeight`
+- `static Point ViewSize` — The world view's size (interface units: the screen's world area).
+
 ## Cancellable  _(class, Cancellable.cs)_
 
 
