@@ -172,7 +172,7 @@ public sealed class WorksTest : WorksMod
         });
         Commands.Add(this, "wt.containers", "wt.containers: the zone's containers, name and place", args =>
         {
-            Log.Info("containers: " + string.Join("; ", World.Containers.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name))));
+            Log.Info("containers: " + string.Join("; ", World.Containers.Select(c => c.EntityId.Substring(0, 8) + " " + c.Name + " (" + c.Items.Count + ") @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name))));
             return "containers";
         });
         Commands.Add(this, "wt.goto", "wt.goto x y: teleport the player to a tile", args => "goto: " + World.Player.TeleportTo(int.Parse(args[0]), int.Parse(args[1])));

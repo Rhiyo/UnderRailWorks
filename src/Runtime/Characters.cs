@@ -29,6 +29,9 @@ public sealed class Inventory
     internal efk Owner { get { var o = owner(); if (o == null) throw new InvalidOperationException("the character is gone"); return o; } }
     bool IsPlayer { get { return owner() is e3q; } }
 
+    // Puts an item that exists (taken out of a container or another bag: its condition, ammo and stacks kept) into the bag.
+    public void Put(Item item) { if (item != null) Owner.Bag.z3(item.Game, true); }
+
     // Items in the bag (not equipped ones).
     public IList<Item> Items { get { return Owner.Bag.z2().Select(i => new Item(i)).ToList(); } }
 

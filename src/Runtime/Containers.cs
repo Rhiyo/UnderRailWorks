@@ -21,6 +21,8 @@ public sealed class Container
     internal readonly c7j Game;
     internal Container(c7j c) { Game = c; }
     internal dbi Items_ { get { return Game.ItemContainer; } }
+    // The game's id for its object (kept in saves; World.ByEntityId's kind of id).
+    public string EntityId { get { return Game.a8().qe().ToString(); } }
     public MapObject Entity { get { return new MapObject(Game.a8()); } }
     // Opened before (the game's Inspected flag).
     public bool Searched { get { return Game.Inspected; } }

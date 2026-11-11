@@ -151,7 +151,15 @@ public sealed partial class Coop : WorksMod
                 var name = w.Length > 1 ? w[1].Trim() : "";
                 if (seat.Character != null) { p.Send("SAID", "you're already playing " + seat.Character.Name); return; }
                 if (name.Length == 0) { p.Send("SAID", "coop.new <name>"); return; }
-                if (records.Any(r => r.Name.Equals(name, StringComparison.OrdinalIgnoreCase)) || (World.Player != null && name.Equals(World.Player.Name, StringComparison.OrdinalIgnoreCase))) { p.Send("SAID", "there is already a " + name); return; }
+                Func<string, bool> used = n => records.Any(r => r.Name.Equals(n, StringComparison.OrdinalIgnoreCase)) || (World.Player != null && n.Equals(World.Player.Name, StringComparison.OrdinalIgnoreCase));
+                if (used(name))
+                {
+                    // A character made elsewhere (an import keeps its name): numbered rather than refused.
+                    if (w.Length < 3) { p.Send("SAID", "there is already a " + name); return; }
+                    int n = 2; while (used(name + " " + n)) n++;
+                    p.Send("SAID", "there's already a " + name + " here: yours is " + name + " " + n);
+                    name = name + " " + n;
+                }
                 var rec = new Record { Name = name, Blueprint = DefaultBlueprint, Sheet = w.Length > 2 && w[2].Length > 0 ? w[2] : null };
                 records.Add(rec);
                 Enter(seat, rec, false);
@@ -271,7 +279,7 @@ public sealed partial class Coop : WorksMod
             case "TURN": Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")"); return;
             case "SAID": Tell(w.Length > 1 ? w[1] : ""); return;
         }
-        if (!TalkMessage(w)) MirrorMessage(w);
+        if (!TalkMessage(w) && !LootMessage(w)) MirrorMessage(w);
     }
 
     void Tell(string line)
@@ -348,6 +356,8 @@ public sealed partial class Coop : WorksMod
                 if (ok) Notify.Log("Co-op: " + c.Name + " is heading for the exit: everyone goes along", Say);
                 return ok ? "heading for the exit (everyone goes along)" : "can't take that exit now";
             }
+            case "TAKE": return w.Length > 2 ? Take(c, w[1], w[2]) : "";
+            case "TAKEALL": return w.Length > 1 ? Take(c, w[1], null) : "";
             case "TALK": return w.Length > 1 ? Talk(c, w[1]) : "talk to whom?";
             case "DLGPICK": return w.Length > 1 ? Pick(c, w[1]) : "";
             case "STATUS":
@@ -386,6 +396,7 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.host", "coop.host [port]: let others join this game", Host);
         LoadUi();
         LoadMirror();
+        LoadLoot();
         Commands.Add(this, "coop.stop", "coop.stop: stop hosting (joined characters stay, back to their AI)", a => { if (listener == null) return "not hosting"; StopHosting(); return "stopped"; });
         Commands.Add(this, "coop.who", "coop.who: who is connected and what they play", a =>
         {
@@ -405,6 +416,7 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.door", "coop.door <id start>: your character uses that door (wt.doors lists them)", a => { var d = a.Length == 0 ? null : World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return d == null ? "no such door" : Mine("USE", d.EntityId); });
         Commands.Add(this, "coop.newfrom", "coop.newfrom <file.char> <name>: join with a character exported earlier (as finishing creation does)", a => { if (host == null || a.Length < 2) return "coop.newfrom <file.char> <name>"; host.Send("NEW", a[1], Convert.ToBase64String(System.IO.File.ReadAllBytes(a[0]))); return "sent"; });
         Commands.Add(this, "coop.talk", "coop.talk <name>: your character talks to that character (nearest of that name)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 80).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0); return t == null ? "nobody called that" : Mine("TALK", t.EntityId); });
+        Commands.Add(this, "coop.box", "coop.box <id start>: your character opens that container", a => { var b = a.Length == 0 ? null : World.Containers.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return b == null ? "no such container" : Mine("USE", b.EntityId); });
         Commands.Add(this, "coop.status", "coop.status: your character's state", a => Mine("STATUS"));
         Commands.Add(this, "coop.spawn", "coop.spawn [blueprint]: a local test partner next to you (no network)", a =>
         {
