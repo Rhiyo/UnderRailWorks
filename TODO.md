@@ -126,7 +126,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 
 ## For modders
 
-- [ ] A mod template / SDK: reference assemblies and a build script.
+- [x] A mod template / SDK: sdk/template + UnderRailWorks.Mod.targets (references, mod.json check, copy into the game, PackMod zip); built and installed in a test (Nov 2026).
 - [ ] Docs: the framework rules, the API per area, a walkthrough for a first mod.
 - [ ] The map editor, as its own project, once the item and map slices exist.
 
