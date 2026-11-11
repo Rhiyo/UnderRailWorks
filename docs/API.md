@@ -203,6 +203,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `static void Log(string text, Color? colour = null, Character actor = null)` — A line in the chat/combat log, and floating text over a character (the game's own). A line in the combat feed (the log during fights; Notify.Log writes to the chat feed, which a fight hides), as the game's own combat lines (vr, shown through bey.a when the player's side is involved). {0} in the text is the actor's name (default: the player).
 - `static int Damage(Character target, int amount, string type = "Mechanical", Character source = null, bool resistances = true)` — Damage the game's way (as its traps and scripts do: Defense.a with a hit): resistances and thresholds when resistances is true, shields, the combat log, death, and Works' damage events. type: Mechanical, Heat, Cold, Electricity, Acid, Energy, Bio. Returns the health it took (0 when dead already or immune).
 - `static void Float(Character over, string text, Color? colour = null, bool big = false)`
+- `static Shot ShotBreakdown(Character target)` — The player's plain attack on target with the weapon in hand (no special attack), or null (no target, no weapon).
 
 ## Commands  _(class, Commands.cs)_
 
@@ -1283,6 +1284,15 @@ The first handler that returns true replaces the game's step.
 - `void Remove(string key)`
 - `IList<string> Keys`
 - `void Clear()` — Everything, e.g. to migrate an older layout (keep a "version" key of your own).
+
+## Shot  _(class, ShotBreakdown.cs)_
+
+- `double Chance`
+- `bool Ranged`
+- `double Distance`
+- `double Light`
+- `double IfClose`
+- `double IfLit`
 
 ## Skills  _(class, Stats.cs)_
 

@@ -1,0 +1,2 @@
+{ "id": "ShotBreakdown", "name": "Shot Breakdown", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+  "description": "While the mouse is on an enemy, a note by the cursor says what range and darkness cost your shot, by the game's own formula: e.g. \"Range -16% (78% from close)\"." }

@@ -72,7 +72,7 @@ public sealed class TurnPoints
     public int MovementPoints { get; set; }
 }
 
-public static class Combat
+public static partial class Combat
 {
     public static readonly Hook<Action<Character>> TurnStarted = new Hook<Action<Character>>("TurnStarted");
     public static readonly Hook<Action<Character>> TurnEnding = new Hook<Action<Character>>("TurnEnding");

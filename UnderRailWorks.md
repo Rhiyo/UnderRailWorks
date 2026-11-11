@@ -1463,3 +1463,13 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   rest with what they still need ("Fried Siphoner Tongue: needs Siphoner Tongue", "Throwing Net: needs Tailoring 25");
   selecting one shows its category and the skills its parts need. Tested with mod recipes and a game blueprint, with
   Tailoring 40 (ready) and 10 (needs 25).
+
+## Shot Breakdown; Combat.ShotBreakdown (Nov 2026)
+
+- The game's hit-chance preview (`dka`, shown by `esm` as "xx%" by the cursor) calls the ranged formula `euf.a(att,
+  tgt, min(distance, weapon range), target light (c5x.l, averaged), darkvision, ammo, burst, 1.0, awq.a(...))`;
+  melee: `euf.a(att, tgt, awq.b(...), 1.0)`. `Combat.ShotBreakdown(target)` repeats the plain-attack call, and again
+  from 3 tiles and at a fully lit target, so the differences are the game's own (no formula copied).
+- **Shot Breakdown** (mods/ShotBreakdown): while the mouse is on a hostile, a note under the game's "xx%":
+  "Range -18% (40% from close)", "Darkness -8% (30% if lit)" (tested: an Ironhead gunner 7 tiles away in the player's
+  house, Beretta 99; the game showed 22%). Nothing shows when neither costs anything, or for melee weapons.
