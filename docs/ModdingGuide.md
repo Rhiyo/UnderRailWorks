@@ -1,0 +1,67 @@
+# Writing an UnderRailWorks mod
+
+This guide is the starting point for mod authors. The examples are in [Cookbook.md](Cookbook.md) (one per API area,
+compiled and run on every build), every type and member is in [API.md](API.md), and how each part works inside the
+game is in UnderRailWorks.md.
+
+## 1. Set up
+
+1. Install UnderRailWorks into the game (the patcher), and the .NET SDK 8 or newer.
+2. Copy `sdk/template` (with `sdk/UnderRailWorks.Mod.targets`), rename `MyMod` (folder, `.cs`, `.csproj`, `mod.json`).
+3. `dotnet build` builds the mod and copies it to the game's `Mods/MyMod`. Start the game; the Mods tab in Options
+   lists it, with any errors.
+4. `dotnet build -t:PackMod` makes `bin/MyMod-1.0.0.zip` to share.
+
+Set `UnderRailPath` if the game isn't in Steam's default folder. No code at all? A **content pack** is a mod with only
+`mod.json` and `content/*.json` (items, recipes, dialogs, quests, placements, triggers, stores, loot...): see
+`mods/CampfireCooking` and the "Content packs" section of UnderRailWorks.md.
+
+## 2. The rules
+
+**Use Works' API, not the game's code.** Mods reference `UnderRailWorks.dll` and `FNA.dll`, not `underrail.exe`.
+The game's names are scrambled and change with game updates; Works keeps one readable layer over them, checked at
+startup, so a game update means fixing Works once instead of every mod breaking. Works also carries the traps you'd
+otherwise hit alone (obfuscated property accessors, members that share names, state the game caches).
+
+**Saves stay loadable by the stock game.** Never put a mod's own types into the game's save. Keep your data in
+`SaveData.Of(this)` (JSON next to the save) or small values in `Data`; things you put in the world (characters,
+objects, triggers, exits) are placements, re-created on every load and never saved. A player who removes your mod
+must still be able to load their game. (A save made *inside* a mod's new zone is the one exception: it needs the mod.)
+
+**Never ship game files or decompiled code.** Clone stock items with `Items.Define`, point at stock art and maps by
+path; ship only your own work.
+
+**Interface: any resolution, any interface size.** Read [UI.md](../UI.md). In short: ask the player things with the
+game's own popups (`Ui.Ask`, `Ui.AskNumber`, `Ui.Confirm`, `Ui.Choose`); lay text out with `Ui.LineHeight` and
+`Ui.TextWidth`; give other sizes in Small's units through `Ui.S(n)`; move things only with `Ui.Move` (or what uses it);
+test at Small and at Huge.
+
+**Handlers never throw into the game.** Works catches and reports a failing handler (log, the mod's card in the Mods
+tab, one message to the player), but keep per-frame handlers cheap and null-check the player (there is none in the
+menus).
+
+## 3. When Works doesn't have what you need
+
+In this order:
+
+1. **Build it from Works' API.** Mods are full C#: most features are compositions of what's there (Workbench Planner,
+   Stealth Lens and Survey Pins are).
+2. **Ask for it in Works** (an issue, or a pull request to `src/Runtime`). A gap in the API is fixed in Works, so
+   every mod gets it and it survives game updates. This is how `Ui.WorldView`, `Camera`, `Stealth.Notice` and many
+   others came about.
+3. **Publish it from your mod for other mods** when it's a feature others build on (a camera network, a reputation
+   system): `Mods.Provide(this, api)`; others use `Mods.Api<T>("YourMod")`, `Mods.Call("YourMod", "Method", args)`,
+   or events with `Mods.Event(name)` / `Raise`. Declare it in your documentation; keep it stable.
+4. **Last resort: raw game access.** Harmony on the game's types (by reflection, or by referencing the game yourself)
+   works, but it breaks when the game updates and you're on your own. If you do it, keep it in one class, check every
+   lookup for null and switch the feature off with a log line when one is missing, and never touch saves this way.
+   Then ask for the piece in Works (2), so you can drop it.
+
+## 4. Testing
+
+- `works.reload` (console, ` key) re-reads pictures, translations and settings; code changes need a restart.
+- `works.dialog <name>` writes an outline of any game conversation (to patch it with `Dialogs.Patch`);
+  `works.content` lists item paths, blueprints, stores and dialogs; `works.spawn`, `works.give`, `works.var` help set
+  up a scene.
+- The log is `UnderRailWorks.log` in the game folder (`Log=1` in UnderRailWorks.ini for everything).
+- Before sharing: load a save with your mod, play, save; then remove the mod and load that save in the plain game.

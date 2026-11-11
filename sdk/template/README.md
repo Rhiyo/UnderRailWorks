@@ -6,4 +6,5 @@
 4. `dotnet build -t:PackMod` makes `bin/MyMod-1.0.0.zip` to share.
 
 Set `UnderRailPath` if the game isn't in Steam's default folder. The API is in the `UnderRailWorks` namespace;
-the docs are UnderRailWorks.md and the examples in `examples/` and `mods/`.
+start with docs/ModdingGuide.md (the rules, and what to do when Works lacks something), then docs/Cookbook.md;
+the examples are in `examples/` and `mods/`.
