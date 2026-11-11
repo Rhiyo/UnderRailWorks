@@ -13,7 +13,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.1.0")]
+[assembly: System.Reflection.AssemblyVersion("1.2.0")]
 
 public sealed class MinimapConfig : ModConfig
 {
@@ -28,6 +28,8 @@ public sealed class MinimapConfig : ModConfig
     [Label("Background opacity"), Range(0, 100), Increment(5)] public int Opacity = 85;
     [Label("Show characters"), Tooltip("Characters the player can currently see, as dots in their Tab outline colour.")]
     public bool ShowCharacters = true;
+    [Label("Large map: tiles across"), Range(0, 300), Increment(10), Tooltip("Click the minimap for a large map of the area: how many tiles it spans around the player.\n0: the whole area, centred.")]
+    public int LargeTilesAcross = 0;
     [Label("Show markers"), Tooltip("Places mods mark (quest targets, notes): a diamond, at the map's edge when farther away.")] public bool ShowMarkers = true;
     [Label("Show merchants"), Tooltip("Every merchant in the area as a small square (seen or not, as long as their spot is discovered).")]
     public bool ShowMerchants = true;
@@ -46,7 +48,8 @@ public sealed class Minimap : WorksMod
     Keybind toggleKey;
     UiElement hud;
     UiPanel panel;
-    readonly MapPicture map = new MapPicture();
+    readonly MapPicture map = new MapPicture(), large = new MapPicture();
+    UiWindow largeWindow;
     double sinceDraw;
     List<Character> merchants = new List<Character>();
     IList<MapMarker> markers = new List<MapMarker>();
@@ -67,14 +70,37 @@ public sealed class Minimap : WorksMod
             if (panel == null) return;
             if (Relayout) { Relayout = false; Build(); return; }
             if (toggleKey.Pressed) { hidden = panel.Visible; Ui.Show(panel, !hidden); }     // kept across HUD rebuilds (loads, resolution changes)
+            // A click on the minimap opens the large map (and closes it again).
+            if (panel.Visible && Input.MousePressed(MouseButton.Left) && Ui.IsHot(panel)) { if (largeWindow != null && largeWindow.IsOpen) largeWindow.Close(); else OpenLarge(); }
             sinceDraw += seconds;
             if (!panel.Visible || sinceDraw < 0.25) return;
             sinceDraw = 0;
             if (config.ShowMerchants && (merchantsFor != World.ZoneId || sinceMerchants++ > 20)) { merchants = World.Characters.Where(c => c.IsMerchant && !c.IsPlayer).ToList(); merchantsFor = World.ZoneId; sinceMerchants = 0; }
             if (config.ShowMarkers && (markersDirty || markersFor != World.ZoneId)) { markers = Markers.Here; markersFor = World.ZoneId; markersDirty = false; }
             map.Update(World.Player, config.ShowCharacters ? World.Visible : null, config.TilesAcross / 2, config.ShowExits, config.ShowMerchants ? merchants : null, config.ShowMarkers ? markers : null);
+            if (largeWindow != null && largeWindow.IsOpen)
+            {
+                var a = World.Player == null ? null : World.Player.Area;
+                bool fit = config.LargeTilesAcross == 0 && a != null;
+                // The whole area: an isometric map W x H spans W + H tiles across the screen; centred on its middle.
+                large.Update(World.Player, config.ShowCharacters ? World.Visible : null, fit ? (a.Width + a.Height) / 2 + 2 : config.LargeTilesAcross / 2, config.ShowExits,
+                    config.ShowMerchants ? merchants : null, config.ShowMarkers ? markers : null, fit ? new Vector3(a.Width / 2f, a.Height / 2f, 0) : (Vector3?)null);
+            }
             if (map.Note != null) { Log.Info(map.Note); map.Note = null; }
         });
+    }
+
+    // The large map: the same picture over more of the area, in a window (drag it by the title, Escape closes it).
+    void OpenLarge()
+    {
+        const int w = 800, h = 440;
+        largeWindow = Ui.Window(this, "large", "Map: " + (World.Player != null && World.Player.Area != null ? World.Player.Area.Name : ""), w, h);
+        if (largeWindow == null) return;
+        int ph = h - largeWindow.Top - 8;
+        Ui.Add(largeWindow, Ui.Custom(w - 16, ph, large.Draw), 8, largeWindow.Top + 2);
+        large.Resize(w - 16, ph);
+        largeWindow.Closed += () => largeWindow = null;
+        sinceDraw = 1;
     }
 
     void Build()
@@ -113,7 +139,7 @@ sealed class MapPicture
 
     public void Resize(int width, int height) { tw = Math.Max(16, width); th = Math.Max(8, height); }
 
-    public void Update(Character player, IList<Character> characters, int radius, bool exits, IList<Character> merchants = null, IList<MapMarker> markers = null)
+    public void Update(Character player, IList<Character> characters, int radius, bool exits, IList<Character> merchants = null, IList<MapMarker> markers = null, Vector3? centre = null)
     {
         if (pixels == null || pixels.Length != tw * th) pixels = new Color[tw * th];
         Array.Clear(pixels, 0, pixels.Length);
@@ -121,7 +147,8 @@ sealed class MapPicture
         var area = player == null ? null : player.Area;
         if (area == null) return;
         var at = player.Position;
-        float cx = at.X + 0.5f, cy = at.Y + 0.5f;
+        var mid = centre ?? at;
+        float cx = mid.X + 0.5f, cy = mid.Y + 0.5f;
         int r = radius + radius / 2 + 2, size = 2 * r + 1, ox = (int)cx - r, oy = (int)cy - r;
         // What each tile around the player shows (Works applies the shroud: undiscovered tiles are Nothing).
         var colour = new Color?[size, size];

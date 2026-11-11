@@ -1496,3 +1496,7 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   difficulty) until opened (setting). **Minimap 1.1**: a marker's label shows while the mouse rests on its diamond.
   Tested in South Gate Station: the pin "Stash", the locker pins, the hover labels, removing the pin.
 - WorksTest's debug hotkeys now skip while a text box has the keyboard (typing "stash" opened Bret's dialog: H).
+- **Minimap 1.2**: a click on the minimap opens a large map window ("Map: <area>"; again, or Escape, closes it): the
+  same picture (shroud, exits, merchants, characters, markers with hover labels), by default the whole area centred
+  (an isometric W x H area spans W + H tiles across), or a fixed span around the player (setting). Tested in South
+  Gate Station North.
