@@ -173,6 +173,7 @@ public static class ModOptions
     static readonly ConditionalWeakTable<t1, Tab> Tabs = new ConditionalWeakTable<t1, Tab>();
 
     // From a mod's OnLoad: its settings rows in the Mods tab. changed runs after Accept wrote new values.
+    internal static void Forget(string mod) { Pages.Remove(mod); }
     public static void Register(string mod, Action<ModPage> build, Action changed = null)
     {
         Pages[mod] = new Entry { Build = build, Changed = changed };

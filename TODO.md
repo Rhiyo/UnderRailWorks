@@ -55,7 +55,10 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
   attachment points (inventory, dialog, character screen), readable wrappers for dropdowns and sliders outside Options.
 - [x] Mods' save data: works.json per save, per-mod JSON, data of a missing mod kept, a warning icon on the Load Game
   screen, a backup before saving.
-- [ ] Reload mods without restarting (collectible AssemblyLoadContext, possible on .NET 10).
+- [x] Reload mods without restarting (ModReload.cs: works.reload <mod>, HotReload=1 watches DLLs; collectible
+  AssemblyLoadContext from memory). Tested in game: Minimap reloaded (old interface removed, one map), WorksTest
+  v1 -> v2 by copying the DLL in while running (no doubled Update handlers), HelloWorks' Harmony patches stay 2 after
+  two reloads. Not tested: a mod others reference by assembly (they keep the old one), memory actually freed.
 - [ ] Debug tools in Works, not in the mod: the draw-order log and render-target dumps (KeyholeDebug today), and a
   documented "draw exactly like the world pass" helper.
 - [ ] Measure the fills/outlines mask: built the same plain-batch way the keyhole's was, probably a pixel or two off.

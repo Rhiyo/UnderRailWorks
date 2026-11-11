@@ -22,6 +22,7 @@ namespace UnderRailWorks
         // null). Name it after the mod to avoid clashes ("mymod.heal"); the game's own commands win otherwise.
         public static void Add(WorksMod mod, string name, string help, Func<string[], string> run) { Add(mod.Id, name, help, run); }
         internal static void Add(string mod, string name, string help, Func<string[], string> run) { all[name] = new Command { Mod = mod, Name = name, Help = help, Run = run }; }
+        internal static void Forget(string mod) { foreach (var k in all.Where(kv => kv.Value.Mod == mod).Select(kv => kv.Key).ToList()) all.Remove(k); }
 
         // Opens the game's console (as its ` key does; in game only).
         public static void OpenConsole() { var hud = Hud.Current; if (hud != null) hud.k(); }
@@ -44,8 +45,10 @@ namespace UnderRailWorks
             var words = Split(line);
             Command c;
             if (words.Count == 0 || !all.TryGetValue(words[0], out c)) return false;
+            var was = ModScope.Current; ModScope.Current = c.Mod;
             try { var r = c.Run(words.Skip(1).ToArray()); if (r != null) Print(r); }
             catch (Exception ex) { Print("[error]" + c.Name + " failed: " + ex.Message); ModErrors.Report(c.Mod, "command " + c.Name, ex); }
+            finally { ModScope.Current = was; }
             return true;
         }
 
@@ -93,14 +96,32 @@ namespace UnderRailWorks
                 Profiler.Start(Math.Max(1, s));
                 return "profiling for " + s + " s";
             });
-            Add("UnderRailWorks", "works.reload", "works.reload: re-reads mods' pictures, texture packs, translations and settings (code needs a restart)", a =>
+            Add("UnderRailWorks", "works.reload", "works.reload: re-reads mods' pictures, texture packs, translations and settings; works.reload <mod id>: also loads its code again; works.reload code: every mod whose DLL changed", a =>
             {
+                if (a.Length > 0 && a[0].Equals("code", StringComparison.OrdinalIgnoreCase)) { int c = ModReloader.RequestChanged(); return c == 0 ? "no mod's DLL changed" : c + " mod(s) to reload"; }
+                if (a.Length > 0) { ModReloader.Request(a[0]); return null; }     // on the next update, outside the console's command
                 AssetStore.ReloadFiles();
                 Translations.Forget();
                 int n = 0;
                 foreach (var s in ModSettings.Every) s.ReadAgain();     // the files first: Reload reads from these
                 foreach (var c in ModConfig.All) { c.Reload(); n++; }
                 return "reloaded pictures and translations, settings of " + n + " mods";
+            });
+            Add("UnderRailWorks", "works.patches", "works.patches [owner]: Harmony patches on the game by owner (Works, each mod), or one owner's patched methods", a =>
+            {
+                var rows = new List<KeyValuePair<string, string>>();
+                foreach (var m in HarmonyLib.Harmony.GetAllPatchedMethods())
+                {
+                    var info = HarmonyLib.Harmony.GetPatchInfo(m);
+                    if (info == null) continue;
+                    foreach (var p in info.Prefixes.Concat(info.Postfixes).Concat(info.Transpilers).Concat(info.Finalizers))
+                        rows.Add(new KeyValuePair<string, string>(p.owner, m.DeclaringType.Name + "." + m.Name));
+                }
+                string text = a.Length > 0
+                    ? string.Join(", ", rows.Where(r => r.Key.EndsWith(a[0], StringComparison.OrdinalIgnoreCase)).Select(r => r.Value).ToArray())
+                    : string.Join(", ", rows.GroupBy(r => r.Key).Select(g => g.Key + " " + g.Count()).ToArray());
+                Log.Write("patches: " + text);
+                return text.Length == 0 ? "none" : text;
             });
             Add("UnderRailWorks", "works.dialog", "works.dialog <name>: writes an outline of a game dialog (lines, conditions, effects), e.g. works.dialog characters\\cc_jyles", a => a.Length == 0 ? "which dialog?" : "written: " + (Dialogs.WriteDescription(a[0]) ?? "no such dialog"));
             Add("UnderRailWorks", "works.split", "works.split: the game's own split-stack popup (for comparing Ui.AskNumber)", a => { CloseConsole(); UiPopups.RawSplit(10); return "split"; });

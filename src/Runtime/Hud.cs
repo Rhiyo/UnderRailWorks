@@ -74,7 +74,8 @@ public static class Hud
     {
         UiEvents.HudCreated.Add(mod, build);
         var root = Root;
-        if (root != null) try { build(root); } catch (Exception ex) { ModErrors.Report(mod.Id, "Hud.WhenReady", ex); }
+        // (A reload runs HudCreated for the mod afterwards.)
+        if (root != null && ModScope.Reloading != mod.Id) try { build(root); } catch (Exception ex) { ModErrors.Report(mod.Id, "Hud.WhenReady", ex); }
     }
 
     // The in-game screen: mods add their own elements to it (they draw above the HUD).
@@ -101,6 +102,11 @@ public static class Hud
 
     // --- Parts mods add: listed with the game's, so layout tools can move them too ---------------------------------
     static readonly List<HudModPart> modParts = new List<HudModPart>();
+    // Reloading a mod: its parts come off the HUD (the new code adds them again).
+    internal static void Forget(string mod)
+    {
+        foreach (var p in modParts.Where(p => p.Mod == mod).ToList()) { Ui.Remove(p.Element); modParts.Remove(p); }
+    }
 
     // Adds a mod's element to the HUD as a named part (e.g. "Minimap") at its default place, and announces it
     // (PartAdded), so a layout mod can move it where the player put it. Call it again when the element is rebuilt.

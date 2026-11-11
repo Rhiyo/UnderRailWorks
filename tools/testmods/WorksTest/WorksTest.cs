@@ -19,6 +19,7 @@ public sealed class WorksTest : WorksMod
     AreaTrigger trigger;
     ModFeat grit;
     bool aiHold, block, aiFlee;
+    static int updates;
     Character pet; double petLog, autoWait, autoPoll;
     int startX, startY;
     bool statsOn;
@@ -253,6 +254,8 @@ public sealed class WorksTest : WorksMod
         Commands.Add(this, "wt.moveto", "wt.moveto x y: the player walks there", args => { Commands.CloseConsole(); return "walk: " + World.Player.MoveTo(int.Parse(args[0]), int.Parse(args[1])); });
         Commands.Add(this, "wt.blueprints", "wt.blueprints: each character's guessed blueprint", args => { Log.Info("blueprints: " + string.Join("; ", World.Characters.Select(c => c.Name + " -> " + (c.Blueprint ?? "none")))); return "bp"; });
         Commands.Add(this, "wt.grudge", "wt.grudge <name>: Grudges remembers that character (Mods.Call)", args => { var c = World.Characters.FirstOrDefault(x => x.Name == string.Join(" ", args)); return "grudge: " + Mods.Call("Grudges", "Hold", c); });
+        Commands.Add(this, "wt.codever", "wt.codever: which build of WorksTest's code is running (reload test)", args => { var r = "code v1, updates seen " + updates; Log.Info(r); return r; });
+        GameEvents.Update.Add(this, dt => updates++);
         Commands.Add(this, "wt.edgehere", "wt.edgehere: an edge exit on the player's tile and around (to the test zone)", args =>
         {
             var p = World.Player.Position;

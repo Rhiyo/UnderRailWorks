@@ -1025,7 +1025,7 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `List<KeyValuePair<ModInfo, cao>> Switches = new List<KeyValuePair<ModInfo, cao>>()`
 - `List<ModInfo> WithSettings = new List<ModInfo>()`
 - `cvh Page`
-- `static void Register(string mod, Action<ModPage> build, Action changed = null)` — From a mod's OnLoad: its settings rows in the Mods tab. changed runs after Accept wrote new values.
+- `static void Register(string mod, Action<ModPage> build, Action changed = null)`
 
 ## ModPage  _(class, ModOptions.cs)_
 
@@ -1713,6 +1713,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `T GetConfig<T>() where T : ModConfig` — The mod's ModConfig class (ModConfig.cs), loaded from settings.ini on first use.
 - `virtual void Load()`
 - `virtual void PostLoad()`
+- `virtual void Unload()`
 
 ## WorksSettings  _(class, Interface.cs)_
 

@@ -201,6 +201,8 @@ Log=0
     public static bool FrameRateFix { get { string v = Get("FrameRateFix"); return v == "1" || string.Equals(v, "on", StringComparison.OrdinalIgnoreCase) || string.Equals(v, "true", StringComparison.OrdinalIgnoreCase); } }     // off unless set (not tested thoroughly)
     public static int MaxFps => Number("MaxFps") ?? 0;
     public static bool BackgroundFit => UiScaleFix && Get("BackgroundFit") == "1";     // off unless set; part of the Interface group
+    // For modders: mods' changed DLLs are loaded again while the game runs (ModReload.cs). Off unless set.
+    public static bool HotReload { get { string v = Get("HotReload"); return v == "1" || string.Equals(v, "on", StringComparison.OrdinalIgnoreCase) || string.Equals(v, "true", StringComparison.OrdinalIgnoreCase); } }
     public static bool LogEnabled { get { string v = Get("Log"); return v == "1" || string.Equals(v, "on", StringComparison.OrdinalIgnoreCase) || string.Equals(v, "true", StringComparison.OrdinalIgnoreCase); } }     // off unless set
 
     // Called when the in-game menu picks a resolution; null = native.

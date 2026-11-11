@@ -136,6 +136,7 @@ public static partial class Ui
         Move(element, x, y);
         UnderrailDropdownScroll.Add(parent.Control, element.Control);
         RelayoutWorldViews(element.Control);     // now that it's on screen: a world view's position depends on its parents
+        ModScope.Own(element);     // the running mod's: removed if its code is reloaded
         if (parent.Control is ci3) Hud.Track(element);     // on the HUD: hidden with the game's HUD
     }
     public static void Remove(UiElement element) { if (element != null && element.Control.Parent != null) UnderrailDropdownScroll.Remove(element.Control.Parent, element.Control); }
@@ -653,6 +654,7 @@ static class UiHooks
         UnderRailWorks.Hud.FlowTick();
         try { UiTextBox.Poll(); } catch (Exception ex) { Log.Write("ui: " + ex.Message); }
         try { Saves.Tick(); } catch (Exception ex) { Log.Write("saves: " + ex); }
+        try { ModReloader.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("reload: " + ex); }
         double dt = __0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds;
         if (GameEvents.Update.Any) GameEvents.Update.Run(h => h(dt));
     }

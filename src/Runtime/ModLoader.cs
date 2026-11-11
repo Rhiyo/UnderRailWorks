@@ -127,6 +127,8 @@ public static class ModLoader
         {
             string name = new AssemblyName(e.Name).Name;
             if (name == "0Harmony") return harmony;
+            Assembly mine;
+            if (ModCode.ByName.TryGetValue(name, out mine)) return mine;     // a mod's own (maybe loaded from memory)
             foreach (string folder in Folders)
             {
                 string path = Path.Combine(folder, name + ".dll");
@@ -140,7 +142,7 @@ public static class ModLoader
             // A required mod that failed while loading takes its dependents with it.
             var failed = mod.Requires.Select(d => Find(d.Id)).FirstOrDefault(d => d != null && !d.Loaded);
             if (failed != null) { mod.Error = "needs " + failed.Name + " (it failed to load)"; Log.Write("mods: " + mod.Id + " not loaded: " + mod.Error); continue; }
-            Load(mod, harmonyType);
+            LoadCode(mod, FixSettings.HotReload);
         }
         // Content packs (content/*.json), after every mod's code: packs may use conditions and effects a DLL registered.
         foreach (var mod in order.Where(m => m.Loaded))
@@ -151,9 +153,11 @@ public static class ModLoader
         // PostLoad: after every mod's Load, in the same order.
         foreach (var mod in order.Where(m => m.Loaded && m.Instance != null))
         {
+            ModScope.Current = mod.Id;
             try { mod.Instance.PostLoad(); }
             catch (Exception ex) { mod.Error = "PostLoad failed: " + ex.Message; Log.Write("mods: " + mod.Id + " PostLoad failed: " + ex); }
         }
+        ModScope.Current = null;
     }
 
     static ModInfo Read(string folder)
@@ -294,15 +298,32 @@ public static class ModLoader
         catch (Exception ex) { Log.Write("mods: could not write mods.ini: " + ex.Message); }
     }
 
-    static void Load(ModInfo mod, Type harmonyType)
+    // A mod's DLLs (collectible: from memory into a context that can be unloaded, for reloading: ModReload.cs).
+    internal static void LoadCode(ModInfo mod, bool collectible)
     {
+        var harmonyType = typeof(HarmonyLib.Harmony);
         var dlls = Directory.GetFiles(mod.Folder, "*.dll").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
         if (dlls.Count == 0) { mod.Loaded = true; Log.Write("mods: loaded " + mod.Id + " (no code)"); return; }
+        ModCode.Stamps[mod.Id] = ModCode.Stamp(mod);
+        // Every DLL first, then their entry points: a mod's own libraries are there when its Load needs them.
+        var loaded = new List<KeyValuePair<string, Assembly>>();
         foreach (string dll in dlls)
+        {
+            try { loaded.Add(new KeyValuePair<string, Assembly>(dll, ModCode.Load(mod, dll, collectible))); }
+            catch (Exception ex) { mod.Error = "failed: " + ex.Message; Log.Write("mods: " + mod.Id + " failed (" + Path.GetFileName(dll) + "): " + ex); }
+        }
+        var was = ModScope.Current;
+        ModScope.Current = mod.Id;
+        try { foreach (var kv in loaded) LoadEntries(mod, kv.Key, kv.Value, harmonyType); }
+        finally { ModScope.Current = was; }
+        if (!mod.Loaded && mod.Error == null) mod.Error = "no WorksMod class in its DLL";
+    }
+
+    static void LoadEntries(ModInfo mod, string dll, Assembly assembly, Type harmonyType)
+    {
         {
             try
             {
-                Assembly assembly = Assembly.LoadFrom(dll);
                 if (mod.Version == null) mod.Version = assembly.GetName().Version;
                 int entries = 0;
                 foreach (Type type in assembly.GetExportedTypes())
@@ -348,7 +369,6 @@ public static class ModLoader
                 Log.Write("mods: " + mod.Id + " failed (" + Path.GetFileName(dll) + "): " + inner);
             }
         }
-        if (!mod.Loaded && mod.Error == null) mod.Error = "no WorksMod class in its DLL";
     }
 }
 }

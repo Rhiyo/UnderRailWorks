@@ -16,7 +16,7 @@ namespace UnderRailWorks
 // Where a handler runs among a hook's handlers (tModLoader runs by load order only; BepInEx/Harmony have priorities).
 public enum HookOrder { First = 0, Early = 1, Normal = 2, Late = 3, Last = 4 }
 
-public abstract class HookBase<T> where T : class
+public abstract class HookBase<T> : IModOwned where T : class
 {
     readonly string name;
     protected T[] handlers = new T[0];
@@ -24,7 +24,28 @@ public abstract class HookBase<T> where T : class
     int[] orders = new int[0];
     readonly Dictionary<T, int> failures = new Dictionary<T, int>();
     const int MaxFailures = 10;
-    internal HookBase(string name) { this.name = name; }
+    internal HookBase(string name) { this.name = name; lock (ModScope.Hooks) ModScope.Hooks.Add(this); }
+
+    // Reloading a mod: its handlers go (the new code adds its own).
+    void IModOwned.RemoveOwner(string mod)
+    {
+        var keep = Enumerable.Range(0, handlers.Length).Where(i => owners[i] != mod).ToList();
+        if (keep.Count == handlers.Length) return;
+        var h = keep.Select(i => handlers[i]).ToArray(); var o = keep.Select(i => owners[i]).ToArray(); var r = keep.Select(i => orders[i]).ToArray();
+        handlers = h; owners = o; orders = r;
+    }
+    // One mod's handlers only (a reloaded mod catching up: GameStarted, ZoneLoaded...).
+    internal void RunFor(string mod, Action<T> call)
+    {
+        var list = handlers; var o = owners;
+        for (int i = 0; i < list.Length && i < o.Length; i++)
+        {
+            if (o[i] != mod) continue;
+            try { call(list[i]); } catch (Exception ex) { Failed(list, i, ex); }
+        }
+    }
+    // While a handler runs: its mod (what it adds to the interface is its own, removed if the mod is reloaded).
+    protected string OwnerAt(T[] list, int i) { var o = owners; return ReferenceEquals(list, handlers) && i < o.Length ? o[i] : null; }
 
     public bool Any { get { return handlers.Length > 0; } }
 
@@ -59,9 +80,10 @@ public abstract class HookBase<T> where T : class
         for (int i = 0; i < list.Length; i++)
         {
             long started = Profiler.On ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
+            var was = ModScope.Current; ModScope.Current = OwnerAt(list, i);
             try { if (call(list[i])) return true; }
             catch (Exception ex) { Failed(list, i, ex); }
-            finally { if (started != 0) Profiled(i, started); }
+            finally { ModScope.Current = was; if (started != 0) Profiled(i, started); }
         }
         return false;
     }
@@ -95,9 +117,10 @@ public sealed class Hook<T> : HookBase<T> where T : class
         for (int i = 0; i < list.Length; i++)
         {
             long started = Starting();
+            var was = ModScope.Current; ModScope.Current = OwnerAt(list, i);
             try { call(list[i]); }
             catch (Exception ex) { Failed(list, i, ex); }
-            finally { Done(i, started); }
+            finally { ModScope.Current = was; Done(i, started); }
         }
     }
     // Handlers in turn until one returns true (for "first answer wins" hooks).

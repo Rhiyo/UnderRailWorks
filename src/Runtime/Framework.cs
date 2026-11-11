@@ -127,6 +127,7 @@ namespace UnderRailWorks
 
         // Publishes this mod's API object (call in Load). Others get it by the mod's id.
         public static void Provide(WorksMod mod, object api) { apis[mod.Id] = api; }
+        internal static void Forget(string mod) { apis.Remove(mod); }
 
         // Another mod's API as an interface or class both mods compile against (a small shared DLL, or the providing
         // mod's own DLL as a reference). Null if the mod isn't loaded or provides none (call from PostLoad or later).

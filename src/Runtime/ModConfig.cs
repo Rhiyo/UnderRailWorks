@@ -204,6 +204,13 @@ public abstract class ModConfig
         return (T)c;
     }
 
+    // Reloading: the old code's config classes go (the new ones read settings.ini again).
+    internal static void Forget(IEnumerable<Assembly> old)
+    {
+        var set = new HashSet<Assembly>(old);
+        foreach (var t in Loaded.Keys.Where(t => set.Contains(t.Assembly)).ToList()) Loaded.Remove(t);
+    }
+
     // After a mod's Load: its config classes (loaded if the mod didn't ask for them yet), and their Mods tab rows.
     internal static void Register(ModInfo mod, Assembly assembly)
     {

@@ -38,6 +38,11 @@ namespace UnderRailWorks
             lock (Options) { Options.RemoveAll(o => o.Mod == mod && o.Key == key); Options.Add(new Option { Mod = mod, Key = key, Label = label, Value = value, Min = 0, Max = names.Length - 1, Step = 1, Names = names }); }
         }
 
+        internal static void Forget(string mod)
+        {
+            lock (Options) { Options.RemoveAll(o => o.Mod.Id == mod); foreach (var k in Shown.Keys.Where(o => o.Mod.Id == mod).ToList()) Shown.Remove(k); }
+        }
+
         // The value chosen for the current game (fallback: a game started without it, or no game).
         public static int Get(WorksMod mod, string key, int fallback)
         {

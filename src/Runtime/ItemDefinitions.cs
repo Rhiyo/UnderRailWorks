@@ -219,11 +219,14 @@ namespace UnderRailWorks.Internal
 
         static string Norm(string p) { return (p ?? "").Replace('/', '\\').Trim('\\'); }
 
+        internal static void Forget(string mod) { foreach (var l in edits.Values) l.RemoveAll(e => e.Mod == mod); }
         internal static void Edit(string mod, string path, Action<ItemDefinition> edit)
         {
             List<Edit_> list;
             if (!edits.TryGetValue(Norm(path), out list)) edits[Norm(path)] = list = new List<Edit_>();
             list.Add(new Edit_ { Mod = mod, Edit = edit });
+            // Reloaded code: definitions already loaded keep the first version's edit (edits may add to values).
+            if (ModScope.Reloading == mod) return;
             // Already loaded: the cached definition(s) under any spelling of the path.
             foreach (var d in Cached(path)) Apply(mod, edit, d, path);
         }

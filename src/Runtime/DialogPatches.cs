@@ -50,6 +50,7 @@ public static partial class Dialogs
 
     // Adds to a stock dialog each time it opens. Several mods may patch the same dialog (in load order).
     public static void Patch(WorksMod mod, string dialog, Action<DialogPatch> patch) { Patch(mod.Id, dialog, patch); }
+    internal static void Forget(string mod) { foreach (var l in patches.Values) l.RemoveAll(kv => kv.Key == mod); }
     internal static void Patch(string mod, string dialog, Action<DialogPatch> patch)
     {
         List<KeyValuePair<string, Action<DialogPatch>>> list;

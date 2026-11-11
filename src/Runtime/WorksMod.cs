@@ -2,7 +2,9 @@
 // Works creates it, fills in Info, Log, Harmony and Settings, and calls:
 //   Load()     after the mods it requires: add hook handlers, register settings and options (ModOptions.Register).
 //   PostLoad() after every mod's Load (as PostSetupContent): look at other mods (ModLoader.IsLoaded).
-// There is no Unload: .NET Framework / Mono can't unload a DLL, so mods are switched on or off for the next start.
+//   Unload()   before the mod's code is loaded again (works.reload, HotReload=1): anything Works doesn't know about
+//              (threads, files, game objects it changed directly). What it registered through Works goes by itself.
+// Switching a mod on or off still applies at the next start.
 // The base class can grow (new virtuals, properties) without breaking mods built against an older Works.
 using System;
 using HarmonyLib;
@@ -33,6 +35,7 @@ public abstract partial class WorksMod
 
     public virtual void Load() { }
     public virtual void PostLoad() { }
+    public virtual void Unload() { }
 }
 
 public sealed class ModLog

@@ -50,6 +50,14 @@ namespace UnderRailWorks
         public static ModFeat Add(WorksMod mod, string id, string name, string description, FeatRequirements requires = null, string icon = null, StatBonus[] bonuses = null)
         {
             var f = new ModFeat { Mod = mod.Id, Id = id, Name = name, Description = description, Requires = requires ?? new FeatRequirements(), Bonuses = bonuses ?? new StatBonus[0] };
+            ModFeat before;
+            if (All.TryGetValue(f.Key, out before) && before.Type != null)
+            {
+                // Reloaded code: the game already has this feat's type (a type name is made once); the new texts,
+                // requirements and bonuses are used from now on.
+                f.Type = before.Type; All[f.Key] = f;
+                return f;
+            }
             All[f.Key] = f;
             FeatRegistry.Register(f, icon == null ? null : System.IO.Path.Combine(mod.Info.Folder, icon));
             return f;

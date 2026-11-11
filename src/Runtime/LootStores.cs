@@ -43,6 +43,7 @@ namespace UnderRailWorks.Internal
         sealed class Entry { public string Mod, Path; public int Count; public bool Once; }
         static readonly Dictionary<string, List<Entry>> entries = new Dictionary<string, List<Entry>>(StringComparer.OrdinalIgnoreCase);
 
+        internal static void Forget(string mod) { foreach (var l in entries.Values) l.RemoveAll(e => e.Mod == mod); }
         internal static void Add(string mod, string store, string path, int count, bool once)
         {
             List<Entry> list;

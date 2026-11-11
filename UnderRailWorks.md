@@ -1605,3 +1605,20 @@ player picks anything.
   by the time the fight ends), struck off when they die. Tested with a real fight (wt_testzone with its neutrals
   removed: they and the Praetorians in cc-res kill a fleeing rathound, which correctly leaves no grudge): the rathound
   fled, combat ended, "Rathound holds a grudge", and on entering the next area "Rathound returned in cc_ph".
+
+## Reloading mod code (ModReload.cs, Nov 2026)
+
+- `works.reload <mod>` / `works.reload code` / `HotReload=1` (UnderRailWorks.ini; checks DLL times every second,
+  reloads once a DLL stopped changing). With HotReload=1 every mod loads from memory into its own collectible
+  AssemblyLoadContext (reached by reflection: Works compiles against Mono's reference assemblies); otherwise mods load
+  with LoadFrom as before and a reload puts the new code in a collectible context.
+- Ownership: `ModScope.Current` is the running mod (Load/PostLoad, each hook handler, commands); `Ui.Add` records
+  elements against it. Every HookBase registers in `ModScope.Hooks` (RemoveOwner, RunFor).
+- A reload: Unload() -> hook handlers, Harmony (`UnpatchAll("UnderRailWorks.<id>")`), windows, HUD parts, owned
+  interface, commands, triggers, loot/store rules, dialog patches, item edits list, Mods.Provide, NewGameOptions,
+  settings page, ModConfig types of the old assembly, abilities/skills/recipes -> context unloaded -> LoadCode ->
+  PostLoad -> GameStarted / ZoneLoaded / HudCreated for that mod only (Hud.WhenReady skips its immediate build during
+  a reload, since HudCreated runs after).
+- Things the game holds stay: feats keep their emitted type (Feats.Add reuses it), item edits aren't applied again
+  to cached definitions (ModScope.Reloading).
+- `works.patches [owner]`: Harmony patch counts by owner.

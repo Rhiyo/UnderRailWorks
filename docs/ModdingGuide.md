@@ -59,7 +59,16 @@ In this order:
 
 ## 4. Testing
 
-- `works.reload` (console, ` key) re-reads pictures, translations and settings; code changes need a restart.
+- `works.reload` (console, ` key) re-reads pictures, translations and settings.
+- Code without restarting: `HotReload=1` in UnderRailWorks.ini, then build your mod into its folder while the game
+  runs: within a couple of seconds the new DLL is loaded (the log says "reload: reloaded <id>"). Or by hand:
+  `works.reload <mod id>`, `works.reload code` (every changed mod). Works removes what the old code registered through
+  it (handlers, patches, commands, triggers, the interface it added, HUD parts, windows...) and runs the new Load and
+  PostLoad; in a running game your GameStarted, ZoneLoaded and HudCreated handlers run once to catch up. Your save data
+  and settings stay. Override `Unload()` for anything Works doesn't know about (threads, files, game objects you
+  changed yourself). Not undone: item definition edits already applied (they apply to definitions loaded later) and a
+  feat's type (texts and bonuses do change). Restart when in doubt; switching mods on or off still needs one.
+- `works.patches [owner]`: the Harmony patches on the game by owner, or one owner's patched methods.
 - `works.dialog <name>` writes an outline of any game conversation (to patch it with `Dialogs.Patch`);
   `works.content` lists item paths, blueprints, stores and dialogs; `works.spawn`, `works.give`, `works.var` help set
   up a scene.
