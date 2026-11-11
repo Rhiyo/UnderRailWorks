@@ -97,6 +97,18 @@ Tested in game (test zone and Station Alpha, the player in god mode):
 - Not yet checked: faction "player" side effects (crimes, reputation, who gets blamed), its death, items/inventory,
   using objects and doors, talking, stealth, zone changes (a spawned character stays behind).
 
+## Step 2 so far (2026-11-11, Co-op 0.3)
+
+- Networking in the mod (Net.cs): TCP port 27650, a line per message, words separated by tabs. Joiner: HELLO
+  version name, PICK n, NEW name, GO x y, ATTACK [name] (none: the nearest hostile), FOLLOW, END, STATUS, BYE. Host:
+  LIST hostName, CHAR n name free|taken, LISTEND, PLAYING name x y, STATE name hp max combat current ap mp x y dead
+  (pushed when it changes), TURN ap mp, SAID text, BYE reason.
+- The Co-op window (HUD button): host / join (address popup), the host's list of who plays what and its addresses,
+  the joiner's character list, the playing view (health, whose turn, messages, End turn / Attack nearest / Follow
+  host / Walk to... / Leave). Tested both sides against scripted peers at 2560x720 (Small) and 5120x1440 (Huge).
+- Works fix found on the way: HUD parts the player had placed were only reserved when the stacking reached them, so
+  a later-stacked one (the Layout button) could end up on top of another (Hud.Flow).
+
 ## Plan
 
 1. (done, see above) Spike, no network: in the host's game, a second character controlled by console commands (walk, attack on its

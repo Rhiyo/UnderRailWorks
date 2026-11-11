@@ -186,6 +186,7 @@ public static class Hud
     }
     static string lastObstacles;
 
+    internal static bool FlowDebug;     // a line per part and decision in the log
     static void Flow(HudAnchor anchor)
     {
         var parts = modParts.Where(p => p.Anchor == anchor && p.Element.Control.Parent != null)
@@ -198,14 +199,18 @@ public static class Hud
         // Other anchors' mod parts where they are now.
         foreach (var other in modParts.Where(p => p.Anchor != anchor && p.Element.Control.Parent != null && p.Element.Visible))
             placed.Add(new Rectangle(other.Element.X, other.Element.Y, other.Element.Width, other.Element.Height));
+        // Parts the player put somewhere stay there: their places are taken before the others stack (whatever their
+        // order: a part placed by the player after this one in the stack used to be overlapped).
+        foreach (var p in parts)
+            if (p.Element.Visible && (p.Element.X != p.AutoX || p.Element.Y != p.AutoY)) placed.Add(new Rectangle(p.Element.X, p.Element.Y, p.Element.Width, p.Element.Height));
         foreach (var p in parts)
         {
             var e = p.Element;
             bool moved = e.X != p.AutoX || e.Y != p.AutoY;     // the player put it somewhere
-            if (!e.Visible) continue;
-            if (moved) { placed.Add(new Rectangle(e.X, e.Y, e.Width, e.Height)); continue; }
+            if (!e.Visible || moved) continue;
             var a = asked.FirstOrDefault(k => k.Key == p.Key).Value;
             var r = Clear(new Rectangle(a.X, a.Y, e.Width, e.Height), placed, up, col, rw, rh);
+            if (FlowDebug) Log.Write("hud flow: " + p.Key + " asked " + a.X + "," + a.Y + " " + e.Width + "x" + e.Height + " -> " + r.X + "," + r.Y + "; taken: " + string.Join(" ", placed.Select(q => q.X + "," + q.Y + "," + q.Width + "x" + q.Height).ToArray()));
             if (r.X != e.X || r.Y != e.Y) Ui.Move(e, r.X, r.Y);
             p.AutoX = r.X; p.AutoY = r.Y; p.DefaultX = r.X; p.DefaultY = r.Y;
             placed.Add(r);

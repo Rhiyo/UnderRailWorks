@@ -4,6 +4,7 @@
 // character appears in the host's game (where it left off in this zone, else next to the host's character),
 // controlled by the joiner's commands instead of an AI (Works' CharacterControl). The joiner's own screen doesn't show
 // the host's world yet (step 3).
+// The Co-op button on the HUD opens the Co-op window (CoopUi.cs) for all of this; the console commands do the same.
 // Host (console, ` key):   coop.host [port]   coop.who   coop.stop
 // Joiner:                  coop.join <address[:port]> [your name]   then coop.pick <number> or coop.new <name>
 // Playing (joiner):        coop.go x y   coop.attack <name>   coop.end   coop.status   coop.leave
@@ -16,9 +17,9 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("0.2.0")]
+[assembly: System.Reflection.AssemblyVersion("0.3.0")]
 
-public sealed class Coop : WorksMod
+public sealed partial class Coop : WorksMod
 {
     const int DefaultPort = 27650;
     const string DefaultBlueprint = "creatures\\generichumans\\jkkgunslinger";
@@ -56,7 +57,7 @@ public sealed class Coop : WorksMod
     }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; }
     Listener listener;
     readonly Inbox inbox = new Inbox();
     readonly Dictionary<Peer, Seat> seats = new Dictionary<Peer, Seat>();
@@ -72,6 +73,7 @@ public sealed class Coop : WorksMod
         catch (Exception ex) { listener = null; return "can't host on port " + port + ": " + ex.Message; }
         ReadRecords();
         Log.Info("hosting on port " + port);
+        Changed();
         Notify.Log("Co-op: hosting on port " + port + ". Others join with coop.join <your address>" + (port == DefaultPort ? "" : ":" + port), Say);
         return "hosting on port " + port;
     }
@@ -85,6 +87,7 @@ public sealed class Coop : WorksMod
         seats.Clear(); orphans.Clear();
         listener.Stop(); listener = null;
         Log.Info("stopped hosting");
+        Changed();
     }
 
     void HostMessage(Peer p, string[] w)
@@ -99,12 +102,14 @@ public sealed class Coop : WorksMod
                 if (seat.Character != null) { Remember(seat); seat.Peer = null; orphans.Add(seat); }
                 Log.Info(p.Name + " left" + (seat.Character != null ? " (" + seat.Character.Name + " stays, passing its turns)" : ""));
                 Notify.Log("Co-op: " + p.Name + " left", Say);
+                Changed(false);
                 return;
             case "HELLO":
                 p.Name = w.Length > 2 && w[2].Trim().Length > 0 ? w[2].Trim() : "Player " + p.Id;
                 if (w.Length < 2 || w[1] != Info.VersionText) { p.Send("BYE", "the host has Co-op " + Info.VersionText + ", you have " + (w.Length > 1 ? w[1] : "?")); p.Close(); return; }
                 seats[p] = new Seat { Peer = p };
                 Log.Info(p.Name + " connected from " + p.Address);
+                Changed(false);
                 Notify.Log("Co-op: " + p.Name + " is choosing a character", Say);
                 SendList(p);
                 return;
@@ -167,6 +172,7 @@ public sealed class Coop : WorksMod
         var at = seat.Character.Position;
         Log.Info(seat.Peer.Name + " plays " + r.Name + " at " + (int)at.X + "," + (int)at.Y);
         Notify.Log("Co-op: " + seat.Peer.Name + " plays " + r.Name, Say);
+        Changed(false);
         seat.Peer.Send("PLAYING", r.Name, (int)at.X, (int)at.Y);
     }
 
@@ -195,6 +201,10 @@ public sealed class Coop : WorksMod
     // --- Joiner -------------------------------------------------------------------------------------------------
     Peer host;
     bool playing;
+    string hostName;
+    readonly List<KeyValuePair<string, bool>> choices = new List<KeyValuePair<string, bool>>();     // name, taken
+    readonly List<string> messages = new List<string>();
+    string[] state;     // the host's last STATE for our character
 
     string Join(string[] args)
     {
@@ -212,7 +222,7 @@ public sealed class Coop : WorksMod
             host = new Peer(tcp, inbox.Add, p => inbox.Add(p, new[] { "_closed" }));
         }
         catch (Exception ex) { host = null; return "can't reach " + args[0] + ": " + ex.Message; }
-        playing = false;
+        playing = false; state = null; choices.Clear();
         host.Send("HELLO", Info.VersionText, name);
         Log.Info("connected to " + args[0] + " as " + name);
         return "connected to " + args[0] + ", waiting for the character list";
@@ -222,12 +232,16 @@ public sealed class Coop : WorksMod
     {
         switch (w[0])
         {
-            case "_closed": Tell("disconnected from the host"); host = null; playing = false; return;
+            case "_closed": Tell("disconnected from the host"); host = null; playing = false; state = null; Changed(); return;
             case "BYE": Tell("the host closed the connection: " + (w.Length > 1 ? w[1] : "")); return;
-            case "LIST": Tell("Characters in this game:  0. " + (w.Length > 1 ? w[1] : "?") + " (the host)"); return;
-            case "CHAR": Tell("  " + w[1] + ". " + w[2] + (w.Length > 3 && w[3] == "taken" ? " (taken)" : "")); return;
-            case "LISTEND": Tell("coop.pick <number> plays one, coop.new <name> makes a new one"); return;
-            case "PLAYING": playing = true; Tell("You play " + w[1] + " (at " + w[2] + "," + w[3] + "). coop.go x y, coop.attack <name>, coop.end, coop.status"); return;
+            case "LIST": hostName = w.Length > 1 ? w[1] : "?"; choices.Clear(); return;
+            case "CHAR": choices.Add(new KeyValuePair<string, bool>(w[2], w.Length > 3 && w[3] == "taken")); return;
+            case "LISTEND":
+                Log.Info("characters: " + hostName + " (host), " + string.Join(", ", choices.Select((c, i) => (i + 1) + ". " + c.Key + (c.Value ? " (taken)" : "")).ToArray()));
+                Commands.Print("co-op: characters: " + hostName + " (host), " + string.Join(", ", choices.Select((c, i) => (i + 1) + ". " + c.Key + (c.Value ? " (taken)" : "")).ToArray()) + ". coop.pick <number> or coop.new <name>");
+                Changed(); return;
+            case "PLAYING": playing = true; Tell("You play " + w[1] + " (at " + w[2] + "," + w[3] + ")"); Changed(); return;
+            case "STATE": state = w; Changed(false); return;
             case "TURN": Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")"); return;
             case "SAID": Tell(w.Length > 1 ? w[1] : ""); return;
         }
@@ -235,6 +249,9 @@ public sealed class Coop : WorksMod
 
     void Tell(string line)
     {
+        messages.Add(line);
+        if (messages.Count > 60) messages.RemoveAt(0);
+        Changed(false);
         Log.Info(line);
         Commands.Print("co-op: " + line);
         Notify.Log("Co-op: " + line, Say);
@@ -255,12 +272,24 @@ public sealed class Coop : WorksMod
             }
             case "ATTACK":
             {
-                var name = string.Join(" ", w.Skip(1).ToArray());
-                var target = World.CharactersNear(c.Position, 40).FirstOrDefault(t => t != c && !t.IsPlayer && !t.IsDead && t.Name != null && t.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
-                if (target == null) return "nobody called " + name + " near you";
+                var name = string.Join(" ", w.Skip(1).ToArray()).Trim();
+                // No name: the nearest character hostile to it.
+                var target = name.Length == 0
+                    ? World.CharactersNear(c.Position, 40).FirstOrDefault(t => t != c && !t.IsDead && t.AttitudeTo(c) == Attitude.Hostile)
+                    : World.CharactersNear(c.Position, 40).FirstOrDefault(t => t != c && !t.IsPlayer && !t.IsDead && t.Name != null && t.Name.IndexOf(name, StringComparison.OrdinalIgnoreCase) >= 0);
+                if (target == null) return name.Length == 0 ? "no enemy near you" : "nobody called " + name + " near you";
                 bool ok = c.Attack(target);
                 Log.Info(c.Name + ": attack " + target.Name + " (" + target.Health + " HP): " + (ok ? "attacking" : "refused") + Points(c));
                 return ok ? "attacking " + target.Name : "can't attack now" + (Combat.InCombat && !c.IsTakingTurn ? " (not your turn)" : "");
+            }
+            case "FOLLOW":
+            {
+                var p = World.Player;
+                if (p == null) return "no host character";
+                var at = p.Position;
+                var tile = World.FreeTilesNear((int)at.X, (int)at.Y, 3).OrderBy(t => Math.Abs(t.X - at.X) + Math.Abs(t.Y - at.Y)).FirstOrDefault(t => Math.Abs(t.X - at.X) + Math.Abs(t.Y - at.Y) >= 1);
+                if (tile == Point.Zero) return "no room next to " + p.Name;
+                return c.MoveTo(tile.X, tile.Y) ? "walking to " + p.Name : "can't walk there now" + (Combat.InCombat && !c.IsTakingTurn ? " (not your turn)" : "");
             }
             case "END":
             {
@@ -302,6 +331,7 @@ public sealed class Coop : WorksMod
     public override void Load()
     {
         Commands.Add(this, "coop.host", "coop.host [port]: let others join this game", Host);
+        LoadUi();
         Commands.Add(this, "coop.stop", "coop.stop: stop hosting (joined characters stay, back to their AI)", a => { if (listener == null) return "not hosting"; StopHosting(); return "stopped"; });
         Commands.Add(this, "coop.who", "coop.who: who is connected and what they play", a =>
         {
@@ -311,7 +341,8 @@ public sealed class Coop : WorksMod
             Log.Info(s); return s;
         });
         Commands.Add(this, "coop.join", "coop.join <address[:port]> [your name]: join a co-op game", Join);
-        Commands.Add(this, "coop.leave", "coop.leave: leave the co-op game", a => { if (host == null) return "not joined"; host.Send("BYE"); host.Close(); host = null; playing = false; return "left"; });
+        Commands.Add(this, "coop.leave", "coop.leave: leave the co-op game", a => { if (host == null) return "not joined"; Leave(); return "left"; });
+        Commands.Add(this, "coop.follow", "coop.follow: your character walks next to the host's", a => Mine("FOLLOW"));
         Commands.Add(this, "coop.pick", "coop.pick <number>: play that character from the host's list", a => { if (host == null) return "not joined"; host.Send("PICK", a.Length > 0 ? a[0] : ""); return null; });
         Commands.Add(this, "coop.new", "coop.new <name>: a new character in the host's game", a => { if (host == null) return "not joined"; host.Send("NEW", string.Join(" ", a)); return null; });
         Commands.Add(this, "coop.go", "coop.go x y: your character walks to tile x, y", a => Mine(new[] { "GO" }.Concat(a).ToArray()));
@@ -339,6 +370,23 @@ public sealed class Coop : WorksMod
             {
                 try { if (m.Key == host) JoinerMessage(m.Value); else if (listener != null) HostMessage(m.Key, m.Value); }
                 catch (Exception ex) { Log.Error("message " + m.Value[0] + ": " + ex); }
+            }
+        });
+        // Each joined player's state, sent when it changes (checked twice a second).
+        double stateTimer = 0;
+        GameEvents.Update.Add(this, dt =>
+        {
+            if (listener == null || (stateTimer -= dt) > 0) return;
+            stateTimer = 0.5;
+            var cur = Combat.Current;
+            foreach (var seat in seats.Values.Where(x => x.Character != null))
+            {
+                var c = seat.Character;
+                var state = new object[] { "STATE", c.Name, (int)c.Health, (int)c.MaxHealth, Combat.InCombat ? "1" : "0", cur == null ? "" : cur.Name, Combat.ActionPoints(c), Combat.MovementPoints(c), (int)Math.Round(c.Position.X), (int)Math.Round(c.Position.Y), c.IsDead ? "1" : "0" };
+                var key = string.Join("|", state.Select(o => Convert.ToString(o)).ToArray());
+                if (key == seat.LastState) continue;
+                seat.LastState = key;
+                seat.Peer.Send(state);
             }
         });
         // A joined player's turn: told to them. A character whose player left: its turn passes at once.

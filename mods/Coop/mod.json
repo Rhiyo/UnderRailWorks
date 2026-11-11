@@ -1,2 +1,2 @@
-{ "id": "Coop", "name": "Co-op", "version": "0.2.0", "author": "UnderRailWorks", "works": "0.9",
-  "description": "Play together (in development). Host with coop.host; others join with coop.join <address>, pick or make a character from your game's list, and control it in your game with console commands (coop.go, coop.attack, coop.end). Their own screen doesn't show your world yet." }
+{ "id": "Coop", "name": "Co-op", "version": "0.3.0", "author": "UnderRailWorks", "works": "0.9",
+  "description": "Play together (in development). The Co-op button on the HUD: host your game, or join someone's, pick or make a character from their game's list and control it in their game (end turn, attack, follow, walk). Their own screen doesn't show the host's world yet." }
