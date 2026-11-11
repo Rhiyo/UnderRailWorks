@@ -95,6 +95,27 @@ namespace UnderRailWorks.Internal
             return false;
         }
 
+        // A controlled character that stopped between tiles (a walk cut short where two bodies met) is put on the nearest
+        // free tile after a moment: the game's own actions (an attack's approach, a use) start from a tile, and nothing
+        // orders it on as the player's clicks or an AI would.
+        static readonly Dictionary<b0b, double> between = new Dictionary<b0b, double>();
+        internal static void SettleTick(double seconds)
+        {
+            List<Character> list;
+            lock (CharacterControl.Taken) { if (CharacterControl.Taken.Count == 0) { between.Clear(); return; } list = CharacterControl.Taken.Keys.Where(e => e.Area != null).Select(e => Character.Of(e)).ToList(); }
+            foreach (var c in list)
+            {
+                var at = c.Position;
+                bool off = Math.Abs(at.X - Math.Round(at.X)) > 0.05 || Math.Abs(at.Y - Math.Round(at.Y)) > 0.05;
+                if (!off || c.IsWalking || c.IsDead) { between.Remove(c.Entity); continue; }
+                double t; between.TryGetValue(c.Entity, out t); t += seconds; between[c.Entity] = t;
+                if (t < 0.6) continue;
+                between.Remove(c.Entity);
+                var tile = World.FreeTilesNear((int)Math.Round(at.X), (int)Math.Round(at.Y), 2).OrderBy(p => Math.Abs(p.X - at.X) + Math.Abs(p.Y - at.Y)).FirstOrDefault();
+                if (tile != Microsoft.Xna.Framework.Point.Zero) c.PlaceAt(new Microsoft.Xna.Framework.Vector3(tile.X, tile.Y, at.Z), c.Facing);
+            }
+        }
+
         // Released mid-turn: its AI starts the turn's clock afresh (not timed from when it was first taken).
         internal static void ResetTurnClock(c5x e)
         {

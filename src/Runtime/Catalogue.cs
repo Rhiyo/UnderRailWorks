@@ -67,6 +67,7 @@ namespace UnderRailWorks
     public sealed partial class Character
     {
         // Its blueprint path, matched by name among the creature blueprints (null: no match). See World.BlueprintFor.
-        public string Blueprint { get { return World.BlueprintFor(Name); } }
+        // A character Works spawned or placed: the blueprint it was made from.
+        public string Blueprint { get { var p = World.PlacementOf(Entity); if (p != null && p.Blueprint != null && p.Blueprint.Contains("\\")) return p.Blueprint; return World.BlueprintFor(Name); } }
     }
 }

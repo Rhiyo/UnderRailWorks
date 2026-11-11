@@ -77,7 +77,7 @@ public sealed partial class Coop
         switch (builtFor)
         {
             case "idle":
-                if (World.Player != null) button("Host this game", () => Commands.Print("co-op: " + Host(new string[0])));
+                if (World.Player != null) button("Host this game...", AskAndHost);
                 button("Join a game...", AskJoin);
                 break;
             case "host":

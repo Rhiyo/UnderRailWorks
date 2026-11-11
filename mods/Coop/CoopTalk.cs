@@ -45,6 +45,7 @@ public sealed partial class Coop
 
     // --- Joiner -------------------------------------------------------------------------------------------------
     UiWindow talkWindow;
+    bool talkEnding;
     UiList talkList;
     string talkSpeaker, talkText;
     readonly List<KeyValuePair<int, string>> talkChoices = new List<KeyValuePair<int, string>>();
@@ -63,7 +64,7 @@ public sealed partial class Coop
                 return true;
             }
             case "DLGSHOW": ShowTalk(); return true;
-            case "DLGEND": if (talkWindow != null && talkWindow.IsOpen) talkWindow.Close(); talkWindow = null; return true;
+            case "DLGEND": talkEnding = true; if (talkWindow != null && talkWindow.IsOpen) talkWindow.Close(); talkWindow = null; talkEnding = false; return true;
         }
         return false;
     }
@@ -75,7 +76,8 @@ public sealed partial class Coop
             int w = Ui.S(640), h = Ui.S(420), pad = Ui.S(10);
             talkWindow = Ui.Window(this, "talk", "Conversation", w, h);
             if (talkWindow == null) return;
-            talkWindow.Closed += () => { talkWindow = null; };
+            // Closed by the player (not by the conversation ending): it ends on the host too.
+            talkWindow.Closed += () => { talkWindow = null; if (!talkEnding && host != null && !host.Closed) host.Send("DLGCLOSE"); };
             w = talkWindow.Width; h = talkWindow.Height;
             var go = Ui.Button("Continue", () => Answer(-1));
             int listTop = talkWindow.Top + Ui.S(4);

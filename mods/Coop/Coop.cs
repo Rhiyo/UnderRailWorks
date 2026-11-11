@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("0.7.0")]
+[assembly: System.Reflection.AssemblyVersion("0.8.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -113,6 +113,7 @@ public sealed partial class Coop : WorksMod
         {
             case "_closed":
                 if (seat == null) return;
+                if (talking == seat) { TalkAs.Close(); talking = null; }     // left mid-conversation: it ends
                 seats.Remove(p);
                 if (seat.Character != null) { Remember(seat); seat.Peer = null; orphans.Add(seat); }
                 Log.Info(p.Name + " left" + (seat.Character != null ? " (" + seat.Character.Name + " stays, passing its turns)" : ""));
@@ -170,6 +171,9 @@ public sealed partial class Coop : WorksMod
         var said = Act(seat.Character, w);
         if (!string.IsNullOrEmpty(said)) p.Send("SAID", said);
     }
+
+    // The host's key for a character in this (joiner's) copy: a mirror's key, else the game's id (kept in the save).
+    string KeyHere(Character c) { return spawned.Where(kv => kv.Value == c).Select(kv => kv.Key).FirstOrDefault() ?? c.EntityId; }
 
     bool Taken(Record r) { return seats.Values.Any(s => s.Record == r); }
 
@@ -279,7 +283,7 @@ public sealed partial class Coop : WorksMod
             case "TURN": Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")"); return;
             case "SAID": Tell(w.Length > 1 ? w[1] : ""); return;
         }
-        if (!TalkMessage(w) && !LootMessage(w)) MirrorMessage(w);
+        if (!TalkMessage(w) && !LootMessage(w) && !TradeMessage(w)) MirrorMessage(w);
     }
 
     void Tell(string line)
@@ -358,8 +362,19 @@ public sealed partial class Coop : WorksMod
             }
             case "TAKE": return w.Length > 2 ? Take(c, w[1], w[2]) : "";
             case "TAKEALL": return w.Length > 1 ? Take(c, w[1], null) : "";
+            case "TRADED": if (w.Length > 2) { var seat = seats.Values.FirstOrDefault(s => s.Character == c); if (seat != null) Traded(seat, w[1], w[2]); } return "";
+            case "MYSHEET": if (w.Length > 1) { var seat = seats.Values.FirstOrDefault(s => s.Character == c); if (seat != null) TakeSheet(seat, w[1]); } return "";
+            case "TRADEWITH":
+            {
+                // A trade without a conversation (testing; a mod's own "trade" button): as the conversation's would.
+                var seat = seats.Values.FirstOrDefault(s => s.Character == c); var m = w.Length > 1 ? Resolve(w[1]) : null;
+                if (seat == null || m == null || !m.IsMerchant) return "not a merchant";
+                seat.Peer.Send("STOCK", KeyOf(m), Convert.ToBase64String(Item.Pack(m.Stock))); seat.Peer.Send("TRADE", KeyOf(m));
+                return "";
+            }
             case "TALK": return w.Length > 1 ? Talk(c, w[1]) : "talk to whom?";
             case "DLGPICK": return w.Length > 1 ? Pick(c, w[1]) : "";
+            case "DLGCLOSE": if (talking != null && talking.Character == c) { TalkAs.Close(); talking = null; } return "";
             case "STATUS":
             {
                 var cur = Combat.Current;
@@ -394,9 +409,11 @@ public sealed partial class Coop : WorksMod
     public override void Load()
     {
         Commands.Add(this, "coop.host", "coop.host [port]: let others join this game", Host);
+        LoadXp();
         LoadUi();
         LoadMirror();
         LoadLoot();
+        LoadTrade();
         Commands.Add(this, "coop.stop", "coop.stop: stop hosting (joined characters stay, back to their AI)", a => { if (listener == null) return "not hosting"; StopHosting(); return "stopped"; });
         Commands.Add(this, "coop.who", "coop.who: who is connected and what they play", a =>
         {
@@ -415,13 +432,15 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.end", "coop.end: ends your character's combat turn", a => Mine("END"));
         Commands.Add(this, "coop.door", "coop.door <id start>: your character uses that door (wt.doors lists them)", a => { var d = a.Length == 0 ? null : World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return d == null ? "no such door" : Mine("USE", d.EntityId); });
         Commands.Add(this, "coop.newfrom", "coop.newfrom <file.char> <name>: join with a character exported earlier (as finishing creation does)", a => { if (host == null || a.Length < 2) return "coop.newfrom <file.char> <name>"; host.Send("NEW", a[1], Convert.ToBase64String(System.IO.File.ReadAllBytes(a[0]))); return "sent"; });
-        Commands.Add(this, "coop.talk", "coop.talk <name>: your character talks to that character (nearest of that name)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 80).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0); return t == null ? "nobody called that" : Mine("TALK", t.EntityId); });
+        Commands.Add(this, "coop.talk", "coop.talk <name>: your character talks to that character (nearest of that name)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 80).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0); return t == null ? "nobody called that" : Mine("TALK", KeyHere(t)); });
         Commands.Add(this, "coop.box", "coop.box <id start>: your character opens that container", a => { var b = a.Length == 0 ? null : World.Containers.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return b == null ? "no such container" : Mine("USE", b.EntityId); });
         Commands.Add(this, "coop.threats", "coop.threats: for each joined character, the enemies in the fight and who has noticed whom", a =>
         {
             var lines = seats.Values.Concat(orphans).Where(x => x.Character != null).Select(x => x.Character.Name + " at " + (int)x.Character.Position.X + "," + (int)x.Character.Position.Y + (x.Character.IsInCombat ? " (in the fight)" : "") + ": " + string.Join("; ", World.CharactersNear(x.Character.Position, 60).Where(e => e != x.Character && e.IsInCombat && e.AttitudeTo(x.Character) == Attitude.Hostile).Select(e => e.Name + " " + (int)Vector2.Distance(new Vector2(e.Position.X, e.Position.Y), new Vector2(x.Character.Position.X, x.Character.Position.Y)) + " tiles" + ", its sight " + e.SightRange + (e.HasNoticed(x.Character) ? ", knows of it" : "")).ToArray())).ToArray();
             var t = string.Join(" | ", lines); Log.Info("threats: " + t); return t;
         });
+        Commands.Add(this, "coop.trade", "coop.trade <name>: trade with that merchant (testing)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 200).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0 && x.IsMerchant); return t == null ? "no merchant called that" : Mine("TRADEWITH", KeyHere(t)); });
+        Commands.Add(this, "coop.xpmode", "coop.xpmode <0 everyone|1 nearby|2 split|3 earner> [oddity finder 0|1]: the experience rule (Host this game... asks)", a => { int m; if (a.Length > 0 && int.TryParse(a[0], out m) && m >= 0 && m <= 3) xpMode = (XpMode)m; if (a.Length > 1) oddityFinder = a[1] == "1"; return "experience: " + XpModeNames[(int)xpMode] + (oddityFinder ? ", oddities: finder only" : ""); });
         Commands.Add(this, "coop.status", "coop.status: your character's state", a => Mine("STATUS"));
         Commands.Add(this, "coop.spawn", "coop.spawn [blueprint]: a local test partner next to you (no network)", a =>
         {

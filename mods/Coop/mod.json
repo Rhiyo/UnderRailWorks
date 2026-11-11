@@ -1,2 +1,2 @@
-{ "id": "Coop", "name": "Co-op", "version": "0.7.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "Coop", "name": "Co-op", "version": "0.8.0", "author": "UnderRailWorks", "works": "0.9",
   "description": "Play together (in development). Host from the Co-op button on the HUD; others use Join a Game on the main menu, make a character in the game's own creation (or pick one saved with the host's game), and play it in the host's world: walking, fighting, doors and objects, looting, exits (the group travels), conversations. Everyone is in the host's zone. Other mods that use Works' Party.Members include the co-op characters." }

@@ -31,6 +31,7 @@ namespace UnderRailWorks
         internal static readonly MethodInfo ReadFile = typeof(ajk).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(string) }, null),
             WriteFile = typeof(ajk).GetMethod("b", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null);
         internal static readonly FieldInfo SheetProvider = typeof(amc).GetField("m_m", Inst) ?? typeof(amc).GetFields(Inst).FirstOrDefault(f => f.FieldType == typeof(IProvider<efk>));
+        static readonly FieldInfo UidField = typeof(efk).GetField("m_c", Inst | BindingFlags.DeclaredOnly) ?? typeof(efk).GetFields(Inst | BindingFlags.DeclaredOnly).FirstOrDefault(f => f.Name == "c" && f.FieldType == typeof(Guid));
         static readonly FieldInfo Flags = typeof(c5x).GetField("g", Inst | BindingFlags.DeclaredOnly);
         static readonly FieldInfo Footprint = typeof(b0b).GetFields(Inst | BindingFlags.DeclaredOnly).FirstOrDefault(f => f.Name == "z" && f.FieldType == typeof(Vector2?));
 
@@ -46,6 +47,9 @@ namespace UnderRailWorks
             var file = ReadFile.Invoke(null, new object[] { path });
             var sheet = file == null ? null : FileSheet.GetValue(file) as au2;
             if (sheet == null) { Log.Write("world: " + path + " has no player sheet"); return null; }
+            // A sheet copied from a character here (an import of this game's player) has its id: who-did-what (the blow's
+            // attacker, recorded by this id) would find the other one. A new id then.
+            if (UidField != null && Characters.Any(other => other.GameData != null && other.GameData.Uid == sheet.Uid)) sheet.Uid = Guid.NewGuid();
             var body = (c5x)BuildBody.Invoke(game, new object[] { sheet });
             var aspect = body.GetAspect<amc>();
             SheetProvider.SetValue(aspect, new StandAloneProvider<efk>(sheet));

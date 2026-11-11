@@ -35,7 +35,14 @@ public sealed class LevelPoints
 
 public sealed class XpGain
 {
+    // The game uses the Oddity experience system (XP from studying oddities and quests, none for kills).
     public bool Oddity { get; internal set; }
+    // Who gets it (the player, or another character with a player sheet), and why, as the game says it ("studying an
+    // oddity: ...", a quest's reason, null for kills).
+    public Character Who { get; internal set; }
+    public string Reason { get; internal set; }
+    // For studying an oddity.
+    public bool FromOddity { get { return Reason != null && Reason.StartsWith("studying an oddity", StringComparison.OrdinalIgnoreCase); } }
     // What the player is about to get (Classic: before the game's intelligence bonus).
     public int Amount { get; set; }
 }
@@ -69,6 +76,8 @@ static class ProgressionHooks
         harmony.Patch(typeof(c2h).GetMethod("a", any, null, new[] { typeof(int), typeof(ExperienceSystem), typeof(int) }, null), postfix: m("Needed"));
         harmony.Patch(typeof(e3q).GetMethod("a", BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null), prefix: m("PointsBefore"), postfix: m("PointsAfter"));
         harmony.Patch(typeof(e3q).GetMethod("c", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(int) }, null), prefix: m("Gain"));
+        harmony.Patch(typeof(awq).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(int), typeof(string) }, null), prefix: m("Giving"), finalizer: m("Given"));
+        harmony.Patch(typeof(amc).GetMethod("a", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(int), typeof(string) }, null), prefix: m("Giving"), finalizer: m("Given"));
     }
 
     static void Needed(int __0, ExperienceSystem __1, ref int __result)
@@ -99,10 +108,16 @@ static class ProgressionHooks
         catch (Exception ex) { Log.Write("progression: " + ex.Message); }
     }
 
+    // The reason the XP is given with (awq.a(int, string) for the player, amc.a(int, string) for any sheet), for e3q.c.
+    [ThreadStatic] internal static string XpReason;
+    static void Giving(string __1) { XpReason = __1; }
+    static void Given() { XpReason = null; }
+
     static void Gain(e3q __instance, ref int __0)
     {
         if (!Progression.ModifyExperience.Any) return;
-        var g = new XpGain { Oddity = __instance.e() == ExperienceSystem.Oddity, Amount = __0 };
+        var sheet = __instance as au2; var body = sheet == null ? null : sheet.b() as c5x;
+        var g = new XpGain { Oddity = __instance.e() == ExperienceSystem.Oddity, Amount = __0, Who = body == null ? null : Character.Of(body), Reason = XpReason };
         Progression.ModifyExperience.Run(h => h(g));
         __0 = Math.Max(0, g.Amount);
     }

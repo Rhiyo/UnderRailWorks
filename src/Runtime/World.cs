@@ -137,7 +137,13 @@ public sealed partial class Character
     // The player's XP (0 for others) and the game's way to award it (Intelligence factor, notice, level-up).
     internal e3q PlayerData { get { return Data as e3q; } }
     public int Experience { get { var p = Data as e3q; return p == null ? 0 : p.i(); } }
-    public void GiveExperience(int amount, string reason = null) { if (IsPlayer) awq.a(amount, reason); }
+    // XP as the game gives it (its notice, level-ups): the player, or a character with a player sheet (amc.a(int, string)).
+    public void GiveExperience(int amount, string reason = null)
+    {
+        if (IsPlayer) { awq.a(amount, reason); return; }
+        var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>();
+        if (a != null && a.aa() is e3q) a.a(amount, reason);
+    }
 
     public Inventory Inventory { get { return inventory ?? (inventory = new Inventory(() => Data)); } }
     // What it wears and wields; equip and unequip.
@@ -215,6 +221,8 @@ public sealed partial class Character
     }
 
     // A merchant's stock (what the barter screen lists on their side), and what they charge the player per item value.
+    // The game store it runs ("bigbret": data/rules/stores/<name>.store), or null.
+    public string StoreName { get { var c = Entity as c5x; var m = c == null ? null : c.GetAspect<dvp>(); return m == null ? null : m.g(); } }
     public IList<Item> Stock { get { var c = Entity as c5x; var m = c == null ? null : c.GetAspect<dvp>(); return m == null ? new List<Item>() : m.ap7().z2().Select(i => new Item(i)).ToList(); } }
     public float Markup { get { var c = Entity as c5x; var m = c == null ? null : c.GetAspect<dvp>(); var p = World.Player; var pd = p == null ? null : ((c5x)p.Entity).GetAspect<amc>().aa(); return m == null || pd == null ? 1 : m.aqd(pd); } }
 

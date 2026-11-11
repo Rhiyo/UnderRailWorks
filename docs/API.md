@@ -124,7 +124,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 
 ## Character  _(class, Catalogue.cs)_
 
-- `string Blueprint` — Its blueprint path, matched by name among the creature blueprints (null: no match). See World.BlueprintFor.
+- `string Blueprint` — Its blueprint path, matched by name among the creature blueprints (null: no match). See World.BlueprintFor. A character Works spawned or placed: the blueprint it was made from.
 - `bool IsTakingTurn` — In combat: this character's turn now.
 - `bool Attack(Character target)` — An attack on target with what it holds, as the player's click (the game checks AP, range and line of fire, and refuses with its own message). A character in the fight only on its turn; one outside it attacks at once, which brings it into the fight (as the player shooting first). False: it can't attack now.
 - `bool EndTurn()` — Ends its combat turn (as the player's End Turn: leftover AP carries over up to 10). False: not its turn.
@@ -145,6 +145,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `bool UseObject(string entityId)` — Walks to the object with that EntityId (a door, lever, container, computer...) and uses it, as the player's click does. False: no such object here, or it can't be used.
 - `bool TakeExitAt(int x, int y)` — Walks to the zone exit on tile x, y and takes it (as the player's click on an exit). The game then changes zone: for everyone, as when the player leaves. False: no exit there.
 - `bool PlaceAt(Vector3 at, int facing = -1)` — Puts it exactly there (map tiles, fractional allowed) at once, facing that way (-1: as it is).
+- `bool SetStock(IEnumerable<Item> items)` — Replaces a merchant's stock with these items.
 - `bool IsPlayer`
 - `bool IsHostile` — Hostile or unfriendly to the player, not passive (red and orange outlines).
 - `Vector3 Position` — Map position (tiles; fractional while moving).
@@ -186,7 +187,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `IList<string> Feats`
 - `bool HasFeat(string name)` — By display name or key (the game's internal name, or a mod feat's ModFeat.Key).
 - `int Experience`
-- `void GiveExperience(int amount, string reason = null)`
+- `void GiveExperience(int amount, string reason = null)` — XP as the game gives it (its notice, level-ups): the player, or a character with a player sheet (amc.a(int, string)).
 - `Inventory Inventory`
 - `Equipment Equipment` — What it wears and wields; equip and unequip.
 - `override string ToString()` — Its personal attitude to the player (overrides its faction's), as the game's scripts set it.
@@ -199,7 +200,8 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `bool HasStatusEffect(string code)`
 - `bool IsMerchant`
 - `bool MakeMerchant(string store)` — Makes a placed character a merchant with one of the game's stores (data/Rules/Stores/<name>.store, e.g. "bigbret"), as the game's scripts do (die: the merchant aspect, the store name, a restock). Only characters Works placed (they are never saved); false otherwise.
-- `IList<Item> Stock` — A merchant's stock (what the barter screen lists on their side), and what they charge the player per item value.
+- `string StoreName` — A merchant's stock (what the barter screen lists on their side), and what they charge the player per item value. The game store it runs ("bigbret": data/rules/stores/<name>.store), or null.
+- `IList<Item> Stock`
 - `float Markup`
 - `Variables Variables` — Its own variables (the game's per-character CustomProperties, saved with it).
 
@@ -559,6 +561,7 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<string>> DialogEnded = new Hook<Action<string>>("DialogEnded")`
 - `static readonly Hook<Action<Item>> ItemAdded = new Hook<Action<Item>>("ItemAdded")` — An item went into the player's bag (any way: loot, trade, reward).
 - `static readonly Hook<Action<int>> ExperienceGained = new Hook<Action<int>>("ExperienceGained")` — The player gained XP (before the game's own multipliers for the classic system are known: the amount given).
+- `static readonly Hook<Action<Character, int>> CharacterExperienceGained = new Hook<Action<Character, int>>("CharacterExperienceGained")` — Any character with a player sheet gained XP (the player, and characters like co-op partners): who, how much.
 - `static readonly Hook<Action<string>> Saving = new Hook<Action<string>>("Saving")` — Before and after the game writes a save; the argument is the save's folder name ("quicksave", "autosave"...).
 - `static readonly Hook<Action<string>> Saved = new Hook<Action<string>>("Saved")`
 - `static readonly Hook<Action<string, QuestState>> QuestChanged = new Hook<Action<string, QuestState>>("QuestChanged")` — A quest changed state (started, completed, failed): its id and new state.
@@ -736,6 +739,8 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 - `void SetValue(string key, object value)` — Saved inside the item (II:CP), so the stock game reads it back: only plain values (a number, bool, string, DateTime, Guid); anything else would make the save unloadable without the mod.
 - `ItemDefinition Definition`
 - `void MakeUnique()` — This one item gets its own copy of the definition (as crafted items have), to edit without touching others. Saved whole, with stock types only: the stock game shows it as edited.
+- `static byte[] Pack(IEnumerable<Item> items)`
+- `static IList<Item> Unpack(byte[] bytes)`
 
 ## ItemCodes  _(class, Characters.cs)_
 
@@ -1852,6 +1857,8 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static IList<Point> ExitTiles` — The tiles of the player's area with a zone exit (what the player clicks to leave; Character.TakeExitAt).
 - `static IList<Door> Doors` — The doors in the player's area.
 - `static Character ByEntityId(string id)` — The character with this EntityId in the player's area, or null.
+- `static bool OpenTrade(Character merchant)` — The game's barter screen between the player and merchant (as a conversation's "let's trade"). False: no player, not a merchant.
+- `static bool IsTrading` — The barter screen is open.
 - `static Character Player` — The player's character, as the game finds it (cnk.aqu(): the player's data au2, its entity).
 - `static IList<Character> Visible` — The characters the game drew in the last frame, the player excepted: the ones in sight (stealthed or out of sight characters aren't drawn). Updated at the end of each world pass.
 - `static bool FogOfWar` — The game's fog of war is on: undiscovered parts are hidden under the shroud.
@@ -1887,7 +1894,10 @@ The world view (a7m): the map's drawing for one frame.
 
 ## XpGain  _(class, Progression.cs)_
 
-- `bool Oddity`
+- `bool Oddity` — The game uses the Oddity experience system (XP from studying oddities and quests, none for kills).
+- `Character Who` — Who gets it (the player, or another character with a player sheet), and why, as the game says it ("studying an oddity: ...", a quest's reason, null for kills).
+- `string Reason`
+- `bool FromOddity` — For studying an oddity.
 - `int Amount` — What the player is about to get (Classic: before the game's intelligence bonus).
 
 ## XpNeeded  _(class, Progression.cs)_

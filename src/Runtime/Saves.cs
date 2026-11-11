@@ -40,6 +40,8 @@ public static partial class GameEvents
     public static readonly Hook<Action<Item>> ItemAdded = new Hook<Action<Item>>("ItemAdded");
     // The player gained XP (before the game's own multipliers for the classic system are known: the amount given).
     public static readonly Hook<Action<int>> ExperienceGained = new Hook<Action<int>>("ExperienceGained");
+    // Any character with a player sheet gained XP (the player, and characters like co-op partners): who, how much.
+    public static readonly Hook<Action<Character, int>> CharacterExperienceGained = new Hook<Action<Character, int>>("CharacterExperienceGained");
     // Before and after the game writes a save; the argument is the save's folder name ("quicksave", "autosave"...).
     public static readonly Hook<Action<string>> Saving = new Hook<Action<string>>("Saving");
     public static readonly Hook<Action<string>> Saved = new Hook<Action<string>>("Saved");
@@ -88,8 +90,9 @@ static class Saves
         harmony.Patch(typeof(zq).GetMethod("n2", any), postfix: m("DialogClosed"));
         // Items: dcw.g(coh), the one notifier for items added to a container.
         harmony.Patch(typeof(dcw).GetMethod("g", any, null, new[] { typeof(coh) }, null), postfix: m("ItemAddedHook"));
-        // XP: amc.a(int, string), how the game gives XP (kills, quests, the console).
-        harmony.Patch(typeof(amc).GetMethod("a", any, null, new[] { typeof(int), typeof(string) }, null), postfix: m("XpHook"));
+        // XP: e3q.c(int), where a player sheet takes XP (returns what it took): the player's (awq.a: kills, quests, the
+        // console) and any other player sheet's (amc.a(int, string)) both end there.
+        harmony.Patch(typeof(e3q).GetMethod("c", any, null, new[] { typeof(int) }, null), postfix: m("XpHook"));
         // Trade: dka.amw(player, merchant) opens barter.
         harmony.Patch(typeof(dka).GetMethods(any).First(x => x.Name == "amw" && x.GetParameters().Length == 2), postfix: m("TradeHook"));
         // Death: amc.a(cwt attack, bool shattered).
@@ -272,9 +275,14 @@ static class Saves
     }
     static dcw PlayerBag() { var game = bpo.GetService<cnk>(); var p = game == null || game.aqu() == null ? null : game.aqu().v(); return p == null ? null : p.Bag; }
 
-    static void XpHook(amc __instance, int __0)
+    static void XpHook(e3q __instance, int __result)
     {
-        if (GameEvents.ExperienceGained.Any && __instance.aa() is e3q) GameEvents.ExperienceGained.Run(h => h(__0));
+        int __0 = __result;
+        if (__0 <= 0) return;
+        var sheet = __instance as au2;
+        var body = sheet == null ? null : sheet.b() as c5x;
+        if (body != null && body.IsPlayer) { if (GameEvents.ExperienceGained.Any) GameEvents.ExperienceGained.Run(h => h(__0)); }
+        if (GameEvents.CharacterExperienceGained.Any && body != null) { var c = Character.Of(body); GameEvents.CharacterExperienceGained.Run(h => h(c, __0)); }
     }
 
     static void Dying(amc __instance, cwt __0)

@@ -9,7 +9,7 @@
 // Messages, host to joiner: WORLD, FILE <path> <base64>..., WORLDEND, YOU <key>,
 // POS <key> <x> <y> <z> <facing> <health> <dead>, WALK <key> <x> <y> (walking there: the joiner's copy walks too),
 // DOOR <id> <0|1>, DEAD <key>, GONE <key>, SHEET <key> <.char base64> (a co-op character's sheet: its body is built from
-// it, and the joiner's own becomes the player there), SPAWN <key> <blueprint> <hostile> <name> (before a character's first POS).
+// it, and the joiner's own becomes the player there), SPAWN <key> <blueprint> <hostile> <name> <store> (before a character's first POS).
 // Joiner to host: LOADED, ATTACKID <key>, USE <id>, EXIT <x> <y> (and GO x y).
 using System;
 using System.Collections.Generic;
@@ -70,7 +70,7 @@ public sealed partial class Coop
         {
             // What a change worth a new sheet looks like (the sheet's bytes change all the time: its fog of war, clocks).
             var c = seat.Character;
-            var sign = c.Level + "|" + c.Experience + "|" + string.Join(",", c.Inventory.Items.Select(i => i.Name + "x" + i.Stacks).OrderBy(x => x).ToArray());
+            var sign = SignOf(c);
             if (seat.LastSign == null) { seat.LastSign = sign; continue; }
             if (sign == seat.LastSign) continue;
             seat.LastSign = sign;
@@ -136,7 +136,7 @@ public sealed partial class Coop
                 string old;
                 if (s.Sent.TryGetValue(l.Key, out old) && old == text) continue;
                 if (old == null && l.Key.StartsWith("c:")) { var r = records.FirstOrDefault(x => x.Name == l.Key.Substring(2)); if (r != null && r.Sheet != null) s.Peer.Send("SHEET", l.Key, r.Sheet); }
-                if (old == null) { var c = who[l.Key]; s.Peer.Send("SPAWN", l.Key, l.Key.StartsWith("c:") ? BlueprintOf(c.Name) : c.Blueprint ?? "", c.IsHostile ? 1 : 0, c.Name); }
+                if (old == null) { var c = who[l.Key]; s.Peer.Send("SPAWN", l.Key, l.Key.StartsWith("c:") ? BlueprintOf(c.Name) : c.Blueprint ?? "", c.IsHostile ? 1 : 0, c.Name, c.StoreName ?? ""); }
                 s.Sent[l.Key] = text;
                 s.Peer.Send(l.Value);
             }
@@ -225,7 +225,7 @@ public sealed partial class Coop
                 var c = SpawnSheet(w[1], (int)Math.Round(at.X), (int)Math.Round(at.Y));
                 if (c == null) return;
                 c.PlaceAt(at, old.Facing);
-                if (w[1] == myKey) { World.MakePlayer(c); followed = c; Build(); }
+                if (w[1] == myKey) { World.MakePlayer(c); followed = c; lastSign = SignOf(c); Build(); }
                 World.Despawn(old);
                 return;
             }
@@ -271,6 +271,7 @@ public sealed partial class Coop
         if (c == null) { spawnInfo.Remove(key); return null; }     // once: not every POS
         if (info != null && info.Length > 4) c.Name = info[4]; else if (coop) c.Name = key.Substring(2);
         if (coop) c.Faction = "player";
+        if (info != null && info.Length > 5 && info[5].Length > 0) c.MakeMerchant(info[5]);     // a mod's merchant: its stock comes with a trade
         spawned[key] = c;
         Log.Info("mirror: " + c.Name + " placed");
         return c;
@@ -299,7 +300,7 @@ public sealed partial class Coop
         if (myKey == null || !spawned.TryGetValue(myKey, out c) || c == followed) return;
         followed = c;
         // A character with its own sheet becomes this machine's player (HUD, inventory, camera); else the camera follows.
-        if (c.HasPlayerSheet && World.MakePlayer(c)) Build();
+        if (c.HasPlayerSheet && World.MakePlayer(c)) { lastSign = SignOf(c); Build(); }
         else Camera.Follow(c);
     }
 
