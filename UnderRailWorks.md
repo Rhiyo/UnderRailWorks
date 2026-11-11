@@ -1565,3 +1565,13 @@ Vendors, Planner). Rules: UI.md, "Sizes".
 - **Collector's Checklist** (mods/CollectorsChecklist, Home): every oddity, studied ones green with counts, ones in
   the bag amber, "N of 125 studied". F4 first: Works found it was Bounty Hunter's and left it unbound (logged), so Home.
 - Save check after all of this: 61 of 61 files load in the stock game.
+
+## Smaller download: no WPF in the bundled runtime (Nov 2026)
+
+The bundled Windows .NET 10 runtime was 173 MB, 95 MB of it Microsoft.WindowsDesktop.App (WinForms and WPF). Following
+every assembly reference from the game, Works and Harmony (Mono.Cecil) reaches WinForms only; about 49 MB is never
+referenced, nearly all WPF. `tools/trim-runtime.py` (run by build.sh) removes the WPF family and its native libraries
+(202 files with their language resources, 53.5 MB) and their entries in the framework's .deps.json (the host checks
+the files it lists); smaller unreached pieces WinForms may load by name stay. Runtime folder: 173 -> 119 MB. Tested:
+the game starts on it under Proton, loads, changes zone, quicksaves; tools/check-release.sh passes. Not tested on
+real Windows.

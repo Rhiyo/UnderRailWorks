@@ -122,6 +122,8 @@ if [ ! -f "$DOTNET_WIN/dotnet.exe" ]; then
     done
 fi
 rm -rf "$OUT/dotnet"; cp -r "$DOTNET_WIN" "$OUT/dotnet"
+# No WPF: the game and Works use WinForms only (tools/trim-runtime.py: measured, about 49 MB never referenced).
+python3 "$HERE/tools/trim-runtime.py" "$OUT/dotnet"
 DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_NOLOGO=1 "$DOTNET" publish "$HERE/src/Launcher" -c Release -o "$HERE/build/launcher" >/dev/null
 for f in UnderRailLauncher.exe UnderRailLauncher.dll UnderRailLauncher.runtimeconfig.json UnderRailLauncher.deps.json System.Runtime.Serialization.Formatters.dll; do
     cp "$HERE/build/launcher/$f" "$OUT/"

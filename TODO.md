@@ -44,7 +44,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
   of it. (Running the 1.x patcher on a Works install: it reads the launcher as a broken exe and stops.)
 - [ ] Untested on .NET 10: Steam achievements through the helper, GOG Galaxy, clipboard, the dev console, long sessions.
 - [ ] Performance: frame times on .NET 10 against Wine Mono in the same scenes.
-- [ ] Download size: the runtime is 76 MB zipped; check what can be trimmed.
+- [x] Download size: WPF removed from the bundled runtime (173 -> 119 MB unzipped; tools/trim-runtime.py).
 - [ ] underrail.exe (the launcher) shows .NET's default icon in Explorer: copy the icon resource from the player's own
   underrail.exe into it at install time (we can't ship the game's art). The game window's icon is already right.
 
