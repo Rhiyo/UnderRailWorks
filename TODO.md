@@ -165,3 +165,7 @@ startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
   achievement not tried on purpose (it would change the player's real profile). Sound output: measured from the test run's
   audio sink (Nov 2026): menu music RMS ~3100, in-game music and ambience ~1500 (NVorbis streaming works on .NET 10);
   single sound effects not isolated.
+
+## Multiplayer (planned)
+
+- [ ] Co-op mod: design, known facts and open questions in docs/Multiplayer.md. Next: the no-network spike (a second character controlled by commands).
