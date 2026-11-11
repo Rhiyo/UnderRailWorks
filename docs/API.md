@@ -1119,6 +1119,14 @@ Values: `Left, Right, Middle`
 - `static void Add(WorksMod mod, string id, string oggFile)` — A new song id (to play with Override, Play, or an area's "Music" property set by a mod).
 - `static void Override(WorksMod mod, Func<string> choose)` — Asked every frame: a song id to play instead of the game's choice, or null for the game's. The first mod (in hook order) with an answer wins.
 
+## NewGameOptions  _(class, NewGameOptions.cs)_
+
+- `static void AddSlider(WorksMod mod, string key, string label, int value, int min, int max, int step = 1, bool percent = false)` — A slider from min to max (step: its small step), shown as a number or a percentage.
+- `static void AddChoice(WorksMod mod, string key, string label, string[] names, int value = 0)` — A choice between names (a slider over them, showing the chosen name). Its value is the index.
+- `static int Get(WorksMod mod, string key, int fallback)` — The value chosen for the current game (fallback: a game started without it, or no game).
+- `static bool Chosen(WorksMod mod, string key)`
+- `static readonly Hook<Action> Applied = new Hook<Action>("NewGameOptions.Applied")` — The player accepted the new-game screen: the values are in each mod's data (Get) for the new game.
+
 ## Notice  _(class, StealthNotice.cs)_
 
 - `double Distance`
@@ -1783,7 +1791,7 @@ The player about to leave the zone (an exit, a door between maps, a script, Worl
 
 - `static void Add(WorksMod mod, string id, string name, string likeZone = null)` — A zone from the mod's data\Maps folder (<id>.uz and <id>_L1.uzl). likeZone: a game zone whose music, locale type and level it takes (null: none). Prefix the id with the mod's id.
 - `static Placement AddExit(WorksMod mod, string id, string zone, string area, int x, int y, string toZone, string toWaypoint,` — An exit: a usable object placed in a zone (any zone, the game's too; re-added each time it loads, never saved) that takes the player to a waypoint of another zone (a mod's or the game's) when used. name: its hover label. Zones.AddExit(this, "cave_in", "cc-res", "cc-res", 30, 12, "mymod_cave", "Entrance", "Cave entrance");
-- `static AreaTrigger AddEdgeExit(WorksMod mod, string id, string zone, string area, Rectangle tiles, string toZone, string toWaypoint)` — An exit at a map's edge, as the game's own area transitions: walking onto the tiles takes the player to a waypoint of another zone. Shown on map mods (EdgeExits). Not on arrival: someone who arrives standing on its tiles goes only after stepping off and back on. Zones.AddEdgeExit(this, "cave_mouth", "cc-res", "cc-res", new Rectangle(0, 30, 1, 4), "mymod_cave", "Entrance");
+- `static AreaTrigger AddEdgeExit(WorksMod mod, string id, string zone, string area, Rectangle tiles, string toZone, string toWaypoint)` — An exit at a map's edge, as the game's own area transitions: walking onto the tiles takes the player to a waypoint of another zone. Shown on map mods (EdgeExits). Not on arrival (or when it's made under the player): someone already standing on its tiles goes only after stepping off and back on. Zones.AddEdgeExit(this, "cave_mouth", "cc-res", "cc-res", new Rectangle(0, 30, 1, 4), "mymod_cave", "Entrance");
 - `static IList<EdgeExit> EdgeExits` — Mods' edge exits in the current zone (a map draws them like the game's exits).
 - `static bool IsModZone(string id)` — A zone a mod added (true), so not one of the game's.
 - `static IList<string> Added`

@@ -253,6 +253,12 @@ public sealed class WorksTest : WorksMod
         Commands.Add(this, "wt.moveto", "wt.moveto x y: the player walks there", args => { Commands.CloseConsole(); return "walk: " + World.Player.MoveTo(int.Parse(args[0]), int.Parse(args[1])); });
         Commands.Add(this, "wt.blueprints", "wt.blueprints: each character's guessed blueprint", args => { Log.Info("blueprints: " + string.Join("; ", World.Characters.Select(c => c.Name + " -> " + (c.Blueprint ?? "none")))); return "bp"; });
         Commands.Add(this, "wt.grudge", "wt.grudge <name>: Grudges remembers that character (Mods.Call)", args => { var c = World.Characters.FirstOrDefault(x => x.Name == string.Join(" ", args)); return "grudge: " + Mods.Call("Grudges", "Hold", c); });
+        Commands.Add(this, "wt.edgehere", "wt.edgehere: an edge exit on the player's tile and around (to the test zone)", args =>
+        {
+            var p = World.Player.Position;
+            Zones.AddEdgeExit(this, "here", World.ZoneId, World.Player.Area.Name, new Microsoft.Xna.Framework.Rectangle((int)p.X - 1, (int)p.Y - 1, 3, 3), "wt_testzone", "FromElevator");
+            return "edge exit at " + p;
+        });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

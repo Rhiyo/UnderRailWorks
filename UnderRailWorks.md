@@ -1583,3 +1583,21 @@ real Windows.
 - **Soak test** (Nov 2026): 20 minutes in the HousePets save with every mod on, into the house and out every 2 minutes
   (19 zone loads: placements, pets, minimap, HUD rebuilds). Memory: 1023 MB at start, rising to a plateau of 1371 MB
   by 17 minutes, then 1118 MB after a collection: caches, no leak. No errors in the log.
+
+## Options on the new-game screen (NewGameOptions, Nov 2026)
+
+The game's new-game flow (workflow StartNewGame, `dmb`): create the game (`a2g` -> `d6f.arf`: GameEvents.NewGame),
+then the Game Rules screen (`c9v`, opened by `hj` from `bnu`: Rules tab = difficulty and experience system; Custom tab
+= the custom difficulty's sliders), Accept (`c9v.a(bool)`) -> character creation. So NewGame fires *before* the
+player picks anything.
+- `NewGameOptions.AddSlider(mod, key, label, value, min, max, step, percent)` / `AddChoice(mod, key, label, names,
+  value)`: rows in a "Mods" tab Works adds to that screen (a postfix on the c9v constructor: a new `cvh` page, the
+  screen's own row builder `a(key, label, value, min, max, small, large, percent, changed, text, wide)` pointed at it
+  by setting its fields aj/ai/ah/ak). On Accept (postfix on `c9v.a(bool)`) the values go into each mod's SaveData
+  ("newgame.<key>") and `NewGameOptions.Applied` runs; `NewGameOptions.Get(mod, key, fallback)` reads them later.
+- **Gauntlet 1.1** uses it: Off / Tough / Brutal / Custom on the new-game screen, kept with that game (Custom: the
+  Options values when the game starts); older games are Off. Tested: the Mods tab with the game's slider, Brutal
+  chosen, Accept -> "challenge for this game: damage taken 200%, ...". Not played through: character creation and
+  a save/load of that new game (the values use the same per-save data as every other mod).
+- Edge exits also ignore the first second after they're made (one made under the player sent them at once).
+  Arriving on one was tested: no bounce; stepping off and on travelled.

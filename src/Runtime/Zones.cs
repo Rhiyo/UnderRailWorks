@@ -51,16 +51,17 @@ namespace UnderRailWorks
         }
 
         // An exit at a map's edge, as the game's own area transitions: walking onto the tiles takes the player to a waypoint
-        // of another zone. Shown on map mods (EdgeExits). Not on arrival: someone who arrives standing on its tiles goes
-        // only after stepping off and back on.
+        // of another zone. Shown on map mods (EdgeExits). Not on arrival (or when it's made under the player): someone
+        // already standing on its tiles goes only after stepping off and back on.
         //   Zones.AddEdgeExit(this, "cave_mouth", "cc-res", "cc-res", new Rectangle(0, 30, 1, 4), "mymod_cave", "Entrance");
         public static AreaTrigger AddEdgeExit(WorksMod mod, string id, string zone, string area, Rectangle tiles, string toZone, string toWaypoint)
         {
             if (mod == null || id == null || zone == null || toZone == null) throw new ArgumentException("an exit needs a mod, an id, its zone and where it goes");
             lock (edge) { edge.RemoveAll(e => e.Id == mod.Id + "." + id); edge.Add(new EdgeExit { Id = mod.Id + "." + id, Zone = zone, Area = area, Tiles = tiles, ToZone = toZone }); }
+            var made = DateTime.UtcNow;     // someone standing on it when it's made doesn't go either
             return Triggers.Add(mod, zone, area, tiles, who =>
             {
-                if (who == null || !who.IsPlayer || (DateTime.UtcNow - World.ZoneLoadedAt).TotalSeconds < 1.0) return;
+                if (who == null || !who.IsPlayer || (DateTime.UtcNow - World.ZoneLoadedAt).TotalSeconds < 1.0 || (DateTime.UtcNow - made).TotalSeconds < 1.0) return;
                 World.Travel(toZone, toWaypoint);
             }, null);
         }
