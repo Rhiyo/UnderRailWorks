@@ -101,7 +101,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Merchant Ledger: vendor stock and prices remembered across zones, searchable (Ui.TextBox).
 - [x] Pack Mule: sell tagged junk in one click (needs selling through the barter screen's own transaction). (done Nov 2026: mark with Delete, "Offer junk" in barter; mods/PackMule)
 - [x] Stealth Lens: show where enemies would notice you (needs detection rules: research). (done Nov 2026: notice distance per enemy while sneaking; mods/StealthLens)
-- [~] Survey Pins: the Minimap marks merchants; still: pins with notes, workbenches, locked containers.
+- [x] Survey Pins: the Minimap marks merchants; still: pins with notes, workbenches, locked containers. (done Nov 2026: notes with Insert, locked containers; mods/SurveyPins)
 - [x] Neural Reallocation: a respec NPC (points refunded to the game's own unspent points).
 - [x] Workbench Planner: recipes, what can be crafted now (mods can now add recipes: Crafting.AddRecipe). (done Nov 2026: key D; mods/WorkbenchPlanner)
 - [ ] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist.
