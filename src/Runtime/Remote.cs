@@ -68,7 +68,7 @@ namespace UnderRailWorks
         {
             var c = Entity as c5x; var area = Area;
             var move = c == null ? null : c.GetAspect<ale>();
-            if (move == null || area == null || x < 0 || y < 0 || x >= area.Width || y >= area.Height) return false;
+            if (move == null || area == null || x < 0 || y < 0 || x >= area.Width || y >= area.Height || !Exits.IsEnabled(World.ZoneId, x, y)) return false;
             var tile = Areas.Tile(area.Game, x, y);
             var triggers = tile.a(typeof(b0j));
             if (triggers == null || triggers.Count == 0) triggers = tile.a(typeof(cdo));

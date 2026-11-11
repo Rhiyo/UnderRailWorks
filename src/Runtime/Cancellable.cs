@@ -65,7 +65,9 @@ namespace UnderRailWorks.Internal
         // a0l.a(character, destination, ...): queues the game's ChangeZone workflow (exits and scripts alike).
         static bool Leave(c5x __0, c2w __1)
         {
-            if (__0 == null || !__0.IsPlayer || __1 == null) return true;
+            if (__0 == null || __1 == null) return true;
+            try { if (!Party.Allows(PartyNeed.EnterZone, __1.b(), Character.Of(__0))) return false; } catch (Exception ex) { Log.Write("party: " + ex.Message); }
+            if (!__0.IsPlayer) return true;
             if (!GameEvents.ZoneLeaving.Any) { World.PackFollowers(); return true; }
             try
             {

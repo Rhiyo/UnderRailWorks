@@ -189,6 +189,7 @@ public static partial class Dialogs
     {
         string over;
         if (target != null && overrides.TryGetValue(target, out over)) name = over;
+        if (name != null && !barkMode && initiator is c5x && !Party.Allows(PartyNeed.Talk, name, Character.Of(initiator))) { result = false; return false; }
         if (GameEvents.DialogStarting.Any && name != null && !barkMode)
         {
             var e = new DialogStart { Name = name, With = target == null ? null : Character.Of(target) };

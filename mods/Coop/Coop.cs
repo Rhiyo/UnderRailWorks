@@ -186,6 +186,7 @@ public sealed partial class Coop : WorksMod
             seat.Record = r; seat.Character = c;
         }
         CharacterControl.Take(this, seat.Character);
+        Party.Add(this, seat.Character);     // other mods' "everyone" (Works' Party) includes it
         var at = seat.Character.Position;
         Log.Info(seat.Peer.Name + " plays " + r.Name + " at " + (int)at.X + "," + (int)at.Y);
         Notify.Log("Co-op: " + seat.Peer.Name + " plays " + r.Name, Say);
@@ -498,7 +499,7 @@ public sealed partial class Coop : WorksMod
                 if (s.Character != null && s.Character.Area != null) continue;
                 var c = SpawnFor(s.Record, false);
                 if (c == null) continue;
-                s.Character = c; CharacterControl.Take(this, c);
+                s.Character = c; CharacterControl.Take(this, c); Party.Add(this, c);
                 s.Peer.Send("PLAYING", s.Record.Name, (int)c.Position.X, (int)c.Position.Y);
             }
             foreach (var s in seats.Values.Where(s => s.Character != null)) SendWorld(s);     // the joiners follow into the new zone

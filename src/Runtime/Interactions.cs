@@ -119,6 +119,7 @@ namespace UnderRailWorks.Internal
         {
             try
             {
+                if (__0 != null && __instance.a8() != null && !Party.Allows(PartyNeed.Use, __instance.a8().qe().ToString(), Character.Of(__0))) { __result = false; return false; }
                 var p = World.PlacementOf(__instance.a8());
                 if (p == null || p.OnUse == null) return true;
                 var who = __0 == null ? null : Character.Of(__0);
