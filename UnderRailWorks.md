@@ -1643,3 +1643,49 @@ player picks anything.
 - `AttitudeTo(other)` (efk.a(faction table = cyt.ac(), other's FactionId)), `SetAttitudeToFaction(faction, a)`.
 - AI target choice `bq1.f7`: candidates must be hostile; `playerNativeAlly` targets are a fallback (only when
   nothing else); then nearest. A co-op character belongs in faction "player".
+
+## Multiplayer support: what Co-op needed (Nov 2026)
+
+All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each is usable without networking.
+- **Menus:** `MainMenu.AddButton(mod, text, onClick)` (game-styled, above Exit; the column grows upwards);
+  `Ui.Window` also opens over the main menu; `Ui.Ask(..., alsoAllow)` (the save-name box only types letters, digits,
+  spaces: an address needs ".:").
+- **Saves on command:** `SaveGames.SaveNow(name)` (cnk.arg, synchronous), `SaveGames.Load(name)`
+  (LoadGameFromMainMenu / LoadGameFromLocale), `SaveGames.Folder`, `SaveGames.CanSave` (cnk.arh: not in combat).
+- **Identity and placement:** `Character.EntityId` (cae.qe(), kept in saves; spawned characters get a new one),
+  `World.ByEntityId`, `Character.Facing`, `Character.PlaceAt(Vector3, facing)` (a0l.a, fractional).
+- **Walking:** `Character.WalkTarget` / `IsWalking` (the current djk), `Character.WalkTo` (re-orders a walk the game
+  cut short). A walk step stops for good where two bodies' footprints meet (bpr.fr, the collision handler's kq says
+  characters collide; everyone has a 0.75 footprint): while a controlled character steps, the player and other
+  controlled characters don't block it (ControlHooks.Passable). `MoveTo` in combat: only a character *in* the fight
+  waits for its turn.
+- **Using things:** `Character.UseObject(entityId)` (ale.b: walk there, use, as the player's click),
+  `Character.TakeExitAt(x, y)` (ale.a(tile, trigger); the game then changes zone for everyone), `World.ExitTiles`,
+  `World.Doors` (`Door.IsOpen` set quietly with passability, `Toggle`, `IsLocked`), `Container.EntityId`,
+  `Inventory.Put(item)` (an existing item into a bag).
+- **The player's orders:** `GameEvents.PlayerOrdering` (tf.lj: every click order and the attack key; Kind Walk /
+  Attack / Talk / Use / Ability / Travel, the tile, Target, TargetEntityId; Cancel).
+- **A world shown from elsewhere:** `Simulation.Frozen` (ix.a runs walking only: em1 / qy / bpr / dnf / bsz;
+  crp.aho skipped), `Camera.Follow(character)` (dka.akx().ae0).
+- **Player-style characters:** `World.SpawnFromCharacterFile(path, x, y)` (a .char sheet, the body built as the
+  player's by d6f.a(au2), then given a StandAloneProvider with its own sheet), `Character.ExportTo(path[, date])`
+  (as d6f.arv: the HUD's and body's handlers off the sheet while it's written), `Character.HasPlayerSheet`,
+  `World.MakePlayer(c)` (cyt.a(sheet), au2.a(body), the providers swapped, e2b.d moved, the HUD rebuilt with
+  ps.anc(); tested: the HUD showed the new character's 30/90 health and the game's low-health bark),
+  `World.StartNewGame()` (the menu's New Game: azl.aty()). Exports compare equal only with a fixed date; the sheet's
+  bytes change all the time anyway (its fog of war, clocks).
+- **Conversations held by another character:** `TalkAs.Talk(speaker, npc, onLine, onEnd)`, `TalkAs.Choose(i)`,
+  `TalkAs.Close()`. The speaker walks there (WalkTo; the game's own approach step didn't move a controlled character)
+  and starts it without approach (j7.a(target, false, null, true)); cyt.v() is swapped to the speaker's sheet while
+  the dialog evaluates (zq.n1, and each answer: runtime aud/aue then zq.nz), so its own skills and items answer the
+  checks and scripts give to it; the window stays hidden (the controller's b(false)) and the counters zq.n1 raises
+  (dka.aml / amf / amh) are lowered, and raised again before zq.n2 lowers them, so the game isn't paused. One at a time.
+- **Combat:** `Combat.Join(c)` (crp.ahn(amc)), `Combat.Leave(c)` (crp.a(amc)), `Character.IsInCombat` also asks the
+  combat manager (a player-style sheet that isn't the player gets no flag), `Character.Attack` outside a fight
+  attacks at once. The game brings the player's whole side into a fight when it starts.
+- **The party:** `Party.Members` (the player + characters mods add: what "the players" means for any mod),
+  `Party.Add/Remove/Contains`, `Party.NeedTogether(mod, PartyNeed.EnterZone | Talk | Use, key, distance)` checked at
+  a0l.a(c5x, c2w), dka.amu and bim.a (refused with a floating line), `Party.Missing(who, distance)`.
+  `Exits.Disable/Enable/IsEnabled(zone, x, y)` (refuses the walk to the exit, ale.a(tile, trigger)). The game's own
+  exits can also be closed by map scripts (each trigger has a condition: b0j.Condition, cdo.c()).
+- `works.body <name>`: a character's footprint, size, entity state, combat state (debugging).

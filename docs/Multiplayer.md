@@ -1,7 +1,15 @@
 # Multiplayer (co-op) mod: design notes and open questions
 
-Started 2026-11-11. The final test of the framework: a co-op mod. Nothing is built yet. This file records what the
-player wants, what is known about the game, and the questions to work through one at a time.
+Started 2026-11-11. The final test of the framework: a co-op mod (mods/Coop, 0.7). This file records what the
+player wants, what is known about the game, what was built and measured, and the questions still open.
+
+**Where it stands (2026-11-12):** a joiner joins from the main menu, makes a character in the game's own creation
+(or picks one saved with the host's game), and plays it in the host's world: their copy loads the host's save and
+mirrors it (positions, walks with the game's animation, health, deaths, doors), their HUD and inventory are their own
+character's, and their clicks walk, attack, use doors/levers/containers (loot goes to their own bag), take exits (the
+group travels), and talk (the conversation runs on the host for their character, relayed to their window). They join
+fights like anyone: in sight of an enemy or by fighting. Everyone is in the host's zone (see "Players in different
+zones" below).
 
 ## What it should do (the player's design)
 
@@ -79,6 +87,25 @@ character placed by the mod and controlled by those commands instead of by the A
 13. Cheating/trust: friends only (no anti-cheat); say so.
 14. Connection: LAN / port forward / Tailscale first; a relay later?
 
+### Where the open questions stand (2026-11-12)
+
+1. Leaving mid-combat: the character stays and passes its turns (orphan); someone can pick it up again.
+2. Leaving mid-conversation: not handled yet (the conversation stays open on the host; TalkAs.Close would end it).
+3. Conversations: the one who clicked talks, with their own sheet answering the checks; only they see it; one at a
+   time (the game's limit).
+4. Experience: not shared yet; kills give XP to the host's player only (the game's rule). Undecided.
+5. The game's machinery: turns, targeting, doors, walking (after the collision fix), using objects, exits, looting,
+   conversations all work for a co-op character; stealth not checked.
+6. Quests and story: the host's (one world); a joiner's character keeps only its sheet (stats, items, XP).
+7. Zone changes: anyone taking an exit takes the group (unless Party.NeedTogether says everyone must be near).
+   Separate zones: see below.
+8. Real time: a joiner's conversation doesn't pause the host; the host's own menus do pause the host's world.
+9. Death: not handled beyond the mirror (the body dies on both sides).
+10. Loot: each takes into their own bag; trading between players not built.
+11. Saving: only the host; joined characters' sheets are saved with the host's save data.
+12. Versions: Co-op's version must match exactly.
+13-14. As planned: friends only, direct connections.
+
 ## Step 1 results (2026-11-11, no network; Works CharacterControl + the Coop mod's console commands)
 
 Tested in game (test zone and Station Alpha, the player in god mode):
@@ -148,6 +175,96 @@ Tested in game (test zone and Station Alpha, the player in god mode):
   -> cc_ph, the joiner reloaded in 2 s.
 - Seen: a co-op character walking a long way through corridors as an NPC got stuck on the host (both copies agreed
   on where); its health resets when it's spawned again in a new zone.
+
+## Step 3, round 2 (2026-11-12, Co-op 0.6-0.7)
+
+Decided with the player: co-op characters are made in the game's own creation screen; the host keeps playing while a
+joiner makes theirs (they only enter once it's done); conversations don't interrupt the host.
+- **Characters:** New character... (on the main menu) starts the game's New Game on the joiner's machine (rules,
+  creation; World.StartNewGame); when that game's first zone loads, the player is exported (.char) and sent (NEW name
+  sheet); the joiner then loads the host's world. The host builds it as the game builds the player
+  (World.SpawnFromCharacterFile), keeps the sheet (base64) in its save data with the record, and exports it again on
+  save, on leaving a zone, before taking an exit, and every 5 s out of combat when level, XP or items changed (the
+  bytes change constantly: fog of war, clocks). A taken name (an import keeps its name) is numbered. Tested end to
+  end (Import used for speed).
+- **The joiner's HUD:** the joiner's copy builds the character from the same sheet and makes it its player
+  (World.MakePlayer): portrait, health, inventory, quick bar are theirs. A new sheet rebuilds the body there.
+- **Conversations:** a click on an NPC sends TALK; the host's character-for-the-joiner walks there and the game runs
+  the conversation with the joiner's sheet answering the checks (Works' TalkAs), hidden on the host, the host not
+  paused; lines and answers go to the joiner's Conversation window. Tested with Jyles (cc-res): his greeting, five
+  answers, an answer and his reply. Barter from a conversation would open on the host: not handled yet.
+- **Looting:** opening a container sends its contents (the host's loot window cancelled); the joiner's Loot window
+  takes one or all into their own bag. Tested: SGS Credits x200 from a desk reached the joiner's bag.
+- **Combat:** the game brings the player's whole side into a fight; a joined character with no enemy in the fight
+  within 14 tiles that hasn't attacked or been attacked is taken out (Combat.Leave) and walks in real time; it joins
+  (Combat.Join) when one comes within sight or it fights. Tested: 17 tiles away it stayed out and walked during the
+  fight, and joined when walked up to it.
+- **Walking fixed:** two bodies' footprints stop a walk for good (bpr.fr); controlled characters now pass the player
+  and each other (Works). Before, a co-op character next to the host couldn't walk past them.
+- **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
+  adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
+
+## Players in different zones (asked 2026-11-12; designed, not built)
+
+The player wants players free to be in different zones, the world map showing where *your* character is, and an API
+to make some zones (and some conversations or objects) need everyone together (the last part is built: Party.NeedTogether).
+
+**The limit:** a game process has one live zone (c1a); the others are stored. So whoever is alone in a zone must
+simulate it on their own machine.
+
+**What the game makes possible (measured in the decompile, 2026-11-12):**
+- A stored zone is exactly three compressed blobs in the in-memory bulk storage (`bmg`'s static `ccc`), under
+  `lmaps\<zoneId>`: `_L1.uzl` (doq: its layer state), `.uzdm` (l8), `.ap` (az0: pending actions and
+  ElapsedZoneTime), written by `bl1.yp(loc, zone, leaving)` (also callable while staying: `d6f.arr(false)`), read back
+  when the zone loads (`bl1.a(id, out doq)` over the static map). Raw access: `ccc.d(name)` / `ccc.a(name, bytes,
+  ...)` / `ccc.e(name)`. So a zone can be taken out of one game and put into another.
+- Characters that travel between zones (`cka`) are stored apart, `glent\<id>.*`, indexed (with their zone) in
+  `cyt.b()`: a handoff carries those too.
+- Global state lives in the game state cyt: variables `cyt.r()` (a PropertyCollection), quests `cyt.t()` (active,
+  completed, failed), notes `cyt.w()`, factions `cyt.ac()`, explored places `cyt.z()` / transitions, times `cyt.p()` /
+  `cyt.o()`, delayed events, pending per-zone actions. No built-in diff: compare those collections.
+- The world map shows `cyt.c().b()` (the current zone): a joiner simulating their own zone sees themselves there
+  naturally. Showing other players' zones too: a postfix on the map drawing (`eg0.a(e5q, d69)`) can outline more nodes.
+
+**The design:**
+1. **Zone owners.** The host owns its zone. A joiner who takes an exit alone (no Party rule against it) becomes the
+   owner of the zone they enter: the host takes their character out of its zone, sends the target zone's three
+   blobs (and its travelling characters) plus the current global state, and the joiner's game unfreezes and travels
+   there itself (World.Travel), with their own character as the player (already the case).
+2. **Global state flows to the host.** The owner of a zone sends changes to global variables, quests, notes,
+   factions and explored places (a diff every few seconds); the host applies them, and forwards them to everyone.
+   The host's own changes go out the same way. (Conflicts are unlikely: a quest step happens in one zone.)
+3. **Handing a zone back.** When its owner leaves it, or the host (or another player) wants to enter it, the owner
+   stores it (`arr(false)`), sends the blobs to the host, which replaces its stored copy (`ccc.a`), and the one
+   entering gets it from the host. Two players in one zone: the first one there owns it and the other mirrors it
+   (the mirror code, generalised: today only the host can be the source).
+4. **Saving.** Only the host saves, so before a save it asks every owner for their zone and the global diff
+   (asynchronous: the save waits a moment, or saves what it has and the next save catches up).
+5. **The world map.** Each machine shows its own player's zone (as the game does); the host also outlines the
+   joiners' zones, and each joiner the others' (the eg0 postfix).
+6. **Works APIs this needs:** `Zones.Store(zoneId)` / `Zones.Export(zoneId)` / `Zones.Import(zoneId, blobs)`,
+   `GlobalState.Snapshot()` / `Diff(a, b)` / `Apply(diff)`, `WorldMap.Outline(zoneId, colour)`.
+- Risks: saves (an imported zone must stay loadable by the stock game: the blobs are the game's own format, so they
+  should); scripts that run on zone entry for "the player" running on the joiner's machine; merchants (stored with
+  their zone, so they move with it).
+
+## Making other mods work in co-op
+
+What the player asked: Co-op should replace Works' calls so other mods work in multiplayer as long as Co-op loads
+first. What that can and can't mean:
+- **Mods run on the host.** The host's game is the real one: a mod's handlers there change the real world, and the
+  joiners see the result through the mirror (positions, health, doors, items in their bag through the sheet). A
+  joiner's copy is frozen and gets overwritten: mods there should only show things, never change the world (a spawn
+  there would be a ghost only that joiner sees).
+- **"The player" vs "the players".** A mod that gives the player an item, heals the player or checks the player's
+  skill means one character. Works now has `Party.Members` (the player + co-op characters): a mod written against it
+  works in co-op without knowing about Co-op. Co-op fills it.
+- **Next steps (not built):** (1) a Works flag for "this game is a mirror" so Works' world-changing calls (Spawn,
+  Place, Inventory.Add, Variables...) do nothing on joiners unless the mirror itself makes them; (2) Works events that
+  are about the player (ItemAdded, LevelUp, Equipped...) also raised for party members, marked with the character;
+  (3) mod UI (popups, windows) that a joiner's action triggers on the host shown on that joiner instead (a remote
+  UI: the hardest; until then it shows on the host). Patching Works itself from Co-op (Harmony on Works' methods)
+  would work for (1), but the flag is cleaner and keeps Works the one place that knows.
 
 ## Plan
 

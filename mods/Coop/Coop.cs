@@ -1,9 +1,10 @@
-// Co-op: an UnderRailWorks mod (in development; design and open questions: docs/Multiplayer.md in the Works repo).
-// The host's game is the only real one. A joiner connects, gets the host's character list (the host's own character
-// first, not choosable, then the co-op characters saved with this game), picks one or makes a new one, and that
-// character appears in the host's game (where it left off in this zone, else next to the host's character),
-// controlled by the joiner's commands instead of an AI (Works' CharacterControl). The joiner's own screen doesn't show
-// the host's world yet (step 3).
+// Co-op: an UnderRailWorks mod (in development; design, results and open questions: docs/Multiplayer.md in the Works repo).
+// The host's game is the only real one. A joiner connects (Join a Game on the main menu, or the Co-op window), gets the
+// host's character list (the host's own first, not choosable, then the co-op characters saved with this game), picks
+// one or makes a new one in the game's own creation, and that character appears in the host's game (where it left off
+// in this zone, else next to the host's character), driven by the joiner instead of an AI (Works' CharacterControl).
+// The joiner's game loads the host's save and mirrors it (Mirror.cs); their clicks become commands here; conversations
+// (CoopTalk.cs) and looting (CoopLoot.cs) are relayed.
 // The Co-op button on the HUD opens the Co-op window (CoopUi.cs) for all of this; the console commands do the same.
 // Host (console, ` key):   coop.host [port]   coop.who   coop.stop
 // Joiner:                  coop.join <address[:port]> [your name]   then coop.pick <number> or coop.new <name>
@@ -17,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("0.6.0")]
+[assembly: System.Reflection.AssemblyVersion("0.7.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -353,7 +354,7 @@ public sealed partial class Coop : WorksMod
                 int x, y;
                 bool ok = w.Length > 2 && int.TryParse(w[1], out x) && int.TryParse(w[2], out y) && c.TakeExitAt(x, y);
                 Log.Info(c.Name + ": exit " + (w.Length > 2 ? w[1] + "," + w[2] : "?") + ": " + (ok ? "going" : "refused"));
-                if (ok) Notify.Log("Co-op: " + c.Name + " is heading for the exit: everyone goes along", Say);
+                if (ok) { Notify.Log("Co-op: " + c.Name + " is heading for the exit: everyone goes along", Say); foreach (var s in seats.Values.Concat(orphans)) Remember(s); }
                 return ok ? "heading for the exit (everyone goes along)" : "can't take that exit now";
             }
             case "TAKE": return w.Length > 2 ? Take(c, w[1], w[2]) : "";
@@ -502,6 +503,8 @@ public sealed partial class Coop : WorksMod
             }
         });
         GameEvents.Saving.Add(this, name => { if (listener != null || records.Count > 0) WriteRecords(); });
+        // Leaving the zone: each joined character's sheet as it is now (health, items...), as it's built again from it there.
+        GameEvents.ZoneLeaving.Add(this, e => { if (listener != null && !e.Cancel) foreach (var s in seats.Values.Concat(orphans)) Remember(s); });
         // Joined characters follow the host's character into other zones (spawned characters stay behind).
         GameEvents.ZoneLoaded.Add(this, (zone, first) =>
         {
