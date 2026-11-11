@@ -152,7 +152,7 @@ startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
   PlayerHouse API, works.dialog (Dialogs.Describe), Dialogs.Patch on lines that continue to their options, Ui.Ask /
   AskNumber / Confirm / Choose on the game's popups, Ui.Window on the game's titled window, Outlines.PickThrough
   (select characters behind scenery), Zones.Add / AddExit, Container.Name, followers keep their dialog. UI rules: UI.md.
-- [ ] Mod text at the interface size's font (UI.md, Known debt): mods need a line-height API and to measure first.
+- [x] Mod text and sizes follow the interface size (Ui.LineHeight, Ui.S; UI.md "Sizes").
 
 
 - [x] Fewer allocations per world layer: hook dispatch done; the wrappers (Layer, WorldView, DrawContext) are structs. Measured

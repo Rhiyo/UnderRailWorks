@@ -83,7 +83,7 @@ public sealed class Loadouts : WorksMod
 
     void Open()
     {
-        const int w = 620, h = 36 + Sets * 50;
+        int w = Ui.S(620), h = 36 + Sets * Ui.S(50);
         panel = Ui.Window(this, "loadouts", "Loadouts: save what you wear, put it back on in one click", w, h);
         if (panel == null) return;
         panel.Closed += () => { panel = null; rows = null; };
@@ -93,7 +93,7 @@ public sealed class Loadouts : WorksMod
     void Refresh()
     {
         if (panel == null) return;
-        if (rows == null) rows = UiRows.In(panel, 10, panel.Top + 6, 600, 50);
+        if (rows == null) rows = UiRows.In(panel, 10, panel.Top + 6, panel.Width - 20, Ui.S(50));
         rows.Clear();
         for (int i = 1; i <= Sets; i++)
         {
@@ -101,6 +101,7 @@ public sealed class Loadouts : WorksMod
             var desc = Data.Get("name" + set);
             rows.Add(set + ".  " + (string.IsNullOrEmpty(desc) ? "(empty)" : desc), null, UiRows.Button("Save", () => Save(set)), UiRows.Button("Wear", () => Wear(set)));
         }
+        Ui.Resize(panel, panel.Width, rows.Bottom + 8);     // rows are as tall as the game's buttons at this interface size
     }
 
     void Close() { if (panel != null) panel.Close(); }

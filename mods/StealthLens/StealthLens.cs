@@ -51,8 +51,8 @@ public sealed class StealthLens : WorksMod
             var b = m.Who.ScreenBounds;
             if (b == null) continue;
             var r = b.Value;
-            int w = Ui.TextWidth(m.Text) + 10, x = r.Center.X - w / 2, y = r.Top - 22;
-            c.Fill(new Rectangle(x, y, w, 18), new Color(8, 8, 8, 200));
+            int lh = Ui.LineHeight, w = Ui.TextWidth(m.Text) + 10, x = r.Center.X - w / 2, y = r.Top - lh - 4;
+            c.Fill(new Rectangle(x, y, w, lh), new Color(8, 8, 8, 200));
             c.Text(m.Text, x + 5, y + 1, m.Colour);
         }
     }

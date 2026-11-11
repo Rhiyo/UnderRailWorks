@@ -116,7 +116,7 @@ public sealed class Minimap : WorksMod
     // The large map: the same picture over more of the area, in a window (drag it by the title, Escape closes it).
     void OpenLarge()
     {
-        const int w = 800, h = 440;
+        int w = Ui.S(800), h = Ui.S(440);
         largeWindow = Ui.Window(this, "large", "Map: " + (World.Player != null && World.Player.Area != null ? World.Player.Area.Name : ""), w, h);
         if (largeWindow == null) return;
         int ph = h - largeWindow.Top - 8;
@@ -151,7 +151,7 @@ public sealed class Minimap : WorksMod
     {
         if (hud == null) return;
         if (panel != null) Ui.Remove(panel);
-        int w = config.Size, h = config.Size / 2 + 12;
+        int w = Ui.S(config.Size), h = w / 2 + 12;     // the setting is in Small's units
         panel = Ui.Panel(w, h);
         panel.Background = new Color(8, 8, 8) * (config.Opacity / 100f);
         mapView = Ui.Custom(w - 8, h - 8, map.Draw);
@@ -348,9 +348,9 @@ sealed class MapPicture
         foreach (var l in labels)
         {
             if (string.IsNullOrEmpty(l.Value) || Math.Abs(b.X + l.Key.X * b.Width / tw - m.X) > 6 || Math.Abs(b.Y + l.Key.Y * b.Height / th - m.Y) > 6) continue;
-            int w = Ui.TextWidth(l.Value) + 10, x = Math.Max(b.X, Math.Min(b.Right - w, m.X - w / 2)), y = m.Y - 26;
-            canvas.Fill(new Rectangle(x, y, w, 18), new Color(8, 8, 8, 230));
-            canvas.Frame(new Rectangle(x, y, w, 18), new Color(181, 92, 0));
+            int lh = Ui.LineHeight, w = Ui.TextWidth(l.Value) + 10, x = Math.Max(b.X, Math.Min(b.Right - w, m.X - w / 2)), y = m.Y - lh - 8;
+            canvas.Fill(new Rectangle(x, y, w, lh), new Color(8, 8, 8, 230));
+            canvas.Frame(new Rectangle(x, y, w, lh), new Color(181, 92, 0));
             canvas.Text(l.Value, x + 5, y + 1, new Color(230, 220, 200));
             break;
         }

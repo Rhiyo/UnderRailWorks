@@ -613,7 +613,7 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 - `int MinWidth`
 - `Color Background`
 - `Color? Border`
-- `const int LineHeight = 18`
+- `static int LineHeight` — A line's height: the mod text font's (Ui.LineHeight), so it follows the interface size.
 - `static HudText Add(WorksMod mod, string name, HudAnchor anchor, int dx, int dy)`
 - `bool Visible`
 - `void Show(HudLines lines)`
@@ -1501,6 +1501,9 @@ A trap a character has just spotted (the player sees "Trap detected!").
 
 ## Ui  _(class, Ui.cs)_
 
+- `static int LineHeight` — The height of a line of mod text (the text font's line spacing): rows, lists, tooltips.
+- `static float Scale` — How much bigger the interface is than Small: the game's own factor for its sizes (wj.g4: Small 1, Large 1.5, Huge 1.75; Classic 1). Design a mod's layout at Small and pass its sizes through S.
+- `static int S(int small)`
 - `static UiElement Label(string text, int width = 300)` — A line of text in the game's interface font (left-aligned).
 - `static UiElement Button(string text, Action onClick)` — A button styled like the options window's (Accept, Cancel), as wide as its text needs.
 - `static UiTickBox TickBox(bool value)` — The game's tick box (as in its options).
@@ -1532,7 +1535,7 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static bool Choose(WorksMod mod, string title, string text, Action<int> onChoice, params string[] buttons)` — One of a few answers (buttons top to bottom) in the game's message box; onChoice gets the button's index. Enter: the first; Escape: the last.
 - `static UiElement Image(Texture2D texture, int width, int height)` — A picture scaled into width x height (null texture: nothing drawn).
 - `static void Tooltip(UiElement element, string text)` — Text shown next to the mouse while it rests on element (half a second).
-- `static UiList List(int width, int height, int rowHeight = 20)` — A scrolling list of text rows: the mouse wheel scrolls, a click selects.
+- `static UiList List(int width, int height, int rowHeight = 0)` — A scrolling list of text rows: the mouse wheel scrolls, a click selects. rowHeight 0: a line of text and a little room (Ui.LineHeight + 4).
 - `static UiSlider Slider(int width, double min, double max, double value)` — A slider from min to max (drag or click; the value is drawn on it).
 - `static UiElement SmallButton(string text, int width, int height, Action click)` — A small button of any size drawn in the game's colours (Ui.Button is the game's own, at its own sizes).
 - `static UiChoice Choice(int width, IList<string> options, int index = 0)` — A button that steps through options on click (right-click: back).
@@ -1614,6 +1617,7 @@ Rows of text with buttons at their right end, in an area of a panel or window (a
 - `static UiRows In(UiElement parent, int x, int y, int width, int rowHeight)`
 - `static RowButton Button(string text, Action click)`
 - `void Clear()`
+- `int Bottom` — Where the next row goes (rows are at least rowHeight high, taller when a button or the text needs it: the game's buttons grow with the interface size).
 - `void Add(string text, Color? colour = null, params RowButton[] buttons)` — A row: its text (cut to what's left of the buttons) in colour (null: the body colour), buttons right-aligned.
 
 ## UiSlider  _(class, UiWidgets.cs)_

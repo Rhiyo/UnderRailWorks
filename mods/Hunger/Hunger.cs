@@ -49,7 +49,7 @@ public sealed class Hunger : WorksMod
         });
         UiEvents.HudCreated.Add(this, root =>
         {
-            meter = Ui.Custom(120, 18, c =>
+            meter = Ui.Custom(Ui.S(120), Ui.LineHeight + 2, c =>
             {
                 var b = c.Bounds;
                 c.Fill(b, new Color(12, 12, 12, 210));

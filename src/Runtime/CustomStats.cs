@@ -164,19 +164,19 @@ namespace UnderRailWorks.Internal
             var c = screen.g();
             bool editable = screen.h() != a9m.a;
             bool creating = screen.h() == a9m.c;
-            int y = 16;
-            Ui.Add(page, Ui.Custom(600, 22, cv =>
+            int y = Ui.S(16), line = Ui.LineHeight;
+            Ui.Add(page, Ui.Custom(Ui.S(600), line + 4, cv =>
             {
                 var t = "Ability points: " + AbilityPoints.GetValue(c, null) + "     Skill points: " + SkillPoints.GetValue(c, null);
-                cv.Text(t, cv.Bounds.X, cv.Bounds.Y + 3, new Color(215, 215, 205));
-            }), 20, y);
-            y += 36;
-            Action<string> heading = text => { Ui.Add(page, Ui.Custom(600, 22, cv => cv.Text(text, cv.Bounds.X, cv.Bounds.Y + 3, new Color(230, 160, 60))), 20, y); y += 28; };
+                cv.Text(t, cv.Bounds.X, cv.Bounds.Y + 2, new Color(215, 215, 205));
+            }), Ui.S(20), y);
+            y += line + Ui.S(14);
+            Action<string> heading = text => { Ui.Add(page, Ui.Custom(Ui.S(600), line + 4, cv => cv.Text(text, cv.Bounds.X, cv.Bounds.Y + 2, new Color(230, 160, 60))), Ui.S(20), y); y += line + Ui.S(8); };
             if (CustomStats.AbilityList.Count > 0)
             {
                 heading("Base abilities");
                 foreach (var a in CustomStats.AbilityList) Row(page, c, a, true, editable, creating, ref y);
-                y += 10;
+                y += Ui.S(10);
             }
             if (CustomStats.SkillList.Count > 0)
             {
@@ -187,21 +187,22 @@ namespace UnderRailWorks.Internal
 
         static void Row(UiElement page, e3q c, CustomStat stat, bool ability, bool editable, bool creating, ref int y)
         {
-            var label = Ui.Custom(360, 24, cv =>
+            int line = Ui.LineHeight;
+            var label = Ui.Custom(Ui.S(360), line + 6, cv =>
             {
                 int value = stat is ModSkill ? ((ModSkill)stat).ValueFor(c) : stat.Value;
                 var v = stat.Base == value ? stat.Base.ToString() : stat.Base + "  [" + value + "]";
-                cv.Text(stat.Name, cv.Bounds.X, cv.Bounds.Y + 4, new Color(181, 120, 40));
-                cv.Text(v, cv.Bounds.X + 260, cv.Bounds.Y + 4, Color.White);
+                cv.Text(stat.Name, cv.Bounds.X, cv.Bounds.Y + 3, new Color(181, 120, 40));
+                cv.Text(v, cv.Bounds.X + Ui.S(260), cv.Bounds.Y + 3, Color.White);
             });
-            Ui.Add(page, label, 30, y);
+            Ui.Add(page, label, Ui.S(30), y);
             Ui.Tooltip(label, stat.Name + "\n" + stat.Description);
             if (editable)
             {
-                Ui.Add(page, Ui.SmallButton("+", 24, 22, () => Change(c, stat, ability, creating, +1)), 400, y);
-                Ui.Add(page, Ui.SmallButton("-", 24, 22, () => Change(c, stat, ability, creating, -1)), 428, y);
+                Ui.Add(page, Ui.SmallButton("+", Ui.S(24), line + 4, () => Change(c, stat, ability, creating, +1)), Ui.S(400), y);
+                Ui.Add(page, Ui.SmallButton("-", Ui.S(24), line + 4, () => Change(c, stat, ability, creating, -1)), Ui.S(428), y);
             }
-            y += 28;
+            y += line + Ui.S(10);
         }
 
         static void Change(e3q c, CustomStat stat, bool ability, bool creating, int step)

@@ -97,7 +97,7 @@ public sealed class MerchantLedger : WorksMod
 
     void Open()
     {
-        int w = 560, h = 92 + Shown * 20;
+        int line = Ui.LineHeight + 2, w = Ui.S(560), h = 40 + Ui.LineHeight + Ui.S(32) + (Shown + 1) * line;
         int seen = Merchants();
         panel = Ui.Window(this, "ledger", "Merchant ledger: " + seen + (seen == 1 ? " merchant" : " merchants") + " seen", w, h);
         if (panel == null) return;
@@ -107,10 +107,12 @@ public sealed class MerchantLedger : WorksMod
         Ui.Add(panel, title, 10, panel.Top + 4);
         search = Ui.TextBox(w - 20, 40);
         search.Changed += text => Show(text);
-        Ui.Add(panel, search, 10, panel.Top + 26);
+        Ui.Add(panel, search, 10, panel.Top + Ui.LineHeight + 8);
+        listTop = panel.Top + Ui.LineHeight + 8 + search.Height + 8;
         Show("");
     }
 
+    int listTop;
     void Close() { if (panel != null) panel.Close(); }
 
     void Show(string text)
@@ -119,20 +121,20 @@ public sealed class MerchantLedger : WorksMod
         rows.Clear();
         var found = All().Where(e => text.Length == 0 || e.Item.IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
             .OrderBy(e => e.Item).ThenBy(e => e.Price).ToList();
-        int y = panel.Top + 62;
+        int y = listTop, step = Ui.LineHeight + 2;
         if (found.Count == 0)
         {
-            var none = Ui.Label(Merchants() == 0 ? "Nothing yet: trade with a merchant and their stock is written down." : "No item matches.", 520);
+            var none = Ui.Label(Merchants() == 0 ? "Nothing yet: trade with a merchant and their stock is written down." : "No item matches.", panel.Width - 20);
             rows.Add(none); Ui.Add(panel, none, 10, y);
             return;
         }
         foreach (var e in found.Take(Shown))
         {
-            var line = Ui.Label(e.Item + (e.Stacks > 1 ? " x" + e.Stacks : "") + "   " + e.Price + " charons   " + e.Merchant + (e.Zone.Length > 0 ? " (" + e.Zone + ")" : ""), 540);
+            var line = Ui.Label(e.Item + (e.Stacks > 1 ? " x" + e.Stacks : "") + "   " + e.Price + " charons   " + e.Merchant + (e.Zone.Length > 0 ? " (" + e.Zone + ")" : ""), panel.Width - 20);
             Ui.SetColor(line, new Color(215, 215, 205));
             rows.Add(line); Ui.Add(panel, line, 10, y);
-            y += 20;
+            y += step;
         }
-        if (found.Count > Shown) { var more = Ui.Label("... " + (found.Count - Shown) + " more: type more of the name.", 520); rows.Add(more); Ui.Add(panel, more, 10, y); }
+        if (found.Count > Shown) { var more = Ui.Label("... " + (found.Count - Shown) + " more: type more of the name.", panel.Width - 20); rows.Add(more); Ui.Add(panel, more, 10, y); }
     }
 }

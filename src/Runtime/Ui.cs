@@ -31,11 +31,17 @@ public static partial class Ui
 {
     static readonly PropertyInfo ColorProperty = typeof(avo).GetProperty("Color");
     static readonly MethodInfo StyleButton = typeof(t1).GetMethod("a", BindingFlags.Static | BindingFlags.NonPublic, null, new[] { typeof(dak), typeof(wj) }, null);
-    // Mod text uses one font at every interface size (C13b). The interface size's own text font (wj.fo: C12sb small,
-    // C16sb large, C22sb huge) was tried in Nov 2026 and broke mods that lay text out by fixed line heights (Quest
-    // Tracker, HUD parts, Loadouts' labels): switching needs each mod to measure first (UI.md, Known debt).
-    static readonly FieldInfo DefaultFontField = typeof(egg).GetField("aq", BindingFlags.Static | BindingFlags.Public);
-    internal static string TextFontName() { return DefaultFontField == null ? null : DefaultFontField.GetValue(null) as string; }
+    // Mod text follows the interface size, as the game's own windows' text does (its notes field's font, wj.fo: C12sb on
+    // Small, C16sb on Large, C22sb on Huge; Classic egg.am). Lay text out with Ui.LineHeight and Ui.TextWidth, and give
+    // fixed sizes in Small's units through Ui.S (UI.md).
+    static readonly FieldInfo ClassicTextFont = typeof(egg).GetField("am", BindingFlags.Static | BindingFlags.Public);
+    internal static string TextFontName() { var theme = wj.a(); return theme == null || theme.c() ? ClassicTextFont.GetValue(null) as string : theme.fo; }
+    // The height of a line of mod text (the text font's line spacing): rows, lists, tooltips.
+    public static int LineHeight { get { var f = DefaultFontFace(); return f == null ? 16 : f.LineSpacing; } }
+    // How much bigger the interface is than Small: the game's own factor for its sizes (wj.g4: Small 1, Large 1.5,
+    // Huge 1.75; Classic 1). Design a mod's layout at Small and pass its sizes through S.
+    public static float Scale { get { var theme = wj.a(); return theme == null || theme.c() ? 1f : theme.g4.Y; } }
+    public static int S(int small) { return (int)Math.Round(small * Scale); }
 
     static readonly MethodInfo LabelFont = typeof(d7w).GetMethod("a", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null);
     static readonly MethodInfo NewTickBox = typeof(t1).GetMethod("b", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(bool) }, null);
@@ -50,7 +56,7 @@ public static partial class Ui
         if (LabelFont != null) LabelFont.Invoke(label, new object[] { TextFontName() });
         label.a(cab.a);     // left
         label.Text = text;
-        label.Size = new esj(width, 22);
+        label.Size = new esj(width, LineHeight + 4);
         return UiElement.Of(label);
     }
 
@@ -83,7 +89,7 @@ public static partial class Ui
     {
         var theme = wj.a();
         var box = new c68();
-        box.Size = new esj(width, theme.c() ? 25 : 28);
+        box.Size = new esj(width, theme.c() ? 25 : UnderrailDropdownScroll.H(theme.h8));     // the theme's field height (as the save-name popup's)
         var font = TextFontName();
         if (font != null) BoxFont.Invoke(box, new object[] { font });
         if (!theme.c())
@@ -621,7 +627,8 @@ static class UiHooks
         foreach (var c in ctors) harmony.Patch(c, postfix: method);
     }
 
-    static void Hud(object __instance) { UnderRailWorks.Hud.Created((ci3)__instance); var root = UiElement.Of((euz)__instance); if (UiEvents.HudCreated.Any) UiEvents.HudCreated.Run(h => h(root)); }
+    static string loggedSize;
+    static void Hud(object __instance) { var size = wj.a() == null ? "?" : wj.a().d.ToString(); if (size != loggedSize) { loggedSize = size; Log.Write("ui: interface size " + size + ", text font " + Ui.TextFontName() + ", line " + Ui.LineHeight); } UnderRailWorks.Hud.Created((ci3)__instance); var root = UiElement.Of((euz)__instance); if (UiEvents.HudCreated.Any) UiEvents.HudCreated.Run(h => h(root)); }
     static void MainMenu(object __instance)
     {
         if (UnderRailWorks.Hud.Exists) { UnderRailWorks.Hud.Gone(); if (UiEvents.HudDestroyed.Any) UiEvents.HudDestroyed.Run(h => h()); }     // back to the main menu: no HUD

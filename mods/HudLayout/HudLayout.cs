@@ -247,22 +247,22 @@ public sealed class HudLayout : WorksMod
         var message = "Arranging the HUD: drag a part, wheel over it for its anchor, right-click to put it back.";
         var reset = resetButton = Ui.Button("Reset all", ResetAll);
         var done = doneButton = Ui.Button("Done", End);
-        const int controls = 190;     // snap switch + grid size
+        int controls = Ui.S(190), bh = Ui.LineHeight + 6;     // snap switch + grid size
         int w = Ui.TextWidth(message) + controls + reset.Width + done.Width + 60;
         int h = Math.Max(40, Math.Max(reset.Height, done.Height) + 10), mid = h / 2;     // the game's buttons grow with the interface tier
         help = Ui.Panel(w, h);
         var text = Ui.Label(message, Ui.TextWidth(message) + 4);
         Ui.SetColor(text, new Color(230, 200, 120));
-        Ui.Add(help, text, 10, mid - 9);
+        Ui.Add(help, text, 10, mid - text.Height / 2);
         int x = 10 + Ui.TextWidth(message) + 16;
-        snapBox = Ui.Custom(86, 22, c => Box(c, config.Snap ? "Snap: on" : "Snap: off", config.Snap));
-        Ui.Add(help, snapBox, x, mid - 11);
-        gridMinus = Ui.Custom(20, 22, c => Box(c, "-", false));
-        Ui.Add(help, gridMinus, x + 92, mid - 11);
-        var size = Ui.Custom(46, 22, c => c.Text(config.Grid.ToString(), c.Bounds.X + (c.Bounds.Width - Ui.TextWidth(config.Grid.ToString())) / 2, c.Bounds.Y + 3, config.Snap ? new Color(230, 200, 120) : new Color(120, 110, 90)));
-        Ui.Add(help, size, x + 114, mid - 11);
-        gridPlus = Ui.Custom(20, 22, c => Box(c, "+", false));
-        Ui.Add(help, gridPlus, x + 162, mid - 11);
+        snapBox = Ui.Custom(Ui.S(86), bh, c => Box(c, config.Snap ? "Snap: on" : "Snap: off", config.Snap));
+        Ui.Add(help, snapBox, x, mid - bh / 2);
+        gridMinus = Ui.Custom(Ui.S(20), bh, c => Box(c, "-", false));
+        Ui.Add(help, gridMinus, x + Ui.S(92), mid - bh / 2);
+        var size = Ui.Custom(Ui.S(46), bh, c => c.Text(config.Grid.ToString(), c.Bounds.X + (c.Bounds.Width - Ui.TextWidth(config.Grid.ToString())) / 2, c.Bounds.Y + 3, config.Snap ? new Color(230, 200, 120) : new Color(120, 110, 90)));
+        Ui.Add(help, size, x + Ui.S(114), mid - bh / 2);
+        gridPlus = Ui.Custom(Ui.S(20), bh, c => Box(c, "+", false));
+        Ui.Add(help, gridPlus, x + Ui.S(162), mid - bh / 2);
         Ui.Add(help, reset, w - done.Width - reset.Width - 14, mid - reset.Height / 2);     // above the overlay: they get the clicks
         Ui.Add(help, done, w - done.Width - 8, mid - done.Height / 2);
         Ui.Add(hud, help, (hud.Width - w) / 2, hud.Height / 2 - h / 2);
@@ -275,7 +275,7 @@ public sealed class HudLayout : WorksMod
         var r = c.Bounds; bool hot = r.Contains(Input.Mouse);
         c.Fill(r, hot ? new Color(90, 50, 10) : lit ? new Color(60, 34, 8) : new Color(24, 16, 8));
         c.Frame(r, new Color(181, 92, 0));
-        c.Text(label, r.X + (r.Width - Ui.TextWidth(label)) / 2, r.Y + 3, new Color(230, 200, 120));
+        c.Text(label, r.X + (r.Width - Ui.TextWidth(label)) / 2, r.Y + (r.Height - Ui.LineHeight) / 2, new Color(230, 200, 120));
     }
 
     // Clicks on the bar: its controls, else the start of moving it. True if the click was the bar's.

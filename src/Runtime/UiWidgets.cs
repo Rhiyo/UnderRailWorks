@@ -31,26 +31,36 @@ namespace UnderRailWorks
         public sealed class RowButton { internal string Text; internal Action Click; }
         public static RowButton Button(string text, Action click) { return new RowButton { Text = text, Click = click }; }
 
-        public void Clear() { foreach (var e in made) Ui.Remove(e); made.Clear(); Count = 0; }
+        public void Clear() { foreach (var e in made) Ui.Remove(e); made.Clear(); Count = 0; Bottom = y; }
+
+        // Where the next row goes (rows are at least rowHeight high, taller when a button or the text needs it: the
+        // game's buttons grow with the interface size).
+        public int Bottom { get; private set; }
 
         // A row: its text (cut to what's left of the buttons) in colour (null: the body colour), buttons right-aligned.
         public void Add(string text, Color? colour = null, params RowButton[] buttons)
         {
-            int top = y + Count * height, right = x + width;
+            if (Count == 0) Bottom = y;
+            int top = Bottom, right = x + width, tallest = Ui.LineHeight + 4;
+            var added = new List<UiElement>();
             foreach (var b in (buttons ?? new RowButton[0]).Reverse())
             {
                 if (b == null) continue;
                 var button = Ui.Button(b.Text, b.Click);
                 right -= button.Width;
                 Ui.Add(parent, button, right, top);
-                made.Add(button);
+                made.Add(button); added.Add(button);
+                tallest = Math.Max(tallest, button.Height);
                 right -= 8;
             }
+            int rowHeight = Math.Max(height, tallest + 4);
             var label = Ui.Label(text ?? "", Math.Max(20, right - x));
             Ui.SetColor(label, colour ?? Look.Text);
-            Ui.Add(parent, label, x, top + 4);
+            Ui.Add(parent, label, x, top + (rowHeight - label.Height) / 2);
+            foreach (var bt in added) Ui.Move(bt, bt.X, top + (rowHeight - bt.Height) / 2);
             made.Add(label);
             Count++;
+            Bottom = top + rowHeight;
         }
     }
 
@@ -113,9 +123,10 @@ namespace UnderRailWorks
         public static void Tooltip(UiElement element, string text) { Widgets.Tooltips[element] = text; }
 
         // A scrolling list of text rows: the mouse wheel scrolls, a click selects.
-        public static UiList List(int width, int height, int rowHeight = 20)
+        // rowHeight 0: a line of text and a little room (Ui.LineHeight + 4).
+        public static UiList List(int width, int height, int rowHeight = 0)
         {
-            var l = new UiList { RowHeight = rowHeight };
+            var l = new UiList { RowHeight = rowHeight > 0 ? rowHeight : Ui.LineHeight + 4 };
             l.Element = Custom(width, height, c =>
             {
                 var b = c.Bounds;
@@ -129,7 +140,7 @@ namespace UnderRailWorks
                     int index = l.First + i;
                     if (index == l.Selection) c.Fill(r, Look.Orange * 0.6f);
                     else if (Ui.IsHot(l.Element) && r.Contains(m)) c.Fill(r, Look.Hot);
-                    c.Text(l.Items[index], r.X + 4, r.Y + Math.Max(0, (l.RowHeight - 16) / 2), l.ItemColors != null && index < l.ItemColors.Count ? l.ItemColors[index] : Look.Text);
+                    c.Text(l.Items[index], r.X + 4, r.Y + Math.Max(0, (l.RowHeight - Ui.LineHeight) / 2), l.ItemColors != null && index < l.ItemColors.Count ? l.ItemColors[index] : Look.Text);
                 }
                 if (l.Items.Count > rows)
                 {
@@ -155,7 +166,7 @@ namespace UnderRailWorks
                 c.Fill(new Rectangle(b.X, b.Center.Y - 2, x - b.X + 5, 4), Look.Orange);
                 c.Fill(new Rectangle(x, b.Y + 2, 10, b.Height - 4), Ui.IsHot(s.Element) || s.Dragging ? Look.Light : Look.Orange);
                 var t = s.Value.ToString(s.Step >= 1 ? "0" : "0.##");
-                c.Text(t, b.Right - Ui.TextWidth(t) - 2, b.Y - 16, Look.Text);
+                c.Text(t, b.Right - Ui.TextWidth(t) - 2, b.Y - Ui.LineHeight, Look.Text);
             });
             Widgets.Sliders.Add(new WeakReference(s));
             return s;
@@ -169,7 +180,7 @@ namespace UnderRailWorks
             {
                 var b = c.Bounds; bool hot = Ui.IsHot(e);
                 c.Fill(b, hot ? Look.Hot : Look.Dark); c.Frame(b, hot ? Look.Light : Look.Orange);
-                c.Text(text, b.X + (b.Width - Ui.TextWidth(text)) / 2, b.Y + (b.Height - 16) / 2, Look.Light);
+                c.Text(text, b.X + (b.Width - Ui.TextWidth(text)) / 2, b.Y + (b.Height - Ui.LineHeight) / 2, Look.Light);
             });
             Widgets.Buttons.Add(new KeyValuePair<WeakReference, Action>(new WeakReference(e), click));
             return e;
@@ -179,12 +190,12 @@ namespace UnderRailWorks
         public static UiChoice Choice(int width, IList<string> options, int index = 0)
         {
             var ch = new UiChoice { Options = options ?? new List<string>(), Index = index };
-            ch.Element = Custom(width, 24, c =>
+            ch.Element = Custom(width, Ui.LineHeight + 8, c =>
             {
                 var b = c.Bounds; bool hot = Ui.IsHot(ch.Element);
                 c.Fill(b, hot ? Look.Hot : Look.Dark); c.Frame(b, Look.Orange);
                 var t = ch.Options.Count == 0 ? "" : "< " + ch.Options[Math.Max(0, Math.Min(ch.Index, ch.Options.Count - 1))] + " >";
-                c.Text(t, b.X + (b.Width - Ui.TextWidth(t)) / 2, b.Y + 4, Look.Light);
+                c.Text(t, b.X + (b.Width - Ui.TextWidth(t)) / 2, b.Y + (b.Height - Ui.LineHeight) / 2, Look.Light);
             });
             Widgets.Choices.Add(new WeakReference(ch));
             return ch;
@@ -244,9 +255,9 @@ namespace UnderRailWorks.Internal
             if (hovered < 0.5 || tipPanel != null) return;
             var root = UnderRailWorks.Hud.Root ?? (UiHooks.CurrentOptions == null ? null : UiElement.Of(UiHooks.CurrentOptions));
             if (root == null) return;
-            var lines = Ui.Wrap(Tooltips[over], 320);
-            int w = Math.Min(340, lines.Max(l => Ui.TextWidth(l)) + 16), h = 8 + lines.Count * 18;
-            tipPanel = Ui.Custom(w, h, c => { c.Fill(c.Bounds, new Color(8, 8, 8, 235)); c.Frame(c.Bounds, Look.Orange); for (int i = 0; i < lines.Count; i++) c.Text(lines[i], c.Bounds.X + 8, c.Bounds.Y + 4 + i * 18, Look.Text); });
+            var lines = Ui.Wrap(Tooltips[over], Ui.S(320));
+            int lh = Ui.LineHeight, w = Math.Min(Ui.S(340), lines.Max(l => Ui.TextWidth(l)) + 16), h = 8 + lines.Count * lh;
+            tipPanel = Ui.Custom(w, h, c => { c.Fill(c.Bounds, new Color(8, 8, 8, 235)); c.Frame(c.Bounds, Look.Orange); for (int i = 0; i < lines.Count; i++) c.Text(lines[i], c.Bounds.X + 8, c.Bounds.Y + 4 + i * lh, Look.Text); });
             int x = Math.Min(root.Width - w - 4, m.X + 16), y = Math.Min(root.Height - h - 4, m.Y + 20);
             Ui.Add(root, tipPanel, Math.Max(0, x), Math.Max(0, y));
         }

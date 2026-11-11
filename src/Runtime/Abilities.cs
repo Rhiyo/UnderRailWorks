@@ -108,7 +108,8 @@ namespace UnderRailWorks.Internal
         static readonly Dictionary<ModAbility, UiElement> icons = new Dictionary<ModAbility, UiElement>();
         static readonly Dictionary<string, UiElement> bars = new Dictionary<string, UiElement>();
         static readonly Color Back = new Color(12, 12, 12, 220), Frame = new Color(181, 92, 0), Grey = new Color(90, 90, 90);
-        const int Size = 44, Gap = 4;
+        static int Size { get { return Ui.S(44); } }
+        static int Gap { get { return Ui.S(4); } }
 
         internal static void Tick()
         {
@@ -158,7 +159,7 @@ namespace UnderRailWorks.Internal
                     icons[a] = icon;
                 }
                 bars[group.Key.Id] = bar;
-                Hud.AddPart(group.Key, "Abilities", bar, HudAnchor.Bottom, 0, 70 + row * (Size + 2 * Gap + 4));
+                Hud.AddPart(group.Key, "Abilities", bar, HudAnchor.Bottom, 0, Ui.S(70) + row * (Size + 2 * Gap + Ui.S(4)));
                 row++;
             }
         }
@@ -169,12 +170,12 @@ namespace UnderRailWorks.Internal
             UiElement el; bool hot = icons.TryGetValue(a, out el) && Ui.IsHot(el);
             c.Fill(b, new Color(30, 30, 30, 230));
             if (a.Icon != null && !a.Icon.IsDisposed) c.DrawTexture(a.Icon, new Rectangle(b.X + 2, b.Y + 2, b.Width - 4, b.Height - 4), Color.White);
-            else c.Text(a.Name.Length > 3 ? a.Name.Substring(0, 3) : a.Name, b.X + 6, b.Y + 13, Color.White);
+            else { var n = a.Name.Length > 3 ? a.Name.Substring(0, 3) : a.Name; c.Text(n, b.X + (b.Width - Ui.TextWidth(n)) / 2, a.ApCost > 0 ? b.Y + 2 : b.Y + (b.Height - Ui.LineHeight) / 2, Color.White); }     // above the AP cost
             double left = a.CooldownLeft;
             bool apShort = GameClock.InTurnBasedCombat && World.Player != null && Combat.ActionPoints(World.Player) < a.ApCost;
             if (left > 0 || apShort) c.Fill(b, new Color(0, 0, 0, 150));
-            if (left > 0) { var t = Math.Ceiling(left).ToString(); c.Text(t, b.X + (b.Width - Ui.TextWidth(t)) / 2, b.Y + 13, new Color(230, 160, 60)); }
-            if (a.ApCost > 0) c.Text(a.ApCost.ToString(), b.X + 3, b.Bottom - 17, apShort ? new Color(200, 60, 60) : new Color(215, 215, 205));
+            if (left > 0) { var t = Math.Ceiling(left).ToString(); c.Text(t, b.X + (b.Width - Ui.TextWidth(t)) / 2, b.Y + (b.Height - Ui.LineHeight) / 2, new Color(230, 160, 60)); }
+            if (a.ApCost > 0) c.Text(a.ApCost.ToString(), b.X + 3, b.Bottom - Ui.LineHeight, apShort ? new Color(200, 60, 60) : new Color(215, 215, 205));
             c.Frame(b, hot ? new Color(230, 160, 60) : Grey);
         }
     }

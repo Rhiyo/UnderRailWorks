@@ -72,7 +72,7 @@ public sealed class QuestTracker : WorksMod
         panel = null;
         if (!config.Show || hidden || active.Count == 0) return;
 
-        int w = config.Width, y = 6;
+        int w = Ui.S(config.Width), y = 6, line = Ui.LineHeight;
         var rows = new List<KeyValuePair<UiElement, int>>();
         string lastGroup = null;
         foreach (var id in active)
@@ -82,14 +82,14 @@ public sealed class QuestTracker : WorksMod
             if (group != lastGroup && group.Length > 0)
             {
                 var h = Ui.Label(group, w - 16); Ui.SetColor(h, Heading);
-                rows.Add(new KeyValuePair<UiElement, int>(h, y)); y += 20; lastGroup = group;
+                rows.Add(new KeyValuePair<UiElement, int>(h, y)); y += line + 2; lastGroup = group;
             }
-            var lines = Ui.Wrap(Quests.JournalText(id), w - 44);     // room for " ..." on a cut line
+            var lines = Ui.Wrap(Quests.JournalText(id), w - 16 - Ui.TextWidth("-  ..."));     // room for " ..." on a cut line
             for (int i = 0; i < lines.Count && i < config.MaxLines; i++)
             {
                 var text = (i == 0 ? "- " : "  ") + lines[i] + (i == config.MaxLines - 1 && lines.Count > config.MaxLines ? " ..." : "");
                 var l = Ui.Label(text, w - 16); Ui.SetColor(l, Body);
-                rows.Add(new KeyValuePair<UiElement, int>(l, y)); y += 18;
+                rows.Add(new KeyValuePair<UiElement, int>(l, y)); y += line;
             }
             y += 4;
         }

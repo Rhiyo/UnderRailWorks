@@ -63,10 +63,11 @@ public sealed class BountyHunter : WorksMod
     {
         var entries = (SaveData.Get<List<object>>("bounties", null) ?? new List<object>()).Select(o => Convert.ToString(o).Split('|')).Where(a => a.Length == 2).ToList();
         int total = entries.Sum(a => { int n; return int.TryParse(a[1], out n) ? n : 0; });
-        var win = Ui.Window(this, "ledger", T("ledger"), 340, 300);
-        Ui.Add(win, Ui.Label(T("total", total, entries.Count), 320), 10, win.Top + 4);
-        var list = Ui.List(320, 220, 20);
+        var win = Ui.Window(this, "ledger", T("ledger"), Ui.S(340), Ui.S(300));
+        Ui.Add(win, Ui.Label(T("total", total, entries.Count), win.Width - 20), 10, win.Top + 4);
+        int listTop = win.Top + Ui.LineHeight + 12;
+        var list = Ui.List(win.Width - 20, win.Height - listTop - 10);
         list.Items = entries.Select(a => a[0] + "  —  " + a[1] + " ¢").Reverse().ToList();
-        Ui.Add(win, list.View, 10, win.Top + 28);
+        Ui.Add(win, list.View, 10, listTop);
     }
 }

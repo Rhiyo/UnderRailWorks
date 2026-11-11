@@ -59,16 +59,16 @@ public sealed class VendorDirectory : WorksMod
         // Hostile merchants don't trade; neither does anyone during a fight.
         var merchants = World.Characters.Where(c => c.IsMerchant && !c.IsPlayer && !c.IsHostile && !c.IsDead)
             .OrderBy(c => (c.Position - player.Position).Length()).ToList();
-        const int w = 460;
+        int w = Ui.S(460);
         // The window stays; its rows are rebuilt (a rebuilt window would swallow a click on Trade).
         if (panel == null || shownCount != merchants.Count)
         {
             Close();
-            panel = Ui.Window(this, "vendors", "Vendors in this zone" + (config.Remote ? " (trading from anywhere)" : ""), w, 40 + Math.Max(1, merchants.Count) * 28);
+            panel = Ui.Window(this, "vendors", "Vendors in this zone" + (config.Remote ? " (trading from anywhere)" : ""), w, 40 + Math.Max(1, merchants.Count) * Ui.S(30));
             if (panel == null) return;
             panel.Closed += () => { panel = null; rows = null; shownCount = -1; };
             shownCount = merchants.Count;
-            rows = UiRows.In(panel, 10, panel.Top + 4, w - 20, 28);
+            rows = UiRows.In(panel, 10, panel.Top + 4, panel.Width - 20, Ui.S(28));
         }
         rows.Clear();
         if (merchants.Count == 0) rows.Add("No merchants here.");
@@ -81,6 +81,7 @@ public sealed class VendorDirectory : WorksMod
             rows.Add(m.Name + "  -  " + Text.Count(tiles, "tile") + (seen >= 0 ? ", " + Text.Count(seen, "item") + " last time" : ", not visited"), null,
                 canTrade ? UiRows.Button("Trade", () => { Close(); Trade.Open(merchant); }) : null);
         }
+        Ui.Resize(panel, panel.Width, Math.Max(panel.Height, rows.Bottom + 8));
     }
 
 }

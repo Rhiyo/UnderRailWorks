@@ -320,7 +320,8 @@ public sealed class HudText
     public int MinWidth { get; set; } = 160;
     public Color Background { get; set; } = new Color(8, 8, 8) * 0.8f;
     public Color? Border { get; set; }
-    public const int LineHeight = 18;
+    // A line's height: the mod text font's (Ui.LineHeight), so it follows the interface size.
+    public static int LineHeight { get { return Ui.LineHeight; } }
 
     HudText(WorksMod mod, string name, HudAnchor anchor, int dx, int dy) { this.mod = mod; this.name = name; this.anchor = anchor; this.dx = dx; this.dy = dy; }
 
@@ -345,7 +346,7 @@ public sealed class HudText
         if (panel != null) Ui.Remove(panel);
         panel = null;
         if (items.Count == 0) return;
-        int w = Math.Max(MinWidth, items.Max(l => Ui.TextWidth(l.Key)) + 24), h = 10 + items.Count * LineHeight;
+        int w = Math.Max(Ui.S(MinWidth), items.Max(l => Ui.TextWidth(l.Key)) + 24), h = 10 + items.Count * LineHeight;
         panel = Ui.Panel(w, h);
         panel.Background = Background;
         if (Border.HasValue) panel.Border = Border.Value;

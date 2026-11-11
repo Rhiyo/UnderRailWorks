@@ -39,13 +39,19 @@ wide after insets) can be clipped, overlapping or tiny elsewhere.
   directly leaves its contents drawn (and clicked) at the old place. A live world view in a mod window:
   `Ui.WorldView` (it clips itself; the game's own clipping switch can't be set from Works).
 
+## Sizes: design at Small, scale with Ui.S
+
+- Mod text uses the interface size's own text font (C12sb Small, C16sb Large, C22sb Huge; `Ui.TextFontName`).
+- **Lay text out with `Ui.LineHeight` and `Ui.TextWidth`**, never 16/18/20 px steps.
+- **Give every other fixed size in Small's units through `Ui.S(n)`** (`Ui.Scale`: the game's own factor `wj.g4`: 1,
+  1.5, 1.75). Window sizes, column positions, panel widths, offsets inside a part.
+- Widgets measure themselves: `Ui.Label` (a line high), `Ui.List` (default rows), `UiRows` (rows as tall as the
+  game's buttons; `rows.Bottom` to size the window), tooltips, sliders, choices, `HudText`, the abilities bar.
+- Check at Small (2560x720 test) and at the player's Huge (`launch.sh --config 5120 1440`).
+
 ## Known debt
 
 - `Ui.Window` is the game's titled window (`a9t`: frame, title strip, font and close button of the interface size;
   at least as wide as its title, at least as tall as the frame's picture, else the frame draws above it). Mods still
   place their contents at fixed offsets from `Top`; check them at other interface sizes.
-- Mod text (`Ui.Label`, `Ui.TextBox`, canvas text, HUD parts) uses one font at every interface size (C13b), so it
-  stays small on large and huge interfaces. Switching to the interface size's own text font (`wj.fo`) was tried
-  (Nov 2026) and broke mods that assume a line height (Quest Tracker's lines overlapped, "Sec"/"Zap" collided,
-  Loadouts' labels were cut): each mod has to measure its text first (`Ui.TextWidth`, a font line height API), then
-  the font can follow the interface size.
+- (Done Nov 2026) Mod text follows the interface size: see "Sizes" above.

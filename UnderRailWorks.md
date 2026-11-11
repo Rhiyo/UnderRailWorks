@@ -1533,3 +1533,13 @@ dragged with its window, with and without UnderRailFixes' occlusion effects.
   box on other floors). "Remember explored areas" needs nothing from the mod: the game keeps its own fog of war per area
   in the save (measured in the player's house: 364 tiles hidden on the first visit, 217 when back after exploring;
   `wt.areas` counts discovered tiles per area: ground floor 187 of 404, upper floor and basement 0, never visited).
+
+## Mod text and sizes follow the interface size (Nov 2026)
+
+The player plays on Huge (logged now at HUD creation: "ui: interface size Huge, text font Fonts\C22sb, line 36").
+Mod text used C13b at every size (small on Large and Huge). Now: the text font is the theme's (`wj.fo`), `Ui.LineHeight`,
+`Ui.Scale` (`wj.g4`), `Ui.S(n)`; Works' widgets, HudText, the abilities bar, the custom stats page and every mod's
+layout use them (Quest Tracker, After-Action Report, Merchant Ledger, Loadouts, Bounty Hunter, Vendor Directory,
+Workbench Planner, Beastmaster, Hunger, HUD Layout, Shot Breakdown, Stealth Lens, Minimap); `UiRows` rows grow to the
+game's button height; `Ui.TextBox` takes the theme's field height. Checked at Small and Huge (HUD, Loadouts, Ledger,
+Vendors, Planner). Rules: UI.md, "Sizes".

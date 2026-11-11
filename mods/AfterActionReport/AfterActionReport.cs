@@ -87,15 +87,15 @@ public sealed class AfterActionReport : WorksMod
             new[] { "Kills", last.Kills.ToString(), Total("aar_kills").ToString() },
             new[] { "Attacks dodged", last.Dodged.ToString(), "" },
         };
-        int w = 340, h = 32 + rows.Count * 20;
+        int line = Ui.LineHeight + 2, w = Ui.S(340), h = 32 + rows.Count * line;
         panel = Ui.Window(this, "report", "After-Action Report", w, h);
         if (panel == null) return;
         panel.Closed += () => panel = null;
         for (int i = 0; i < rows.Count; i++)
         {
             var colour = i == 0 ? new Color(160, 160, 150) : new Color(215, 215, 205);
-            int[] x = { 10, 150, 240 };
-            for (int c = 0; c < 3; c++) { var l = Ui.Label(rows[i][c], c == 0 ? 140 : 95); Ui.SetColor(l, colour); Ui.Add(panel, l, x[c], panel.Top + 2 + i * 20); }
+            int[] x = { 10, Ui.S(150), Ui.S(240) };
+            for (int c = 0; c < 3; c++) { var l = Ui.Label(rows[i][c], c == 0 ? Ui.S(140) : Ui.S(95)); Ui.SetColor(l, colour); Ui.Add(panel, l, x[c], panel.Top + 2 + i * line); }
         }
         shownFor = 0;
     }

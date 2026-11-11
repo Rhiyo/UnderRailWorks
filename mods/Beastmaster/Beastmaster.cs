@@ -39,14 +39,14 @@ public sealed class Beastmaster : WorksMod
         GameEvents.CharacterDying.Add(this, (who, killer) => { if (who == companion) { Notify.OverPlayer(T("fell")); companion = null; } });
         UiEvents.HudCreated.Add(this, root =>
         {
-            panel = Ui.Custom(220, 22, c =>
+            panel = Ui.Custom(Ui.S(220), Ui.LineHeight + 6, c =>
             {
                 var pet = companion;
                 if (pet == null) return;
                 c.Fill(c.Bounds, new Color(12, 12, 12, 210));
                 c.Frame(c.Bounds, new Color(181, 92, 0));
                 int left = Math.Max(0, (int)Math.Ceiling(leaveAt - GameClock.Turns));
-                c.Text(T("status", pet.Name, (int)pet.Health, (int)pet.MaxHealth, left), c.Bounds.X + 6, c.Bounds.Y + 3, new Color(215, 215, 205));
+                c.Text(T("status", pet.Name, (int)pet.Health, (int)pet.MaxHealth, left), c.Bounds.X + 6, c.Bounds.Y + 3, new Color(215, 215, 205));     // (a status line: grows with the font)
             });
             Hud.AddPart(this, "Companion", panel, HudAnchor.Left, 10, 0);
             Ui.Show(panel, false);
