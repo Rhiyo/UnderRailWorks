@@ -461,7 +461,7 @@ public sealed partial class Coop : WorksMod
         {
             foreach (var m in inbox.Take())
             {
-                try { if (m.Key == host) JoinerMessage(m.Value); else if (listener != null) HostMessage(m.Key, m.Value); }
+                try { if (m.Key == host) Simulation.Apply(() => JoinerMessage(m.Value)); else if (listener != null) HostMessage(m.Key, m.Value); }
                 catch (Exception ex) { Log.Error("message " + m.Value[0] + ": " + ex); }
             }
         });

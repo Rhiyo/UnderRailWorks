@@ -30,7 +30,7 @@ public sealed class Inventory
     bool IsPlayer { get { return owner() is e3q; } }
 
     // Puts an item that exists (taken out of a container or another bag: its condition, ammo and stacks kept) into the bag.
-    public void Put(Item item) { if (item != null) Owner.Bag.z3(item.Game, true); }
+    public void Put(Item item) { if (item != null && !Simulation.Refuses("Inventory.Put")) Owner.Bag.z3(item.Game, true); }
 
     // Items in the bag (not equipped ones).
     public IList<Item> Items { get { return Owner.Bag.z2().Select(i => new Item(i)).ToList(); } }
@@ -43,6 +43,7 @@ public sealed class Inventory
     // (for the player: lootable, and the "item received" line). False if the path is unknown.
     public bool Add(string path, int stacks = 1, bool notify = true)
     {
+        if (Simulation.Refuses("Inventory.Add")) return false;
         var item = ez2.a(path);
         if (item == null) return false;
         item.Stacks = stacks;
@@ -56,6 +57,7 @@ public sealed class Inventory
     // many were taken.
     public int Take(string code, int stacks = 1, bool notify = true)
     {
+        if (Simulation.Refuses("Inventory.Take")) return 0;
         var taken = Owner.a(code, stacks, true);
         if (taken == null) return 0;
         if (IsPlayer && notify) a7v.a(new aub(taken));
@@ -215,6 +217,7 @@ public static partial class World
 
     public static void Place(Placement p)
     {
+        if (Simulation.Refuses("World.Place")) return;
         if (p == null || p.Id == null || p.Zone == null || p.Blueprint == null) throw new ArgumentException("a placement needs Id, Zone and Blueprint");
         lock (placements) { placements.RemoveAll(x => x.Id == p.Id); placements.Add(p); }
         if (string.Equals(ZoneId, p.Zone, StringComparison.OrdinalIgnoreCase)) SpawnPlacements(Areas.CurrentZone(), p.Zone);
@@ -231,6 +234,7 @@ public static partial class World
     // hostile to "player". (Giving it the player's own faction instead turned the whole station on the player.)
     public static Character Spawn(string blueprint, int x, int y, SpawnSide side)
     {
+        if (Simulation.Refuses("World.Spawn")) return null;
         bool hostile = side != SpawnSide.Neutral;
         var player = Player;
         var zone = ZoneId;
@@ -395,6 +399,7 @@ public static partial class World
     internal static void SpawnPlacements(c1a zone, string zoneId)
     {
         if (zone == null || zoneId == null) return;
+        if (Simulation.IsMirror) return;     // a copy of another game: its placed characters come from there
         foreach (var p in placements.Where(x => string.Equals(x.Zone, zoneId, StringComparison.OrdinalIgnoreCase)).ToList())
         {
             c5x existing;

@@ -212,6 +212,27 @@ namespace UnderRailWorks
     public static class Simulation
     {
         public static bool Frozen { get; set; }
+
+        // This game is a copy of another one, set from there (a co-op joiner's): Works' calls that change the world
+        // (Spawn, Place, SpawnFromCharacterFile, items in and out of bags and containers, GiveExperience, TeleportTo,
+        // Travel, Use) do nothing here, so other mods running on this machine don't make things only it would see. The
+        // mod that keeps the copy makes its changes inside Apply.
+        public static bool IsMirror { get; set; }
+        public static void Apply(Action changes)
+        {
+            scope++;
+            try { changes(); }
+            finally { scope--; }
+        }
+        [ThreadStatic] static int scope;
+        // A world-changing call now: refused (once logged per caller) when this is a mirror outside Apply.
+        internal static bool Refuses(string what)
+        {
+            if (!IsMirror || scope > 0) return false;
+            lock (logged) if (logged.Add(what)) Log.Write("mirror: " + what + " refused (this game is a copy of another; logged once)");
+            return true;
+        }
+        static readonly HashSet<string> logged = new HashSet<string>();
     }
 }
 

@@ -34,7 +34,7 @@ public sealed partial class Coop
             Log.Info(talking.Character.Name + " trades with " + e.Merchant.Name + " (on " + talking.Peer.Name + "'s machine)");
             TalkAs.Close();
         });
-        GameEvents.Update.Add(this, dt => { if (host != null && inWorld) JoinerTick(dt); });
+        GameEvents.Update.Add(this, dt => { if (host != null && inWorld) Simulation.Apply(() => JoinerTick(dt)); });
     }
 
     void Traded(Seat seat, string key, string items)

@@ -28,8 +28,8 @@ public sealed class Container
     public bool Searched { get { return Game.Inspected; } }
     public IList<Item> Items { get { return Items_ == null ? new List<Item>() : Items_.z2().Select(i => new Item(i)).ToList(); } }
     // Adds a stock item by path (it is saved with the container: stock items only).
-    public bool Add(string path, int stacks = 1) { return Containers.AddTo(Items_, path, stacks); }
-    public bool Remove(Item item) { return item != null && Items_ != null && Items_.z5(item.Game); }
+    public bool Add(string path, int stacks = 1) { if (Simulation.Refuses("Container.Add")) return false; return Containers.AddTo(Items_, path, stacks); }
+    public bool Remove(Item item) { if (Simulation.Refuses("Container.Remove")) return false; return item != null && Items_ != null && Items_.z5(item.Game); }
     public Microsoft.Xna.Framework.Vector3 Position { get { return Entities.MapPosition(Game.a8()); } }
     // Its shown name (the hover label, e.g. "Locker").
     public string Name { get { return Entities.Name(Game.a8()); } }

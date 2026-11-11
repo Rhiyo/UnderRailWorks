@@ -182,8 +182,9 @@ public sealed partial class Coop
             case "WORLDEND":
                 receiving = false;
                 spawned.Clear(); early.Clear();
+                Simulation.IsMirror = true;     // already while it loads: other mods' load handlers don't add to the copy
                 if (SaveGames.Load(JoinSave)) { loading = true; Tell("loading the host's world"); }
-                else Tell("couldn't load the host's world (a different game version or DLC?)");
+                else { Simulation.IsMirror = false; Tell("couldn't load the host's world (a different game version or DLC?)"); }
                 return;
             case "WALK":
             {
@@ -310,6 +311,7 @@ public sealed partial class Coop
         if (!loading) return;
         loading = false; inWorld = true; followed = null;
         Simulation.Frozen = true;
+        Simulation.IsMirror = true;     // other mods here don't change this copy (Works refuses; Co-op's changes go through Apply)
         foreach (var w in early) Place(w);
         early.Clear();
         host.Send("LOADED");
@@ -321,6 +323,7 @@ public sealed partial class Coop
     {
         receiving = loading = inWorld = false;
         Simulation.Frozen = false;
+        Simulation.IsMirror = false;
         myKey = null; followed = null; spawned.Clear(); early.Clear(); sheets.Clear();
     }
 
@@ -337,7 +340,7 @@ public sealed partial class Coop
             host.Send("NEW", World.Player.Name, sheet);
             Tell("sending " + World.Player.Name + " to the host...");
         });
-        GameEvents.ZoneLoaded.Add(this, (zone, first) => { if (loading && host != null) Arrived(); });
+        GameEvents.ZoneLoaded.Add(this, (zone, first) => { if (loading && host != null) Simulation.Apply(Arrived); });
         // The joiner's orders go to the host: walking and attacking for now.
         GameEvents.PlayerOrdering.Add(this, o =>
         {

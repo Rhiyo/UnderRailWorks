@@ -88,6 +88,7 @@ namespace UnderRailWorks
         // e.g. "lu-c1b", "entry"; the ids are in UnderRailWorks-content.txt). False if there's no player.
         public static bool Travel(string zone, string entry)
         {
+            if (Simulation.Refuses("World.Travel")) return false;
             var p = Player == null ? null : Player.Entity as c5x;
             if (p == null || string.IsNullOrEmpty(zone) || string.IsNullOrEmpty(entry)) return false;
             a0l.a(p, new c2w(zone, entry), 0, null);
@@ -97,6 +98,7 @@ namespace UnderRailWorks
         // A character uses a placed object (as clicking it does, without walking there or the game's checks).
         public static bool Use(Character user, string placementId)
         {
+            if (Simulation.Refuses("World.Use")) return false;
             var e = Placed(placementId) == null ? World.PlacedEntity(placementId) : Placed(placementId).Entity;
             var b = e is c5x ? ((c5x)e).GetAspect<bim>() : null;
             return b != null && user != null && b.a((c5x)user.Entity, null, true, true);

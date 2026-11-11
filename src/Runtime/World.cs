@@ -140,6 +140,7 @@ public sealed partial class Character
     // XP as the game gives it (its notice, level-ups): the player, or a character with a player sheet (amc.a(int, string)).
     public void GiveExperience(int amount, string reason = null)
     {
+        if (Simulation.Refuses("GiveExperience")) return;
         if (IsPlayer) { awq.a(amount, reason); return; }
         var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>();
         if (a != null && a.aa() is e3q) a.a(amount, reason);

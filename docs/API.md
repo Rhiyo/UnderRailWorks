@@ -1417,6 +1417,8 @@ The first handler that returns true replaces the game's step.
 Frozen: nothing in the zone moves or acts by itself (no walking, attacks, AI, combat turns), while it is still drawn and the UI works: for a world set from elsewhere (PlaceAt, Health).
 
 - `static bool Frozen`
+- `static bool IsMirror` — This game is a copy of another one, set from there (a co-op joiner's): Works' calls that change the world (Spawn, Place, SpawnFromCharacterFile, items in and out of bags and containers, GiveExperience, TeleportTo, Travel, Use) do nothing here, so other mods running on this machine don't make things only it would see. The mod that keeps the copy makes its changes inside Apply.
+- `static void Apply(Action changes)`
 
 ## Skills  _(class, Stats.cs)_
 

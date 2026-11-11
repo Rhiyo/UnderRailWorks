@@ -41,6 +41,7 @@ namespace UnderRailWorks
         // Null: no such file, not a player sheet, or no room there.
         public static Character SpawnFromCharacterFile(string path, int x, int y)
         {
+            if (Simulation.Refuses("SpawnFromCharacterFile")) return null;
             var game = bpo.GetService<cnk>();
             var player = Player; var area = player == null ? null : player.Area;
             if (game == null || area == null || BuildBody == null || SheetProvider == null || AddEntityToArea == null || !System.IO.File.Exists(path)) return null;

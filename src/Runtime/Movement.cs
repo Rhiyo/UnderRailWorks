@@ -52,6 +52,7 @@ namespace UnderRailWorks
         // Puts it on tile x, y of its area at once (no walking, as the game's scripts move characters between scenes).
         public bool TeleportTo(int x, int y)
         {
+            if (Simulation.Refuses("TeleportTo")) return false;
             var c = Entity as c5x;
             var area = Area;
             if (c == null || area == null || x < 0 || y < 0 || x >= area.Width || y >= area.Height) return false;
