@@ -392,6 +392,7 @@ public static partial class World
                     }
                     if (p.Friendly) { c.Passive = true; c.SetAttitudeToPlayer(Attitude.Neutral); }
                 }
+                else if (p.Name != null) e.q(p.Name);     // an object: its hover label
                 if (p.Store != null && !c.IsMerchant) c.MakeMerchant(p.Store);
                 // An object with a mod use but none of its own: a plain use aspect (never saved: placed entities aren't).
                 if (p.OnUse != null && e.GetAspect<bim>() == null) e.SetAspect(new bim(e));

@@ -1430,3 +1430,10 @@ inside and after. **Saves:** the stock game refuses a save made inside a mod zon
 load the saved game. Locale with id 'wt_testzone' not found in the current game"), nothing breaks; a save made after
 leaving the zone loads and plays in the stock game (the zone's level stays in the save, unused). So, as with any mod
 that adds places, a save inside the mod's zone needs the mod.
+
+**Exits** (`Zones.AddExit(mod, id, zone, area, x, y, toZone, toWaypoint, name, blueprint)`): a usable object placed in
+any zone (a placement: re-added on each load, never saved, so saves stay stock-loadable) that takes the player to a
+waypoint of another zone; default look: a hole in the ground (`objects\largemachines\tchortparts\tchortholes`).
+Placed objects now show a placement's `Name` as their hover label. Tested: from the residential district outside the
+player's house into the mod zone and back (by script), and by hand: hovering shows "Strange hole" with the use cursor,
+clicking walks there and travels. So a new dungeon is reachable from the game's world without touching its maps.

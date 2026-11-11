@@ -211,6 +211,9 @@ public sealed class WorksTest : WorksMod
         // A new zone: Mods\WorksTest\data\Maps\wt_testzone.uz + _L1.uzl, copied into the test copy from a game zone
         // (never committed: game files).
         Zones.Add(this, "wt_testzone", "Works Test Zone", "wa-shop");
+        Zones.AddExit(this, "toTest", "cc-res", "cc-res", 11, 9, "wt_testzone", "FromElevator", "Strange hole");
+        Zones.AddExit(this, "back", "wt_testzone", "wa-shop", 2, 3, "cc-res", "FromPlayerHouse", "Way back up");
+        Commands.Add(this, "wt.useexit", "wt.useexit <id>: the player uses a WorksTest exit (toTest, back)", args => { Commands.CloseConsole(); return "use: " + World.Use(World.Player, "WorksTest.exit." + args[0]); });
         Commands.Add(this, "wt.zone", "wt.zone: travel to the mod zone wt_testzone", args => "travel: " + World.Travel("wt_testzone", "FromElevator"));
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {

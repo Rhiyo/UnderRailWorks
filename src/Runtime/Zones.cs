@@ -36,6 +36,19 @@ namespace UnderRailWorks
             ZoneHooks.Indexed = null;     // add it to the index again
         }
 
+        // An exit: a usable object placed in a zone (any zone, the game's too; re-added each time it loads, never saved)
+        // that takes the player to a waypoint of another zone (a mod's or the game's) when used. name: its hover label.
+        //   Zones.AddExit(this, "cave_in", "cc-res", "cc-res", 30, 12, "mymod_cave", "Entrance", "Cave entrance");
+        public static Placement AddExit(WorksMod mod, string id, string zone, string area, int x, int y, string toZone, string toWaypoint,
+            string name = null, string blueprint = "objects\\largemachines\\tchortparts\\tchortholes")
+        {
+            if (mod == null || id == null || zone == null || toZone == null) throw new ArgumentException("an exit needs a mod, an id, its zone and where it goes");
+            var p = new Placement { Id = mod.Id + ".exit." + id, Zone = zone, Area = area ?? zone, X = x, Y = y, Blueprint = blueprint, Name = name,
+                OnUse = who => { if (who != null && who.IsPlayer) World.Travel(toZone, toWaypoint); } };
+            World.Place(p);
+            return p;
+        }
+
         // A zone a mod added (true), so not one of the game's.
         public static bool IsModZone(string id) { return id != null && added.ContainsKey(id); }
         public static IList<string> Added { get { return added.Keys.ToList(); } }

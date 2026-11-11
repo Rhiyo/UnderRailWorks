@@ -1719,5 +1719,6 @@ The player about to leave the zone (an exit, a door between maps, a script, Worl
 ## Zones  _(class, Zones.cs)_
 
 - `static void Add(WorksMod mod, string id, string name, string likeZone = null)` — A zone from the mod's data\Maps folder (<id>.uz and <id>_L1.uzl). likeZone: a game zone whose music, locale type and level it takes (null: none). Prefix the id with the mod's id.
+- `static Placement AddExit(WorksMod mod, string id, string zone, string area, int x, int y, string toZone, string toWaypoint,` — An exit: a usable object placed in a zone (any zone, the game's too; re-added each time it loads, never saved) that takes the player to a waypoint of another zone (a mod's or the game's) when used. name: its hover label. Zones.AddExit(this, "cave_in", "cc-res", "cc-res", 30, 12, "mymod_cave", "Entrance", "Cave entrance");
 - `static bool IsModZone(string id)` — A zone a mod added (true), so not one of the game's.
 - `static IList<string> Added`
