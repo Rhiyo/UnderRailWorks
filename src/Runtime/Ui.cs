@@ -132,7 +132,22 @@ public static partial class Ui
         if (parent.Control is ci3) Hud.Track(element);     // on the HUD: hidden with the game's HUD
     }
     public static void Remove(UiElement element) { if (element != null && element.Control.Parent != null) UnderrailDropdownScroll.Remove(element.Control.Parent, element.Control); }
-    public static void Move(UiElement element, int x, int y) { UnderrailDropdownScroll.Move(element.Control, x, y); }
+    public static void Move(UiElement element, int x, int y) { UnderrailDropdownScroll.Move(element.Control, x, y); RelayoutWorldViews(element.Control); }
+
+    // A world view (a7m: the game's world, and the map window's map) works out where it is on screen only when it's
+    // resized (a7m.f(): its origin m_b from at()); the game never moves the windows holding one. After a move, every
+    // world view inside the moved element works it out again, or it keeps drawing (and taking clicks) at the old place.
+    static void RelayoutWorldViews(euz control)
+    {
+        if (control == null) return;
+        try
+        {
+            var view = control as a7m;
+            if (view != null) { view.f(); return; }
+            foreach (euz child in control.Controls) RelayoutWorldViews(child);
+        }
+        catch (Exception ex) { Log.Write("ui: relayout after a move: " + ex.Message); }
+    }
     // Drawn over its siblings and first to get clicks (the game's euz.d: "always on top" popups and tooltips stay above).
     public static void ToFront(UiElement element) { var p = element == null ? null : element.Control.Parent; if (p != null) p.d(element.Control); }
 

@@ -1508,3 +1508,7 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   rectangle maps to a rectangle on the isometric minimap: one map step is Camera.TileWidth on screen and k2 pixels
   there); left-click or drag on the minimap or the large map moves the view there (the player doesn't move);
   right-click the minimap opens the large map. Tested both maps in South Gate Station North.
+- **Fixed: moving the Global Map window (Movable Windows) left its map behind.** A world view (`a7m`: the world and
+  the map window's map `d69`) works out its screen origin (`m_b` from `at()`) only when resized (`a7m.f()`, from
+  `jq`); the game never moves windows that hold one. `Ui.Move` now calls `f()` on every world view inside the moved
+  element. Tested: the Global Map dragged 300 units, its map moved with it.
