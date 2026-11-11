@@ -1537,6 +1537,7 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static UiElement SmallButton(string text, int width, int height, Action click)` — A small button of any size drawn in the game's colours (Ui.Button is the game's own, at its own sizes).
 - `static UiChoice Choice(int width, IList<string> options, int index = 0)` — A button that steps through options on click (right-click: back).
 - `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD (null if there is no HUD). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
+- `static UiWorldView WorldView(int width, int height, Vector2? centre = null)` — A view of the player's area, width x height, centred on centre (null: the player). Null without a game.
 
 ## UiCanvas  _(class, Ui.cs)_
 
@@ -1641,6 +1642,10 @@ Rows of text with buttons at their right end, in an area of a panel or window (a
 - `bool IsOpen`
 - `event Action Closed` — Runs once when the window closes (button, Escape, Close, or the HUD going away).
 - `void Close()`
+
+## UiWorldView  _(class, UiWorldView.cs)_
+
+- `Vector2 Centre` — The map position it is centred on (tiles). Setting it looks there.
 
 ## Variables  _(class, Content.cs)_
 

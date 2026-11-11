@@ -36,7 +36,8 @@ wide after insets) can be clipped, overlapping or tiny elsewhere.
 - **Move things only through `Ui.Move`** (or what uses it: `Ui.Add`, `UiDrag`, `Ui.KeepInside`, `Ui.Restore`, window
   drags). A world view (`a7m`: the world, the Global Map's map) works out its screen position only when resized; after
   a move, `Ui.Move` makes every world view inside the moved element work it out again. Setting a control's Location
-  directly leaves its contents drawn (and clicked) at the old place.
+  directly leaves its contents drawn (and clicked) at the old place. A live world view in a mod window:
+  `Ui.WorldView` (it clips itself; the game's own clipping switch can't be set from Works).
 
 ## Known debt
 

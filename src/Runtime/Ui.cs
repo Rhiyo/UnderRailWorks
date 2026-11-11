@@ -129,6 +129,7 @@ public static partial class Ui
     {
         Move(element, x, y);
         UnderrailDropdownScroll.Add(parent.Control, element.Control);
+        RelayoutWorldViews(element.Control);     // now that it's on screen: a world view's position depends on its parents
         if (parent.Control is ci3) Hud.Track(element);     // on the HUD: hidden with the game's HUD
     }
     public static void Remove(UiElement element) { if (element != null && element.Control.Parent != null) UnderrailDropdownScroll.Remove(element.Control.Parent, element.Control); }

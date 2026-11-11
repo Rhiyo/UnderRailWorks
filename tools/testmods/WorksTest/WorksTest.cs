@@ -229,6 +229,16 @@ public sealed class WorksTest : WorksMod
             Log.Info("camera " + Camera.Centre + " zoom " + Camera.Zoom + " tile " + Camera.TileWidth + "x" + Camera.TileHeight + " view " + Camera.ViewSize + "; player " + World.Player.Position + " screen " + World.Player.ScreenBounds);
             return "cam";
         });
+        Commands.Add(this, "wt.pip", "wt.pip: a window with a live world view 6 tiles from the player", args =>
+        {
+            Commands.CloseConsole();
+            var w = Ui.Window(this, "pip", "Remote view", 440, 300);
+            var p = World.Player.Position;
+            var view = Ui.WorldView(420, 260, new Microsoft.Xna.Framework.Vector2(p.X + 6, p.Y + 6));
+            if (view == null) return "no view";
+            Ui.Add(w, view, 10, w.Top + 2);
+            return "pip at " + view.Centre;
+        });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

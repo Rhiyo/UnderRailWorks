@@ -1512,3 +1512,19 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   the map window's map `d69`) works out its screen origin (`m_b` from `at()`) only when resized (`a7m.f()`, from
   `jq`); the game never moves windows that hold one. `Ui.Move` now calls `f()` on every world view inside the moved
   element. Tested: the Global Map dragged 300 units, its map moved with it.
+
+## Ui.WorldView: a live view of the world in a mod's window (Nov 2026)
+
+`Ui.WorldView(width, height, centre)` -> `UiWorldView` (`Centre` get/set): a second `mv` on the player's area, set up
+as the game's own remote-view popup does (`aqu`: its own camera bw7 bounded to the area, input options off, the
+player's sight `dnn.c`, cursor mode `edg.b`, no zoom wheel). Three traps found by measuring:
+- **Placement:** `Ui.Add` moved the element before attaching it, so the view worked out its screen origin with no
+  parent and drew nothing; `Ui.Add` now re-lays out world views after attaching (as `Ui.Move` does after moves).
+- **Clipping:** a world view draws as far as the screen unless its clip rectangle is set when its pass starts
+  (`a7m.vo` reads it). A parent clips only through `euz.UseScissorRect`, whose **getter has an obfuscated name**, so
+  overriding the property from Works compiles but is never called (logged: False). The holder (`UiClipControl`) sets
+  the clip around its draw instead: end batch, set scissor (Works' mapping), begin a clipping batch (the view's pass
+  starts by ending one), draw, then end, restore, reopen as `a7m.vo` does.
+- Each view redraws the area every frame: keep them small and few.
+Tested: WorksTest `wt.pip` (a window showing the spot 6 tiles from the player), clipped, the main view untouched,
+dragged with its window, with and without UnderRailFixes' occlusion effects.
