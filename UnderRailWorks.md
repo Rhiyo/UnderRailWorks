@@ -1473,3 +1473,16 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
 - **Shot Breakdown** (mods/ShotBreakdown): while the mouse is on a hostile, a note under the game's "xx%":
   "Range -18% (40% from close)", "Darkness -8% (30% if lit)" (tested: an Ironhead gunner 7 tiles away in the player's
   house, Beretta 99; the game showed 22%). Nothing shows when neither costs anything, or for melee weapons.
+
+## Stealth Lens; Stealth.Notice, Character.ScreenBounds, Ui.Overlay (Nov 2026)
+
+- `Stealth.Notice(observer)`: the game's own detection rule for the player as they stand: the AI sensor (`cn8`) calls
+  `bui.a(target, Detection, Stealth skill a2n, distance bnx.a(tile, entity), SightRange, angle bnx.a(pos, facing,
+  pos), light c5x.l(), darkvision)` each scan; positive = gaining; `bui.a(detection, stealth)` = spotted at once.
+  Works samples the distance (0.1 tiles) for where the rate turns positive (`Within`).
+- `Character.ScreenBounds` (where it was drawn last frame, interface units; from World's layer tracking, shadows and
+  markers left out), `Ui.Overlay(draw)` (a full-HUD canvas that never takes the mouse: `iz` refuses it).
+- **Stealth Lens** (mods/StealthLens): while sneaking, a label over each hostile in view: "notices within 7.4"
+  (amber within 2 tiles of it, green beyond), "noticing you" (red), "can't notice you". Tested in the player's house
+  against an Ironhead gunner (Detection 60 vs Stealth 29, light 0.39): 7.4 tiles; at 8 tiles nothing happened, at
+  4.5 the label turned red and the gunner detected the player within about 20 s (combat).

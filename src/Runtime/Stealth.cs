@@ -37,7 +37,7 @@ public sealed class InstantDetection
     public bool Instant { get; set; }
 }
 
-public static class Stealth
+public static partial class Stealth
 {
     public static readonly Hook<Action<Detection>> ModifyDetection = new Hook<Action<Detection>>("ModifyDetection");
     public static readonly Hook<Action<InstantDetection>> ModifyInstant = new Hook<Action<InstantDetection>>("ModifyInstant");

@@ -59,6 +59,8 @@ public sealed partial class Character
     public void StopFollowing() { World.SetFollow(this, null, 0); }
     public bool IsFollowing { get { return World.IsFollowing(this); } }
     public Area Area { get { return Area.Of(Entities.AreaOf(Entity)); } }
+    // Where it was drawn on screen in the last frame (interface units, as Ui positions), or null (not drawn).
+    public Rectangle? ScreenBounds { get { return World.ScreenBoundsOf(Entity); } }
     public Attitude Attitude { get { return Entities.AttitudeOf(Entity); } }
     // The colour holding Tab outlines it in (gold for the player, sandy brown if passive, else by attitude).
     public Color OutlineColor { get { return Entities.OutlineColor(Entity); } }
@@ -255,7 +257,13 @@ public static partial class World
     {
         if (!tracking) return;
         var e = Layers.Entity(layer);
-        if (e != null && Entities.Character(e) != null && !Entities.IsPlayer(e)) drawing.Add(e);
+        if (e == null || Entities.Character(e) == null) return;
+        if (!Entities.IsPlayer(e)) drawing.Add(e);
+        var id = Layers.Id(layer);
+        if (id == "SHD" || id == "marker") return;     // shadows and markers reach past the body
+        var r = Layers.Bounds(layer);
+        Rectangle had;
+        boundsNow[e] = boundsNow.TryGetValue(e, out had) ? Rectangle.Union(had, r) : r;
     }
 
     internal static void WorldDone()
@@ -265,6 +273,11 @@ public static partial class World
         foreach (var e in drawing) list.Add(Character.Of(e));
         visible = list.AsReadOnly();
         drawing.Clear();
+        var t = boundsLast; boundsLast = boundsNow; boundsNow = t; boundsNow.Clear();
     }
+    static Dictionary<b0b, Rectangle> boundsNow = new Dictionary<b0b, Rectangle>(), boundsLast = new Dictionary<b0b, Rectangle>();
+    // Where a character was drawn in the last frame (interface units, as Ui elements; null: not drawn, e.g. out of
+    // sight). The first call starts the tracking, so it answers from the next frame on.
+    internal static Rectangle? ScreenBoundsOf(b0b e) { tracking = true; Rectangle r; return e != null && boundsLast.TryGetValue(e, out r) ? r : (Rectangle?)null; }
 }
 }

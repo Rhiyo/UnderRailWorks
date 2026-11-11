@@ -104,6 +104,18 @@ public static partial class Ui
         ThemeOffsetField = typeof(wj).GetField("fg"), ThemeSizeField = typeof(wj).GetField("fh");
     static readonly MethodInfo TextOffset = typeof(c68).GetMethods().First(m => m.Name == "a" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType.Name == "Point");
 
+    // A canvas over the whole HUD that never takes the mouse (clicks reach the world and the windows): for labels at
+    // characters (Character.ScreenBounds) and other marks over the world. Draw with the canvas's absolute coordinates.
+    public static UiElement Overlay(Action<UiCanvas> draw)
+    {
+        var root = Hud.Root;
+        if (root == null) return null;
+        var control = new UiCustomControl(draw) { PassThrough = true, Size = new esj(root.Width, root.Height) };
+        var e = UiElement.Of(control);
+        Add(root, e, 0, 0);
+        return e;
+    }
+
     // A panel in the game's style: dark, with a border in the interface colour. Holds other elements.
     public static UiPanel Panel(int width, int height) { return new UiPanel(new UiPanelControl { Size = new esj(width, height) }); }
 
@@ -415,6 +427,8 @@ public sealed class UiCanvas
 
 sealed class UiCustomControl : euz
 {
+    internal bool PassThrough;     // never takes the mouse (an overlay over the world)
+    public override bool iz(Microsoft.Xna.Framework.Input.MouseState A_0) { return !PassThrough && base.iz(A_0); }
     // The game's own hit testing says the mouse is on it (topmost: not through a window above it).
     internal bool MouseOver;
     protected override void ik(object A_0, b25 A_1) { MouseOver = true; base.ik(A_0, A_1); }

@@ -129,6 +129,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `void StopFollowing()`
 - `bool IsFollowing`
 - `Area Area`
+- `Rectangle? ScreenBounds` — Where it was drawn on screen in the last frame (interface units, as Ui positions), or null (not drawn).
 - `Attitude Attitude`
 - `Color OutlineColor` — The colour holding Tab outlines it in (gold for the player, sandy brown if passive, else by attitude).
 - `bool IsCharacter` — A character (has character data), not a placed object such as a turret's base or a prop.
@@ -1108,6 +1109,14 @@ Values: `Left, Right, Middle`
 - `static void Add(WorksMod mod, string id, string oggFile)` — A new song id (to play with Override, Play, or an area's "Music" property set by a mod).
 - `static void Override(WorksMod mod, Func<string> choose)` — Asked every frame: a song id to play instead of the game's choice, or null for the game's. The first mod (in hook order) with an answer wins.
 
+## Notice  _(class, StealthNotice.cs)_
+
+- `double Distance`
+- `double SightRange`
+- `bool Instant`
+- `double Within`
+- `bool Noticing`
+
 ## Notify  _(class, Content.cs)_
 
 - `static void Log(string text, Color? colour = null)` — A line in the game's chat/log (where "New journal entry: ..." appears).
@@ -1369,6 +1378,7 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 
 - `static readonly Hook<Action<Detection>> ModifyDetection = new Hook<Action<Detection>>("ModifyDetection")`
 - `static readonly Hook<Action<InstantDetection>> ModifyInstant = new Hook<Action<InstantDetection>>("ModifyInstant")`
+- `static Notice Notice(Character observer)` — The observer's view of the player as they stand now (null: no player, or not characters).
 
 ## Stores  _(class, LootStores.cs)_
 
@@ -1487,6 +1497,7 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static UiElement Button(string text, Action onClick)` — A button styled like the options window's (Accept, Cancel), as wide as its text needs.
 - `static UiTickBox TickBox(bool value)` — The game's tick box (as in its options).
 - `static UiTextBox TextBox(int width, int maxLength = 40)` — A text box (the game's own field, c68, as its split-stack dialog sets one up): click it to type; Text reads it. Asking the player for a name or a number? Don't build a window around this: use Ui.Ask (text) or Ui.AskNumber, the game's own popups, right at every interface size (UI.md). This is for a field that stays in your own panel.
+- `static UiElement Overlay(Action<UiCanvas> draw)` — A canvas over the whole HUD that never takes the mouse (clicks reach the world and the windows): for labels at characters (Character.ScreenBounds) and other marks over the world. Draw with the canvas's absolute coordinates.
 - `static UiPanel Panel(int width, int height)` — A panel in the game's style: dark, with a border in the interface colour. Holds other elements.
 - `static UiElement Custom(int width, int height, Action<UiCanvas> draw)` — An element the mod draws itself: draw is called every frame it is visible, with a canvas at its place on screen.
 - `static void Add(UiElement parent, UiElement element, int x, int y)`
@@ -1529,6 +1540,7 @@ What a custom element draws with, during its draw: everything in interface units
 - `void Fill(Rectangle area, Color colour)`
 - `void Text(string text, int x, int y, Color colour)` — Text in the interface's default font, its top left at (x, y).
 - `void Frame(Rectangle r, Color colour)` — A one-unit frame around an area.
+- `override bool iz(Microsoft.Xna.Framework.Input.MouseState A_0)`
 - `override void iv(e6d time, cp9 context)`
 - `Microsoft.Xna.Framework.Color Background = new Microsoft.Xna.Framework.Color(12, 12, 12, 225)`
 - `Microsoft.Xna.Framework.Color Border = new Microsoft.Xna.Framework.Color(181, 92, 0)`
