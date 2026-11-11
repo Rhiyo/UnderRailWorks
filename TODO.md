@@ -45,11 +45,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [ ] Untested on .NET 10: Steam achievements through the helper, GOG Galaxy, clipboard, the dev console, long sessions.
 - [ ] Performance: frame times on .NET 10 against Wine Mono in the same scenes.
 - [x] Download size: WPF removed from the bundled runtime (173 -> 119 MB unzipped; tools/trim-runtime.py).
-- [ ] underrail.exe (the launcher) shows .NET's default icon in Explorer: copy the icon resource from the player's own
-  underrail.exe into it at install time (we can't ship the game's art). The game window's icon is already right.
-
-## Foundations
-
+- [x] The launcher gets the game's icon from the player's own exe at install (Windows; LauncherIcon.cs).
 - [ ] Port the engine fixes into Works: Harmony where possible; keep in the patcher only the loader hook, the FNA
   retargeting, the 64-bit flags and the SFML/Steam/Galaxy replacements.
 - [x] Declarative mod settings: ModConfig (tModLoader's, with our readable ini); UnderRailFixes uses it.

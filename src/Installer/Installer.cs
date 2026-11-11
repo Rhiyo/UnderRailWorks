@@ -160,6 +160,7 @@ static class Patcher
             File.WriteAllBytes(path, b);
         }
         WriteSafely(exe, File.ReadAllBytes(Path.Combine(dir, LauncherExe)));
+        if (Environment.OSVersion.Platform == PlatformID.Win32NT) LauncherIcon.CopyFrom(backup, exe);     // Explorer's icon
         foreach (string old in new[] { "UnderrailFix.dll", "UnderrailFix64.dll" })     // 1.x's runtime, unused now
             if (File.Exists(Path.Combine(dir, old))) { File.Delete(Path.Combine(dir, old)); Console.WriteLine("Removed 1.x's " + old + "."); }
 

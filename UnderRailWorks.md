@@ -1575,3 +1575,8 @@ referenced, nearly all WPF. `tools/trim-runtime.py` (run by build.sh) removes th
 the files it lists); smaller unreached pieces WinForms may load by name stay. Runtime folder: 173 -> 119 MB. Tested:
 the game starts on it under Proton, loads, changes zone, quicksaves; tools/check-release.sh passes. Not tested on
 real Windows.
+- **Launcher icon**: on Windows the patcher copies the game's icon resources (its first RT_GROUP_ICON, 32512, and the
+  RT_ICON images it lists) from the player's own underrail.exe into the launcher (installed as underrail.exe, an
+  apphost with no icon) with the Win32 resource APIs (src/Installer/LauncherIcon.cs); nothing shipped. Tested with
+  the Windows patcher under Wine: the launcher got group 32512 and both images (12840 and 3240 bytes, as the game's),
+  and the game starts through it. Linux: skipped (no Explorer). Not seen in a real Windows Explorer.
