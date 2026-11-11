@@ -69,8 +69,8 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Drawing (experimental): WorldDraw, Outlines, names; UnderRailFixes uses it.
 - [x] Items: the proven overlay made real: JSON recipes, icons, text, adding to stores and loot.
 - [ ] Characters, stores, dialogs: the same overlay; their loaders still to find.
-- [ ] Maps: zone overlay, patches on every zone load (visited zones come from the save), cross-zone waypoints, what the
-  stock game does with a transition to a missing map.
+- [x] Maps: zone overlay, patches on every zone load (visited zones come from the save), cross-zone waypoints, what the
+  stock game does with a transition to a missing map. (Nov 2026: new zones from a mod folder, Zones.Add; exits into them from any zone, Zones.AddExit; saves made inside a mod zone need the mod. Still: transitions on the map edge, a map editor.)
 - [ ] Later: combat, UI, quests.
 
 ## Mods
@@ -116,7 +116,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Per-save mod data (WorksMod.Data, plain values in the save).
 - [x] Status effect events (applying with a veto, applied, removed). Custom status effects still to do.
 - [x] Level-up event; XP curve, XP gains and points per level (Progression).
-- [ ] New item definitions (clone a stock item, override name/stats; the save holds the stock base).
+- [x] New item definitions (clone a stock item, override name/stats; the save holds the stock base). (done: Items.Define, see UnderRailWorks.md.)
 - [x] New feats / abilities; level-up and progression hooks (XP curve, points per level): mod feats, mod abilities, CustomStats, CharacterRules, Stats.Modify.
 - [x] Cancellable hooks with a set order (HookOrder; trade, containers, taking, dialogs, crafting, equipping, leaving a zone, weapon switching, disarming).
 - [x] Equipment (slots, equip/unequip, events). A veto still to do.
@@ -126,7 +126,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Area triggers and interactables (Triggers, usable objects).
 - [x] Content packs: triggers; DLL-registered conditions and effects.
 - [x] Patching stock dialogs (Dialogs.Patch, content packs' dialogPatches).
-- [ ] Content packs: stores, item tweaks.
+- [x] Content packs: stores, item tweaks. (done: "stores", "itemEdits", "recipes" sections.)
 
 ## For modders
 
@@ -147,6 +147,12 @@ CharacterDying, allies and followers, MoveTo/TeleportTo, mod crafting recipes, k
 startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
 
 ## Next
+
+- [x] Nov 2026: House Pets (Jyles' catalogue, living room, feed/follow/home), Campfire Cooking (recipes content pack),
+  PlayerHouse API, works.dialog (Dialogs.Describe), Dialogs.Patch on lines that continue to their options, Ui.Ask /
+  AskNumber / Confirm / Choose on the game's popups, Ui.Window on the game's titled window, Outlines.PickThrough
+  (select characters behind scenery), Zones.Add / AddExit, Container.Name, followers keep their dialog. UI rules: UI.md.
+- [ ] Mod text at the interface size's font (UI.md, Known debt): mods need a line-height API and to measure first.
 
 
 - [x] Fewer allocations per world layer: hook dispatch done; the wrappers (Layer, WorldView, DrawContext) are structs. Measured
