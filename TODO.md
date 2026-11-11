@@ -42,7 +42,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] The patcher installs and uninstalls the new layout (game -> UnderRail.Game.exe, launcher as underrail.exe,
   dotnet\), over a stock game, an existing install, a game update or a 1.x install; tools/check-release.sh tests all
   of it. (Running the 1.x patcher on a Works install: it reads the launcher as a broken exe and stops.)
-- [ ] Untested on .NET 10: Steam achievements through the helper, GOG Galaxy, clipboard, the dev console, long sessions.
+- [ ] Untested on .NET 10: Steam achievements through the helper, GOG Galaxy, clipboard, the dev console. Long sessions: a 20-minute soak (19 zone loads) plateaued, no errors (Nov 2026).
 - [ ] Performance: frame times on .NET 10 against Wine Mono in the same scenes.
 - [x] Download size: WPF removed from the bundled runtime (173 -> 119 MB unzipped; tools/trim-runtime.py).
 - [x] The launcher gets the game's icon from the player's own exe at install (Windows; LauncherIcon.cs).

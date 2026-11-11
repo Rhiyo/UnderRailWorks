@@ -1580,3 +1580,6 @@ real Windows.
   apphost with no icon) with the Win32 resource APIs (src/Installer/LauncherIcon.cs); nothing shipped. Tested with
   the Windows patcher under Wine: the launcher got group 32512 and both images (12840 and 3240 bytes, as the game's),
   and the game starts through it. Linux: skipped (no Explorer). Not seen in a real Windows Explorer.
+- **Soak test** (Nov 2026): 20 minutes in the HousePets save with every mod on, into the house and out every 2 minutes
+  (19 zone loads: placements, pets, minimap, HUD rebuilds). Memory: 1023 MB at start, rising to a plateau of 1371 MB
+  by 17 minutes, then 1118 MB after a collection: caches, no leak. No errors in the log.
