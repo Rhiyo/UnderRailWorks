@@ -36,9 +36,16 @@ positions and animations, health, doors, containers, items, combat turns, dialog
 character's commands (move here, attack that, use this, say this answer). The joiner's character is, on the host, a
 character placed by the mod and controlled by those commands instead of by the AI.
 
+## Where things go (decided 2026-11-11)
+
+- **The multiplayer mod** owns the networking (plain .NET sockets: host/join, messages, who is connected, its
+  protocol and versioning), the character list, what to send when, and its menu/HUD option. Nothing in it needs the
+  game's internals. Other mods that want to work in co-op get the mod's API through `Mods.Provide` (an optional
+  dependency), not through Works. If a second networking mod ever needs the same layer, move it into Works then.
+- **Works** gets the game-side pieces (they need the game's internals, and are useful without networking too):
+
 ## New Works API this needs (first estimate)
 
-- Networking: a connection layer (host/join, messages, who is connected), so mods don't each bring their own.
 - A second controllable character: make a non-player character act on commands (walk to, attack, use, pick up,
   talk), take its combat turns from a remote player instead of the AI, end its turn.
 - Character creation for a co-op character (the game's own creation screens, outside a new game) and keeping it in
@@ -75,7 +82,7 @@ character placed by the mod and controlled by those commands instead of by the A
 
 1. Spike, no network: in the host's game, a second character controlled by console commands (walk, attack on its
    combat turn instead of the AI, use, talk). Answers question 5 and most of the "second controllable character" API.
-2. Networking basics: host and join between two copies (two test copies on this machine), a character list, and
+2. Networking basics (in the mod): host and join between two copies (two test copies on this machine), a character list, and
    the joiner's commands moving their character on the host.
 3. The client view (replication), the hardest part.
 4. Then the open questions above, one at a time.
