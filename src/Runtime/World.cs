@@ -135,6 +135,29 @@ public sealed partial class Character
     // Its personal attitude to the player (overrides its faction's), as the game's scripts set it.
     public override string ToString() { try { return Name ?? "?"; } catch { return "?"; } }
     public Attitude AttitudeToPlayer { get { return Attitude; } }
+    // How it stands towards another character (its own override for the other's faction, else the faction table),
+    // e.g. whether an enemy would fight the player's ally. None for non-characters.
+    public Attitude AttitudeTo(Character other)
+    {
+        try
+        {
+            var me = Entities.Character(Entity); var them = other == null ? null : Entities.Character(other.Entity);
+            if (me == null || them == null) return Attitude.None;
+            var game = bpo.GetService<cnk>();
+            var table = game == null || game.aqu() == null ? null : game.aqu().ac();     // the game state's faction table
+            var a = me.GetAspect<amc>().aa().a(table, them.GetAspect<amc>().aa().FactionId);
+            return ToAttitude(a);
+        }
+        catch { return Attitude.Neutral; }
+    }
+    // Its own attitude to everyone of a faction ("player", "playerNativeAlly", a faction id as Faction shows),
+    // whatever the faction table says. None: back to the table.
+    public void SetAttitudeToFaction(string faction, Attitude attitude)
+    {
+        if (attitude == Attitude.None) { Need.c(faction); return; }
+        Need.a(faction, (h)((int)attitude - 1));
+    }
+    static Attitude ToAttitude(h a) { return a == global::h.a ? Attitude.Hostile : a == global::h.b ? Attitude.Unfriendly : a == global::h.d ? Attitude.Friendly : a == global::h.e ? Attitude.Ally : Attitude.Neutral; }
     public void SetAttitudeToPlayer(Attitude attitude)
     {
         if (attitude == Attitude.None) { Need.c(asp.a); return; }

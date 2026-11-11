@@ -238,7 +238,9 @@ public static partial class World
         // Ally: the game's own faction for what the player brings into a fight (its force fields: playerNativeAlly),
         // so the faction table makes it friends with the player and enemies with the player's enemies, both ways.
         else if (side == SpawnSide.Ally) p.Setup = c => c.Faction = "playerNativeAlly";
-        else if (hostile) p.Setup = c => c.SetAttitudeToPlayer(Attitude.Hostile);
+        // Hostile: to the player and to the player's allies (playerNativeAlly: companions, a co-op partner), as the
+        // game's own enemies are.
+        else if (hostile) p.Setup = c => { c.SetAttitudeToPlayer(Attitude.Hostile); c.SetAttitudeToFaction("playerNativeAlly", Attitude.Hostile); };
         Place(p);
         p.When = Condition.Code(() => false);     // created: never again
         return Placed(id);

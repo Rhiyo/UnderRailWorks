@@ -10,13 +10,15 @@ namespace UnderRailWorks
     public sealed partial class Character
     {
         // Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it
-        // can't take orders (no movement, not on a map) or the tile is outside the area. Not in turn-based combat.
+        // can't take orders (no movement, not on a map) or the tile is outside the area or not floor. In turn-based combat only on its
+        // own turn, spending movement points then AP as the player's walk does (it stops when they run out).
         public bool MoveTo(int x, int y)
         {
             var c = Entity as c5x;
             var move = c == null ? null : c.GetAspect<ale>();
             var area = Area;
-            if (move == null || area == null || x < 0 || y < 0 || x >= area.Width || y >= area.Height || GameClock.InTurnBasedCombat) return false;
+            if (move == null || area == null || x < 0 || y < 0 || x >= area.Width || y >= area.Height || (GameClock.InTurnBasedCombat && !IsTakingTurn)) return false;
+            if (area.KindAt(x, y, false) != TileKind.Floor) return false;     // a wall or nothing to stand on: the game would quietly not walk
             return move.a(Areas.Tile(area.Game, x, y), 0.0, 1, 0, true) != null;
         }
 

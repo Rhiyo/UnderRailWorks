@@ -15,10 +15,11 @@ player wants, what is known about the game, and the questions to work through on
 
 ## What is known about the game (measured in the decompile, Nov 2026)
 
-- "The player" is mostly one object: the game state's `cyt.ac()` (`cnk.aqu().ac()`), used in about 168 places
-  (experience, the inventory and character windows, dialogs, quests, the camera...). `c5x.IsPlayer` is a flag on the
-  entity (`e2b.d`, used in about 175 places), so a second entity could carry it, but what each of those places does
-  with two players is unknown.
+- "The player" is one entity: the game state's `v().b()` (`cnk.aqu().v().b()`), referenced directly about 1,166
+  times in 540 files (experience, inventory and character windows, dialogs, quests, the camera, triggers...).
+  (`aqu().ac()` is the faction table, not the player: an earlier note here said otherwise.) `c5x.IsPlayer` is a flag
+  on the entity (`e2b.d`, about 175 uses). Making the game accept a second "player" is out of reach; joiners'
+  characters stay ordinary characters the mod controls (CharacterControl), in the player's faction.
 - Combat is turn-based through `crp` (turn start `crp.f()`, end `crp.ahq`); Works already has TurnStarted /
   TurnEnding / ModifyTurnPoints and AI hooks (`Ai.ShouldFlee`, weapon switching), and followers (placed characters
   that follow the player, keep dialog/store across zones).
@@ -78,9 +79,27 @@ character placed by the mod and controlled by those commands instead of by the A
 13. Cheating/trust: friends only (no anti-cheat); say so.
 14. Connection: LAN / port forward / Tailscale first; a relay later?
 
+## Step 1 results (2026-11-11, no network; Works CharacterControl + the Coop mod's console commands)
+
+Tested in game (test zone and Station Alpha, the player in god mode):
+- A controlled character (spawned, faction "player") walks out of combat and, on its own turn, in combat (spending
+  movement points, e.g. 42 -> 12); attacks with its weapon (the game walks it into range, takes AP, rolls hits and
+  crits); ends its turn. Several rounds against two Rathound Alphas until they died; combat ended normally.
+- Its turn waits for its controller: 35 s and about 2 minutes tested (an AI turn ends after 15 s). The game only
+  holds the controlled character's AI step (bm6.r7), keeping its awareness.
+- Enemies target it like the player when it is in the player's faction: a Rathound Alpha next to it attacked it, not
+  the player further away. In `playerNativeAlly` (the force-field/turret faction) enemies rank it last
+  (`bq1.f7`: that faction is a fallback target) and kept attacking the player. The station's own neutrals see it as
+  an ally, as they see the player.
+- Initiative: it gets its own place in the turn order like anyone.
+- Gaps found: MoveTo can't tell "no path" (a closed door): it queues the walk and nothing happens; it now refuses
+  tiles that aren't floor. Works' hostile spawns were hostile to the player only (now also to playerNativeAlly).
+- Not yet checked: faction "player" side effects (crimes, reputation, who gets blamed), its death, items/inventory,
+  using objects and doors, talking, stealth, zone changes (a spawned character stays behind).
+
 ## Plan
 
-1. Spike, no network: in the host's game, a second character controlled by console commands (walk, attack on its
+1. (done, see above) Spike, no network: in the host's game, a second character controlled by console commands (walk, attack on its
    combat turn instead of the AI, use, talk). Answers question 5 and most of the "second controllable character" API.
 2. Networking basics (in the mod): host and join between two copies (two test copies on this machine), a character list, and
    the joiner's commands moving their character on the host.

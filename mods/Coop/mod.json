@@ -1,0 +1,2 @@
+{ "id": "Coop", "name": "Co-op", "version": "0.1.0", "author": "UnderRailWorks", "works": "0.9",
+  "description": "Play together (in development). This version: a second character in your game that you control with console commands (coop.spawn, coop.go, coop.attack, coop.end), to test how the game handles it. Networking comes later." }

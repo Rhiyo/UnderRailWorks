@@ -256,6 +256,12 @@ public sealed class WorksTest : WorksMod
         Commands.Add(this, "wt.grudge", "wt.grudge <name>: Grudges remembers that character (Mods.Call)", args => { var c = World.Characters.FirstOrDefault(x => x.Name == string.Join(" ", args)); return "grudge: " + Mods.Call("Grudges", "Hold", c); });
         Commands.Add(this, "wt.codever", "wt.codever: which build of WorksTest's code is running (reload test)", args => { var r = "code v1, updates seen " + updates; Log.Info(r); return r; });
         GameEvents.Update.Add(this, dt => updates++);
+        Commands.Add(this, "wt.spawnat", "wt.spawnat x y <blueprint>: a hostile at a tile", args =>
+        {
+            var c = World.Spawn(args[2], int.Parse(args[0]), int.Parse(args[1]), SpawnSide.Hostile);
+            Log.Info("spawned at " + args[0] + "," + args[1] + ": " + (c == null ? "none" : c.Name));
+            return c == null ? "none" : c.Name;
+        });
         Commands.Add(this, "wt.edgehere", "wt.edgehere: an edge exit on the player's tile and around (to the test zone)", args =>
         {
             var p = World.Player.Position;

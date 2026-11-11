@@ -1622,3 +1622,15 @@ player picks anything.
 - Things the game holds stay: feats keep their emitted type (Feats.Add reuses it), item edits aren't applied again
   to cached definitions (ModScope.Reloading).
 - `works.patches [owner]`: Harmony patch counts by owner.
+
+## CharacterControl (Control.cs, Nov 2026, for the Co-op mod)
+
+- `CharacterControl.Take(mod, c)` / `Release` / `IsControlled` / `All`: prefix on `bm6.r7(eds)` keeps only the
+  awareness step `a(eds)` (skips the combat step `b(eds)` with its 15 s turn timeout `m_ab`, and the out-of-combat
+  tactic `m_c.avh()`). Release clears `m_ab`.
+- `Character.Attack(target)` = `amc.b(amc)` (btk AutoAttackAction; walks into range, AP checked by the game),
+  `EndTurn()` = the current `d4n.f()`, `IsTakingTurn`. `MoveTo` works on its own combat turn (djk through the action
+  queue, MP spent in em1.hj), refuses non-floor tiles; it can't tell a missing path.
+- `AttitudeTo(other)` (efk.a(faction table = cyt.ac(), other's FactionId)), `SetAttitudeToFaction(faction, a)`.
+- AI target choice `bq1.f7`: candidates must be hostile; `playerNativeAlly` targets are a fallback (only when
+  nothing else); then nearest. A co-op character belongs in faction "player".

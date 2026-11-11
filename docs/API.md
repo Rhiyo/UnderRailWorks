@@ -124,7 +124,10 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 ## Character  _(class, Catalogue.cs)_
 
 - `string Blueprint` — Its blueprint path, matched by name among the creature blueprints (null: no match). See World.BlueprintFor.
-- `bool MoveTo(int x, int y)` — Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it can't take orders (no movement, not on a map) or the tile is outside the area. Not in turn-based combat.
+- `bool IsTakingTurn` — In combat: this character's turn now.
+- `bool Attack(Character target)` — An attack on target with what it holds, as the player's click (the game checks AP, range and line of fire, and refuses with its own message). In combat only on its turn. False: it can't attack now.
+- `bool EndTurn()` — Ends its combat turn (as the player's End Turn: leftover AP carries over up to 10). False: not its turn.
+- `bool MoveTo(int x, int y)` — Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it can't take orders (no movement, not on a map) or the tile is outside the area or not floor. In turn-based combat only on its own turn, spending movement points then AP as the player's walk does (it stops when they run out).
 - `bool TeleportTo(int x, int y)` — Puts it on tile x, y of its area at once (no walking, as the game's scripts move characters between scenes).
 - `DefenseStats Defense`
 - `bool UsingSecondaryWeapon` — In its secondary weapon set now (the game's swap: X). SwitchWeapons() swaps as the key does.
@@ -174,6 +177,8 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `Equipment Equipment` — What it wears and wields; equip and unequip.
 - `override string ToString()` — Its personal attitude to the player (overrides its faction's), as the game's scripts set it.
 - `Attitude AttitudeToPlayer`
+- `Attitude AttitudeTo(Character other)` — How it stands towards another character (its own override for the other's faction, else the faction table), e.g. whether an enemy would fight the player's ally. None for non-characters.
+- `void SetAttitudeToFaction(string faction, Attitude attitude)` — Its own attitude to everyone of a faction ("player", "playerNativeAlly", a faction id as Faction shows), whatever the faction table says. None: back to the table.
 - `void SetAttitudeToPlayer(Attitude attitude)`
 - `bool Say(string text, bool interrupt = true)` — Says a line over its head, as the game's barks do (c0s: floating speech; the game also puts it in the chat log when the player can see the speaker). interrupt: replace what it is saying now. False if it can't speak (no speech aspect: only characters Works placed get one added, game characters keep theirs as saved).
 - `IList<StatusEffect> StatusEffects`
@@ -183,6 +188,13 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `IList<Item> Stock` — A merchant's stock (what the barter screen lists on their side), and what they charge the player per item value.
 - `float Markup`
 - `Variables Variables` — Its own variables (the game's per-character CustomProperties, saved with it).
+
+## CharacterControl  _(class, Control.cs)_
+
+- `static bool Take(WorksMod mod, Character c)` — Its AI stops (see the file's header). False: not a character (or the player, who is the player's already).
+- `static void Release(Character c)`
+- `static bool IsControlled(Character c)`
+- `static IList<Character> All` — The controlled characters in the current zone.
 
 ## CharacterRules  _(class, CharacterRules.cs)_
 
