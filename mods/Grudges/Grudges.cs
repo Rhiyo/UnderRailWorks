@@ -1,5 +1,5 @@
-// Grudges: an UnderRailWorks mod. When a fight ends, hostile characters still alive and hurt (they fled, or the player
-// got away) are remembered with their name and the blueprint they were made from (Character.Blueprint). Entering
+// Grudges: an UnderRailWorks mod. Hostile characters hurt in a fight and not killed by its end (they fled, or the
+// player got away) are remembered with their name and the blueprint they were made from (Character.Blueprint). Entering
 // another area later, with a chance, one of them is there: spawned hostile a few tiles away, with a warning. Kept in
 // the mod's save data (the game's save never holds them). Built from Works' API only.
 using System;
@@ -8,7 +8,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.1")]
 
 public sealed class GrudgesConfig : ModConfig
 {
@@ -38,7 +38,18 @@ public sealed class Grudges : WorksMod
     public override void Load()
     {
         config = GetConfig<GrudgesConfig>();
+        // Hostiles hurt during a fight, noted as it happens (one that flees may be gone from the area when it ends);
+        // the dead are struck off; whoever is left when the fight ends holds a grudge.
+        Combat.ModifyIncomingDamage.Add(this, d =>
+        {
+            var c = d.Target;
+            if (c == null || c.IsPlayer || c.IsDead || !c.IsHostile || hurt.ContainsKey(c)) return;
+            var bp = c.Blueprint;
+            if (bp != null) hurt[c] = c.Name + "|" + bp;
+        }, HookOrder.Late);
+        GameEvents.CharacterDying.Add(this, (who, killer) => { if (who != null) hurt.Remove(who); });
         GameEvents.CombatEnded.Add(this, Remember);
+        GameEvents.GameStarted.Add(this, () => hurt.Clear());
         GameEvents.ZoneLoaded.Add(this, (zone, first) => Return(zone));
         Mods.Provide(this, new GrudgesApi(this));     // other mods: Mods.Call("Grudges", "Hold", character)
     }
@@ -54,17 +65,20 @@ public sealed class Grudges : WorksMod
         return true;
     }
 
+    readonly Dictionary<Character, string> hurt = new Dictionary<Character, string>();
+
     void Remember()
     {
-        var zone = World.ZoneId; if (zone == null) return;
+        var zone = World.ZoneId;
+        if (zone == null || hurt.Count == 0) { hurt.Clear(); return; }
         var l = List;
-        foreach (var c in World.Characters.Where(c => c.IsHostile && !c.IsDead && !c.IsPlayer && c.Health < c.MaxHealth))
+        foreach (var kv in hurt)
         {
-            var bp = c.Blueprint;
-            if (bp == null) continue;     // can't be made again
-            l.Add(c.Name + "|" + bp + "|" + zone);
-            Log.Info(c.Name + " holds a grudge (" + bp + ")");
+            if (kv.Key.IsDead) continue;
+            l.Add(kv.Value + "|" + zone);
+            Log.Info(kv.Value.Split('|')[0] + " holds a grudge");
         }
+        hurt.Clear();
         while (l.Count > config.Remembered) l.RemoveAt(0);
         Store(l);
     }

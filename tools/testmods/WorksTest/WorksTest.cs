@@ -200,9 +200,9 @@ public sealed class WorksTest : WorksMod
             Log.Info("cook: known " + string.Join(", ", Crafting.Known.Where(k => k.Name.Contains("Steak") || k.Name.Contains("Tongue")).Select(k => k.Name)) + "; window " + Windows.Open(Window.Crafting));
             return "cook";
         });
-        Commands.Add(this, "wt.hurt", "wt.hurt <name> <amount>: damage the named character (Combat.Damage)", args =>
+        Commands.Add(this, "wt.hurt", "wt.hurt <name> <amount>: damage the first living character whose name contains <name> (Combat.Damage)", args =>
         {
-            var c = World.Characters.FirstOrDefault(x => x.Name == args[0]);
+            var c = World.Characters.FirstOrDefault(x => x.Name == args[0] && !x.IsDead) ?? World.Characters.FirstOrDefault(x => x.Name != null && x.Name.Contains(args[0]) && !x.IsDead);
             if (c == null) return "none";
             var before = c.Health; var name = c.Name; var dealt = Combat.Damage(c, int.Parse(args[1]));
             Log.Info("hurt " + name + ": " + before + " -> " + (c.Area == null ? "gone" : c.Health.ToString()) + " (dealt " + dealt + ")");

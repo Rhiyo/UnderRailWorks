@@ -1601,3 +1601,7 @@ player picks anything.
   a save/load of that new game (the values use the same per-save data as every other mod).
 - Edge exits also ignore the first second after they're made (one made under the player sent them at once).
   Arriving on one was tested: no bounce; stepping off and on travelled.
+- **Grudges 1.0.1**: hostiles are noted when they take damage during the fight (one that flees may have left the area
+  by the time the fight ends), struck off when they die. Tested with a real fight (wt_testzone with its neutrals
+  removed: they and the Praetorians in cc-res kill a fleeing rathound, which correctly leaves no grudge): the rathound
+  fled, combat ended, "Rathound holds a grudge", and on entering the next area "Rathound returned in cc_ph".
