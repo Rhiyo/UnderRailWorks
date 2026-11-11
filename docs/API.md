@@ -271,8 +271,19 @@ The game's content, listed for modders: item paths with their codes and names, c
 - `static IList<Blueprint> All` — Every blueprint in the game (its blueprint classes).
 - `static IList<Blueprint> Known` — The blueprints the player knows (e3q.d()).
 - `static bool Learn(string idOrName)` — The player learns a stock blueprint (by id or name), as reading its blueprint item does. Saved with the game (the stock game knows every stock blueprint). False if there's no such blueprint.
+- `static IList<CraftPlan> Plans(Character crafter)` — Plans for every blueprint the character knows (the game's and mods' recipes), sorted by name.
 - `static ModRecipe AddRecipe(WorksMod mod, string id, string name, string category, string result, params RecipeSlot[] slots)` — category: Weapons, Armor, Grenades, Ammo, Medicine, Traps, Devices, Processing. result: an item path.
 - `static IList<ModRecipe> ModRecipes`
+
+## CraftPlan  _(class, CraftPlan.cs)_
+
+- `string Name`
+- `string Category`
+- `bool FromMod`
+- `IList<string> Missing` — Labels of required slots nothing in the bag fills.
+- `IDictionary<string, int> Needs` — The skills the picked components need (skill -> value) and the ones the character lacks (skill -> needed).
+- `IDictionary<string, int> Lacks`
+- `bool CanCraft` — Every required slot filled and the skills enough.
 
 ## CustomStat  _(class, CustomStats.cs)_
 
@@ -1553,6 +1564,7 @@ A handle on an interface element (one of the game's controls inside).
 
 - `UiElement View`
 - `IList<string> Items`
+- `IList<Color> ItemColors` — Optional: each row's text colour (same order as Items; missing ones in the usual colour).
 - `int Selection`
 - `int First`
 - `event Action<int> Selected`

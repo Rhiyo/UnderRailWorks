@@ -215,6 +215,7 @@ public sealed class WorksTest : WorksMod
         Zones.AddExit(this, "back", "wt_testzone", "wa-shop", 2, 3, "cc-res", "FromPlayerHouse", "Way back up");
         Commands.Add(this, "wt.useexit", "wt.useexit <id>: the player uses a WorksTest exit (toTest, back)", args => { Commands.CloseConsole(); return "use: " + World.Use(World.Player, "WorksTest.exit." + args[0]); });
         Commands.Add(this, "wt.zone", "wt.zone: travel to the mod zone wt_testzone", args => "travel: " + World.Travel("wt_testzone", "FromElevator"));
+        Commands.Add(this, "wt.skill", "wt.skill <name> <n>: set a game skill's base points", args => { World.Player.SetBaseSkill(args[0], int.Parse(args[1])); return args[0] + " " + World.Player.Skill(args[0]); });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

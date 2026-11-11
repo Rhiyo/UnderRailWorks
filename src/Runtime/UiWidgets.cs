@@ -64,6 +64,8 @@ namespace UnderRailWorks
         internal UiElement Element;
         public UiElement View { get { return Element; } }
         public IList<string> Items { get; set; } = new List<string>();
+        // Optional: each row's text colour (same order as Items; missing ones in the usual colour).
+        public IList<Color> ItemColors { get; set; }
         public int Selection { get; set; } = -1;
         public int First { get; set; }
         internal int RowHeight;
@@ -127,7 +129,7 @@ namespace UnderRailWorks
                     int index = l.First + i;
                     if (index == l.Selection) c.Fill(r, Look.Orange * 0.6f);
                     else if (Ui.IsHot(l.Element) && r.Contains(m)) c.Fill(r, Look.Hot);
-                    c.Text(l.Items[index], r.X + 4, r.Y + Math.Max(0, (l.RowHeight - 16) / 2), Look.Text);
+                    c.Text(l.Items[index], r.X + 4, r.Y + Math.Max(0, (l.RowHeight - 16) / 2), l.ItemColors != null && index < l.ItemColors.Count ? l.ItemColors[index] : Look.Text);
                 }
                 if (l.Items.Count > rows)
                 {

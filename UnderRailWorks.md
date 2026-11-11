@@ -1452,3 +1452,14 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
 - Test harness trap: run-underrail's `inp.sh key` sent navigation keys (Delete, Insert, Home/End, PgUp/PgDn, arrows)
   without the extended flag, so Wine reported their number-pad twins (Delete arrived as the keypad's "."). Fixed in
   input.cs (`Ext`).
+
+## Workbench Planner; Crafting.Plans (Nov 2026)
+
+- `Crafting.Plans(character)`: for each known recipe (the game's blueprints and mods' recipes) a `CraftPlan`: the
+  required slots nothing in the bag fills (`Missing`), the skills the picked components need (`Needs`, from the
+  blueprint's own private `a(components)`, the numbers the crafting window shows) and those the character lacks
+  (`Lacks`). Components are picked first-fit; nothing is crafted or moved. `UiList.ItemColors`: a colour per row.
+- **Workbench Planner** (mods/WorkbenchPlanner, key D): a window with every known recipe, ready ones first (green), the
+  rest with what they still need ("Fried Siphoner Tongue: needs Siphoner Tongue", "Throwing Net: needs Tailoring 25");
+  selecting one shows its category and the skills its parts need. Tested with mod recipes and a game blueprint, with
+  Tailoring 40 (ready) and 10 (needs 25).

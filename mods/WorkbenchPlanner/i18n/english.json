@@ -1,0 +1,10 @@
+{
+  "key": "Workbench Planner",
+  "title": "Workbench Planner",
+  "summary": "{0} of {1} recipes can be made now",
+  "ready": "{0}: ready",
+  "missing": "{0}: needs {1}",
+  "skill": "{0} {1}",
+  "none": "You don't know any recipes yet.",
+  "pick": "Select a recipe for details."
+}
