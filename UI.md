@@ -33,6 +33,11 @@ wide after insets) can be clipped, overlapping or tiny elsewhere.
 - Keyboard: a popup with a text box gives the box the keyboard when it opens, and keeps it if something closing in the
   same moment takes it back (a conversation does: see `UiWindows.KeepAskFocus`).
 
+- **Move things only through `Ui.Move`** (or what uses it: `Ui.Add`, `UiDrag`, `Ui.KeepInside`, `Ui.Restore`, window
+  drags). A world view (`a7m`: the world, the Global Map's map) works out its screen position only when resized; after
+  a move, `Ui.Move` makes every world view inside the moved element work it out again. Setting a control's Location
+  directly leaves its contents drawn (and clicked) at the old place.
+
 ## Known debt
 
 - `Ui.Window` is the game's titled window (`a9t`: frame, title strip, font and close button of the interface size;
