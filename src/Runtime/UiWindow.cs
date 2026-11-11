@@ -38,13 +38,14 @@ public sealed class UiWindow : UiPanel
 
 public static partial class Ui
 {
-    // A window on the HUD (null if there is no HUD). id: unique within the mod, for remembering its place. Opening a
+    // A window on the HUD, or on the main menu when it is showing (null otherwise). id: unique within the mod, for remembering its place. Opening a
     // window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player
     // something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose
     // (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
     public static UiWindow Window(WorksMod mod, string id, string title, int width, int height)
     {
         var hud = Hud.Root;
+        if (hud == null) { var screen = UiPopups.Screen(); if (screen is a8k) hud = UiElement.Of(screen); }     // on the main menu: over it (closed when a game starts)
         if (hud == null) return null;
         var open = UiWindows.Open.FirstOrDefault(o => o.Mod == mod && o.Id == id && o.IsOpen);
         if (open != null) return open;

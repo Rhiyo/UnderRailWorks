@@ -20,9 +20,10 @@ namespace UnderRailWorks
 public static partial class Ui
 {
     // A line of text, in the save-name popup with the question above the box. OK (or Enter) passes the trimmed text
-    // (OK stays disabled while it's empty); Cancel or Escape don't. Letters, digits and spaces, up to 30.
+    // (OK stays disabled while it's empty); Cancel or Escape don't. Letters, digits and spaces, up to 30, plus the
+    // characters in alsoAllow (".:" for an address, "-'" for names...).
     //   Ui.Ask(this, "What will you call your dog?", "Rex", name => { ... });
-    public static bool Ask(WorksMod mod, string question, string initial, Action<string> onAnswer, string okText = "OK")
+    public static bool Ask(WorksMod mod, string question, string initial, Action<string> onAnswer, string okText = "OK", string alsoAllow = null)
     {
         var screen = UiPopups.Screen();
         if (screen == null) return false;
@@ -30,6 +31,7 @@ public static partial class Ui
         var ok = UiPopups.Field<dak>(popup, "c");
         if (ok != null && okText != null) ok.Text = okText;
         UiPopups.AddQuestion(popup, question);
+        if (!string.IsNullOrEmpty(alsoAllow)) { var box = UiPopups.Field<c68>(popup, "b"); if (box != null) foreach (var ch in alsoAllow) if (!box.m().Contains(ch)) box.m().Add(ch); }     // e4u.a(c68): its typed-character list
         popup.a((EventHandler)((sender, e) => UiPopups.Answer(mod, () => { var text = popup.e(); if (text.Length > 0 && onAnswer != null) onAnswer(text); })));
         UiPopups.Show(popup, screen);
         popup.d();      // the box has the keyboard (again over the next frames: a conversation closing meanwhile takes it back)

@@ -68,7 +68,7 @@ namespace UnderRailWorks
         public static void SetItemIcon(WorksMod mod, string itemCode, string file) { AssetStore.ItemIcon(itemCode, Register(mod, "item." + itemCode, file)); }
     }
 
-    public static class MainMenu
+    public static partial class MainMenu
     {
         // The picture behind the main menu (and the other full-screen menus that use the same art: options, loading a
         // game). Works' BackgroundFit setting decides between cropping and letterboxing it.

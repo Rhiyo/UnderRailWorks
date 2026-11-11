@@ -533,6 +533,15 @@ sheet must keep its layout.
   game's own name back, so saves never hold a mod's icon name (**not yet tested with an item in a quick slot**).
 - `MainMenu.SetBackground(mod, file)`: replaces every main-menu concept art variant (`concept\*mm\<aspect>`); the
   logo is part of the art. BackgroundFit decides crop or letterbox.
+- `MainMenu.AddButton(mod, text, onClick)` (Nov 2026): a button in the main menu's column, above Exit, in the
+  game's style for the menu theme (`a8k.a(zt)`, colours copied from Exit). After `a8k.c()` the mods' buttons take
+  Exit's place, Exit moves down by the column's spacing (1.5 button heights, 55 in Classic) and the panel grows
+  upwards, so its bottom stays where the game put it. Added every time the menu is built. Tested at Small and Huge.
+- `Ui.Window` also opens on the main menu when no HUD exists (over `a8k`; closed when a game starts, as HUD windows
+  are on a new HUD).
+- `Ui.Ask(..., alsoAllow)`: the save-name popup's box only types what is in its character list (`e4u.a(c68)`:
+  letters, digits, space; `t3.a(char)` checks `m()`), so an address couldn't be typed. alsoAllow adds characters
+  (Co-op passes ".:-"). Tested: `.`, `:` and the keypad's `.` go in.
 - Tested in game: the menu background; the bandage's icon in the inventory; a texture pack recolouring the player's
   HUD portrait and the player's sprite sheet in the world; exports of icon atlases, a portrait, a sprite sheet.
   Never commit exported game textures: they are the game's files.

@@ -34,6 +34,7 @@ public sealed partial class Coop
             Hud.AddPart(this, "Co-op button", button, HudAnchor.TopRight, 70, 62);
         });
         GameEvents.Update.Add(this, dt => { if (windowKey.Pressed) Toggle(); });
+        MainMenu.AddButton(this, "Join a Game", AskJoin);
     }
 
     void Toggle()
@@ -59,7 +60,6 @@ public sealed partial class Coop
 
     void Build()
     {
-        if (World.Player == null) return;
         int w = Ui.S(600), h = Ui.S(380), line = Ui.LineHeight, pad = Ui.S(10);
         window = Ui.Window(this, "coop", "Co-op", w, h);
         if (window == null) return;
@@ -77,7 +77,7 @@ public sealed partial class Coop
         switch (builtFor)
         {
             case "idle":
-                button("Host this game", () => Commands.Print("co-op: " + Host(new string[0])));
+                if (World.Player != null) button("Host this game", () => Commands.Print("co-op: " + Host(new string[0])));
                 button("Join a game...", AskJoin);
                 break;
             case "host":
@@ -206,8 +206,8 @@ public sealed partial class Coop
             lastAddress = address.Trim();
             var r = Join(new[] { lastAddress });
             Tell(r);
-            Changed();
-        }, "Join");
+            if (window == null || !window.IsOpen) Build(); else Changed();
+        }, "Join", ".:-");
     }
 
     void Leave()

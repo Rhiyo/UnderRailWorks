@@ -224,6 +224,7 @@ namespace UnderRailWorks.Internal
             step("item edits", () => ItemHooks.Forget(id));
             step("api", () => Mods.Forget(id));
             step("new game options", () => NewGameOptions.Forget(id));
+            step("main menu buttons", () => MainMenu.Forget(id));
             step("settings page", () => ModOptions.Forget(id));
             step("abilities", () => { Abilities.All.RemoveAll(a => a.Owner != null && a.Owner.Id == id); AbilityBars.Dirty = true; });
             step("skills", () => { CustomStats.AbilityList.RemoveAll(a => a.Owner != null && a.Owner.Id == id); CustomStats.SkillList.RemoveAll(s => s.Owner != null && s.Owner.Id == id); });

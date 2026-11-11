@@ -635,6 +635,7 @@ static class UiHooks
     static void MainMenu(object __instance)
     {
         if (UnderRailWorks.Hud.Exists) { UnderRailWorks.Hud.Gone(); if (UiEvents.HudDestroyed.Any) UiEvents.HudDestroyed.Run(h => h()); }     // back to the main menu: no HUD
+        UnderRailWorks.MainMenu.Built((a8k)__instance);
         var root = UiElement.Of((euz)__instance);
         if (UiEvents.MainMenuCreated.Any) UiEvents.MainMenuCreated.Run(h => h(root));
     }

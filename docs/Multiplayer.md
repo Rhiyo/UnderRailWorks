@@ -106,6 +106,9 @@ Tested in game (test zone and Station Alpha, the player in god mode):
 - The Co-op window (HUD button): host / join (address popup), the host's list of who plays what and its addresses,
   the joiner's character list, the playing view (health, whose turn, messages, End turn / Attack nearest / Follow
   host / Walk to... / Leave). Tested both sides against scripted peers at 2560x720 (Small) and 5120x1440 (Huge).
+- Co-op 0.3.1: a "Join a Game" button on the main menu (Works' MainMenu.AddButton) asks the address and opens the
+  Co-op window over the menu: joining, choosing and playing work without loading a save (tested against a scripted
+  host). The address box didn't accept `.` or `:` before (Works' Ui.Ask now takes extra characters).
 - Works fix found on the way: HUD parts the player had placed were only reserved when the stacking reached them, so
   a later-stacked one (the Layout button) could end up on top of another (Hud.Flow).
 
