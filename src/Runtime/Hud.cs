@@ -526,7 +526,7 @@ static class WindowSideHooks
     }
 }
 
-public static class Trade
+public static partial class Trade
 {
     // Opens barter between the player and a merchant (a character with a store); false otherwise.
     public static bool Open(Character merchant)

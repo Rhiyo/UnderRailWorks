@@ -1,0 +1,11 @@
+{
+  "key": "Mark junk",
+  "marked": "{0}: junk",
+  "unmarked": "{0}: not junk",
+  "tooltip": "Junk (Pack Mule)",
+  "button": "Offer junk",
+  "offered": "{0} offered",
+  "none": "No junk in your bag",
+  "notWanted": "This merchant doesn't buy your junk",
+  "skipped": " ({0} not wanted here)"
+}

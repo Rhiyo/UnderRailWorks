@@ -1437,3 +1437,18 @@ waypoint of another zone; default look: a hole in the ground (`objects\largemach
 Placed objects now show a placement's `Name` as their hover label. Tested: from the residential district outside the
 player's house into the mod zone and back (by script), and by hand: hovering shows "Strange hole" with the use cursor,
 clicking walks there and travels. So a new dungeon is reachable from the game's world without touching its maps.
+
+## Pack Mule; Items.Hovered, Trade.Offer / WillBuy (Nov 2026)
+
+- `Items.Hovered`: the item under the mouse in any game window (the deepest visible control implementing the game's
+  item-cell interface `ta`, mouse over it, holding an item). `Trade.IsOpen`, `Trade.Window` (the barter window, to put
+  a button on), `Trade.WillBuy(item)` (the game's own test, `b6o.aeg`: what it doesn't cross out), `Trade.Offer(item,
+  stacks)`: from the player's bag into their offer, as the game's Auto button does (bag `z5`, offer grid `b6o.g.l().z3`,
+  then `b6o.g()` recounts). The game's Trade button still makes the deal.
+- **Pack Mule** (mods/PackMule): hover an item, press Delete (rebindable) to mark that kind of item as junk (per save;
+  "Junk (Pack Mule)" in its tooltip); "Offer junk" at the barter window's top right offers all junk the merchant buys.
+  Tested: marking from the inventory during barter, the tooltip line, offering (a merchant who only buys plants: the
+  Cave Ears went in, the meat stayed in the bag, "1 item offered (1 not wanted here)"), Auto + Trade sold them.
+- Test harness trap: run-underrail's `inp.sh key` sent navigation keys (Delete, Insert, Home/End, PgUp/PgDn, arrows)
+  without the extended flag, so Wine reported their number-pad twins (Delete arrived as the keypad's "."). Fixed in
+  input.cs (`Ext`).

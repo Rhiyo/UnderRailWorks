@@ -1,0 +1,2 @@
+{ "id": "PackMule", "name": "Pack Mule", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+  "description": "Hover an item and press Delete to mark that kind of item as junk (again to unmark). At a merchant, \"Offer junk\" puts all of it from your bag into your offer; you still confirm with the game's Trade button." }

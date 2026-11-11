@@ -711,6 +711,7 @@ Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medic
 - `static void ModifyTooltip(WorksMod mod, Action<Item, Tooltip> edit)` — Lines added to item tooltips (every window that shows them).
 - `static IList<string> All(ItemKind? kind = null)` — Every item path in the game's data (and the mods' defined ones), optionally of one kind.
 - `static IList<string> Defined` — Every new item's path the mods defined.
+- `static Item Hovered` — The item under the mouse in any of the game's windows (an item cell: the game's `ta` controls), or null.
 
 ## ItemTake  _(class, Cancellable.cs)_
 
@@ -1393,6 +1394,10 @@ What a tile holds, as a map would show it.
 ## Trade  _(class, Hud.cs)_
 
 - `static bool Open(Character merchant)` — Opens barter between the player and a merchant (a character with a store); false otherwise.
+- `static bool IsOpen` — The barter window is open.
+- `static UiElement Window` — The barter window (to put a mod's button on it), or null.
+- `static bool WillBuy(Item item)` — The merchant in the open barter window buys this item (the game's own test: b6o.aeg; it crosses out the rest).
+- `static bool Offer(Item item, int stacks = 0)` — Moves stacks of an item from the player's bag into their offer (all of them: stacks <= 0). False if the barter window isn't open or the item isn't in the bag. The game's Trade button then decides as usual.
 
 ## TradeStart  _(class, Cancellable.cs)_
 

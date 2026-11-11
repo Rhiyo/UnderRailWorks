@@ -26,7 +26,7 @@ public sealed class Inventory
     readonly Func<efk> owner;
     internal Inventory(Func<efk> owner) { this.owner = owner; }
 
-    efk Owner { get { var o = owner(); if (o == null) throw new InvalidOperationException("the character is gone"); return o; } }
+    internal efk Owner { get { var o = owner(); if (o == null) throw new InvalidOperationException("the character is gone"); return o; } }
     bool IsPlayer { get { return owner() is e3q; } }
 
     // Items in the bag (not equipped ones).
