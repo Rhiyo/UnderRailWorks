@@ -112,7 +112,26 @@ public sealed partial class Coop
         });
     }
 
-    void Owners() { var z = string.Join(",", seats.Values.Where(s => s.Split != null).Select(s => s.Split).ToArray()); foreach (var s in seats.Values) s.Peer.Send("OWNERS", z); }
+    // Who runs which zone: told to everyone, and outlined on the host's world map.
+    void Owners()
+    {
+        var z = string.Join(",", seats.Values.Where(s => s.Split != null).Select(s => s.Split).ToArray());
+        foreach (var s in seats.Values) s.Peer.Send("OWNERS", z);
+        foreach (var s in seats.Values.Concat(orphans).Where(s => s.Record != null))
+            if (s.Split != null) WorldMap.Mark(this, "player:" + s.Record.Name, s.Split, OtherPlayer); else WorldMap.Unmark(this, "player:" + s.Record.Name);
+    }
+    static readonly Color OtherPlayer = new Color(80, 170, 255);
+
+    // The joiner's map, while on their own: the host's zone and the others'.
+    void MarkOthers()
+    {
+        foreach (var k in marked) WorldMap.Unmark(this, k);
+        marked.Clear();
+        if (ownZone == null) return;
+        if (hostZone != null) { WorldMap.Mark(this, "host", hostZone, OtherPlayer); marked.Add("host"); }
+        foreach (var z in owned.Where(z => !string.Equals(z, ownZone, StringComparison.OrdinalIgnoreCase))) { WorldMap.Mark(this, "other:" + z, z, OtherPlayer); marked.Add("other:" + z); }
+    }
+    readonly List<string> marked = new List<string>();
 
     void Detach(Seat seat)
     {
@@ -224,8 +243,8 @@ public sealed partial class Coop
     {
         switch (w[0])
         {
-            case "HOSTZONE": if (w.Length > 1) hostZone = w[1]; return true;
-            case "OWNERS": owned = new HashSet<string>((w.Length > 1 ? w[1] : "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries), StringComparer.OrdinalIgnoreCase); return true;
+            case "HOSTZONE": if (w.Length > 1) hostZone = w[1]; MarkOthers(); return true;
+            case "OWNERS": owned = new HashSet<string>((w.Length > 1 ? w[1] : "").Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries), StringComparer.OrdinalIgnoreCase); MarkOthers(); return true;
             case "VARSALL":
             case "VARS":
             {
@@ -268,6 +287,7 @@ public sealed partial class Coop
         SendVars(true);
         host.Send(word);
         ownZone = null; goingTo = null;
+        MarkOthers();
     }
 
     void SendVars(bool force)
@@ -288,6 +308,7 @@ public sealed partial class Coop
             ownZone = World.ZoneId; goingTo = null;
             myVars = Variables.Global.Snapshot(); myQuests = QuestsNow();
             host.Send("ARRIVED", ownZone);
+            MarkOthers();
             Tell("you're in " + ownZone + " on your own (your game runs it); come back to " + (hostName ?? "the host") + " by walking into their zone");
         });
         GameEvents.ZoneLeaving.Add(this, e =>
@@ -335,6 +356,7 @@ public sealed partial class Coop
         ownZone = s[0];
         myVars = Variables.Global.Snapshot(); myQuests = QuestsNow();
         host.Send("ARRIVED", ownZone);
+        MarkOthers();
         Tell((hostName ?? "the host") + " left: you're in " + ownZone + " on your own (your game runs it)");
         Build();
         return true;

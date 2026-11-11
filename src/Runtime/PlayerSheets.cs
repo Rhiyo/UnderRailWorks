@@ -78,6 +78,11 @@ namespace UnderRailWorks
             if (state == null || newSheet == null || SheetProvider == null) return false;
             var oldSheet = state.v();
             if (oldSheet == newSheet) return true;
+            // The HUD's quick-bar slots (dvx) subscribe to the player's sheet and never let go: unbound first (as the
+            // game's export does, ps.amy), or the old sheet keeps handlers that can't be saved (a zone stored with that
+            // character fails: "Zone transition failed").
+            var hud = bpo.GetService<ps>();
+            if (hud != null && Hud.Exists) hud.amy();
             var oldBody = oldSheet == null ? null : oldSheet.b() as c5x;
             var oldAspect = oldBody == null ? null : oldBody.GetAspect<amc>();
             if (oldAspect != null)

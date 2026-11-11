@@ -204,7 +204,30 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
 
-## Players in different zones (asked 2026-11-12; designed, not built)
+## Round 3 (2026-11-12, Co-op 0.8-0.9): built from the design below
+
+- **Fights by sight:** a joined character is in a fight when an enemy in it is within the enemy's own sight range of
+  it, or within its own range of the enemy (each sheet's SightRange; walls not counted). Tested 16 tiles out, 12 in.
+- **Trading:** a conversation's trade opens on the joiner's machine (their character, their money, the merchant's
+  stock packed and sent); on closing, the merchant's stock and the joiner's sheet go back. Tested: a throwing net
+  blueprint bought, 500 -> 458 charons. A mod's spawned merchant gets its store on the joiner too.
+- **The joiner's own changes:** equipping, using, dropping on the joiner (level, XP, bag or gear changed) sends their
+  sheet; the host rebuilds the character from it (keeping its own health).
+- **Experience:** chosen with Host this game...: everyone in full / full if nearby (20 tiles) / split / only who earned
+  it (a joined character's kill: the game gives kill XP to the host's player, Co-op moves it to the killer); oddities:
+  the same, or only the finder. Each mode tested with 100 XP; kill credit and oddities not seen in game (the saves
+  used have no Classic-system kill XP).
+- **Conversations:** a joiner leaving or closing the Conversation window ends it on the host.
+- **Other mods on joiners:** Works refuses their world changes (Simulation.IsMirror). Tested: a spawn refused.
+- **Players in different zones:** as designed below (CoopZones.cs). Tested in cc-res / cc_ph: a joiner taking an exit
+  alone ran cc_ph on their machine; variables both ways; walking back in rejoined (placed by the host, a mirror
+  again); the host leaving with the joiner far away left them running cc-res (saved and sent first), and coming back
+  had it handed over (263 KB). World map: each side's map outlines the other players' zones in blue.
+- Not done: more than one joiner apart in the same zone (refused instead), travelling characters (glent) with a
+  handed-over zone, scripts on zone entry meant for "the player" on a joiner's machine, a joiner's machine crashing
+  while apart (up to 60 s of their zone lost).
+
+## Players in different zones (asked 2026-11-12; designed, then built: round 3)
 
 The player wants players free to be in different zones, the world map showing where *your* character is, and an API
 to make some zones (and some conversations or objects) need everyone together (the last part is built: Party.NeedTogether).

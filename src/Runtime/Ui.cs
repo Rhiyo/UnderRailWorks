@@ -607,6 +607,7 @@ static class UiHooks
         Group("remote (orders, simulation)", () => RemoteHooks.Install(harmony));
         Group("talking as another character", () => TalkHooks.Install(harmony));
         Group("party and exits", () => PartyHooks.Install(harmony));
+        Group("world map marks", () => WorldMapHooks.Install(harmony));
         Group("assets", () => AssetStore.Install(harmony));
         Group("clock, items, crafting, stealing", () => ActivityHooks.Install(harmony));
         Group("item definitions and tooltips", () => ItemHooks.Install(harmony));

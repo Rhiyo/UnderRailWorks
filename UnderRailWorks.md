@@ -1689,3 +1689,28 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
   `Exits.Disable/Enable/IsEnabled(zone, x, y)` (refuses the walk to the exit, ale.a(tile, trigger)). The game's own
   exits can also be closed by map scripts (each trigger has a condition: b0j.Condition, cdo.c()).
 - `works.body <name>`: a character's footprint, size, entity state, combat state (debugging).
+
+### Multiplayer support, round 2 (2026-11-12)
+- **Trading:** `Item.Pack/Unpack` (items with the game's own serializer and binder, eoq + dds: every detail kept),
+  `Character.SetStock` / `StoreName`, `World.OpenTrade(merchant)` (dka.amw), `World.IsTrading`.
+- **Experience:** XP is hooked where a player sheet takes it, `e3q.c(int)` (the player's own path, awq.a for kills,
+  quests and the console, never went through amc.a); `Progression.ModifyExperience` now says `Who`, `Reason` (from
+  awq.a / amc.a) and `FromOddity` ("studying an oddity: ..."); `GameEvents.CharacterExperienceGained(character, xp)`;
+  `GiveExperience` works for any player sheet.
+- **Sight:** `Character.SightRange` (the sheet's: the player 13, a Commoner 10, a Rathound Alpha 8),
+  `Character.HasNoticed(other)` (its AI's detected state, bm6.e; not sight: a starting fight tells the enemies about
+  the player's whole side).
+- **A copy of another game:** `Simulation.IsMirror` makes Works' world-changing calls refuse (logged once each) and
+  skips mod placements on zone load; `Simulation.Apply(...)` is the copy's own way through.
+- **Zones as data:** `Zones.Export(zoneId)` / `Import(bytes)` / `ZoneOf` (the three stored blobs, lmaps\<zone>_L1.uzl,
+  .uzdm, .ap, from bmg's ccc; the current zone stored first with d6f.arr(false)), `Variables.Snapshot()` /
+  `SetValue`, `GameEvents.CharacterLeavingZone` (a non-player taking an exit; `ZoneLeave.Who`),
+  `Character.RemoveFromWorld()`.
+- **World map:** `WorldMap.Mark(mod, key, zoneId, colour)` / `Unmark`: an outline on that zone's map node (a postfix
+  on eg0.a(e5q, d69)); the map's ids are in their own case ("CC-RES"), and its MapOutline shader is always orange,
+  so marks use the creature Outline shader, which takes OutlineColor.
+- **Fixes found on the way:** `World.MakePlayer` unbinds the HUD from the old sheet first (ps.amy: the quick-bar slots
+  dvx subscribe and never let go, and a zone stored with that character then failed: "Zone transition failed"); a
+  controlled character stopped between tiles is settled onto one (an attack's approach starts from a tile); a sheet
+  copied from a character here gets a new Uid (the killer was found by Uid); a spawn's real blueprint
+  (`Character.Blueprint`) instead of a name match.

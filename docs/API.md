@@ -1882,6 +1882,11 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static readonly ReplaceHook<OffsetHandler> InterfaceOffset = new ReplaceHook<OffsetHandler>("InterfaceOffset")` — The interface is being drawn into an off-screen picture placed at from (screen pixels): the first handler that returns true sets it, and UiScaleFix maps drawing by it.
 - `static void TileExtrasStep(WorldView view, DrawContext context, MapTile tile)`
 
+## WorldMap  _(class, WorldMap.cs)_
+
+- `static void Mark(WorksMod mod, string key, string zoneId, Color colour)`
+- `static void Unmark(WorksMod mod, string key)`
+
 ## WorldView  _(struct, DrawApi.cs)_
 
 The world view (a7m): the map's drawing for one frame.
