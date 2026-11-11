@@ -1,0 +1,10 @@
+{
+  "key": "Pin a note",
+  "ask": "A note for this spot:",
+  "removeTitle": "Remove pin",
+  "removeText": "Remove the pin \"{0}\"?",
+  "pinned": "Pinned",
+  "removed": "Pin removed",
+  "noSpot": "Point at a spot in the world first",
+  "locked": "Locked {0} ({1})"
+}

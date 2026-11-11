@@ -164,6 +164,16 @@ public static partial class World
             return c.IsDead ? null : c;
         }
     }
+    // The map tile under the mouse (null: the mouse is over the interface, or no world): what a click would walk to.
+    public static Point? HoveredTile
+    {
+        get
+        {
+            var view = Hud.Current == null ? null : WorldViewField.GetValue(Hud.Current) as dnn;
+            var tile = view == null ? null : view.an1();
+            return tile == null ? (Point?)null : tile.Location;
+        }
+    }
     static readonly System.Reflection.FieldInfo WorldViewField = typeof(ci3).GetField("m_t", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic) ?? typeof(ci3).GetField("t", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
 
     // Every container in the current zone (crates, lockers, corpses...).

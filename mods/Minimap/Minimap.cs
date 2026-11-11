@@ -13,7 +13,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0")]
 
 public sealed class MinimapConfig : ModConfig
 {
@@ -167,8 +167,9 @@ sealed class MapPicture
                 Square(m.Position, cx, cy, k2, Merchant);
             }
         // Markers: a diamond in the marker's colour; one off the map sits on its edge, in its direction.
+        labels.Clear();
         if (markers != null)
-            foreach (var mk in markers) Diamond(new Vector3(mk.X, mk.Y, 0), cx, cy, k2, mk.Colour);
+            foreach (var mk in markers) labels.Add(new KeyValuePair<Point, string>(Diamond(new Vector3(mk.X, mk.Y, 0), cx, cy, k2, mk.Colour), mk.Label));
         Dot(at, cx, cy, k2, player.OutlineColor, 3);     // the player last, on top (gold, as Tab)
     }
 
@@ -186,7 +187,10 @@ sealed class MapPicture
             }
     }
 
-    void Diamond(Vector3 map, float cx, float cy, float k2, Color colour)
+    // Where each marker's diamond is (picture pixels) and its label: shown when the mouse rests on it.
+    readonly List<KeyValuePair<Point, string>> labels = new List<KeyValuePair<Point, string>>();
+
+    Point Diamond(Vector3 map, float cx, float cy, float k2, Color colour)
     {
         float dx = map.X + 0.5f - cx, dy = map.Y + 0.5f - cy;
         float fx = tw / 2f + (dx - dy) * k2, fy = th / 2f + (dx + dy) * k2 / 2;
@@ -207,6 +211,7 @@ sealed class MapPicture
                 if (d > r || px < 0 || py < 0 || px >= tw || py >= th) continue;
                 pixels[py * tw + px] = d == r ? Outline : colour;
             }
+        return new Point(sx, sy);
     }
 
     // A round dot with a dark rim at a map position.
@@ -236,5 +241,17 @@ sealed class MapPicture
         }
         if (changed) { picture.SetData(pixels); changed = false; }
         canvas.DrawTexture(picture, canvas.Bounds, Color.White);
+        // A marker's label while the mouse is on its diamond (the picture is drawn at its own size).
+        var b = canvas.Bounds; var m = Input.Mouse;
+        if (!b.Contains(m)) return;
+        foreach (var l in labels)
+        {
+            if (string.IsNullOrEmpty(l.Value) || Math.Abs(b.X + l.Key.X * b.Width / tw - m.X) > 6 || Math.Abs(b.Y + l.Key.Y * b.Height / th - m.Y) > 6) continue;
+            int w = Ui.TextWidth(l.Value) + 10, x = Math.Max(b.X, Math.Min(b.Right - w, m.X - w / 2)), y = m.Y - 26;
+            canvas.Fill(new Rectangle(x, y, w, 18), new Color(8, 8, 8, 230));
+            canvas.Frame(new Rectangle(x, y, w, 18), new Color(181, 92, 0));
+            canvas.Text(l.Value, x + 5, y + 1, new Color(230, 220, 200));
+            break;
+        }
     }
 }

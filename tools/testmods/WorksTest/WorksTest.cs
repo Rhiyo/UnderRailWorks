@@ -480,6 +480,7 @@ public sealed class WorksTest : WorksMod
         });
         GameEvents.Update.Add(this, seconds =>
         {
+            if (Input.Typing) return;     // the console or a text box has the keyboard: no test hotkeys
             var p = World.Player;
             if (p == null) return;
             if (Input.Pressed(Keys.N))

@@ -1,7 +1,7 @@
 {
   "id": "Minimap",
   "name": "Minimap",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "UnderRailWorks",
   "works": "0.9",
   "description": "A minimap on the HUD: the area around you, exits, and the characters you can see in their Tab outline colours."

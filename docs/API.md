@@ -1695,6 +1695,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static IList<Character> Characters` — Every living character in the current zone (all its areas), the player included.
 - `static IList<Character> CharactersNear(Vector3 at, float radius)` — Living characters in the current zone within radius tiles of a point (distance on the map, levels ignored), nearest first (the player included if in range; filter with Where). at: e.g. World.Player.Position.
 - `static Character Hovered` — The character under the mouse in the world (null: none, or not a character): the one the game outlines white. (The world view mv is a dnn; dnn.an2() is what the mouse is over.)
+- `static Point? HoveredTile` — The map tile under the mouse (null: the mouse is over the interface, or no world): what a click would walk to.
 - `static IList<Container> Containers` — Every container in the current zone (crates, lockers, corpses...).
 - `static string ZoneId` — The current zone's id, for Placement.Zone (null outside a game).
 - `static void Place(Placement p)`

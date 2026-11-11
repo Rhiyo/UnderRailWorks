@@ -1486,3 +1486,13 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   (amber within 2 tiles of it, green beyond), "noticing you" (red), "can't notice you". Tested in the player's house
   against an Ironhead gunner (Detection 60 vs Stealth 29, light 0.39): 7.4 tiles; at 8 tiles nothing happened, at
   4.5 the label turned red and the gunner detected the player within about 20 s (combat).
+
+## Survey Pins; World.HoveredTile; Minimap 1.1 (Nov 2026)
+
+- `World.HoveredTile`: the map tile under the mouse (the world view's `dnn.an1()` -> `ak1.Location`), null over the
+  interface.
+- **Survey Pins** (mods/SurveyPins): Insert on a spot -> `Ui.Ask` for a note -> a marker (light blue); Insert on a pin
+  -> `Ui.Confirm` to remove it. Locked containers on discovered tiles get an orange pin "Locked Locker (30)" (name,
+  difficulty) until opened (setting). **Minimap 1.1**: a marker's label shows while the mouse rests on its diamond.
+  Tested in South Gate Station: the pin "Stash", the locker pins, the hover labels, removing the pin.
+- WorksTest's debug hotkeys now skip while a text box has the keyboard (typing "stash" opened Bret's dialog: H).

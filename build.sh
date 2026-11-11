@@ -89,7 +89,7 @@ cp "$FNA" "$OUT64/"
 cp "$HERE"/lib/fna/x64/*.dll "$OUT64/x64/"
 
 # The shipped mods, into dist's Mods/.
-for m in UnderRailFixes Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic BountyHunter Beastmaster Hunger Ambushes Scavenger CharacterBuilder HousePets PackMule WorkbenchPlanner ShotBreakdown StealthLens; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
+for m in UnderRailFixes Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic BountyHunter Beastmaster Hunger Ambushes Scavenger CharacterBuilder HousePets PackMule WorkbenchPlanner ShotBreakdown StealthLens SurveyPins; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
 cp "$HERE/mods/FieldMedic/treat.wav" "$OUT/Mods/FieldMedic/"
 # Content packs (JSON only, no code).
 for m in CampfireCooking; do rm -rf "$OUT/Mods/$m"; cp -r "$HERE/mods/$m" "$OUT/Mods/$m"; done
