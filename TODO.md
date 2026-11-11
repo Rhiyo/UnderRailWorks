@@ -96,14 +96,14 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 ## More test mods (ranked from research: what popular mods do, what UnderRail players ask for)
 
 - [x] Quest Tracker, Word Gets Around, Difficulty Dial, After-Action Report, Contract Board.
-- [ ] Shot Breakdown: hit chance and damage parts in the tooltip (needs the hit chance's components, not just the total).
+- [x] Shot Breakdown: hit chance and damage parts in the tooltip (needs the hit chance's components, not just the total). (done Nov 2026: range and darkness, by the game's formula; mods/ShotBreakdown)
 - [x] Vendor Directory (the zone's merchants, trade from the list) and Fair Trade (price settings).
 - [x] Merchant Ledger: vendor stock and prices remembered across zones, searchable (Ui.TextBox).
-- [ ] Pack Mule: sell tagged junk in one click (needs selling through the barter screen's own transaction).
-- [ ] Stealth Lens: show where enemies would notice you (needs detection rules: research).
+- [x] Pack Mule: sell tagged junk in one click (needs selling through the barter screen's own transaction). (done Nov 2026: mark with Delete, "Offer junk" in barter; mods/PackMule)
+- [x] Stealth Lens: show where enemies would notice you (needs detection rules: research). (done Nov 2026: notice distance per enemy while sneaking; mods/StealthLens)
 - [~] Survey Pins: the Minimap marks merchants; still: pins with notes, workbenches, locked containers.
 - [x] Neural Reallocation: a respec NPC (points refunded to the game's own unspent points).
-- [ ] Workbench Planner: recipes, what can be crafted now (mods can now add recipes: Crafting.AddRecipe).
+- [x] Workbench Planner: recipes, what can be crafted now (mods can now add recipes: Crafting.AddRecipe). (done Nov 2026: key D; mods/WorkbenchPlanner)
 - [ ] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist.
 - [x] HUD Layout: drag the game's HUD parts around, kept relative to an anchor (survives resolution changes) (Works: Input.Mouse, UiElement.X/Y).
 
