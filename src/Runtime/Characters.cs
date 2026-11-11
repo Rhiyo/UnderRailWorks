@@ -164,6 +164,16 @@ public static partial class World
             return c.IsDead ? null : c;
         }
     }
+    // The areas of the current zone (a building's floors, a station's levels...), in the zone's order.
+    public static IList<Area> ZoneAreas
+    {
+        get
+        {
+            var zone = Areas.CurrentZone();
+            return zone == null || zone.Areas == null ? new List<Area>() : zone.Areas.Select(Area.Of).Where(a => a != null).ToList();
+        }
+    }
+
     // The map tile under the mouse (null: the mouse is over the interface, or no world): what a click would walk to.
     public static Point? HoveredTile
     {

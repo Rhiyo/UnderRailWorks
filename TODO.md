@@ -79,7 +79,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
   their Tab colours; ModConfig settings.
 - [ ] Wrap the drawing API (WorldDraw passes a7m/cp9/a2f) in Works types, so UnderRailFixes can be built without the
   game too, like Minimap and HelloUI.
-- [~] Minimap next: click to open a larger map, remember explored tiles per area, other floors (Z) of the same area, (Nov 2026: click for a large map, marker labels on hover. Still: remember explored tiles, other floors.)
+- [x] Minimap next: click to open a larger map, remember explored tiles per area, other floors (Z) of the same area, (Nov 2026: click for a large map, marker labels on hover. Then: other floors on the large map; explored tiles are the game's own, saved per area.)
   map markers for quests or containers.
 
 ## Content API (Nov 2026: built, see UnderRailWorks.md "The content API")

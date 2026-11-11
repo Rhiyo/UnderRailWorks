@@ -1528,3 +1528,8 @@ player's sight `dnn.c`, cursor mode `edg.b`, no zoom wheel). Three traps found b
 - Each view redraws the area every frame: keep them small and few.
 Tested: WorksTest `wt.pip` (a window showing the spot 6 tiles from the player), clipped, the main view untouched,
 dragged with its window, with and without UnderRailFixes' occlusion effects.
+- **Minimap 1.4**: the large map steps through the zone's other areas ("<" ">": a building's floors, a station's
+  levels; `World.ZoneAreas` from `c1a.Areas`), each with what the player has explored there (no player dot or view
+  box on other floors). "Remember explored areas" needs nothing from the mod: the game keeps its own fog of war per area
+  in the save (measured in the player's house: 364 tiles hidden on the first visit, 217 when back after exploring;
+  `wt.areas` counts discovered tiles per area: ground floor 187 of 404, upper floor and basement 0, never visited).

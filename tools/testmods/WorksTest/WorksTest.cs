@@ -239,6 +239,16 @@ public sealed class WorksTest : WorksMod
             Ui.Add(w, view, 10, w.Top + 2);
             return "pip at " + view.Centre;
         });
+        Commands.Add(this, "wt.areas", "wt.areas: the zone's areas: size, tiles discovered / with anything", args =>
+        {
+            foreach (var ar in World.ZoneAreas)
+            {
+                int seen = 0, any = 0;
+                for (int x = 0; x < ar.Width; x++) for (int y = 0; y < ar.Height; y++) { if (ar.KindAt(x, y) != TileKind.Nothing) seen++; if (ar.KindAt(x, y, false) != TileKind.Nothing) any++; }
+                Log.Info("area " + ar.Name + " " + ar.Width + "x" + ar.Height + ": discovered " + seen + " of " + any);
+            }
+            return "areas";
+        });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

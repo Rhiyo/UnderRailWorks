@@ -15,7 +15,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.3.0")]
+[assembly: System.Reflection.AssemblyVersion("1.4.0")]
 
 public sealed class MinimapConfig : ModConfig
 {
@@ -53,6 +53,7 @@ public sealed class Minimap : WorksMod
     readonly MapPicture map = new MapPicture(), large = new MapPicture();
     UiWindow largeWindow;
     UiElement mapView, largeView;
+    int floor = -1;     // the large map's area: an index into World.ZoneAreas (-1: the player's)
     MapPicture dragging;
     double sinceDraw;
     List<Character> merchants = new List<Character>();
@@ -74,10 +75,10 @@ public sealed class Minimap : WorksMod
             if (panel == null) return;
             if (Relayout) { Relayout = false; Build(); return; }
             if (toggleKey.Pressed) { hidden = panel.Visible; Ui.Show(panel, !hidden); }     // kept across HUD rebuilds (loads, resolution changes)
-            // Like an area map: left-click (or drag) on the map looks there; right-click on the minimap opens the large map.
+            // Like an area map: left-click (or drag) on the map looks there (on the player's own area); right-click on the minimap opens the large map.
             if (panel.Visible && Input.MousePressed(MouseButton.Right) && Ui.IsHot(panel)) { if (largeWindow != null && largeWindow.IsOpen) largeWindow.Close(); else OpenLarge(); }
             if (Input.MousePressed(MouseButton.Left))
-                dragging = panel.Visible && mapView != null && Ui.IsHot(mapView) ? map : largeWindow != null && largeWindow.IsOpen && largeView != null && Ui.IsHot(largeView) ? large : null;
+                dragging = panel.Visible && mapView != null && Ui.IsHot(mapView) ? map : largeWindow != null && largeWindow.IsOpen && largeView != null && Ui.IsHot(largeView) && floor < 0 ? large : null;
             if (dragging != null)
             {
                 if (!Input.MouseDown(MouseButton.Left)) dragging = null;
@@ -91,11 +92,13 @@ public sealed class Minimap : WorksMod
             map.Update(World.Player, config.ShowCharacters ? World.Visible : null, config.TilesAcross / 2, config.ShowExits, config.ShowMerchants ? merchants : null, config.ShowMarkers ? markers : null);
             if (largeWindow != null && largeWindow.IsOpen)
             {
-                var a = World.Player == null ? null : World.Player.Area;
+                var areas = World.ZoneAreas;
+                var a = floor >= 0 && floor < areas.Count ? areas[floor] : World.Player == null ? null : World.Player.Area;
                 bool fit = config.LargeTilesAcross == 0 && a != null;
                 // The whole area: an isometric map W x H spans W + H tiles across the screen; centred on its middle.
                 large.Update(World.Player, config.ShowCharacters ? World.Visible : null, fit ? (a.Width + a.Height) / 2 + 2 : config.LargeTilesAcross / 2, config.ShowExits,
-                    config.ShowMerchants ? merchants : null, config.ShowMarkers ? markers : null, fit ? new Vector3(a.Width / 2f, a.Height / 2f, 0) : (Vector3?)null);
+                    config.ShowMerchants ? merchants : null, config.ShowMarkers ? Markers.All.Where(m => m.Zone == World.ZoneId).ToList() : null,
+                    fit ? new Vector3(a.Width / 2f, a.Height / 2f, 0) : (Vector3?)null, a);
             }
             if (map.Note != null) { Log.Info(map.Note); map.Note = null; }
         });
@@ -119,8 +122,28 @@ public sealed class Minimap : WorksMod
         int ph = h - largeWindow.Top - 8;
         largeView = Ui.Custom(w - 16, ph, large.Draw);
         Ui.Add(largeWindow, largeView, 8, largeWindow.Top + 2);
+        // Other areas of this map (a building's floors, a station's levels): step through them.
+        floor = -1;
+        if (World.ZoneAreas.Count > 1)
+        {
+            var prev = Ui.Button("<", () => Step(-1)); var next = Ui.Button(">", () => Step(1));
+            Ui.Add(largeWindow, prev, 14, largeWindow.Top + 8);
+            Ui.Add(largeWindow, next, 14 + prev.Width + 6, largeWindow.Top + 8);
+        }
         large.Resize(w - 16, ph);
         largeWindow.Closed += () => largeWindow = null;
+        sinceDraw = 1;
+    }
+
+    void Step(int by)
+    {
+        var areas = World.ZoneAreas;
+        if (areas.Count == 0 || largeWindow == null) return;
+        int i = floor >= 0 ? floor : Math.Max(0, areas.IndexOf(World.Player.Area));
+        floor = ((i + by) % areas.Count + areas.Count) % areas.Count;
+        bool mine = areas[floor] == World.Player.Area;
+        Ui.SetText(largeWindow, "Map: " + areas[floor].Name + (mine ? "" : "  (" + (floor + 1) + " of " + areas.Count + ")"));
+        if (mine) floor = -1;
         sinceDraw = 1;
     }
 
@@ -161,13 +184,14 @@ sealed class MapPicture
 
     public void Resize(int width, int height) { tw = Math.Max(16, width); th = Math.Max(8, height); }
 
-    public void Update(Character player, IList<Character> characters, int radius, bool exits, IList<Character> merchants = null, IList<MapMarker> markers = null, Vector3? centre = null)
+    public void Update(Character player, IList<Character> characters, int radius, bool exits, IList<Character> merchants = null, IList<MapMarker> markers = null, Vector3? centre = null, Area show = null)
     {
         if (pixels == null || pixels.Length != tw * th) pixels = new Color[tw * th];
         Array.Clear(pixels, 0, pixels.Length);
         changed = true;
-        var area = player == null ? null : player.Area;
-        if (area == null) return;
+        var area = show ?? (player == null ? null : player.Area);
+        if (area == null || player == null) return;
+        bool here = area == player.Area;     // another floor: no player dot, no view box
         var at = player.Position;
         var mid = centre ?? at;
         float cx = mid.X + 0.5f, cy = mid.Y + 0.5f;
@@ -218,9 +242,10 @@ sealed class MapPicture
         // Markers: a diamond in the marker's colour; one off the map sits on its edge, in its direction.
         labels.Clear();
         if (markers != null)
-            foreach (var mk in markers) labels.Add(new KeyValuePair<Point, string>(Diamond(new Vector3(mk.X, mk.Y, 0), cx, cy, k2, mk.Colour), mk.Label));
-        Dot(at, cx, cy, k2, player.OutlineColor, 3);     // the player last, on top (gold, as Tab)
+            foreach (var mk in markers.Where(mk => mk.Area == null ? here : mk.Area == area.Name)) labels.Add(new KeyValuePair<Point, string>(Diamond(new Vector3(mk.X, mk.Y, 0), cx, cy, k2, mk.Colour), mk.Label));
         lastCx = cx; lastCy = cy; lastK2 = k2;
+        if (!here) return;
+        Dot(at, cx, cy, k2, player.OutlineColor, 3);     // the player last, on top (gold, as Tab)
         ViewBox(cx, cy, k2);
     }
 
