@@ -21,7 +21,7 @@ using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
 {
-    public static class Zones
+    public static partial class Zones
     {
         sealed class Entry { public WorksMod Mod; public string Id, Name, Like, Folder; }
         static readonly Dictionary<string, Entry> added = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);

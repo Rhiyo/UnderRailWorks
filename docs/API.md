@@ -135,6 +135,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `bool UsingSecondaryWeapon` — In its secondary weapon set now (the game's swap: X). SwitchWeapons() swaps as the key does.
 - `void SwitchWeapons()`
 - `int Initiative` — Its initiative (efk.Offense ay(): what StatBonus.Initiative changes).
+- `bool RemoveFromWorld()` — Takes it out of the world now (as the game removes a character: c5x.w(), an()). Not the player.
 - `bool HasPlayerSheet` — It has a whole player sheet (the player, or a character from SpawnFromCharacterFile).
 - `bool ExportTo(string path)` — Writes its sheet as it is now to a .char file (the game's export format; a new game's Import reads it). False: it has no player sheet.
 - `bool ExportTo(string path, DateTime made)` — With the date the file says it was made (the import dialog shows it): a fixed one gives the same bytes for the same sheet, to tell whether it changed.
@@ -538,6 +539,7 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<DialogStart>> DialogStarting = new Hook<Action<DialogStart>>("DialogStarting")` — A conversation about to open (Cancel, or change Name to open another). Not combat barks.
 - `static readonly Hook<Action<EquipAttempt>> Equipping = new Hook<Action<EquipAttempt>>("Equipping")`
 - `static readonly Hook<Action<ZoneLeave>> ZoneLeaving = new Hook<Action<ZoneLeave>>("ZoneLeaving")`
+- `static readonly Hook<Action<ZoneLeave>> CharacterLeavingZone = new Hook<Action<ZoneLeave>>("CharacterLeavingZone")` — A character other than the player is about to take a zone exit (which changes the zone for the whole game, as the player's would): Who, From, To, Entry. Cancel: nothing happens.
 - `static readonly Hook<Action<WeaponSwitch>> WeaponSwitching = new Hook<Action<WeaponSwitch>>("WeaponSwitching")`
 - `static readonly Hook<Action<CraftAttempt>> Crafting = new Hook<Action<CraftAttempt>>("Crafting")`
 - `static readonly Hook<Action<Container, Character, bool>> ContainerOpened = new Hook<Action<Container, Character, bool>>("ContainerOpened");     // container, opener, first time`
@@ -1790,6 +1792,8 @@ A set of named game variables. Values are bool, int, float or string only: the s
 - `void Set(string name, float value)`
 - `void Set(string name, string value)`
 - `void Remove(string name)`
+- `Dictionary<string, object> Snapshot()` — Every variable with a plain value (bool, int, float, string), by name.
+- `void SetValue(string name, object value)` — Sets a plain value (bool, int, float, string) as Snapshot gives it.
 
 ## WeaponSwitch  _(class, Cancellable.cs)_
 
@@ -1913,8 +1917,11 @@ The world view (a7m): the map's drawing for one frame.
 The player about to leave the zone (an exit, a door between maps, a script, World.Travel). To: the destination zone's id, Entry: the entry point there.
 
 
-## Zones  _(class, Zones.cs)_
+## Zones  _(class, ZoneState.cs)_
 
+- `static byte[] Export(string zoneId)` — Null: this game has never stored that zone (never visited).
+- `static bool Import(byte[] data)` — Replaces this game's stored copy of the zone in data (Export's). False: it's the current zone (live: leave it first), or the data isn't a zone.
+- `static string ZoneOf(byte[] data)` — The zone id in data (Export's).
 - `static void Add(WorksMod mod, string id, string name, string likeZone = null)` — A zone from the mod's data\Maps folder (<id>.uz and <id>_L1.uzl). likeZone: a game zone whose music, locale type and level it takes (null: none). Prefix the id with the mod's id.
 - `static Placement AddExit(WorksMod mod, string id, string zone, string area, int x, int y, string toZone, string toWaypoint,` — An exit: a usable object placed in a zone (any zone, the game's too; re-added each time it loads, never saved) that takes the player to a waypoint of another zone (a mod's or the game's) when used. name: its hover label. Zones.AddExit(this, "cave_in", "cc-res", "cc-res", 30, 12, "mymod_cave", "Entrance", "Cave entrance");
 - `static AreaTrigger AddEdgeExit(WorksMod mod, string id, string zone, string area, Rectangle tiles, string toZone, string toWaypoint)` — An exit at a map's edge, as the game's own area transitions: walking onto the tiles takes the player to a waypoint of another zone. Shown on map mods (EdgeExits). Not on arrival (or when it's made under the player): someone already standing on its tiles goes only after stepping off and back on. Zones.AddEdgeExit(this, "cave_mouth", "cc-res", "cc-res", new Rectangle(0, 30, 1, 4), "mymod_cave", "Entrance");

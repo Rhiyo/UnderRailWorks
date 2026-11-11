@@ -309,7 +309,9 @@ public sealed partial class Coop
     void Arrived()
     {
         if (!loading) return;
-        loading = false; inWorld = true; followed = null;
+        loading = false;
+        if (ArrivedOwn()) { inWorld = false; return; }     // a world to run on our own (the host left us here)
+        inWorld = true; followed = null;
         Simulation.Frozen = true;
         Simulation.IsMirror = true;     // other mods here don't change this copy (Works refuses; Co-op's changes go through Apply)
         foreach (var w in early) Place(w);
@@ -325,6 +327,7 @@ public sealed partial class Coop
         Simulation.Frozen = false;
         Simulation.IsMirror = false;
         myKey = null; followed = null; spawned.Clear(); early.Clear(); sheets.Clear();
+        ownZone = null; goingTo = null; stay = null; pendingZone = null; myVars = null;
     }
 
     void LoadMirror()

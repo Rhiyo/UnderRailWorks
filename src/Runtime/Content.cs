@@ -24,7 +24,7 @@ namespace UnderRailWorks
 
 // A set of named game variables. Values are bool, int, float or string only: the stock game must be able to read
 // every save, and these are saved with their owner.
-public sealed class Variables
+public sealed partial class Variables
 {
     readonly Func<PropertyCollection> source;
     internal Variables(Func<PropertyCollection> source) { this.source = source; }

@@ -118,6 +118,15 @@ namespace UnderRailWorks
 
     public sealed partial class Character
     {
+        // Takes it out of the world now (as the game removes a character: c5x.w(), an()). Not the player.
+        public bool RemoveFromWorld()
+        {
+            var e = Entity as c5x;
+            if (e == null || e.IsPlayer || e.Area == null || Simulation.Refuses("RemoveFromWorld")) return false;
+            e.w(); e.an();
+            return true;
+        }
+
         // It has a whole player sheet (the player, or a character from SpawnFromCharacterFile).
         public bool HasPlayerSheet { get { var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>(); return a != null && a.aa() is au2; } }
 

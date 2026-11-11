@@ -21,7 +21,7 @@ namespace UnderRailWorks
     public sealed class EquipAttempt : Cancellable { public Character Character { get; internal set; } public Item Item { get; internal set; } }
     // The player about to leave the zone (an exit, a door between maps, a script, World.Travel). To: the destination
     // zone's id, Entry: the entry point there.
-    public sealed class ZoneLeave : Cancellable { public string From { get; internal set; } public string To { get; internal set; } public string Entry { get; internal set; } }
+    public sealed class ZoneLeave : Cancellable { public string From { get; internal set; } public string To { get; internal set; } public string Entry { get; internal set; } public Character Who { get; internal set; } }
     // A character (the player or an NPC's AI) about to switch between its primary and secondary weapon.
     public sealed class WeaponSwitch : Cancellable { public Character Character { get; internal set; } public bool ToSecondary { get; internal set; } }
     public sealed class CraftAttempt : Cancellable { public string Blueprint { get; internal set; } }
@@ -36,6 +36,9 @@ namespace UnderRailWorks
         public static readonly Hook<Action<DialogStart>> DialogStarting = new Hook<Action<DialogStart>>("DialogStarting");
         public static readonly Hook<Action<EquipAttempt>> Equipping = new Hook<Action<EquipAttempt>>("Equipping");
         public static readonly Hook<Action<ZoneLeave>> ZoneLeaving = new Hook<Action<ZoneLeave>>("ZoneLeaving");
+        // A character other than the player is about to take a zone exit (which changes the zone for the whole game, as
+        // the player's would): Who, From, To, Entry. Cancel: nothing happens.
+        public static readonly Hook<Action<ZoneLeave>> CharacterLeavingZone = new Hook<Action<ZoneLeave>>("CharacterLeavingZone");
         public static readonly Hook<Action<WeaponSwitch>> WeaponSwitching = new Hook<Action<WeaponSwitch>>("WeaponSwitching");
         public static readonly Hook<Action<CraftAttempt>> Crafting = new Hook<Action<CraftAttempt>>("Crafting");
     }
@@ -67,11 +70,16 @@ namespace UnderRailWorks.Internal
         {
             if (__0 == null || __1 == null) return true;
             try { if (!Party.Allows(PartyNeed.EnterZone, __1.b(), Character.Of(__0))) return false; } catch (Exception ex) { Log.Write("party: " + ex.Message); }
-            if (!__0.IsPlayer) return true;
+            if (!__0.IsPlayer)
+            {
+                if (!GameEvents.CharacterLeavingZone.Any) return true;
+                try { var c = new ZoneLeave { From = World.ZoneId, To = __1.b(), Entry = __1.c(), Who = Character.Of(__0) }; GameEvents.CharacterLeavingZone.Run(h => h(c)); return !c.Cancel; }
+                catch (Exception ex) { Log.Write("zone leave: " + ex.Message); return true; }
+            }
             if (!GameEvents.ZoneLeaving.Any) { World.PackFollowers(); return true; }
             try
             {
-                var e = new ZoneLeave { From = World.ZoneId, To = __1.b(), Entry = __1.c() };
+                var e = new ZoneLeave { From = World.ZoneId, To = __1.b(), Entry = __1.c(), Who = Character.Of(__0) };
                 GameEvents.ZoneLeaving.Run(h => h(e));
                 if (!e.Cancel) World.PackFollowers();
                 return !e.Cancel;

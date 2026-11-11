@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("0.8.0")]
+[assembly: System.Reflection.AssemblyVersion("0.9.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -71,7 +71,8 @@ public sealed partial class Coop : WorksMod
     string WriteSheet(string name, string base64) { var path = SheetPath(name); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); System.IO.File.WriteAllBytes(path, Convert.FromBase64String(base64)); return path; }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
+    // Split: the zone it runs on its own machine (players in different zones: CoopZones.cs).
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign, Split; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
     Listener listener;
     readonly HashSet<Character> engaged = new HashSet<Character>();     // attacked or attacking in this fight: stays in it
     readonly Inbox inbox = new Inbox();
@@ -132,6 +133,8 @@ public sealed partial class Coop : WorksMod
             case "BYE": p.Close(); return;
         }
         if (seat == null) { p.Send("BYE", "say HELLO first"); p.Close(); return; }
+        if (HostZoneMessage(seat, w)) return;
+        if (w[0] == "MYSHEET" && seat.Character == null && seat.Record != null) { if (w.Length > 1) seat.Record.Sheet = w[1]; return; }     // apart: kept with the record
         if (w[0] == "LOADED") { HostMirrorMessage(seat, w); return; }
         switch (w[0])
         {
@@ -204,6 +207,7 @@ public sealed partial class Coop : WorksMod
         Notify.Log("Co-op: " + seat.Peer.Name + " plays " + r.Name, Say);
         Changed(false);
         seat.Peer.Send("PLAYING", r.Name, (int)at.X, (int)at.Y);
+        seat.Peer.Send("HOSTZONE", World.ZoneId);
         SendWorld(seat);
     }
 
@@ -283,7 +287,7 @@ public sealed partial class Coop : WorksMod
             case "TURN": Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")"); return;
             case "SAID": Tell(w.Length > 1 ? w[1] : ""); return;
         }
-        if (!TalkMessage(w) && !LootMessage(w) && !TradeMessage(w)) MirrorMessage(w);
+        if (!TalkMessage(w) && !LootMessage(w) && !TradeMessage(w) && !JoinerZoneMessage(w)) MirrorMessage(w);
     }
 
     void Tell(string line)
@@ -358,7 +362,7 @@ public sealed partial class Coop : WorksMod
                 bool ok = w.Length > 2 && int.TryParse(w[1], out x) && int.TryParse(w[2], out y) && c.TakeExitAt(x, y);
                 Log.Info(c.Name + ": exit " + (w.Length > 2 ? w[1] + "," + w[2] : "?") + ": " + (ok ? "going" : "refused"));
                 if (ok) { Notify.Log("Co-op: " + c.Name + " is heading for the exit: everyone goes along", Say); foreach (var s in seats.Values.Concat(orphans)) Remember(s); }
-                return ok ? "heading for the exit (everyone goes along)" : "can't take that exit now";
+                return ok ? "heading for the exit" : "can't take that exit now";
             }
             case "TAKE": return w.Length > 2 ? Take(c, w[1], w[2]) : "";
             case "TAKEALL": return w.Length > 1 ? Take(c, w[1], null) : "";
@@ -414,6 +418,8 @@ public sealed partial class Coop : WorksMod
         LoadMirror();
         LoadLoot();
         LoadTrade();
+        LoadZones();
+        LoadZonesJoiner();
         Commands.Add(this, "coop.stop", "coop.stop: stop hosting (joined characters stay, back to their AI)", a => { if (listener == null) return "not hosting"; StopHosting(); return "stopped"; });
         Commands.Add(this, "coop.who", "coop.who: who is connected and what they play", a =>
         {
@@ -441,6 +447,7 @@ public sealed partial class Coop : WorksMod
         });
         Commands.Add(this, "coop.trade", "coop.trade <name>: trade with that merchant (testing)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 200).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0 && x.IsMerchant); return t == null ? "no merchant called that" : Mine("TRADEWITH", KeyHere(t)); });
         Commands.Add(this, "coop.xpmode", "coop.xpmode <0 everyone|1 nearby|2 split|3 earner> [oddity finder 0|1]: the experience rule (Host this game... asks)", a => { int m; if (a.Length > 0 && int.TryParse(a[0], out m) && m >= 0 && m <= 3) xpMode = (XpMode)m; if (a.Length > 1) oddityFinder = a[1] == "1"; return "experience: " + XpModeNames[(int)xpMode] + (oddityFinder ? ", oddities: finder only" : ""); });
+        Commands.Add(this, "coop.exit", "coop.exit x y: your character takes the exit on that tile", a => a.Length < 2 ? "coop.exit x y" : Mine("EXIT", a[0], a[1]));
         Commands.Add(this, "coop.status", "coop.status: your character's state", a => Mine("STATUS"));
         Commands.Add(this, "coop.spawn", "coop.spawn [blueprint]: a local test partner next to you (no network)", a =>
         {
@@ -541,7 +548,7 @@ public sealed partial class Coop : WorksMod
         GameEvents.ZoneLoaded.Add(this, (zone, first) =>
         {
             if (listener == null) return;
-            foreach (var s in seats.Values.Where(s => s.Record != null).ToList())
+            foreach (var s in seats.Values.Where(s => s.Record != null && s.Split == null).ToList())
             {
                 if (s.Character != null && s.Character.Area != null) continue;
                 var c = SpawnFor(s.Record, false);
