@@ -216,6 +216,15 @@ sealed class MapPicture
                         int i = x - ox, j = y - oy;
                         if (i >= 0 && j >= 0 && i < size && j < size && colour[i, j] != null) colour[i, j] = ex.GameColour;
                     }
+        // Mods' edge exits (Zones.AddEdgeExit) lead to another map: the game's red for those.
+        if (exits)
+            foreach (var ex in Zones.EdgeExits.Where(e => e.Area == null || e.Area == area.Name))
+                for (int x = ex.Tiles.Left; x < ex.Tiles.Right; x++)
+                    for (int y = ex.Tiles.Top; y < ex.Tiles.Bottom; y++)
+                    {
+                        int i = x - ox, j = y - oy;
+                        if (i >= 0 && j >= 0 && i < size && j < size && colour[i, j] != null) colour[i, j] = ModExit;
+                    }
         // Isometric: a map step in X goes right and down on screen, in Y left and down (as the game draws).
         // Screen offset (u, v) from the centre -> map offset: x - y = u / k, x + y = 2v / k.
         float k2 = tw / (2f * radius);
@@ -274,7 +283,7 @@ sealed class MapPicture
     public int Width { get { return tw; } }
     public int Height { get { return th; } }
 
-    static readonly Color Merchant = new Color(225, 175, 60);
+    static readonly Color Merchant = new Color(225, 175, 60), ModExit = new Color(170, 30, 30);
     void Square(Vector3 map, float cx, float cy, float k2, Color colour)
     {
         float dx = map.X + 0.5f - cx, dy = map.Y + 0.5f - cy;

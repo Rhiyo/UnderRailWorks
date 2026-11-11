@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Xna.Framework;
 using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
@@ -48,6 +49,25 @@ namespace UnderRailWorks
             World.Place(p);
             return p;
         }
+
+        // An exit at a map's edge, as the game's own area transitions: walking onto the tiles takes the player to a waypoint
+        // of another zone. Shown on map mods (EdgeExits). Not on arrival: someone who arrives standing on its tiles goes
+        // only after stepping off and back on.
+        //   Zones.AddEdgeExit(this, "cave_mouth", "cc-res", "cc-res", new Rectangle(0, 30, 1, 4), "mymod_cave", "Entrance");
+        public static AreaTrigger AddEdgeExit(WorksMod mod, string id, string zone, string area, Rectangle tiles, string toZone, string toWaypoint)
+        {
+            if (mod == null || id == null || zone == null || toZone == null) throw new ArgumentException("an exit needs a mod, an id, its zone and where it goes");
+            lock (edge) { edge.RemoveAll(e => e.Id == mod.Id + "." + id); edge.Add(new EdgeExit { Id = mod.Id + "." + id, Zone = zone, Area = area, Tiles = tiles, ToZone = toZone }); }
+            return Triggers.Add(mod, zone, area, tiles, who =>
+            {
+                if (who == null || !who.IsPlayer || (DateTime.UtcNow - World.ZoneLoadedAt).TotalSeconds < 1.0) return;
+                World.Travel(toZone, toWaypoint);
+            }, null);
+        }
+        public sealed class EdgeExit { public string Id { get; internal set; } public string Zone { get; internal set; } public string Area { get; internal set; } public Rectangle Tiles { get; internal set; } public string ToZone { get; internal set; } }
+        static readonly List<EdgeExit> edge = new List<EdgeExit>();
+        // Mods' edge exits in the current zone (a map draws them like the game's exits).
+        public static IList<EdgeExit> EdgeExits { get { var z = World.ZoneId; lock (edge) return edge.Where(e => string.Equals(e.Zone, z, StringComparison.OrdinalIgnoreCase)).ToList(); } }
 
         // A zone a mod added (true), so not one of the game's.
         public static bool IsModZone(string id) { return id != null && added.ContainsKey(id); }

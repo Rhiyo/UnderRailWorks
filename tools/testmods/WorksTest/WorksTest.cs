@@ -213,6 +213,7 @@ public sealed class WorksTest : WorksMod
         Zones.Add(this, "wt_testzone", "Works Test Zone", "wa-shop");
         Zones.AddExit(this, "toTest", "cc-res", "cc-res", 11, 9, "wt_testzone", "FromElevator", "Strange hole");
         Zones.AddExit(this, "back", "wt_testzone", "wa-shop", 2, 3, "cc-res", "FromPlayerHouse", "Way back up");
+        Zones.AddEdgeExit(this, "edge", "cc-res", "cc-res", new Microsoft.Xna.Framework.Rectangle(11, 11, 2, 1), "wt_testzone", "FromElevator");
         Commands.Add(this, "wt.useexit", "wt.useexit <id>: the player uses a WorksTest exit (toTest, back)", args => { Commands.CloseConsole(); return "use: " + World.Use(World.Player, "WorksTest.exit." + args[0]); });
         Commands.Add(this, "wt.zone", "wt.zone: travel to the mod zone wt_testzone", args => "travel: " + World.Travel("wt_testzone", "FromElevator"));
         Commands.Add(this, "wt.skill", "wt.skill <name> <n>: set a game skill's base points", args => { World.Player.SetBaseSkill(args[0], int.Parse(args[1])); return args[0] + " " + World.Player.Skill(args[0]); });
@@ -249,6 +250,7 @@ public sealed class WorksTest : WorksMod
             }
             return "areas";
         });
+        Commands.Add(this, "wt.moveto", "wt.moveto x y: the player walks there", args => { Commands.CloseConsole(); return "walk: " + World.Player.MoveTo(int.Parse(args[0]), int.Parse(args[1])); });
         Commands.Add(this, "wt.zoo", "wt.zoo: every character in the zone: position, area, attitude, faction, combat", args =>
         {
             var lines = World.Characters.Select(c => c.Name + " @" + c.Position.X + "," + c.Position.Y + " " + (c.Area == null ? "?" : c.Area.Name) + " " + c.Attitude + " f=" + c.Faction + (c.Passive ? " passive" : "") + (c.IsInCombat ? " COMBAT" : "") + (c.IsDead ? " DEAD" : "")).ToList();

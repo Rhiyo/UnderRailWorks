@@ -1543,3 +1543,9 @@ layout use them (Quest Tracker, After-Action Report, Merchant Ledger, Loadouts, 
 Workbench Planner, Beastmaster, Hunger, HUD Layout, Shot Breakdown, Stealth Lens, Minimap); `UiRows` rows grow to the
 game's button height; `Ui.TextBox` takes the theme's field height. Checked at Small and Huge (HUD, Loadouts, Ledger,
 Vendors, Planner). Rules: UI.md, "Sizes".
+- **Edge exits** (`Zones.AddEdgeExit(mod, id, zone, area, tiles, toZone, toWaypoint)`): a Works area trigger that
+  sends the player to another zone's waypoint when they walk onto its tiles, as the game's own transitions; listed in
+  `Zones.EdgeExits` (the Minimap draws them in the game's red for "another map"). Entries in the first second after a
+  zone loads are ignored (the player is a new character object, so standing on the tiles at arrival counts as entering;
+  afterwards they're inside and it fires only after stepping off and on). Tested: walking onto 2 tiles in the
+  residential district took the player into the mod zone; the minimap showed the strip. Not tested: arriving on one.

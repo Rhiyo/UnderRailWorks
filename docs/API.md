@@ -1712,6 +1712,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static IList<Character> Characters` — Every living character in the current zone (all its areas), the player included.
 - `static IList<Character> CharactersNear(Vector3 at, float radius)` — Living characters in the current zone within radius tiles of a point (distance on the map, levels ignored), nearest first (the player included if in range; filter with Where). at: e.g. World.Player.Position.
 - `static Character Hovered` — The character under the mouse in the world (null: none, or not a character): the one the game outlines white. (The world view mv is a dnn; dnn.an2() is what the mouse is over.)
+- `static DateTime ZoneLoadedAt` — When the current zone finished loading (UTC).
 - `static IList<Area> ZoneAreas` — The areas of the current zone (a building's floors, a station's levels...), in the zone's order.
 - `static Point? HoveredTile` — The map tile under the mouse (null: the mouse is over the interface, or no world): what a click would walk to.
 - `static IList<Container> Containers` — Every container in the current zone (crates, lockers, corpses...).
@@ -1778,5 +1779,7 @@ The player about to leave the zone (an exit, a door between maps, a script, Worl
 
 - `static void Add(WorksMod mod, string id, string name, string likeZone = null)` — A zone from the mod's data\Maps folder (<id>.uz and <id>_L1.uzl). likeZone: a game zone whose music, locale type and level it takes (null: none). Prefix the id with the mod's id.
 - `static Placement AddExit(WorksMod mod, string id, string zone, string area, int x, int y, string toZone, string toWaypoint,` — An exit: a usable object placed in a zone (any zone, the game's too; re-added each time it loads, never saved) that takes the player to a waypoint of another zone (a mod's or the game's) when used. name: its hover label. Zones.AddExit(this, "cave_in", "cc-res", "cc-res", 30, 12, "mymod_cave", "Entrance", "Cave entrance");
+- `static AreaTrigger AddEdgeExit(WorksMod mod, string id, string zone, string area, Rectangle tiles, string toZone, string toWaypoint)` — An exit at a map's edge, as the game's own area transitions: walking onto the tiles takes the player to a waypoint of another zone. Shown on map mods (EdgeExits). Not on arrival: someone who arrives standing on its tiles goes only after stepping off and back on. Zones.AddEdgeExit(this, "cave_mouth", "cc-res", "cc-res", new Rectangle(0, 30, 1, 4), "mymod_cave", "Entrance");
+- `static IList<EdgeExit> EdgeExits` — Mods' edge exits in the current zone (a map draws them like the game's exits).
 - `static bool IsModZone(string id)` — A zone a mod added (true), so not one of the game's.
 - `static IList<string> Added`

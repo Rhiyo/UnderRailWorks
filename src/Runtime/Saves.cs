@@ -155,6 +155,7 @@ static class Saves
         string id = World.ZoneId;
         bool first = firstVisit; firstVisit = false;
         Log.Write("saves: zone loaded: " + id + (first ? " (first visit)" : ""));
+        World.ZoneLoadedAt = DateTime.UtcNow;
         Run("placing characters", () => World.SpawnPlacements(zone, id));
         Run("imported character", CharacterFiles.ZoneReady);
         Run("followers", World.UnpackFollowers);

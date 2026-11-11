@@ -164,6 +164,9 @@ public static partial class World
             return c.IsDead ? null : c;
         }
     }
+    // When the current zone finished loading (UTC).
+    public static DateTime ZoneLoadedAt { get; internal set; }
+
     // The areas of the current zone (a building's floors, a station's levels...), in the zone's order.
     public static IList<Area> ZoneAreas
     {

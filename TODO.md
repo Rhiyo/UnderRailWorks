@@ -70,7 +70,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Items: the proven overlay made real: JSON recipes, icons, text, adding to stores and loot.
 - [ ] Characters, stores, dialogs: the same overlay; their loaders still to find.
 - [x] Maps: zone overlay, patches on every zone load (visited zones come from the save), cross-zone waypoints, what the
-  stock game does with a transition to a missing map. (Nov 2026: new zones from a mod folder, Zones.Add; exits into them from any zone, Zones.AddExit; saves made inside a mod zone need the mod. Still: transitions on the map edge, a map editor.)
+  stock game does with a transition to a missing map. (Nov 2026: new zones from a mod folder, Zones.Add; exits into them from any zone, Zones.AddExit; saves made inside a mod zone need the mod. Edge exits too: Zones.AddEdgeExit. Still: a map editor.)
 - [ ] Later: combat, UI, quests.
 
 ## Mods
