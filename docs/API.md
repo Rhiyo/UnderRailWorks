@@ -1068,17 +1068,18 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `string Author`
 - `string Description`
 - `string Error`
+- `string Warning` — Loaded, but something to know (it uses Works' internals or the game's own code: it may break with an update).
 - `Version Version`
 - `Version Works`
 - `WorksMod Instance`
 - `bool Enabled`
 - `bool StartsOff` — mod.json "startsOff": true: switched off until the player switches it on (gameplay rules, difficulty changes).
 - `bool Loaded`
-- `List<ModDependency> Requires`
-- `List<ModDependency> Optional`
-- `List<string> SortAfter`
-- `List<string> SortBefore`
-- `List<ModDependency> Incompatible`
+- `IReadOnlyList<ModDependency> Requires`
+- `IReadOnlyList<ModDependency> Optional`
+- `IReadOnlyList<string> SortAfter`
+- `IReadOnlyList<string> SortBefore`
+- `IReadOnlyList<ModDependency> Incompatible`
 - `string Homepage`
 - `string Issues`
 - `string License`
@@ -1091,11 +1092,9 @@ A mod's own data for the current game, kept with the save as plain values (the g
 ## ModLoader  _(class, ModLoader.cs)_
 
 - `static readonly string ModsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Mods")`
-- `static readonly List<ModInfo> Mods = new List<ModInfo>()` — Every mod folder, in load order (mods that can't load at the end, by name).
+- `static IReadOnlyList<ModInfo> Mods` — Every mod folder, in load order (mods that can't load at the end, by name). Every mod found (loaded or not), in load order then by name. Read-only to mods.
 - `static ModInfo Find(string id)`
 - `static bool IsLoaded(string id)`
-- `static void Init()`
-- `static void SetEnabled(string id, bool on)` — From the Mods tab: switch a mod on or off for the next start.
 
 ## ModLog  _(class, WorksMod.cs)_
 
@@ -1872,7 +1871,10 @@ Values: `Inventory, CharacterSheet, CombatStats, Crafting, Notes, Oddities, Psi,
 
 The Works API version mods are checked against ("works": "0.9" in mod.json). From 1.0: same major version, at least that minor (the minor goes up when the API gains something; the major only when something mods use changes or goes). While it is 0.x (a preview): the same minor exactly, since a minor may still change what mods use.
 
-- `static readonly Version Version = new Version(0, 9);     // 0.x: a preview; breaking changes possible until 1.0`
+- `static readonly Version Version = new Version(Major, Minor)`
+- `static string GameVersion` — The game running (e.g. "1.3.1.2"), and the one this Works was made for. After a game update they differ until Works is updated; most of Works usually still fits, and Unavailable says what doesn't.
+- `static string MadeForGameVersion`
+- `static IReadOnlyList<string> Unavailable` — Parts of Works that couldn't be set up in this game version (e.g. "party and exits"): their events never fire and their calls do nothing. Empty normally. A mod that needs one can say so instead of misbehaving.
 
 ## WorksMod  _(class, Framework.cs)_
 

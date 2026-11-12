@@ -19,7 +19,7 @@ public enum HookOrder { First = 0, Early = 1, Normal = 2, Late = 3, Last = 4 }
 public abstract class HookBase<T> : IModOwned where T : class
 {
     readonly string name;
-    protected T[] handlers = new T[0];
+    internal T[] handlers = new T[0];
     string[] owners = new string[0];
     int[] orders = new int[0];
     readonly Dictionary<T, int> failures = new Dictionary<T, int>();
@@ -45,7 +45,7 @@ public abstract class HookBase<T> : IModOwned where T : class
         }
     }
     // While a handler runs: its mod (what it adds to the interface is its own, removed if the mod is reloaded).
-    protected string OwnerAt(T[] list, int i) { var o = owners; return ReferenceEquals(list, handlers) && i < o.Length ? o[i] : null; }
+    internal string OwnerAt(T[] list, int i) { var o = owners; return ReferenceEquals(list, handlers) && i < o.Length ? o[i] : null; }
 
     public bool Any { get { return handlers.Length > 0; } }
 
@@ -74,7 +74,7 @@ public abstract class HookBase<T> : IModOwned where T : class
     }
 
     // Each handler in turn until call returns true; a throwing handler is removed.
-    protected bool Each(Func<T, bool> call)
+    internal bool Each(Func<T, bool> call)
     {
         var list = handlers;     // a snapshot: handlers may be removed while running
         for (int i = 0; i < list.Length; i++)

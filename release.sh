@@ -48,8 +48,9 @@ trap cleanup EXIT
 sed -i -E "s/(public const string Value = \")[^\"]*(\";)/\1$VERSION\2/" "$VFILE"
 grep -q "Value = \"$VERSION\"" "$VFILE" || die "couldn't set the version in $VFILE"
 
-# 3-4. Build from scratch and check.
-./build.sh
+# 3-4. Build from scratch and check (the API too: changes since the last release must be covered by WorksApi's
+# version, docs/Versioning.md).
+API_RELEASE=1 ./build.sh
 tools/check-release.sh
 tools/savecheck/check-saves.sh --play
 
@@ -57,6 +58,9 @@ tools/savecheck/check-saves.sh --play
 ORIG="$GAME/underrail.exe"; [ -f "$GAME/underrail.exe.backup" ] && ORIG="$GAME/underrail.exe.backup"
 mcs -nologo -out:"$WORK/GameVersion.exe" -r:"$CECIL_DIR/Mono.Cecil.dll" -r:System.Core.dll src/Build/GameVersion.cs
 GAME_VERSION="$(MONO_PATH="$CECIL_DIR" mono "$WORK/GameVersion.exe" "$ORIG")" || die "couldn't read the game version"
+# Works says which game version it was made for (players are told when theirs differs): it must be this one. Changing
+# it is a decision (Works checked on that game: GameNames, tools/names/Remap), not something to stamp automatically.
+grep -q "ForGame = \"$GAME_VERSION\"" "$VFILE" || die "FixVersion.ForGame in $VFILE isn't the game's version $GAME_VERSION (check Works on it, then update it)"
 STEAM_BUILD="$(grep -oP '"buildid"\s+"\K[0-9]+' "$GAME/../../appmanifest_250520.acf" 2>/dev/null || echo unknown)"
 
 NAME="UnderRailWorks-$VERSION"
@@ -115,7 +119,9 @@ SHA-256 \`$NAME.zip\`: \`$SHA\`
 EOF
 
 # 7. Commit the version (if it changed), tag, push, publish.
-if [ -n "$(git status --porcelain -- "$VFILE")" ]; then git commit -q -m "Release v$VERSION" -- "$VFILE"; fi
+# This release's API becomes the baseline the next builds compare with.
+MONO_PATH="$(dirname /usr/lib/mono/gac/Mono.Cecil/0.11.1.0__0738eb9f132ed756/Mono.Cecil.dll)" mono build/ApiSurface.exe dist/UnderRailWorks/UnderRailWorks.dll api/UnderRailWorks.api.txt >/dev/null
+if [ -n "$(git status --porcelain -- "$VFILE" api/UnderRailWorks.api.txt)" ]; then git add api/UnderRailWorks.api.txt; git commit -q -m "Release v$VERSION" -- "$VFILE" api/UnderRailWorks.api.txt; fi
 committed=1
 git tag -a "v$VERSION" -m "UnderRailWorks $VERSION (UnderRail $GAME_VERSION)"
 git push -q origin "$BRANCH" "v$VERSION"

@@ -24,7 +24,7 @@ namespace UnderRailWorks
 
 public sealed class ModDependency
 {
-    public string Id { get; set; }
+    public string Id { get; internal set; }
     public Version Min { get; set; }     // null: any version
     public override string ToString() { return Min == null ? Id : Id + " " + Min + "+"; }
     internal static ModDependency Parse(string text)
@@ -38,28 +38,30 @@ public sealed class ModDependency
 
 public sealed class ModInfo
 {
-    public string Id { get; set; }
-    public string Name { get; set; }
-    public string Folder { get; set; }
-    public string Author { get; set; }
-    public string Description { get; set; }
-    public string Error { get; set; }
-    public Version Version { get; set; }
-    public Version Works { get; set; }
-    public WorksMod Instance { get; set; }
-    public bool Enabled { get; set; }
+    public string Id { get; internal set; }
+    public string Name { get; internal set; }
+    public string Folder { get; internal set; }
+    public string Author { get; internal set; }
+    public string Description { get; internal set; }
+    public string Error { get; internal set; }
+    // Loaded, but something to know (it uses Works' internals or the game's own code: it may break with an update).
+    public string Warning { get; internal set; }
+    public Version Version { get; internal set; }
+    public Version Works { get; internal set; }
+    public WorksMod Instance { get; internal set; }
+    public bool Enabled { get; internal set; }
     // mod.json "startsOff": true: switched off until the player switches it on (gameplay rules, difficulty changes).
     public bool StartsOff { get; internal set; }
-    public bool Loaded { get; set; }
-    public List<ModDependency> Requires { get; set; } = new List<ModDependency>();
-    public List<ModDependency> Optional { get; set; } = new List<ModDependency>();
-    public List<string> SortAfter { get; set; } = new List<string>();
-    public List<string> SortBefore { get; set; } = new List<string>();
-    public List<ModDependency> Incompatible { get; set; } = new List<ModDependency>();
-    public string Homepage { get; set; }
-    public string Issues { get; set; }
-    public string License { get; set; }
-    public string Game { get; set; }
+    public bool Loaded { get; internal set; }
+    public IReadOnlyList<ModDependency> Requires { get; internal set; } = new List<ModDependency>();
+    public IReadOnlyList<ModDependency> Optional { get; internal set; } = new List<ModDependency>();
+    public IReadOnlyList<string> SortAfter { get; internal set; } = new List<string>();
+    public IReadOnlyList<string> SortBefore { get; internal set; } = new List<string>();
+    public IReadOnlyList<ModDependency> Incompatible { get; internal set; } = new List<ModDependency>();
+    public string Homepage { get; internal set; }
+    public string Issues { get; internal set; }
+    public string License { get; internal set; }
+    public string Game { get; internal set; }
     // The mod's icon (icon.png in its folder), or null.
     public string Icon { get { var f = Path.Combine(Folder, "icon.png"); return File.Exists(f) ? f : null; } }
     // Handlers of this mod that failed while the game ran (HookBase), for the Mods tab.
@@ -81,13 +83,16 @@ public static class ModLoader
     public static readonly string ModsFolder = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Mods");
     static string ListPath { get { return Path.Combine(ModsFolder, "mods.ini"); } }
     // Every mod folder, in load order (mods that can't load at the end, by name).
-    public static readonly List<ModInfo> Mods = new List<ModInfo>();
+    // Every mod found (loaded or not), in load order then by name. Read-only to mods.
+    public static IReadOnlyList<ModInfo> Mods { get { return view; } }
+    internal static readonly List<ModInfo> All = new List<ModInfo>();
+    static readonly System.Collections.ObjectModel.ReadOnlyCollection<ModInfo> view = new System.Collections.ObjectModel.ReadOnlyCollection<ModInfo>(All);
     static readonly List<string> Folders = new List<string>();
 
-    public static ModInfo Find(string id) { return Mods.FirstOrDefault(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase)); }
+    public static ModInfo Find(string id) { return All.FirstOrDefault(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase)); }
     public static bool IsLoaded(string id) { var m = Find(id); return m != null && m.Loaded; }
 
-    public static void Init()
+    internal static void Init()
     {
         if (!Directory.Exists(ModsFolder)) return;
         HashSet<string> listed;
@@ -101,14 +106,14 @@ public static class ModLoader
         if (IntPtr.Size != 8)
         {
             foreach (var m in all) m.Error = "needs the 64-bit mode";
-            Mods.AddRange(all);
+            All.AddRange(all);
             Log.Write("mods: not loaded, they need the 64-bit mode");
             return;
         }
         CheckRequirements(all);
         var order = Order(all.Where(m => m.Enabled && m.Error == null).ToList());
-        Mods.AddRange(order);
-        Mods.AddRange(all.Except(order).OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase));
+        All.AddRange(order);
+        All.AddRange(all.Except(order).OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase));
         Log.Write("mods: load order: " + string.Join(", ", order.Select(m => m.Id).ToArray()));
         foreach (var m in all.Where(m => m.Error != null)) Log.Write("mods: " + m.Id + " not loaded: " + m.Error);
         foreach (var m in all.Where(m => !m.Enabled)) Log.Write("mods: " + m.Id + " is switched off");
@@ -120,7 +125,7 @@ public static class ModLoader
         catch (Exception ex) { Log.Write("mods: can't load Harmony: " + ex.Message); foreach (var m in order) m.Error = "Harmony missing"; return; }
         Type harmonyType = harmony.GetType("HarmonyLib.Harmony", true);
         Log.Write("mods: Harmony " + harmony.GetName().Version);
-        try { UiHooks.Install(); } catch (Exception ex) { Log.Always("UnderRailWorks: UI hooks failed: " + ex); }
+        try { UiHooks.Install(); } catch (Exception ex) { WorksHealth.Fail("interface"); Log.Always("UnderRailWorks: UI hooks failed: " + ex); }
 
         // A mod's own dependencies sit in its folder (or a required mod's).
         AppDomain.CurrentDomain.AssemblyResolve += (sender, e) =>
@@ -144,6 +149,7 @@ public static class ModLoader
             if (failed != null) { mod.Error = "needs " + failed.Name + " (it failed to load)"; Log.Write("mods: " + mod.Id + " not loaded: " + mod.Error); continue; }
             LoadCode(mod, FixSettings.HotReload);
         }
+        Log.Write("mods: checked " + ModCheck.Count + " DLLs against this Works in " + (int)ModCheck.Time + " ms");
         // Content packs (content/*.json), after every mod's code: packs may use conditions and effects a DLL registered.
         foreach (var mod in order.Where(m => m.Loaded))
         {
@@ -155,7 +161,7 @@ public static class ModLoader
         {
             ModScope.Current = mod.Id;
             try { mod.Instance.PostLoad(); }
-            catch (Exception ex) { mod.Error = "PostLoad failed: " + ex.Message; Log.Write("mods: " + mod.Id + " PostLoad failed: " + ex); }
+            catch (Exception ex) { mod.Error = "PostLoad failed: " + ex.Message; mod.Loaded = false; Log.Write("mods: " + mod.Id + " PostLoad failed: " + ex); Unregister(mod); }
         }
         ModScope.Current = null;
     }
@@ -283,7 +289,7 @@ public static class ModLoader
     }
 
     // From the Mods tab: switch a mod on or off for the next start.
-    public static void SetEnabled(string id, bool on)
+    internal static void SetEnabled(string id, bool on)
     {
         try
         {
@@ -298,6 +304,14 @@ public static class ModLoader
         catch (Exception ex) { Log.Write("mods: could not write mods.ini: " + ex.Message); }
     }
 
+    // A mod that failed while loading: whatever it registered before the failure (handlers, Harmony patches, commands,
+    // UI...) goes, so a mod shown as failed never half-runs.
+    static void Unregister(ModInfo mod)
+    {
+        try { int ui = ModReloader.Forget(mod); mod.Instance = null; Log.Write("mods: " + mod.Id + ": what it registered before failing was removed"); }
+        catch (Exception ex) { Log.Write("mods: " + mod.Id + ": removing what it registered failed: " + ex.Message); }
+    }
+
     // A mod's DLLs (collectible: from memory into a context that can be unloaded, for reloading: ModReload.cs).
     internal static void LoadCode(ModInfo mod, bool collectible)
     {
@@ -305,6 +319,19 @@ public static class ModLoader
         var dlls = Directory.GetFiles(mod.Folder, "*.dll").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToList();
         if (dlls.Count == 0) { mod.Loaded = true; Log.Write("mods: loaded " + mod.Id + " (no code)"); return; }
         ModCode.Stamps[mod.Id] = ModCode.Stamp(mod);
+        // Everything it uses from Works must exist here (ModCheck): otherwise not loaded, with what's missing.
+        var warnings = new List<string>();
+        foreach (string dll in dlls)
+        {
+            ModCheck.Result check;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            try { check = ModCheck.Scan(mod, dll); }
+            catch (Exception ex) { Log.Write("mods: " + mod.Id + ": couldn't check " + Path.GetFileName(dll) + ": " + ex.Message); continue; }
+            ModCheck.Time += watch.Elapsed.TotalMilliseconds; ModCheck.Count++;
+            if (check.Error != null) { mod.Error = check.Error; Log.Write("mods: " + mod.Id + " not loaded (" + Path.GetFileName(dll) + "): " + check.Error); return; }
+            warnings.AddRange(check.Warnings);
+        }
+        if (warnings.Count > 0) { mod.Warning = string.Join("; ", warnings.Distinct().ToArray()); Log.Write("mods: " + mod.Id + ": " + mod.Warning); }
         // Every DLL first, then their entry points: a mod's own libraries are there when its Load needs them.
         var loaded = new List<KeyValuePair<string, Assembly>>();
         foreach (string dll in dlls)
@@ -367,6 +394,7 @@ public static class ModLoader
                 mod.Error = "failed: " + inner.Message;
                 mod.Loaded = false;
                 Log.Write("mods: " + mod.Id + " failed (" + Path.GetFileName(dll) + "): " + inner);
+                Unregister(mod);
             }
         }
     }

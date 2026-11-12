@@ -1,0 +1,2 @@
+{ "id": "HalfBroken", "name": "Half broken (test)", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+  "description": "Test only: registers a command and a handler, then fails while loading." }

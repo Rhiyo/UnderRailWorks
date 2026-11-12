@@ -6,4 +6,6 @@ using UnderRailWorks.Internal;
 public static class FixVersion
 {
     public const string Value = "1.0.0";
+    // The game version this Works was made and checked for (release.sh writes it, read from the game exe).
+    internal const string ForGame = "1.3.1.2";
 }

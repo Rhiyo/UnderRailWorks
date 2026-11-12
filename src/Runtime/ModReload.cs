@@ -203,7 +203,7 @@ namespace UnderRailWorks.Internal
         }
 
         // Everything the mod registered through Works. Returns how many interface elements went.
-        static int Forget(ModInfo mod)
+        internal static int Forget(ModInfo mod)
         {
             var id = mod.Id;
             List<IModOwned> hooks;

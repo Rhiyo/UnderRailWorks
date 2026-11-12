@@ -51,7 +51,12 @@ mcs -nologo -out:"$HERE/build/Retarget.exe" -r:"$CECIL" -r:System.Core.dll "$HER
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" "$REF" "$FNA" "$GAMEREF" >/dev/null
 # The runtime (assembly UnderRailWorks), straight into dist.
 WORKS="$OUT/UnderRailWorks.dll"
-mcs -nologo -optimize+ -target:library -out:"$WORKS" -r:"$GAMEREF" -r:"$FNA" -r:"$NVORBIS" -r:"$HARMONY" -r:System.Core.dll -r:System.Drawing.dll -r:System.Windows.Forms.dll -r:System.Configuration.dll "$HERE"/src/Runtime/*.cs
+mcs -nologo -optimize+ -target:library -out:"$WORKS" -r:"$GAMEREF" -r:"$FNA" -r:"$NVORBIS" -r:"$HARMONY" -r:"$CECIL" -r:System.Core.dll -r:System.Drawing.dll -r:System.Windows.Forms.dll -r:System.Configuration.dll "$HERE"/src/Runtime/*.cs
+# The public API against the last release's (api/UnderRailWorks.api.txt, docs/Versioning.md): a break the API version
+# doesn't account for, or a game type in the API, stops the build; additions without a new minor are a warning.
+mcs -nologo -out:"$HERE/build/ApiSurface.exe" -r:"$CECIL" "$HERE/tools/apicheck/ApiSurface.cs"
+api=0; MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/ApiSurface.exe" --check "$WORKS" "$HERE/api/UnderRailWorks.api.txt" ${API_RELEASE:+--release} || api=$?
+[ "$api" -lt 2 ] || { echo "build.sh: the API check failed (above)"; exit 1; }
 # A mod: against FNA and Works only, never the game (a mod that uses Works' API can't reach the game's scrambled names,
 # which change between game versions; any it used would fail to compile here). mod <name> <into> <source dir or file>
 mod() {
@@ -103,6 +108,11 @@ mod TheStranger "$HERE/build/Mods" "$HERE/examples/TheStranger"
 rm -rf "$HERE/build/Mods/TheProspector"; cp -r "$HERE/examples/TheProspector" "$HERE/build/Mods/TheProspector"
 # WorksTest (test keys, never shipped): into build/Mods.
 mod WorksTest "$HERE/build/Mods" "$HERE/tools/testmods/WorksTest"
+mod HalfBroken "$HERE/build/Mods" "$HERE/tools/testmods/HalfBroken"
+mkdir -p "$HERE/build/stub" "$HERE/build/Mods/NeedsNewer"     # built against a stand-in for a newer Works (tools/testmods/NeedsNewer)
+mcs -nologo -target:library -out:"$HERE/build/stub/UnderRailWorks.dll" "$HERE/tools/testmods/NeedsNewer/FutureWorks.cs"
+mcs -nologo -target:library -out:"$HERE/build/Mods/NeedsNewer/NeedsNewer.dll" -r:"$HERE/build/stub/UnderRailWorks.dll" "$HERE/tools/testmods/NeedsNewer/NeedsNewer.cs"
+cp "$HERE/tools/testmods/NeedsNewer/mod.json" "$HERE/build/Mods/NeedsNewer/"
 rm -rf "$HERE/build/Mods/WorksTest/content"; cp -r "$HERE/tools/testmods/WorksTest/content" "$HERE/build/Mods/WorksTest/"; cp -r "$HERE/tools/testmods/WorksTest/i18n" "$HERE/tools/testmods/WorksTest/music" "$HERE/build/Mods/WorksTest/"
 
 # The .NET 10 launcher (installed as underrail.exe; src/Launcher) and the Windows .NET 10 runtime it runs the game on

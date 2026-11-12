@@ -599,7 +599,8 @@ static class UiHooks
 {
     static void Group(string what, Action install)
     {
-        try { install(); } catch (Exception ex) { Log.Write("UnderRailWorks: " + what + " hooks failed (mods using them won't see those events): " + ex); }
+        // Testing: WORKS_FAIL_GROUP=<name> makes that group fail, as a game update that moved it would.
+        try { if (what == Environment.GetEnvironmentVariable("WORKS_FAIL_GROUP")) throw new MissingMethodException("WORKS_FAIL_GROUP"); install(); } catch (Exception ex) { WorksHealth.Fail(what); Log.Write("UnderRailWorks: " + what + " hooks failed (mods using them won't see those events): " + ex); }
     }
 
     internal static void Install()
@@ -666,6 +667,7 @@ static class UiHooks
     {
         if (UnderRailWorks.Hud.Exists) { UnderRailWorks.Hud.Gone(); if (UiEvents.HudDestroyed.Any) UiEvents.HudDestroyed.Run(h => h()); }     // back to the main menu: no HUD
         UnderRailWorks.MainMenu.Built((a8k)__instance);
+        WorksHealth.Tell();
         var root = UiElement.Of((euz)__instance);
         if (UiEvents.MainMenuCreated.Any) UiEvents.MainMenuCreated.Run(h => h(root));
     }
@@ -674,6 +676,7 @@ static class UiHooks
 
     static void Updated(GameTime __0)
     {
+        WorksHealth.Tick();
         Input.Tick();
         Keybinds.Tick();
         UiWindows.Tick();

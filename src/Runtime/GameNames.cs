@@ -244,6 +244,8 @@ static class GameNames
             foreach (var f in t.GetFields(BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public))
             {
                 bool array = f.FieldType.IsArray && typeof(MemberInfo).IsAssignableFrom(f.FieldType.GetElementType());
+                // Read-only fields only: the lookups made once at startup. Others are caches filled later (null now).
+                if (!f.IsInitOnly) continue;
                 if (f.Name.Contains("<") || !(array || typeof(MemberInfo).IsAssignableFrom(f.FieldType) || (typeof(Delegate).IsAssignableFrom(f.FieldType) && f.IsInitOnly))) continue;
                 object v;
                 try { v = f.GetValue(null); }
@@ -258,6 +260,7 @@ static class GameNames
                 if (v == null) missing.Add(t.Name + "." + f.Name); else ok++;
             }
         }
+        WorksHealth.MissingNames = missing.Count;
         if (missing.Count > 0) Log.Always("UnderRailWorks: game members not found in this game version: " + string.Join(", ", missing.ToArray()));
         else Log.Write("mods: " + ok + " game members checked");
     }

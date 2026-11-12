@@ -7,6 +7,7 @@
 // Switching a mod on or off still applies at the next start.
 // The base class can grow (new virtuals, properties) without breaking mods built against an older Works.
 using System;
+using System.Collections.Generic;
 using HarmonyLib;
 using UnderRailWorks.Internal;
 
@@ -52,6 +53,19 @@ public sealed class ModLog
 // While it is 0.x (a preview): the same minor exactly, since a minor may still change what mods use.
 public static class WorksApi
 {
-    public static readonly Version Version = new Version(0, 9);     // 0.x: a preview; breaking changes possible until 1.0
+    // The API's version (docs/Versioning.md): a mod's "works" in mod.json must have the same major and at most this
+    // minor. Major: something mods could use was removed or changed. Minor: something was added. 0.x: a preview, each
+    // minor may break. build.sh compares the API with api/UnderRailWorks.api.txt (the last release's) and fails on a
+    // break this version doesn't account for. Change only these two numbers (the tools read them).
+    internal const int Major = 0, Minor = 9;
+    public static readonly Version Version = new Version(Major, Minor);
+
+    // The game running (e.g. "1.3.1.2"), and the one this Works was made for. After a game update they differ until
+    // Works is updated; most of Works usually still fits, and Unavailable says what doesn't.
+    public static string GameVersion { get { try { return dm9.d == null ? "?" : dm9.d.ToString(); } catch (Exception) { return "?"; } } }
+    public static string MadeForGameVersion { get { return FixVersion.ForGame; } }
+    // Parts of Works that couldn't be set up in this game version (e.g. "party and exits"): their events never fire
+    // and their calls do nothing. Empty normally. A mod that needs one can say so instead of misbehaving.
+    public static IReadOnlyList<string> Unavailable { get { return UnderRailWorks.Internal.WorksHealth.Failed; } }
 }
 }

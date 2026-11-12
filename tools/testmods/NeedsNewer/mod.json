@@ -1,0 +1,2 @@
+{ "id": "NeedsNewer", "name": "Needs a newer Works (test)", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+  "description": "Test only: uses a Works member that doesn't exist, so the loader must refuse it." }
