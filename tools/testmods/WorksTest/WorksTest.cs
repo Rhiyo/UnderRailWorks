@@ -70,6 +70,8 @@ public sealed class WorksTest : WorksMod
         GameEvents.LevelledUp.Add(this, level => Log.Info("unaware: " + World.Player.Name + " reached level " + level));
         Commands.Add(this, "wt.load", "wt.load <save>: load that save", a => "load: " + SaveGames.Load(a[0]));
         Commands.Add(this, "wt.throw", "wt.throw <name> <x> <y>: that character throws its first throwable at a tile", a => { var c = World.Characters.FirstOrDefault(x => x.Name == a[0]); var g = c.Inventory.Items.FirstOrDefault(i => i.Code.Contains("frag")); if (g != null) Log.Info("to belt: " + c.Equipment.ToQuickSlot(g)); g = c.Equipment.QuickSlots.FirstOrDefault(i => i != null && i.Code.Contains("frag")) ?? g; var ok = g != null && c.UseAbility(g.AbilityId, g.Id, new Microsoft.Xna.Framework.Point(int.Parse(a[1]), int.Parse(a[2]))); Log.Info("throw " + (g == null ? "none" : g.ToString()) + ": " + ok); return "throw " + ok; });
+        Commands.Add(this, "wt.anger", "wt.anger <name>: that character turns hostile", a => { var c = World.Characters.FirstOrDefault(x => x.Name == a[0]); if (c == null) return "none"; c.SetAttitudeToPlayer(Attitude.Hostile); return "hostile " + c.IsHostile; });
+        Commands.Add(this, "wt.hostiles", "wt.hostiles: log who is hostile here", a => { Log.Info("hostiles: " + string.Join(", ", World.Characters.Where(x => x.IsHostile).Select(x => x.Name).ToArray())); return "ok"; });
         Commands.Add(this, "wt.coopping", "wt.coopping: a WorksTest message to the co-op host", a => { Mods.Call("Coop", "SendToHost", this, "ping", new object[] { "hello", "host" }); return "sent"; });
     }
     bool logOutlines, hoverWatch;

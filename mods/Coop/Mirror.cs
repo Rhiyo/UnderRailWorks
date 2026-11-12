@@ -98,7 +98,7 @@ public sealed partial class Coop
             if (key == null) continue;
             var at = c.Position;
             who[key] = c;
-            lines.Add(new KeyValuePair<string, object[]>(key, new object[] { "POS", key, F(at.X), F(at.Y), F(at.Z), c.Facing, (int)Math.Round(c.Health), c.IsDead ? 1 : 0 }));
+            lines.Add(new KeyValuePair<string, object[]>(key, new object[] { "POS", key, F(at.X), F(at.Y), F(at.Z), c.Facing, (int)Math.Round(c.Health), c.IsDead ? 1 : 0, c.IsPlayer || key.StartsWith("c:") ? "" : c.IsHostile ? "h" : "n" }));
         }
         var walks = new Dictionary<string, string>();
         foreach (var c in everyone) { var key = KeyOf(c); var t = c.WalkTarget; if (key != null) walks[key] = t == null ? "" : t.Value.X + " " + t.Value.Y; }
@@ -256,6 +256,8 @@ public sealed partial class Coop
         if (c.IsWalking ? off > 3f : (off > 0.001f || Math.Abs(at.Z - z) > 0.001f || c.Facing != facing)) c.PlaceAt(new Vector3(x, y, z), facing);
         int hp; if (int.TryParse(w[6], out hp) && !c.IsDead && Math.Abs(c.Health - hp) >= 1) c.Health = hp;
         if (w[7] == "1" && !c.IsDead) c.Kill();
+        // Hostile on the host (it turned on the players): the same here, so a click on it attacks rather than talks.
+        if (w.Length > 8 && w[8].Length > 0 && !c.IsDead && !c.IsPlayer && (w[8] == "h") != c.IsHostile) c.SetAttitudeToPlayer(w[8] == "h" ? Attitude.Hostile : Attitude.Neutral);
         if (key == myKey) FollowMe();
     }
 
@@ -363,7 +365,7 @@ public sealed partial class Coop
                     if (key != null) host.Send("ATTACKID", key);
                     break;
                 }
-                case PlayerOrderKind.Use: if (o.TargetEntityId != null) host.Send("USE", o.TargetEntityId); break;
+                case PlayerOrderKind.Use: if (o.TargetEntityId != null) host.Send("USE", o.TargetEntityId, o.X, o.Y); break;
                 case PlayerOrderKind.Travel: host.Send("EXIT", o.X, o.Y); break;
                 case PlayerOrderKind.Talk:
                 {

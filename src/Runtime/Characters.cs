@@ -402,7 +402,7 @@ public static partial class World
     internal static void SpawnPlacements(c1a zone, string zoneId)
     {
         if (zone == null || zoneId == null) return;
-        if (Simulation.IsMirror) return;     // a copy of another game: its placed characters come from there
+        if (Simulation.IsMirror && !Simulation.Applying) return;     // a copy of another game: its placed characters come from there (the copy's own mirroring places them)
         foreach (var p in placements.Where(x => string.Equals(x.Zone, zoneId, StringComparison.OrdinalIgnoreCase)).ToList())
         {
             c5x existing;

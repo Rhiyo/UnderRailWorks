@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.6.0")]
+[assembly: System.Reflection.AssemblyVersion("1.7.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -370,6 +370,15 @@ public sealed partial class Coop : WorksMod
                 var door = w.Length > 1 ? World.Doors.FirstOrDefault(d => d.EntityId == w[1]) : null;
                 if (door != null && door.IsLocked && !door.IsOpen) return "that door is locked";
                 bool ok = w.Length > 1 && c.UseObject(w[1]);
+                // Not an object the host knows by that id (a corpse: each game makes its own when someone dies): the
+                // container on that tile.
+                int ux, uy;
+                if (!ok && w.Length > 3 && int.TryParse(w[2], out ux) && int.TryParse(w[3], out uy))
+                {
+                    var box = World.Containers.Where(b => Math.Abs(b.Position.X - ux) <= 1.5f && Math.Abs(b.Position.Y - uy) <= 1.5f)
+                        .OrderBy(b => Math.Abs(b.Position.X - ux) + Math.Abs(b.Position.Y - uy)).FirstOrDefault();
+                    if (box != null) ok = c.UseObject(box.EntityId);
+                }
                 Log.Info(c.Name + ": use " + (w.Length > 1 ? w[1] : "?") + ": " + (ok ? "going" : "refused"));
                 return ok ? "using it" : "can't use that now" + (Combat.InCombat && !c.IsTakingTurn ? " (not your turn)" : "");
             }
@@ -473,6 +482,7 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.door", "coop.door <id start>: your character uses that door (wt.doors lists them)", a => { var d = a.Length == 0 ? null : World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return d == null ? "no such door" : Mine("USE", d.EntityId); });
         Commands.Add(this, "coop.newfrom", "coop.newfrom <file.char> <name>: join with a character exported earlier (as finishing creation does)", a => { if (host == null || a.Length < 2) return "coop.newfrom <file.char> <name>"; host.Send("NEW", a[1], Convert.ToBase64String(System.IO.File.ReadAllBytes(a[0]))); return "sent"; });
         Commands.Add(this, "coop.talk", "coop.talk <name>: your character talks to that character (nearest of that name)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 80).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0); return t == null ? "nobody called that" : Mine("TALK", KeyHere(t)); });
+        Commands.Add(this, "coop.lootnear", "coop.lootnear: open the nearest container here (as a click on it)", a => { var me = World.Player; var b = me == null ? null : World.Containers.OrderBy(x => Math.Abs(x.Position.X - me.Position.X) + Math.Abs(x.Position.Y - me.Position.Y)).FirstOrDefault(); if (b == null) return "none"; host.Send("USE", b.EntityId, (int)Math.Round(b.Position.X), (int)Math.Round(b.Position.Y)); return "opening " + b.Name; });
         Commands.Add(this, "coop.box", "coop.box <id start>: your character opens that container", a => { var b = a.Length == 0 ? null : World.Containers.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return b == null ? "no such container" : Mine("USE", b.EntityId); });
         Commands.Add(this, "coop.threats", "coop.threats: for each joined character, the enemies in the fight and who has noticed whom", a =>
         {

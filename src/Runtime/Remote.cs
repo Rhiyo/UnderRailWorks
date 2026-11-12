@@ -284,6 +284,7 @@ namespace UnderRailWorks
             finally { scope--; }
         }
         [ThreadStatic] static int scope;
+        internal static bool Applying { get { return scope > 0; } }
         // A world-changing call now: refused (once logged per caller) when this is a mirror outside Apply.
         // Mods whose code was refused a world change (Keybinds: their key needs the real game).
         internal static readonly HashSet<string> RefusedBy = new HashSet<string>();
@@ -354,7 +355,9 @@ namespace UnderRailWorks.Internal
             {
                 if (item.c) continue;
                 var a = item.a;
-                if (!(a is em1 || a is qy || a is bpr || a is dnf || a is bsz)) continue;
+                // Walking, and dying (d3q: the death animation, then the corpse; ad6 the body fading, c7 its removal), so
+                // a death set from elsewhere plays out and leaves the game's corpse.
+                if (!(a is em1 || a is qy || a is bpr || a is dnf || a is bsz || a is d3q || a is ad6 || a is c7)) continue;
                 var r = a.n(__0, __1);
                 if (r != dc4.b && !item.c)
                 {

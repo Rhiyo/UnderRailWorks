@@ -205,6 +205,17 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
 
+## Corpses and hostility (Co-op 1.7, 2026-11-12)
+
+- Deaths now play out on joiners (the frozen world also runs the dying action d3q, the body's fade ad6 and removal
+  c7), so the game's corpse appears there too. A corpse is a new entity on each machine (different ids): a joiner's
+  use sends the object's tile as well, and the host falls back to the container on that tile. Tested: a JKK
+  Gunslinger killed on the host; the joiner opened its own copy of the corpse and got the host's corpse's 9 items.
+- Found on the way: Works skipped mod placements on copies, which also blocked Co-op's own mirroring of spawned
+  characters (fixed: skipped only outside the copy's own changes, Simulation.Applying).
+- Hostility mirrors (POS carries hostile/neutral): an NPC turning on the players on the host does so on joiners, so
+  their click attacks rather than talks. Tested with Waylon.
+
 ## Death (Co-op 1.6, 2026-11-12)
 
 Decided with the player: the host chooses the rule when hosting; the host's character follows the same rule; game
