@@ -54,6 +54,7 @@ API_RELEASE=1 ./build.sh
 tools/check-release.sh
 tools/savecheck/check-saves.sh --play
 tools/smoketest/smoke.sh
+tools/smoketest/coop.sh
 
 # 5. Package.
 ORIG="$GAME/underrail.exe"; [ -f "$GAME/underrail.exe.backup" ] && ORIG="$GAME/underrail.exe.backup"

@@ -16,17 +16,10 @@ WORK="${WORK:-$HOME/.cache/underrail-test/smoke}"; SAVE="${SAVE:-dgg}"
 export TEST_GAME="$WORK/game" RUN=smoke
 [ -d "$DIST" ] && [ -d "$MODS/WorksTest" ] || { echo "run ./build.sh first" >&2; exit 1; }
 
-# The game copy: the player's original exe and DLLs, data linked, then this build installed with the test mods.
+# The game copy (gamecopy.sh).
+. "$HERE/gamecopy.sh"
 timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
-ORIG="$GAME/underrail.exe"; [ -f "$GAME/underrail.exe.backup" ] && ORIG="$GAME/underrail.exe.backup"
-rm -rf "$TEST_GAME"; mkdir -p "$TEST_GAME"; cp "$ORIG" "$TEST_GAME/underrail.exe"
-for f in "$GAME"/*.dll; do case "$(basename "$f")" in UnderrailFix*.dll|UnderRailWorks.dll|UnderRailLauncher.dll|0Harmony.dll|System.Runtime.Serialization.Formatters.dll|Mono.Cecil.dll|FNA.dll|NVorbis.dll) ;; *) cp "$f" "$TEST_GAME/";; esac; done
-for f in "$GAME"/sfmlnet-*.dll.backup; do [ -f "$f" ] && cp "$f" "$TEST_GAME/$(basename "$f" .backup)"; done
-ln -s "$GAME/data" "$TEST_GAME/data"
-cp -r "$DIST"/. "$TEST_GAME/"
-"$TEST_GAME/underrailworks-patcher" "$TEST_GAME" >/dev/null || { echo "patcher failed" >&2; exit 1; }
-for m in WorksTest HalfBroken NeedsNewer HelloWorks; do rm -rf "$TEST_GAME/Mods/$m"; cp -r "$MODS/$m" "$TEST_GAME/Mods/"; done
-printf '[UnderRailWorks]\nSettingsVersion=3\nLog=1\n' > "$TEST_GAME/UnderRailWorks.ini"
+gamecopy "$TEST_GAME" || exit 1
 LOG="$TEST_GAME/UnderRailWorks.log"; AUTO="$TEST_GAME/Mods/WorksTest/autorun.txt"
 inp() { timeout 30 "$SKILL/inp.sh" "$@" >/dev/null 2>&1; }
 
