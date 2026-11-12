@@ -7,6 +7,7 @@
 //   Party.NeedTogether(this, PartyNeed.Talk, "dialogs\\core city\\jyles");   // ...to start that conversation
 //   Party.NeedTogether(this, PartyNeed.Use, lever.EntityId); // ...to use that object
 //   Exits.Disable(this, World.ZoneId, 9, 5);                 // that exit tile does nothing until Enable
+// A fight doesn't end while a hostile combatant has detected any party member (the game checks only the player).
 // The rules are checked where the game does those things (a zone change a0l.a(c5x, c2w), the start of a conversation
 // dka.amu, an object's use bim.a, the walk to an exit ale.a(tile, trigger)), whoever starts them; refused with a
 // floating line over the character, as the game refuses. Nothing here is saved: mods set their rules in Load.
@@ -109,8 +110,32 @@ namespace UnderRailWorks.Internal
             catch (Exception ex) { Log.Write("exits: " + ex.Message); return true; }
         }
 
+        // crp.ahs(silent, strict): may the fight end? The game refuses while a hostile combatant has detected the player
+        // (aqu().v() only); the party's other members count the same way, so a fight doesn't end while enemies are after
+        // one of them.
+        static bool MayEnd(bool __0, ref bool __result)
+        {
+            try
+            {
+                var members = Party.Members.Where(c => !c.IsPlayer && !c.IsDead && c.Area != null).ToList();
+                if (members.Count == 0) return true;
+                foreach (var m in members)
+                {
+                    var foe = World.CharactersNear(m.Position, 200).FirstOrDefault(e => e != m && !e.Passive && e.AttitudeTo(m) == Attitude.Hostile && e.HasNoticed(m));
+                    if (foe == null) continue;
+                    if (!__0) Combat.Float(m, "Cannot end combat at this time.", Color.Orange);
+                    __result = false;
+                    return false;
+                }
+            }
+            catch (Exception ex) { Log.Write("party: " + ex.Message); }
+            return true;
+        }
+
         internal static void Install(HarmonyLib.Harmony harmony)
         {
+            var end = typeof(crp).GetMethod("ahs", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public, null, new[] { typeof(bool), typeof(bool) }, null);
+            if (end != null) harmony.Patch(end, prefix: new HarmonyLib.HarmonyMethod(typeof(PartyHooks).GetMethod("MayEnd", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
             var walk = typeof(ale).GetMethod("a", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public, null, new[] { typeof(ak1), typeof(ya) }, null);
             harmony.Patch(walk, prefix: new HarmonyLib.HarmonyMethod(typeof(PartyHooks).GetMethod("ToExit", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
             Log.Write("party: hooks in place");

@@ -1680,9 +1680,9 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
   the dialog evaluates (zq.n1, and each answer: runtime aud/aue then zq.nz), so its own skills and items answer the
   checks and scripts give to it; the window stays hidden (the controller's b(false)) and the counters zq.n1 raises
   (dka.aml / amf / amh) are lowered, and raised again before zq.n2 lowers them, so the game isn't paused. One at a time.
-- **Combat:** `Combat.Join(c)` (crp.ahn(amc)), `Combat.Leave(c)` (crp.a(amc)), `Character.IsInCombat` also asks the
-  combat manager (a player-style sheet that isn't the player gets no flag), `Character.Attack` outside a fight
-  attacks at once. The game brings the player's whole side into a fight when it starts.
+- **Combat:** `Combat.Join(c)` (crp.ahn(amc)), `Combat.Leave(c)` (crp.a(amc)). In a fight the whole zone is
+  turn-based and every character with an AI is in the turn order (registered by crp.ahx when it becomes active); a
+  fight doesn't end while a hostile combatant has detected any `Party` member (crp.ahs extended).
 - **The party:** `Party.Members` (the player + characters mods add: what "the players" means for any mod),
   `Party.Add/Remove/Contains`, `Party.NeedTogether(mod, PartyNeed.EnterZone | Talk | Use, key, distance)` checked at
   a0l.a(c5x, c2w), dka.amu and bim.a (refused with a floating line), `Party.Missing(who, distance)`.
@@ -1697,7 +1697,7 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
   quests and the console, never went through amc.a); `Progression.ModifyExperience` now says `Who`, `Reason` (from
   awq.a / amc.a) and `FromOddity` ("studying an oddity: ..."); `GameEvents.CharacterExperienceGained(character, xp)`;
   `GiveExperience` works for any player sheet.
-- **Sight:** `Character.CanSee(other)` (the game's field of view, walls and all: bm6.a(tile)), `Character.SightRange` (the sheet's: the player 13, a Commoner 10, a Rathound Alpha 8),
+- **Sight:** `Character.CanSee(other)` (the game's field of view, walls and all: bm6.a(tile); wider than the sight range: an NPC's is at least 10 tiles), `Character.SightRange` (the sheet's: the player 13, a Commoner 10, a Rathound Alpha 8),
   `Character.HasNoticed(other)` (its AI's detected state, bm6.e; not sight: a starting fight tells the enemies about
   the player's whole side).
 - **A copy of another game:** `Simulation.IsMirror` makes Works' world-changing calls refuse (logged once each) and

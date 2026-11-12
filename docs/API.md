@@ -126,9 +126,9 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 
 - `string Blueprint` — Its blueprint path, matched by name among the creature blueprints (null: no match). See World.BlueprintFor. A character Works spawned or placed: the blueprint it was made from.
 - `bool IsTakingTurn` — In combat: this character's turn now.
-- `bool Attack(Character target)` — An attack on target with what it holds, as the player's click (the game checks AP, range and line of fire, and refuses with its own message). A character in the fight only on its turn; one outside it attacks at once, which brings it into the fight (as the player shooting first). False: it can't attack now.
+- `bool Attack(Character target)` — An attack on target with what it holds, as the player's click (the game checks AP, range and line of fire, and refuses with its own message). In a fight only on its turn. False: it can't attack now.
 - `bool EndTurn()` — Ends its combat turn (as the player's End Turn: leftover AP carries over up to 10). False: not its turn.
-- `bool MoveTo(int x, int y)` — Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it can't take orders (no movement, not on a map) or the tile is outside the area or not floor. In turn-based combat, a character in the fight only on its own turn (one outside it walks as usual), spending movement points then AP as the player's walk does (it stops when they run out).
+- `bool MoveTo(int x, int y)` — Walks to tile x, y in its area (pathfinding, its speed; it may stop short if the way is blocked). False when it can't take orders (no movement, not on a map) or the tile is outside the area or not floor. In turn-based combat only on its own turn (the whole zone is turn-based: everyone with an AI is in the turn order), spending movement points then AP as the player's walk does (it stops when they run out).
 - `bool WalkTo(int x, int y)` — As MoveTo, but it keeps going: a walk the game cuts short (another character in the way: the walk step stops when two bodies' footprints meet, and only the player's clicks or an AI would order it again) is ordered again from where it stopped, a few times, until it's there. For characters a mod drives (CharacterControl).
 - `bool TeleportTo(int x, int y)` — Puts it on tile x, y of its area at once (no walking, as the game's scripts move characters between scenes).
 - `DefenseStats Defense`
@@ -167,7 +167,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `string Faction`
 - `bool Passive`
 - `bool IsDead`
-- `bool IsInCombat` — In the fight: its own flag, or a combatant in the combat manager's list (characters with a player sheet that aren't the player don't get the flag).
+- `bool IsInCombat` — Its own "in combat" flag (efk.IsInCombat: a timer set by hostility, running down per turn). Note: in a fight the whole zone is turn-based and every character with an AI is in the turn order (crp.ahx registers each one when it becomes active), flag or not.
 - `void Kill()`
 - `bool CanSee(Character other)` — Its AI can see where other stands now: the game's own field of view (walls and all), as enemies notice the player (bm6.a(tile): in a fight the tiles the fight worked out it sees, else its vision's visible points). False for one without an AI, or in another area.
 - `float SightRange` — How far it sees (tiles): its sheet's SightRange, what its AI's vision uses.

@@ -82,9 +82,10 @@ public sealed partial class Character
     public string Faction { get { return Need.FactionId; } set { Need.FactionId = value; } }
     public bool Passive { get { return Need.Passive; } set { Need.Passive = value; } }
     public bool IsDead { get { var d = Data; return d != null && d.Dead; } }
-    // In the fight: its own flag, or a combatant in the combat manager's list (characters with a player sheet that
-    // aren't the player don't get the flag).
-    public bool IsInCombat { get { if (Need.IsInCombat) return true; var m = Combat.Manager; return m != null && m.ahg() && m.ahu(Data) != null; } }
+    // Its own "in combat" flag (efk.IsInCombat: a timer set by hostility, running down per turn). Note: in a fight
+    // the whole zone is turn-based and every character with an AI is in the turn order (crp.ahx registers each one
+    // when it becomes active), flag or not.
+    public bool IsInCombat { get { return Need.IsInCombat; } }
     public void Kill() { Need.a((cwt)null, (cru)null, false); }
 
     // Its AI can see where other stands now: the game's own field of view (walls and all), as enemies notice the player

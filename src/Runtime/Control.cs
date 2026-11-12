@@ -50,13 +50,12 @@ namespace UnderRailWorks
         public bool IsTakingTurn { get { var c = Combat.Current; return c != null && c.Entity == Entity; } }
 
         // An attack on target with what it holds, as the player's click (the game checks AP, range and line of fire, and
-        // refuses with its own message). A character in the fight only on its turn; one outside it attacks at once, which
-        // brings it into the fight (as the player shooting first). False: it can't attack now.
+        // refuses with its own message). In a fight only on its turn. False: it can't attack now.
         public bool Attack(Character target)
         {
             var me = Entity as c5x; var them = target == null ? null : target.Entity as c5x;
             var a = me == null ? null : me.GetAspect<amc>(); var b = them == null ? null : them.GetAspect<amc>();
-            if (a == null || b == null || IsDead || target.IsDead || (Combat.InCombat && IsInCombat && !IsTakingTurn)) return false;
+            if (a == null || b == null || IsDead || target.IsDead || (Combat.InCombat && !IsTakingTurn)) return false;
             return a.b(b) != null;
         }
 

@@ -18,11 +18,12 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("0.10.0")]
+[assembly: System.Reflection.AssemblyVersion("0.11.0")]
 
 public sealed partial class Coop : WorksMod
 {
     const int DefaultPort = 27650;
+    const double PassAfter = 8;     // seconds an uninvolved joined character's combat turn waits for its player
     const string DefaultBlueprint = "creatures\\generichumans\\jkkgunslinger";
     static readonly Color Say = new Color(120, 200, 255);
 
@@ -72,9 +73,20 @@ public sealed partial class Coop : WorksMod
 
     // --- Host ---------------------------------------------------------------------------------------------------
     // Split: the zone it runs on its own machine (players in different zones: CoopZones.cs).
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign, Split; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign, Split; public bool WorldPending, InWorld; public double IdleTurn; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
     Listener listener;
-    readonly HashSet<Character> engaged = new HashSet<Character>();     // attacked or attacking in this fight: stays in it
+    readonly HashSet<Character> engaged = new HashSet<Character>(), toldPassing = new HashSet<Character>();     // attacked or attacking in this fight / told its turns pass
+
+    // In this fight as an ally would be: it fought, or an enemy (not passive) sees it, or it sees one, by the rule the
+    // game's vision sensor uses to detect (cn8.abj): the other's tile in the observer's field of view (walls) and within
+    // the observer's own sight range. (The AI's memory, HasNoticed, isn't it: when a fight starts the enemies learn of
+    // characters far out of sight.)
+    bool Involved(Character c)
+    {
+        if (engaged.Contains(c)) return true;
+        return World.CharactersNear(c.Position, 200).Any(e => e != c && !e.IsDead && !e.Passive && e.AttitudeTo(c) == Attitude.Hostile && (Sees(e, c) || Sees(c, e)));
+    }
+    static bool Sees(Character who, Character other) { return who.CanSee(other) && Dist(who, other) <= who.SightRange; }
     readonly Inbox inbox = new Inbox();
     readonly Dictionary<Peer, Seat> seats = new Dictionary<Peer, Seat>();
     readonly List<Seat> orphans = new List<Seat>();     // joiners who left: their character stays, passing its turns
@@ -171,6 +183,7 @@ public sealed partial class Coop : WorksMod
             }
         }
         if (seat.Character == null || seat.Character.IsDead || seat.Character.Area == null) { p.Send("SAID", seat.Character != null && seat.Character.IsDead ? "your character is dead" : "pick a character first"); return; }
+        seat.IdleTurn = 0;     // they're acting: their turn waits for them
         var said = Act(seat.Character, w);
         if (!string.IsNullOrEmpty(said)) p.Send("SAID", said);
     }
@@ -442,7 +455,7 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.box", "coop.box <id start>: your character opens that container", a => { var b = a.Length == 0 ? null : World.Containers.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return b == null ? "no such container" : Mine("USE", b.EntityId); });
         Commands.Add(this, "coop.threats", "coop.threats: for each joined character, the enemies in the fight and who has noticed whom", a =>
         {
-            var lines = seats.Values.Concat(orphans).Where(x => x.Character != null).Select(x => x.Character.Name + " at " + (int)x.Character.Position.X + "," + (int)x.Character.Position.Y + (x.Character.IsInCombat ? " (in the fight)" : "") + ": " + string.Join("; ", World.CharactersNear(x.Character.Position, 60).Where(e => e != x.Character && e.IsInCombat && e.AttitudeTo(x.Character) == Attitude.Hostile).Select(e => e.Name + " " + (int)Vector2.Distance(new Vector2(e.Position.X, e.Position.Y), new Vector2(x.Character.Position.X, x.Character.Position.Y)) + " tiles" + ", its sight " + e.SightRange + (e.CanSee(x.Character) ? ", sees it" : "") + (x.Character.CanSee(e) ? ", seen by it" : "")).ToArray())).ToArray();
+            var lines = seats.Values.Concat(orphans).Where(x => x.Character != null).Select(x => x.Character.Name + " at " + (int)x.Character.Position.X + "," + (int)x.Character.Position.Y + (x.Character.IsInCombat ? " (in the fight)" : "") + ": " + string.Join("; ", World.CharactersNear(x.Character.Position, 60).Where(e => e != x.Character && !e.IsDead && !e.Passive && e.AttitudeTo(x.Character) == Attitude.Hostile).Select(e => e.Name + " " + (int)Vector2.Distance(new Vector2(e.Position.X, e.Position.Y), new Vector2(x.Character.Position.X, x.Character.Position.Y)) + " tiles" + ", its sight " + e.SightRange + (Sees(e, x.Character) ? ", sees it" : "") + (Sees(x.Character, e) ? ", seen by it" : "") + (e.HasNoticed(x.Character) ? " (AI knows of it)" : "")).ToArray())).ToArray();
             var t = string.Join(" | ", lines); Log.Info("threats: " + t); return t;
         });
         Commands.Add(this, "coop.trade", "coop.trade <name>: trade with that merchant (testing)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 200).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0 && x.IsMerchant); return t == null ? "no merchant called that" : Mine("TRADEWITH", KeyHere(t)); });
@@ -495,36 +508,30 @@ public sealed partial class Coop : WorksMod
             if (c == null) return;
             if (partner != null && c == partner) Log.Info("partner's turn" + Points(c));
             var seat = seats.Values.FirstOrDefault(s => s.Character == c);
-            if (seat != null) { seat.Peer.Send("TURN", Combat.ActionPoints(c), Combat.MovementPoints(c)); Log.Info(c.Name + "'s turn (" + seat.Peer.Name + ")" + Points(c)); }
+            if (seat != null)
+            {
+                seat.Peer.Send("TURN", Combat.ActionPoints(c), Combat.MovementPoints(c));
+                Log.Info(c.Name + "'s turn (" + seat.Peer.Name + ")" + Points(c));
+                // Not involved (as an ally with nothing to do): the turn passes by itself unless the player acts in time.
+                seat.IdleTurn = !Involved(c) ? PassAfter : 0;
+                if (seat.IdleTurn > 0 && toldPassing.Add(c)) seat.Peer.Send("SAID", "there's a fight here, but no enemy has noticed you: your turns pass by themselves after " + (int)PassAfter + " s unless you do something");
+            }
             else if (orphans.Any(o => o.Character == c)) { c.EndTurn(); Log.Info(c.Name + "'s turn passed (no player)"); }
         });
-        // Joined characters are only in a fight as anyone would be: when they attack or are attacked, or an enemy in the
-        // fight is within sight of them (Works' Combat.Join; their AI, which would notice, is held). Otherwise they walk
-        // and act in real time while the others fight.
-        double fightTimer = 0;
-        GameEvents.CombatEnded.Add(this, () => engaged.Clear());
+        // In a fight the whole zone is turn-based and every character is in the turn order (the game's rule, allies
+        // included); a joined character not involved (no enemy has noticed it, it has noticed none, it hasn't fought)
+        // passes its turn by itself, as an ally with nothing to do. GameEvents.CombatEnded clears who fought.
+        GameEvents.CombatEnded.Add(this, () => { engaged.Clear(); toldPassing.Clear(); });
         GameEvents.Update.Add(this, dt =>
         {
-            if (listener == null || !Combat.InCombat || (fightTimer -= dt) > 0) return;
-            fightTimer = 0.5;
-            foreach (var s in seats.Values.Concat(orphans).Where(x => x.Character != null && !x.Character.IsDead && x.Character.Area != null).ToList())
-            {
-                var c = s.Character;
-                // In sight as the game decides it for the player: an enemy in the fight that can see this character, or that
-                // it can see (each one's own field of view: walls, sight range; Works' Character.CanSee).
-                var foe = World.CharactersNear(c.Position, 60).FirstOrDefault(e => e != c && e.IsInCombat && e.AttitudeTo(c) == Attitude.Hostile && (e.CanSee(c) || c.CanSee(e)));
-                if (!c.IsInCombat)
-                {
-                    if (foe != null && Combat.Join(c)) { Log.Info(c.Name + " joins the fight (" + foe.Name + " in sight" + ")"); if (s.Peer != null) s.Peer.Send("SAID", foe.Name + " is in sight: you're in the fight"); }
-                }
-                // The game brings the player's whole side into a fight; one with no enemy in sight that hasn't fought goes back out.
-                else if (foe == null && !engaged.Contains(c) && Combat.Leave(c)) { Log.Info(c.Name + " stays out of the fight (no enemy in sight)"); if (s.Peer != null) s.Peer.Send("SAID", "there's a fight nearby, but no enemy in sight: you're not in it"); }
-            }
+            if (listener == null) return;
+            foreach (var s in seats.Values.Where(x => x.IdleTurn > 0 && x.Character != null))
+                if ((s.IdleTurn -= dt) <= 0) { s.IdleTurn = 0; if (s.Character.IsTakingTurn && !Involved(s.Character)) s.Character.EndTurn(); }
         });
         Combat.AttackResolved.Add(this, o =>
         {
             foreach (var s in seats.Values.Concat(orphans).Where(x => x.Character != null && !x.Character.IsDead))
-                if (o.Target == s.Character || o.AttackerName == s.Character.Name) { engaged.Add(s.Character); if (!s.Character.IsInCombat) Combat.Join(s.Character); }
+                if (o.Target == s.Character || o.AttackerName == s.Character.Name) engaged.Add(s.Character);
         });
         Combat.AttackResolved.Add(this, o =>
         {

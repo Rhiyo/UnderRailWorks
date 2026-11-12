@@ -206,11 +206,23 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 
 ## Round 3 (2026-11-12, Co-op 0.8-0.9): built from the design below
 
-- **Fights by sight:** a joined character is in a fight when an enemy in it can see it, or it can see the enemy, by
-  the game's own field of view (Works' Character.CanSee: bm6.a(tile), the tiles a fight works out each combatant sees,
-  else its vision's visible points: walls and sight ranges as for the player). Tested: 16 and 10 tiles away without a
-  line of sight it stayed out, and joined when it could see the Rathound. (A first version used distance against each
-  sheet's SightRange; the player pointed out single player uses line of sight.)
+- **Fights, as the game does them (decided 2026-11-12):** traced in the decompile: nobody "joins" a fight. Every
+  character with an AI is registered with the combat manager when it becomes active (amc.mx -> crp.ahx), and a fight
+  makes the whole zone turn-based with all of them in the turn order (allies, pets, the player); an ally with nothing
+  to do passes its turn (its AI's combat step). A fight ends only when no hostile combatant has detected the player
+  (crp.ahs), checked when the player ends a turn. Detection is the vision sensor's (cn8.abj): the other's tile in the
+  observer's field of view and within its real SightRange. The field of view itself is wider (an NPC's is at least
+  10 tiles, aju.w; the player's SightRange + 2), which is why a Rathound (sight 8) "saw" a tile 10 away.
+  So co-op characters are always in the turn order, can't walk in real time during a fight anywhere in the zone
+  (nobody can), and a fight doesn't end while an enemy has detected any party member (Works: the game's check extended
+  to Party.Members). A joined character not involved (no enemy sees it and it sees none, by the sensor's rule, and it
+  hasn't fought) gets its turn but it passes after 8 s unless its player does something; involved, it's an ordinary
+  turn. Tested both: far away (21 tiles) the turns passed; next to the host the turns were its player's.
+  Earlier versions (taking characters out of the fight so they walk in real time; a distance; the AI's memory, which
+  knows of characters far out of sight once a fight starts) are gone.
+- **To think through (the player: "potentially has huge ramifications"):** fights that aren't the whole zone (players
+  far from a fight playing in real time) would need the game's single turn order split; until then the whole zone
+  goes turn-based, as in single player.
 - **Trading:** a conversation's trade opens on the joiner's machine (their character, their money, the merchant's
   stock packed and sent); on closing, the merchant's stock and the joiner's sheet go back. Tested: a throwing net
   blueprint bought, 500 -> 458 charons. A mod's spawned merchant gets its store on the joiner too.
