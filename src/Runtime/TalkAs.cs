@@ -23,23 +23,34 @@ namespace UnderRailWorks
     public sealed class TalkChoice { public int Index { get; internal set; } public string Text { get; internal set; } public bool Enabled { get; internal set; } }
     public sealed class TalkLine
     {
+        // Who holds the conversation (the player, or TalkAs's speaker).
+        public Character Talker { get; internal set; }
         public string Speaker { get; internal set; }
         public string Text { get; internal set; }
         // Empty: the line only goes on (Choose(-1): Continue, or End when it's the last).
         public IList<TalkChoice> Choices { get; internal set; }
     }
 
+    public static partial class GameEvents
+    {
+        // Every line any conversation shows (the player's own, or one held through TalkAs): who holds it, the line, the
+        // answers. For showing it elsewhere (co-op players listening, a log). GameEvents.DialogEnded when it closes.
+        public static readonly Hook<Action<TalkLine>> ConversationLine = new Hook<Action<TalkLine>>("ConversationLine");
+    }
+
     public static class TalkAs
     {
         // False: no such characters, the speaker has no player sheet, or a conversation is already going.
-        public static bool Talk(Character speaker, Character npc, Action<TalkLine> onLine, Action onEnd)
+        public static bool Talk(Character speaker, Character npc, Action<TalkLine> onLine, Action onEnd) { return Talk(speaker, npc, onLine, onEnd, false); }
+        // pause: the game pauses while it runs, as for the player's own conversations (else it goes on).
+        public static bool Talk(Character speaker, Character npc, Action<TalkLine> onLine, Action onEnd, bool pause)
         {
             var me = speaker == null ? null : speaker.Entity as c5x;
             var them = npc == null ? null : npc.Entity as c5x;
             var sheet = me == null || me.GetAspect<amc>() == null ? null : me.GetAspect<amc>().aa() as au2;
             var mine = me == null ? null : me.GetAspect<j7>(); var theirs = them == null ? null : them.GetAspect<j7>();
             if (sheet == null || mine == null || theirs == null || IsOpen) return false;
-            var run = new TalkHooks.Run { Speaker = me, Sheet = sheet, OnLine = onLine, OnEnd = onEnd, Npc = npc, Who = speaker, Mine = mine, Theirs = theirs };
+            var run = new TalkHooks.Run { Speaker = me, Sheet = sheet, OnLine = onLine, OnEnd = onEnd, Npc = npc, Who = speaker, Mine = mine, Theirs = theirs, KeepPaused = pause };
             // Walks next to the NPC first (its ordinary walk order), then the conversation starts without the game's own
             // approach step (which didn't move a character a mod controls).
             var at = npc.Position;
@@ -65,7 +76,7 @@ namespace UnderRailWorks.Internal
 {
     static class TalkHooks
     {
-        internal sealed class Run { public c5x Speaker; public au2 Sheet; public Action<TalkLine> OnLine; public Action OnEnd; public zq Controller; public bool Paused; public au2 Saved; public Character Npc, Who; public j7 Mine, Theirs; public double Waited; }
+        internal sealed class Run { public c5x Speaker; public au2 Sheet; public Action<TalkLine> OnLine; public Action OnEnd; public zq Controller; public bool Paused; public au2 Saved; public Character Npc, Who; public j7 Mine, Theirs; public double Waited; public bool KeepPaused; }
         internal static Run Pending, Active, Walking;
 
         internal static void Start(Run r)
@@ -118,7 +129,7 @@ namespace UnderRailWorks.Internal
                 var game = Game;
                 var model = Model == null ? null : Model.GetValue(__instance) as azm;
                 a.Paused = model != null && model.g();
-                if (game != null) { game.amm(); game.amg(); if (a.Paused) game.ami(); }
+                if (game != null && !a.KeepPaused) { game.amm(); game.amg(); if (a.Paused) game.ami(); }
             }
             catch (Exception ex) { Log.Write("talk: " + ex.Message); }
             Report(a);
@@ -143,13 +154,30 @@ namespace UnderRailWorks.Internal
 
         static void Report(Run a)
         {
-            var node = a.Controller.nw() == null ? null : a.Controller.nw().at7();
-            if (node == null) return;
-            var speaker = a.Controller.nt();
-            var line = new TalkLine { Speaker = speaker == null ? "" : speaker.ActorName, Text = a.Controller.nx() ?? node.b(), Choices = new List<TalkChoice>() };
+            var line = LineOf(a.Controller);
+            if (line == null) return;
+            try { if (a.OnLine != null) a.OnLine(line); } catch (Exception ex) { Log.Write("talk: a line handler failed: " + ex.Message); }
+        }
+
+        static readonly FieldInfo Initiator = typeof(zq).GetFields(Any).FirstOrDefault(f => f.Name == "g" && f.FieldType == typeof(b0b));
+        internal static TalkLine LineOf(zq controller)
+        {
+            var node = controller.nw() == null ? null : controller.nw().at7();
+            if (node == null) return null;
+            var speaker = controller.nt();
+            var talker = Initiator == null ? null : Initiator.GetValue(controller) as c5x;
+            var line = new TalkLine { Talker = talker == null ? null : Character.Of(talker), Speaker = speaker == null ? "" : speaker.ActorName, Text = controller.nx() ?? node.b(), Choices = new List<TalkChoice>() };
             var choices = node.d();
             if (choices != null) for (int i = 0; i < choices.Count; i++) line.Choices.Add(new TalkChoice { Index = i, Text = choices[i].Text, Enabled = !choices[i].Answer.d() });
-            try { if (a.OnLine != null) a.OnLine(line); } catch (Exception ex) { Log.Write("talk: a line handler failed: " + ex.Message); }
+            return line;
+        }
+
+        // zq.nz: a conversation's line shown (any conversation: the player's, or one held through TalkAs).
+        static void Shown(zq __instance)
+        {
+            if (!GameEvents.ConversationLine.Any) return;
+            try { var line = LineOf(__instance); if (line != null) GameEvents.ConversationLine.Run(h => h(line)); }
+            catch (Exception ex) { Log.Write("talk: conversation line: " + ex.Message); }
         }
 
         // zq.n2 lowers the counters n1 raised: ours were lowered already, so they go back up first.
@@ -158,7 +186,7 @@ namespace UnderRailWorks.Internal
             var a = Active;
             if (a == null || a.Controller != __instance) return;
             var game = Game;
-            if (game != null) { game.aml(); game.amf(); if (a.Paused) game.amh(); }
+            if (game != null && !a.KeepPaused) { game.aml(); game.amf(); if (a.Paused) game.amh(); }
         }
 
         static void Closed(zq __instance)
@@ -178,6 +206,7 @@ namespace UnderRailWorks.Internal
             var close = typeof(zq).GetMethod("n2", Any, null, new[] { typeof(el5) }, null);
             harmony.Patch(open, prefix: m("Opening"), postfix: m("Opened"));
             harmony.Patch(close, prefix: m("Closing"), postfix: m("Closed"));
+            harmony.Patch(typeof(zq).GetMethod("nz", Any, null, Type.EmptyTypes, null), postfix: m("Shown"));
             Log.Write("talk: hooks in place (answer " + (Answer != null) + ", model " + (Model != null) + ")");
         }
     }

@@ -28,11 +28,40 @@ public sealed partial class Coop
             peer.Send("DLG", line.Speaker, line.Text);
             foreach (var o in line.Choices) peer.Send("DLGOPT", o.Index, o.Enabled ? 1 : 0, o.Text);
             peer.Send("DLGSHOW");
-        }, () => { peer.Send("DLGEND"); if (talking == seat) talking = null; });
+        }, () => { peer.Send("DLGEND"); if (talking == seat) talking = null; }, true);     // the game pauses, as for any conversation: everyone listens
         if (!ok) return "can't talk to " + npc.Name + " now";
         talking = seat;
         Log.Info(c.Name + " talks to " + npc.Name);
         return "going to talk to " + npc.Name;
+    }
+
+    // Every conversation's lines go to the players not holding it, to listen to (and the host listens to a joiner's).
+    void LoadListening()
+    {
+        GameEvents.ConversationLine.Add(this, line =>
+        {
+            if (listener == null) return;
+            var talker = line.Talker == null ? "?" : line.Talker.Name;
+            foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null && x.Character != line.Talker))
+            {
+                s.Peer.Send("DLGW", talker, line.Speaker, line.Text);
+                foreach (var o in line.Choices) s.Peer.Send("DLGOPT", o.Index, o.Enabled ? 1 : 0, o.Text);
+                s.Peer.Send("DLGSHOW");
+            }
+            if (line.Talker != null && !line.Talker.IsPlayer)
+            {
+                talkWatching = talker; talkSpeaker = line.Speaker; talkText = line.Text;
+                talkChoices.Clear(); talkEnabled.Clear();
+                foreach (var o in line.Choices) { talkChoices.Add(new KeyValuePair<int, string>(o.Index, o.Text)); talkEnabled.Add(o.Enabled); }
+                ShowTalk();
+            }
+        });
+        GameEvents.DialogEnded.Add(this, name =>
+        {
+            if (listener == null) return;
+            foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null && x != talking)) s.Peer.Send("DLGEND");
+            if (talkWindow != null && talkWindow.IsOpen) { talkEnding = true; talkWindow.Close(); talkEnding = false; talkWindow = null; }
+        });
     }
 
     string Pick(Character c, string index)
@@ -45,7 +74,8 @@ public sealed partial class Coop
 
     // --- Joiner -------------------------------------------------------------------------------------------------
     UiWindow talkWindow;
-    bool talkEnding;
+    bool talkEnding, talkWindowWatching;
+    string talkWatching;     // listening to someone else's conversation: their name (null: our own, to answer)
     UiList talkList;
     string talkSpeaker, talkText;
     readonly List<KeyValuePair<int, string>> talkChoices = new List<KeyValuePair<int, string>>();
@@ -56,7 +86,9 @@ public sealed partial class Coop
     {
         switch (w[0])
         {
-            case "DLG": talkSpeaker = w.Length > 1 ? w[1] : ""; talkText = w.Length > 2 ? w[2] : ""; talkChoices.Clear(); talkEnabled.Clear(); return true;
+            case "DLG": talkWatching = null; talkSpeaker = w.Length > 1 ? w[1] : ""; talkText = w.Length > 2 ? w[2] : ""; talkChoices.Clear(); talkEnabled.Clear(); return true;
+            // Someone else's conversation, to listen to: DLGW <talker> <speaker> <text>, the answers, DLGSHOW, DLGEND.
+            case "DLGW": talkWatching = w.Length > 1 ? w[1] : "?"; talkSpeaker = w.Length > 2 ? w[2] : ""; talkText = w.Length > 3 ? w[3] : ""; talkChoices.Clear(); talkEnabled.Clear(); return true;
             case "DLGOPT":
             {
                 int i; if (w.Length < 4 || !int.TryParse(w[1], out i)) return true;
@@ -71,15 +103,18 @@ public sealed partial class Coop
 
     void ShowTalk()
     {
+        // A window made for answering isn't the one for listening (and back): made again.
+        if (talkWindow != null && talkWindow.IsOpen && talkWindowWatching != (talkWatching != null)) { talkEnding = true; talkWindow.Close(); talkEnding = false; talkWindow = null; }
         if (talkWindow == null || !talkWindow.IsOpen)
         {
             int w = Ui.S(640), h = Ui.S(420), pad = Ui.S(10);
             talkWindow = Ui.Window(this, "talk", "Conversation", w, h);
             if (talkWindow == null) return;
-            // Closed by the player (not by the conversation ending): it ends on the host too.
-            talkWindow.Closed += () => { talkWindow = null; if (!talkEnding && host != null && !host.Closed) host.Send("DLGCLOSE"); };
+            talkWindowWatching = talkWatching != null;
+            // Closed by the one talking (not by the conversation ending): it ends on the host too.
+            talkWindow.Closed += () => { var watching = talkWindowWatching; talkWindow = null; if (!talkEnding && !watching && host != null && !host.Closed) host.Send("DLGCLOSE"); };
             w = talkWindow.Width; h = talkWindow.Height;
-            var go = Ui.Button("Continue", () => Answer(-1));
+            var go = talkWatching != null ? Ui.Label("", Ui.S(10)) : Ui.Button("Continue", () => Answer(-1));
             int listTop = talkWindow.Top + Ui.S(4);
             talkList = Ui.List(w - 2 * pad, h - listTop - pad - go.Height - Ui.S(8));
             talkList.Selected += row => { if (row >= 0 && row < rowChoice.Count && rowChoice[row] >= 0) Answer(rowChoice[row]); };
@@ -89,11 +124,12 @@ public sealed partial class Coop
         var items = new List<string>(); var colours = new List<Color>();
         rowChoice.Clear();
         int width = talkList.View.Width - Ui.S(12);
+        if (talkWatching != null) { items.Add(talkWatching + " is talking:"); colours.Add(Grey); rowChoice.Add(-2); }
         foreach (var l in Ui.Wrap((string.IsNullOrEmpty(talkSpeaker) ? "" : talkSpeaker + ": ") + talkText, width)) { items.Add(l); colours.Add(Normal); rowChoice.Add(-2); }
         items.Add(""); colours.Add(Normal); rowChoice.Add(-2);
         for (int i = 0; i < talkChoices.Count; i++)
             foreach (var l in Ui.Wrap((i + 1) + ". " + talkChoices[i].Value, width).Select((t, n) => n == 0 ? t : "    " + t))
-            { items.Add(l); colours.Add(talkEnabled[i] ? Mine_ : Grey); rowChoice.Add(talkEnabled[i] ? talkChoices[i].Key : -2); }
+            { items.Add(l); colours.Add(talkEnabled[i] && talkWatching == null ? Mine_ : Grey); rowChoice.Add(talkEnabled[i] && talkWatching == null ? talkChoices[i].Key : -2); }
         talkList.Items = items;
         talkList.ItemColors = colours;
         talkList.Selection = -1;

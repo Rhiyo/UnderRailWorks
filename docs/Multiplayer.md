@@ -204,7 +204,29 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
 
-## Round 3 (2026-11-12, Co-op 0.8-0.9): built from the design below
+## Co-op 1.0: the bare minimum (decided 2026-11-12)
+
+The player split the work: Co-op is plain multiplayer that keeps the game's own rules, and anything that bends them
+becomes a separate mod later, built on APIs (Works' and Co-op's).
+- **Conversations:** whoever clicks talks and answers; every other player listens (a read-only Conversation window
+  following each line, "<name> is talking"; the host sees a joiner's conversation the same way). The game pauses, as
+  for any conversation. Works: GameEvents.ConversationLine (every line of any conversation, with who holds it),
+  TalkAs.Talk(..., pause), Character.TalkTo. Tested both ways with Jyles.
+- **Travel:** the group travels together: an exit is taken only with every player within 10 tiles of whoever takes
+  it (Works' Party.NeedTogether while hosting); refused with a message otherwise. Tested both ways. No separate zones.
+- **Combat:** the whole zone, as the game does it: every player takes their turns. (The 8 s auto-pass is gone.)
+- **Hosting options:** Host this game... opens a window with Shared XP (the % of what any player earns that each other
+  player also gets, 0-100, default 100) and any other mod's options; values remembered. Tested: 50 % gave the joiner
+  50 of the host's 100.
+- **Co-op's API** (Mods.Api<CoopApi>("Coop") or Mods.Call): IsHosting / IsJoined, Players, PlayerJoined / PlayerLeft,
+  XpShare, AddHostOption / AddHostChoice / HostOption, and a mod's own messages (Handle, SendTo, SendToAll,
+  SendToHost). Tested from WorksTest by Mods.Call: an option on the Host window, a message to the host and its reply.
+- **Left for later mods** (their Works pieces stay: Zones.Export/Import, Variables.Snapshot, WorldMap.Mark,
+  Combat.Join/Leave, TalkAs, CharacterLeavingZone, Simulation.IsMirror): players in different zones, fights that
+  aren't the whole zone, a campaign mod with separate conversations, other XP rules. The separate-zones code and the
+  four XP modes were removed from Co-op (they're in git history: Co-op 0.8-0.11).
+
+## Round 3 (2026-11-12, Co-op 0.8-0.9; separate zones and XP modes since moved out): built from the design below
 
 - **Fights, as the game does them (decided 2026-11-12):** traced in the decompile: nobody "joins" a fight. Every
   character with an AI is registered with the combat manager when it becomes active (amc.mx -> crp.ahx), and a fight

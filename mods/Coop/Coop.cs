@@ -18,12 +18,12 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("0.11.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.0")]
 
 public sealed partial class Coop : WorksMod
 {
     const int DefaultPort = 27650;
-    const double PassAfter = 8;     // seconds an uninvolved joined character's combat turn waits for its player
+    const float TogetherTiles = 10;     // every player within this of whoever takes an exit, or nobody goes
     const string DefaultBlueprint = "creatures\\generichumans\\jkkgunslinger";
     static readonly Color Say = new Color(120, 200, 255);
 
@@ -72,20 +72,9 @@ public sealed partial class Coop : WorksMod
     string WriteSheet(string name, string base64) { var path = SheetPath(name); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); System.IO.File.WriteAllBytes(path, Convert.FromBase64String(base64)); return path; }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    // Split: the zone it runs on its own machine (players in different zones: CoopZones.cs).
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign, Split; public bool WorldPending, InWorld; public double IdleTurn; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
     Listener listener;
-    readonly HashSet<Character> engaged = new HashSet<Character>(), toldPassing = new HashSet<Character>();     // attacked or attacking in this fight / told its turns pass
-
-    // In this fight as an ally would be: it fought, or an enemy (not passive) sees it, or it sees one, by the rule the
-    // game's vision sensor uses to detect (cn8.abj): the other's tile in the observer's field of view (walls) and within
-    // the observer's own sight range. (The AI's memory, HasNoticed, isn't it: when a fight starts the enemies learn of
-    // characters far out of sight.)
-    bool Involved(Character c)
-    {
-        if (engaged.Contains(c)) return true;
-        return World.CharactersNear(c.Position, 200).Any(e => e != c && !e.IsDead && !e.Passive && e.AttitudeTo(c) == Attitude.Hostile && (Sees(e, c) || Sees(c, e)));
-    }
+    static float Dist(Character a, Character b) { return Vector2.Distance(new Vector2(a.Position.X, a.Position.Y), new Vector2(b.Position.X, b.Position.Y)); }
     static bool Sees(Character who, Character other) { return who.CanSee(other) && Dist(who, other) <= who.SightRange; }
     readonly Inbox inbox = new Inbox();
     readonly Dictionary<Peer, Seat> seats = new Dictionary<Peer, Seat>();
@@ -100,6 +89,8 @@ public sealed partial class Coop : WorksMod
         try { listener = new Listener(port, tcp => new Peer(tcp, inbox.Add, p => inbox.Add(p, new[] { "_closed" }))); }
         catch (Exception ex) { listener = null; return "can't host on port " + port + ": " + ex.Message; }
         ReadRecords();
+        // The group travels together: an exit is taken only with every player near the one taking it (Works' Party).
+        Party.NeedTogether(this, PartyNeed.EnterZone, null, TogetherTiles);
         Log.Info("hosting on port " + port);
         Changed();
         Notify.Log("Co-op: hosting on port " + port + ". Others join with coop.join <your address>" + (port == DefaultPort ? "" : ":" + port), Say);
@@ -114,6 +105,7 @@ public sealed partial class Coop : WorksMod
         foreach (var s in seats.Values.Concat(orphans)) if (s.Character != null) CharacterControl.Release(s.Character);
         seats.Clear(); orphans.Clear();
         listener.Stop(); listener = null;
+        Party.DontNeedTogether(this, PartyNeed.EnterZone, null);
         Log.Info("stopped hosting");
         Changed();
     }
@@ -128,6 +120,7 @@ public sealed partial class Coop : WorksMod
                 if (seat == null) return;
                 if (talking == seat) { TalkAs.Close(); talking = null; }     // left mid-conversation: it ends
                 seats.Remove(p);
+                if (Api != null) Api.RaiseLeft(p.Name);
                 if (seat.Character != null) { Remember(seat); seat.Peer = null; orphans.Add(seat); }
                 Log.Info(p.Name + " left" + (seat.Character != null ? " (" + seat.Character.Name + " stays, passing its turns)" : ""));
                 Notify.Log("Co-op: " + p.Name + " left", Say);
@@ -145,9 +138,9 @@ public sealed partial class Coop : WorksMod
             case "BYE": p.Close(); return;
         }
         if (seat == null) { p.Send("BYE", "say HELLO first"); p.Close(); return; }
-        if (HostZoneMessage(seat, w)) return;
         if (w[0] == "MYSHEET" && seat.Character == null && seat.Record != null) { if (w.Length > 1) seat.Record.Sheet = w[1]; return; }     // apart: kept with the record
         if (w[0] == "LOADED") { HostMirrorMessage(seat, w); return; }
+        if (ModMessage(p.Name, w)) return;
         switch (w[0])
         {
             case "PICK":
@@ -183,7 +176,6 @@ public sealed partial class Coop : WorksMod
             }
         }
         if (seat.Character == null || seat.Character.IsDead || seat.Character.Area == null) { p.Send("SAID", seat.Character != null && seat.Character.IsDead ? "your character is dead" : "pick a character first"); return; }
-        seat.IdleTurn = 0;     // they're acting: their turn waits for them
         var said = Act(seat.Character, w);
         if (!string.IsNullOrEmpty(said)) p.Send("SAID", said);
     }
@@ -220,7 +212,7 @@ public sealed partial class Coop : WorksMod
         Notify.Log("Co-op: " + seat.Peer.Name + " plays " + r.Name, Say);
         Changed(false);
         seat.Peer.Send("PLAYING", r.Name, (int)at.X, (int)at.Y);
-        seat.Peer.Send("HOSTZONE", World.ZoneId);
+        if (Api != null) Api.RaiseJoined(seat.Peer.Name, seat.Character);
         SendWorld(seat);
     }
 
@@ -300,7 +292,7 @@ public sealed partial class Coop : WorksMod
             case "TURN": Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")"); return;
             case "SAID": Tell(w.Length > 1 ? w[1] : ""); return;
         }
-        if (!TalkMessage(w) && !LootMessage(w) && !TradeMessage(w) && !JoinerZoneMessage(w)) MirrorMessage(w);
+        if (!TalkMessage(w) && !LootMessage(w) && !TradeMessage(w) && !ModMessage(null, w)) MirrorMessage(w);
     }
 
     void Tell(string line)
@@ -372,6 +364,8 @@ public sealed partial class Coop : WorksMod
             case "EXIT":
             {
                 int x, y;
+                var away = Party.Missing(c, TogetherTiles);
+                if (away.Count > 0) return "everyone needs to be near you to go (" + string.Join(", ", away.Select(a => a.Name).ToArray()) + " isn't)";
                 bool ok = w.Length > 2 && int.TryParse(w[1], out x) && int.TryParse(w[2], out y) && c.TakeExitAt(x, y);
                 Log.Info(c.Name + ": exit " + (w.Length > 2 ? w[1] + "," + w[2] : "?") + ": " + (ok ? "going" : "refused"));
                 if (ok) { Notify.Log("Co-op: " + c.Name + " is heading for the exit: everyone goes along", Say); foreach (var s in seats.Values.Concat(orphans)) Remember(s); }
@@ -427,12 +421,12 @@ public sealed partial class Coop : WorksMod
     {
         Commands.Add(this, "coop.host", "coop.host [port]: let others join this game", Host);
         LoadXp();
+        LoadHost();
+        LoadListening();
         LoadUi();
         LoadMirror();
         LoadLoot();
         LoadTrade();
-        LoadZones();
-        LoadZonesJoiner();
         Commands.Add(this, "coop.stop", "coop.stop: stop hosting (joined characters stay, back to their AI)", a => { if (listener == null) return "not hosting"; StopHosting(); return "stopped"; });
         Commands.Add(this, "coop.who", "coop.who: who is connected and what they play", a =>
         {
@@ -459,7 +453,7 @@ public sealed partial class Coop : WorksMod
             var t = string.Join(" | ", lines); Log.Info("threats: " + t); return t;
         });
         Commands.Add(this, "coop.trade", "coop.trade <name>: trade with that merchant (testing)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 200).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0 && x.IsMerchant); return t == null ? "no merchant called that" : Mine("TRADEWITH", KeyHere(t)); });
-        Commands.Add(this, "coop.xpmode", "coop.xpmode <0 everyone|1 nearby|2 split|3 earner> [oddity finder 0|1]: the experience rule (Host this game... asks)", a => { int m; if (a.Length > 0 && int.TryParse(a[0], out m) && m >= 0 && m <= 3) xpMode = (XpMode)m; if (a.Length > 1) oddityFinder = a[1] == "1"; return "experience: " + XpModeNames[(int)xpMode] + (oddityFinder ? ", oddities: finder only" : ""); });
+        Commands.Add(this, "coop.xpshare", "coop.xpshare <0-100>: the Shared XP percentage (Host this game... asks)", a => { int v; if (a.Length > 0 && int.TryParse(a[0], out v)) xpShare = Math.Max(0, Math.Min(100, v)); return "shared XP: " + xpShare + "%"; });
         Commands.Add(this, "coop.exit", "coop.exit x y: your character takes the exit on that tile", a => a.Length < 2 ? "coop.exit x y" : Mine("EXIT", a[0], a[1]));
         Commands.Add(this, "coop.status", "coop.status: your character's state", a => Mine("STATUS"));
         Commands.Add(this, "coop.spawn", "coop.spawn [blueprint]: a local test partner next to you (no network)", a =>
@@ -508,31 +502,11 @@ public sealed partial class Coop : WorksMod
             if (c == null) return;
             if (partner != null && c == partner) Log.Info("partner's turn" + Points(c));
             var seat = seats.Values.FirstOrDefault(s => s.Character == c);
-            if (seat != null)
-            {
-                seat.Peer.Send("TURN", Combat.ActionPoints(c), Combat.MovementPoints(c));
-                Log.Info(c.Name + "'s turn (" + seat.Peer.Name + ")" + Points(c));
-                // Not involved (as an ally with nothing to do): the turn passes by itself unless the player acts in time.
-                seat.IdleTurn = !Involved(c) ? PassAfter : 0;
-                if (seat.IdleTurn > 0 && toldPassing.Add(c)) seat.Peer.Send("SAID", "there's a fight here, but no enemy has noticed you: your turns pass by themselves after " + (int)PassAfter + " s unless you do something");
-            }
+            if (seat != null) { seat.Peer.Send("TURN", Combat.ActionPoints(c), Combat.MovementPoints(c)); Log.Info(c.Name + "'s turn (" + seat.Peer.Name + ")" + Points(c)); }
             else if (orphans.Any(o => o.Character == c)) { c.EndTurn(); Log.Info(c.Name + "'s turn passed (no player)"); }
         });
-        // In a fight the whole zone is turn-based and every character is in the turn order (the game's rule, allies
-        // included); a joined character not involved (no enemy has noticed it, it has noticed none, it hasn't fought)
-        // passes its turn by itself, as an ally with nothing to do. GameEvents.CombatEnded clears who fought.
-        GameEvents.CombatEnded.Add(this, () => { engaged.Clear(); toldPassing.Clear(); });
-        GameEvents.Update.Add(this, dt =>
-        {
-            if (listener == null) return;
-            foreach (var s in seats.Values.Where(x => x.IdleTurn > 0 && x.Character != null))
-                if ((s.IdleTurn -= dt) <= 0) { s.IdleTurn = 0; if (s.Character.IsTakingTurn && !Involved(s.Character)) s.Character.EndTurn(); }
-        });
-        Combat.AttackResolved.Add(this, o =>
-        {
-            foreach (var s in seats.Values.Concat(orphans).Where(x => x.Character != null && !x.Character.IsDead))
-                if (o.Target == s.Character || o.AttackerName == s.Character.Name) engaged.Add(s.Character);
-        });
+        // In a fight the whole zone is turn-based and every character is in the turn order (the game's rule): joined
+        // characters take their turns like the host's, wherever they are in the zone.
         Combat.AttackResolved.Add(this, o =>
         {
             foreach (var s in seats.Values.Where(s => s.Character != null))
@@ -548,7 +522,7 @@ public sealed partial class Coop : WorksMod
         GameEvents.ZoneLoaded.Add(this, (zone, first) =>
         {
             if (listener == null) return;
-            foreach (var s in seats.Values.Where(s => s.Record != null && s.Split == null).ToList())
+            foreach (var s in seats.Values.Where(s => s.Record != null).ToList())
             {
                 if (s.Character != null && s.Character.Area != null) continue;
                 var c = SpawnFor(s.Record, false);

@@ -144,6 +144,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `Point? WalkTarget` — Where it is walking to (the tile of its current walk order), or null (not walking somewhere).
 - `bool IsWalking` — It has a walk order (going somewhere or following someone).
 - `bool UseObject(string entityId)` — Walks to the object with that EntityId (a door, lever, container, computer...) and uses it, as the player's click does. False: no such object here, or it can't be used.
+- `bool TalkTo(Character npc)` — Talks to npc as the player's click does (walks there, opens its conversation; j7.a). For the player: the ordinary conversation window. False: either can't talk.
 - `bool TakeExitAt(int x, int y)` — Walks to the zone exit on tile x, y and takes it (as the player's click on an exit). The game then changes zone: for everyone, as when the player leaves. False: no exit there.
 - `bool PlaceAt(Vector3 at, int facing = -1)` — Puts it exactly there (map tiles, fractional allowed) at once, facing that way (-1: as it is).
 - `bool SetStock(IEnumerable<Item> items)` — Replaces a merchant's stock with these items.
@@ -576,6 +577,7 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<Character, Character>> CharacterDying = new Hook<Action<Character, Character>>("CharacterDying")` — Just before the game handles a death: the character still has its status effects (the game clears them while it dies: measured, none left at CharacterDied) and gear. Killer: who dealt the blow, when known.
 - `static readonly Hook<Action> CombatStarted = new Hook<Action>("CombatStarted")` — Combat started / ended.
 - `static readonly Hook<Action> CombatEnded = new Hook<Action>("CombatEnded")`
+- `static readonly Hook<Action<TalkLine>> ConversationLine = new Hook<Action<TalkLine>>("ConversationLine")` — Every line any conversation shows (the player's own, or one held through TalkAs): who holds it, the line, the answers. For showing it elsewhere (co-op players listening, a log). GameEvents.DialogEnded when it closes.
 - `static readonly Hook<Action<TrapDisarm>> TrapDisarming = new Hook<Action<TrapDisarm>>("TrapDisarming")`
 - `static readonly Hook<Action<TrapDisarmResult>> TrapDisarmed = new Hook<Action<TrapDisarmResult>>("TrapDisarmed")`
 - `static readonly Hook<Action<TrapSpotted>> TrapDetected = new Hook<Action<TrapSpotted>>("TrapDetected")` — A character spotted a trap (its scan every couple of seconds; the player's included).
@@ -1508,6 +1510,7 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 ## TalkAs  _(class, TalkAs.cs)_
 
 - `static bool Talk(Character speaker, Character npc, Action<TalkLine> onLine, Action onEnd)` — False: no such characters, the speaker has no player sheet, or a conversation is already going.
+- `static bool Talk(Character speaker, Character npc, Action<TalkLine> onLine, Action onEnd, bool pause)` — pause: the game pauses while it runs, as for the player's own conversations (else it goes on).
 - `static bool IsOpen`
 - `static bool Choose(int index)` — Answers with choice index (as listed in the last line), or -1 to go on / end when it has none.
 - `static void Close()` — Ends the conversation now.
@@ -1517,6 +1520,7 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 
 ## TalkLine  _(class, TalkAs.cs)_
 
+- `Character Talker` — Who holds the conversation (the player, or TalkAs's speaker).
 - `string Speaker`
 - `string Text`
 - `IList<TalkChoice> Choices` — Empty: the line only goes on (Choose(-1): Continue, or End when it's the last).

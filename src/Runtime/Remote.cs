@@ -62,6 +62,17 @@ namespace UnderRailWorks
             return move.b(target, use.t(), 1, use.y()) != null;
         }
 
+        // Talks to npc as the player's click does (walks there, opens its conversation; j7.a). For the player: the
+        // ordinary conversation window. False: either can't talk.
+        public bool TalkTo(Character npc)
+        {
+            var me = Entity as c5x; var them = npc == null ? null : npc.Entity as c5x;
+            var mine = me == null ? null : me.GetAspect<j7>(); var theirs = them == null ? null : them.GetAspect<j7>();
+            if (mine == null || theirs == null || Simulation.Refuses("TalkTo")) return false;
+            mine.a(theirs, false, null, false);
+            return true;
+        }
+
         // Walks to the zone exit on tile x, y and takes it (as the player's click on an exit). The game then changes zone:
         // for everyone, as when the player leaves. False: no exit there.
         public bool TakeExitAt(int x, int y)

@@ -42,7 +42,16 @@ public sealed class WorksTest : WorksMod
     int aiLogs;
     TimeSpan gameTime;
     bool blockUse;
-    public override void PostLoad() { Log.Info("cross-mod call: " + Mods.Call("WorksTest", "Echo", "hi") + ", typed: " + Mods.Api<TestApi>("WorksTest").Echo("there")); }
+    public override void PostLoad()
+    {
+        Log.Info("cross-mod call: " + Mods.Call("WorksTest", "Echo", "hi") + ", typed: " + Mods.Api<TestApi>("WorksTest").Echo("there"));
+        // Co-op's API without referencing its DLL: an option on the Host window, and a message both ways.
+        Mods.Call("Coop", "AddHostChoice", this, "testchoice", "WorksTest: a test choice", new[] { "One", "Two" }, 1);
+        Action<string, string[]> ping = (from, words) => { Log.Info("coop message from " + (from ?? "the host") + ": " + string.Join(" ", words)); if (from != null) Mods.Call("Coop", "SendTo", from, this, "pong", new object[] { "back" }); };
+        Mods.Call("Coop", "Handle", this, "ping", ping);
+        Mods.Call("Coop", "Handle", this, "pong", ping);
+        Commands.Add(this, "wt.coopping", "wt.coopping: a WorksTest message to the co-op host", a => { Mods.Call("Coop", "SendToHost", this, "ping", new object[] { "hello", "host" }); return "sent"; });
+    }
     bool logOutlines, hoverWatch;
     string lastHover;
     public override void Load()
@@ -383,6 +392,7 @@ public sealed class WorksTest : WorksMod
         Commands.Add(this, "wt.merchant", "wt.merchant: a merchant (store bigbret) next to the player", args => { var at = World.Player.Position; var t = World.FreeTilesNear((int)at.X, (int)at.Y, 3).Skip(3).FirstOrDefault(); var c = World.Spawn("creatures\\generichumans\\foundryworker", t.X, t.Y, false); c.Name = "Trader"; Log.Info("merchant: " + c.MakeMerchant("bigbret") + ", " + c.Stock.Count + " items"); return "merchant"; });
         Commands.Add(this, "wt.giveto", "wt.giveto <name> <item path> <count>: into that character's bag", args => { var c = World.CharactersNear(World.Player.Position, 200).FirstOrDefault(x => x.Name == args[0]); var ok = c != null && c.Inventory.Add(args[1], int.Parse(args[2])); Log.Info("giveto: " + ok); return "giveto " + ok; });
         Commands.Add(this, "wt.var", "wt.var <name>: log a global variable", args => { var v = Variables.Global.Snapshot(); object o; Log.Info("var " + args[0] + " = " + (v.TryGetValue(args[0], out o) ? o : "(none)")); return "var"; });
+        Commands.Add(this, "wt.chat", "wt.chat <name>: the player talks to that character (its own conversation)", args => { var c = World.Characters.FirstOrDefault(x => x.Name == args[0]); return "chat: " + (c != null && World.Player.TalkTo(c)); });
         Commands.Add(this, "wt.toggledoor", "wt.toggledoor <id start>", args => { var d = World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(args[0])); if (d == null) return "none"; d.Toggle(); Log.Info("door " + args[0] + " now " + (d.IsOpen ? "open" : "closed")); return "ok"; });
         Commands.Add(this, "wt.near", "wt.near: characters near the player with map positions and screen boxes", args => { Log.Info("near: " + string.Join("; ", World.CharactersNear(World.Player.Position, 30).Select(c => c.Name + (c.IsDead ? " (dead)" : "") + " at " + c.Position + " screen " + c.ScreenBounds).ToArray())); return "near"; });
         Commands.Add(this, "wt.mark", "wt.mark: markers near and far", args =>

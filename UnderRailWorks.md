@@ -1714,3 +1714,6 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
   controlled character stopped between tiles is settled onto one (an attack's approach starts from a tile); a sheet
   copied from a character here gets a new Uid (the killer was found by Uid); a spawn's real blueprint
   (`Character.Blueprint`) instead of a name match.
+- **Conversations for everyone:** `GameEvents.ConversationLine(TalkLine)` (zq.nz: every line of any conversation;
+  `TalkLine.Talker` is who holds it, from zq's initiator), `TalkAs.Talk(..., pause)` (pause as for the player's own),
+  `Character.TalkTo(npc)` (j7.a, the player's click).
