@@ -742,7 +742,7 @@ Values: `Other, Weapon, Armor, Shield, Component, Ammo, Currency, Throwable, Con
 Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medicine\\bandage"): the code the game counts and takes items by, and the shown name.
 
 - `static bool Use(Character user, Item item, Character target = null)` — A character uses an item from its bag the game's way (the capability its "use" is, e.g. a bandage's treatment; a grenade is thrown at target), as the game's own AI does: queued as the character's next action, with the AP cost, cooldowns and checks of a normal use. target: the character it is used on (null: the user itself). False if the item has no use or the game refuses it now (e.g. a bandage below 40 % health, in combat).
-- `static bool Use(Character user, Item item, Item target)` — The same, used on another item: ammo on a weapon (reloads it), a repair kit on armour...
+- `static bool UseOn(Character user, Item item, Item target)` — The same, used on another item: ammo on a weapon (reloads it), a repair kit on armour... (Its own name: an overload of Use made Use(c, item, null) ambiguous.)
 - `static IList<string> Paths` — Every item in the game's data (paths as Inventory.Add takes them).
 - `static bool Exists(string path)`
 - `static string Code(string path)`

@@ -168,6 +168,8 @@ public static class ModLoader
         ModScope.Current = null;
     }
 
+    static readonly string[] ManifestKeys = { "id", "name", "version", "author", "description", "works", "requires", "optional", "sortAfter", "sortBefore", "incompatible", "homepage", "issues", "license", "game", "startsOff" };
+
     static ModInfo Read(string folder)
     {
         var m = new ModInfo { Folder = folder, Id = Path.GetFileName(folder), Name = Path.GetFileName(folder) };
@@ -177,6 +179,10 @@ public static class ModLoader
         {
             var o = Json.Parse(File.ReadAllText(manifest)) as Dictionary<string, object>;
             if (o == null) throw new FormatException("not a JSON object");
+            // A key Works doesn't know is most likely a typo ("require" for "requires"): said, so it isn't silently ignored.
+            var unknown = o.Keys.Where(k => !Array.Exists(ManifestKeys, x => x == k)).ToList();
+            if (unknown.Count > 0) Log.Write("mods: " + Path.GetFileName(folder) + "/mod.json: unknown key" + (unknown.Count > 1 ? "s " : " ") + string.Join(", ", unknown.ToArray())
+                + " (ignored; known: " + string.Join(", ", ManifestKeys) + ")");
             Func<string, string> str = k => { object v; return o.TryGetValue(k, out v) && v != null ? v.ToString() : null; };
             Func<string, List<string>> list = k => { object v; return o.TryGetValue(k, out v) && v is List<object> l ? l.Where(x => x != null).Select(x => x.ToString()).ToList() : new List<string>(); };
             m.Id = str("id") ?? m.Id;
