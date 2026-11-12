@@ -31,6 +31,7 @@ namespace UnderRailWorks
         internal static readonly MethodInfo ReadFile = typeof(ajk).GetMethod("a", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(string) }, null),
             WriteFile = typeof(ajk).GetMethod("b", BindingFlags.Instance | BindingFlags.Public, null, new[] { typeof(string) }, null);
         internal static readonly FieldInfo SheetProvider = typeof(amc).GetField("m_m", Inst) ?? typeof(amc).GetFields(Inst).FirstOrDefault(f => f.FieldType == typeof(IProvider<efk>));
+        static readonly MethodInfo SetEntityId = typeof(cae).GetMethod("h", Inst | BindingFlags.DeclaredOnly, null, new[] { typeof(Guid) }, null);
         static readonly FieldInfo UidField = typeof(efk).GetField("m_c", Inst | BindingFlags.DeclaredOnly) ?? typeof(efk).GetFields(Inst | BindingFlags.DeclaredOnly).FirstOrDefault(f => f.Name == "c" && f.FieldType == typeof(Guid));
         static readonly FieldInfo Flags = typeof(c5x).GetField("g", Inst | BindingFlags.DeclaredOnly);
         static readonly FieldInfo Footprint = typeof(b0b).GetFields(Inst | BindingFlags.DeclaredOnly).FirstOrDefault(f => f.Name == "z" && f.FieldType == typeof(Vector2?));
@@ -52,6 +53,10 @@ namespace UnderRailWorks
             // attacker, recorded by this id) would find the other one. A new id then.
             if (UidField != null && Characters.Any(other => other.GameData != null && other.GameData.Uid == sheet.Uid)) sheet.Uid = Guid.NewGuid();
             var body = (c5x)BuildBody.Invoke(game, new object[] { sheet });
+            // The game builds every player body with the player's one fixed entity id (aju.a): its scripts find the
+            // player by it, and AI memory, targets and references go by entity id. A second body with it was the same
+            // entity to the game (an enemy that noticed one never noticed the other). A new id, before it's in an area.
+            if (SetEntityId != null) SetEntityId.Invoke(body, new object[] { Guid.NewGuid() });
             var aspect = body.GetAspect<amc>();
             SheetProvider.SetValue(aspect, new StandAloneProvider<efk>(sheet));
             aspect.h(false);

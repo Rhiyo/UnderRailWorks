@@ -89,6 +89,17 @@ namespace UnderRailWorks
                 return a[0] + " = " + (Variables.Global.Get<object>(a[0], null) ?? "(unset)");
             });
             Add("UnderRailWorks", "works.mods", "works.mods: the mods and their state", a => string.Join("\n", ModLoader.Mods.Select(m => m.Name + " " + m.VersionText + ": " + (m.Loaded ? "loaded" : m.Enabled ? "not loaded (" + m.Error + ")" : "off") + (m.Failures > 0 ? ", " + m.Failures + " errors" : ""))));
+            Add("UnderRailWorks", "works.memory", "works.memory <name>: whom an NPC's AI has noticed (debugging)", a =>
+            {
+                var c = a.Length == 0 ? null : World.Characters.FirstOrDefault(x => string.Equals(x.Name, string.Join(" ", a), StringComparison.OrdinalIgnoreCase));
+                var ai = c == null ? null : (c.Entity as c5x)?.GetAspect<bm6>();
+                if (ai == null) return "no such NPC";
+                var lines = new List<string>();
+                foreach (var kv in new bzv(ai.y6()).a()) { var e = kv.Value == null ? null : kv.Value.e(); lines.Add((e == null ? "?" : Character.Of(e.a8()).Name) + " [" + kv.Key + "]: " + kv.Value.a().f() + (kv.Value.b() ? ", seen now" : "") + (e != null && e.aa().Passive ? ", passive" : "")); }
+                var t = Ai.CurrentTarget(c);
+                var text = "party ids: " + string.Join(", ", Party.Members.Select(m => m.Name + " " + m.EntityId).ToArray()) + "; " + c.Name + " remembers " + (lines.Count == 0 ? "nobody" : string.Join("; ", lines.ToArray())) + "; target " + (t == null ? "none" : t.Name);
+                Log.Write(text); return text;
+            });
             Add("UnderRailWorks", "works.body", "works.body <name>: a character's footprint and size (debugging)", a =>
             {
                 var c = World.Player == null || a.Length == 0 ? null : World.CharactersNear(World.Player.Position, 100).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0);

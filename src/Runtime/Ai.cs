@@ -53,6 +53,11 @@ namespace UnderRailWorks
         // returns true (flee), false (don't: it fights or acts normally) or null (the game's choice). First answer wins.
         public static readonly Hook<Func<NpcFlight, bool?>> ShouldFlee = new Hook<Func<NpcFlight, bool?>>("Ai.ShouldFlee");
 
+        // Characters an NPC leaves out when it chooses whom to fight (handler(npc, candidate) true: not a candidate).
+        // The game's own choice then runs on the rest: detected, hostile, nearest, in sight first. None left: it does
+        // what it does with no enemy. Example: a co-op mod leaves out players who are down.
+        public static readonly Hook<Func<Character, Character, bool>> IgnoresTarget = new Hook<Func<Character, Character, bool>>("Ai.IgnoresTarget");
+
         // The character an NPC's AI is after now (its memory's current target), or null. Set null: it chooses again.
         public static Character CurrentTarget(Character npc)
         {
@@ -74,6 +79,35 @@ namespace UnderRailWorks.Internal
     static class AiHooks
     {
         static readonly FieldInfo Found = typeof(bq1).GetField("b", BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly);
+
+        // Ai.IgnoresTarget: the left-out candidates count as passive (the game skips passive ones) during bq1.f7 only.
+        static void Hide(bq1 __instance, out List<efk> __state)
+        {
+            __state = null;
+            if (!Ai.IgnoresTarget.Any) return;
+            try
+            {
+                var tactic = __instance.b();
+                var npc = Character.Of(tactic.g().a8());
+                foreach (var seen in new bzv(tactic.c().y6()).a().Values)
+                {
+                    var data = seen == null || seen.e() == null ? null : seen.e().aa();
+                    if (data == null || data.Passive) continue;
+                    var who = Character.Of(seen.e().a8());
+                    bool ignore = false;
+                    Ai.IgnoresTarget.RunUntil(h => ignore = h(npc, who));
+                    if (!ignore) continue;
+                    data.Passive = true;
+                    (__state ?? (__state = new List<efk>())).Add(data);
+                }
+            }
+            catch (Exception ex) { Log.Write("ai: IgnoresTarget: " + ex.Message); }
+        }
+        static Exception Unhide(Exception __exception, List<efk> __state)
+        {
+            if (__state != null) foreach (var d in __state) d.Passive = false;
+            return __exception;
+        }
 
         static void Target(bq1 __instance, ref abg __result)
         {
@@ -158,7 +192,7 @@ namespace UnderRailWorks.Internal
         internal static void Install(HarmonyLib.Harmony harmony)
         {
             Func<string, HarmonyLib.HarmonyMethod> m = n => new HarmonyLib.HarmonyMethod(typeof(AiHooks).GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
-            harmony.Patch(typeof(bq1).GetMethod("f7"), postfix: m("Target"));
+            harmony.Patch(typeof(bq1).GetMethod("f7"), prefix: m("Hide"), postfix: m("Target"), finalizer: m("Unhide"));
             harmony.Patch(typeof(fh).GetMethod("f7"), postfix: m("Choose"));
             harmony.Patch(typeof(cp).GetMethod("b", BindingFlags.Static | BindingFlags.Public, null, new[] { typeof(eu7), typeof(c5x), typeof(object) }, null), prefix: m("Act"));
             harmony.Patch(typeof(e1k).GetMethod("avi", BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic), prefix: m("Turn"));

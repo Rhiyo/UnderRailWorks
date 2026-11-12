@@ -57,12 +57,9 @@ public sealed partial class Coop
             outOfFight = 0;
             foreach (var c in downed.ToList()) Revive(c, null);
         });
-        // Enemies leave a downed player alone: one whose target is down goes for the nearest player still standing.
-        Ai.ChooseTarget.Add(this, t =>
-        {
-            if (listener == null || t.Chosen == null || !downed.Contains(t.Chosen) || t.Npc == null) return null;
-            return Party.Members.Where(c => !c.IsDead && !downed.Contains(c) && t.Npc.AttitudeTo(c) == Attitude.Hostile).OrderBy(c => Dist(c, t.Npc)).FirstOrDefault();
-        });
+        // Enemies leave a downed player alone: not a candidate when they choose whom to fight (the game's own choice runs
+        // on everyone else it has detected).
+        Ai.IgnoresTarget.Add(this, (npc, who) => listener != null && who != null && downed.Contains(who));
         // ...and any action aimed at a downed player is called off (the NPC's tree tries something else).
         Ai.Acting.Add(this, a => { var t = a.Target as Character; if (listener != null && t != null && downed.Contains(t)) a.Cancel = true; });
         // A downed joined character's turn passes; the host's own is theirs to end (the game shows it as incapacitated).
@@ -74,7 +71,7 @@ public sealed partial class Coop
         if (!downed.Add(c)) return;
         c.Health = 1;
         StatusEffects.Apply(c, "incapacitated", 0, true);
-        // Enemies after them drop them (they choose again: ChooseTarget below sends them to someone standing).
+        // Enemies after them drop them and choose again (IgnoresTarget leaves them out).
         foreach (var e in World.CharactersNear(c.Position, 60).Where(e => e != c && !e.IsDead && Ai.CurrentTarget(e) == c)) Ai.SetCurrentTarget(e, null);
         Notify.Log("Co-op: " + c.Name + " is down" + (deathRule == 1 ? ": another player can revive them (Revive, next to them)" : ": they'll get up when the fight is over"), Bad);
         foreach (var s in seats.Values.Where(x => x.Peer != null)) s.Peer.Send("SAID", (s.Character == c ? "you're" : c.Name + " is") + " down" + (deathRule == 1 ? " (another player can revive " + (s.Character == c ? "you" : "them") + ")" : " until the fight is over"));

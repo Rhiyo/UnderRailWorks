@@ -211,9 +211,16 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
   enemies stopped starting fights. Works' World.Adopt made a Placement with the default Friendly = true, so putting
   the character back after the save made it passive and neutral. Adopt now leaves the character as it is.
 - Enemies go for joined players as for the host (tested: a Rathound next to Mira targeted and bit her).
-- A downed player is left alone: enemies after them drop them (Works' Ai.SetCurrentTarget), choose again among the
-  players still standing (Ai.ChooseTarget) and any action aimed at someone downed is called off (Ai.Acting).
-  Tested: Mira downed, the Rathound turned on the host.
+- Bug: every co-op body had the player's own entity id (the game builds player bodies with one fixed id, aju.a).
+  The game keys AI memory, targets and entity references by that id, so an enemy that noticed one player could never
+  notice the other. Works' SpawnFromCharacterFile now gives each body a new id (the host's player keeps the fixed one,
+  which the game's scripts look the player up by). On a joiner the host's body keeps it and the joiner's own gets a new
+  one: its world is frozen, so no script there looks for its player.
+- A downed player is left out of an enemy's choice (Works' Ai.IgnoresTarget): the game's own rules pick among the rest
+  (detected, hostile, nearest, in sight first). Enemies after them drop them (Ai.SetCurrentTarget) and anything aimed
+  at someone downed is called off (Ai.Acting). Tested: the Rathound noticed both players; Mira downed, it turned on
+  the host. (An earlier version sent enemies to the nearest standing player, which skipped detection.)
+- `works.memory <npc>`: whom an NPC has noticed, and its target.
 - A downed joiner no longer gets "Your turn".
 - Status effects mirrored to joiners also wear off there (tested: a stun, then Second Wind, then nothing, both sides).
 
