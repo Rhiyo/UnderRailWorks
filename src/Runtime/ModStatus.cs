@@ -21,7 +21,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public sealed class ModStatus
-    {
+    { internal ModStatus() { }
         public string Mod { get; internal set; }
         public string Id { get; internal set; }
         public string Name { get; internal set; }

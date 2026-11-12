@@ -33,10 +33,17 @@ static class ApiSurface
         var r = t as ByReferenceType; if (r != null) return "ref " + N(r.ElementType, where);
         var arr = t as ArrayType; if (arr != null) return N(arr.ElementType, where) + "[]";
         if (t is GenericParameter) return t.Name;
-        var scope = t.Scope == null ? "" : t.Scope.Name;
+        var scope = t.Scope == null ? "" : t.Scope.Name; if (scope.EndsWith(".dll") || scope.EndsWith(".exe")) scope = scope.Substring(0, scope.Length - 4);
         if (scope == Game || scope == Game + ".exe" || scope.StartsWith("underrail")) Leaks.Add(t.FullName + "\t" + where);
+        // Only .NET's, FNA's (the XNA API) and Works' own types: anything else (Harmony...) would freeze a third
+        // party's version into the API.
+        else if (!(scope == "" || scope == "mscorlib" || scope == "netstandard" || scope.StartsWith("System") || scope == "FNA" || scope == "UnderRailWorks" || scope.StartsWith("Microsoft.Xna"))) Leaks.Add(t.FullName + " (from " + scope + ")\t" + where);
         return t.FullName.Replace("/", ".");
     }
+
+    static bool Preview(ICustomAttributeProvider p) { return p != null && p.HasCustomAttributes && p.CustomAttributes.Any(a => a.AttributeType.Name == "PreviewAttribute"); }
+    static bool PreviewType(TypeDefinition t) { for (; t != null; t = t.DeclaringType) if (Preview(t)) return true; return false; }
+    static readonly List<string> Previews = new List<string>();
 
     static bool Api(TypeDefinition t) { var ns = t; while (ns.DeclaringType != null) ns = ns.DeclaringType; return ns.Namespace == "UnderRailWorks"; }
 
@@ -54,14 +61,14 @@ static class ApiSurface
         var lines = Surface(args[0]);
         File.WriteAllLines(args[1], lines);
         if (args.Length > 2) File.WriteAllLines(args[2], Leaks.OrderBy(x => x));
-        Console.WriteLine(lines.Count + " API lines, " + Leaks.Count + " game-type uses in the API");
+        Console.WriteLine(lines.Count + " API lines, " + Previews.Distinct().Count() + " preview parts left out, " + Leaks.Count + " game-type uses in the API");
         return 0;
     }
 
     static int Check(string dll, string baselinePath, bool release)
     {
         var now = Surface(dll);
-        if (Leaks.Count > 0) { Console.WriteLine("API: game types in the public API (they'd break mods on every game update):"); foreach (var l in Leaks.OrderBy(x => x)) Console.WriteLine("  " + l); return 2; }
+        if (Leaks.Count > 0) { Console.WriteLine("API: game types, or preview types in stable members, in the public API (mark those members [Preview], or don't use the type):"); foreach (var l in Leaks.OrderBy(x => x)) Console.WriteLine("  " + l); return 2; }
         if (!File.Exists(baselinePath)) { Console.WriteLine("API: no baseline (" + baselinePath + "): writing it"); File.WriteAllLines(baselinePath, now); return 0; }
         var was = File.ReadAllLines(baselinePath).ToList();
         Version vNow = new Version(now[0].Split(' ').Last()), vWas = new Version(was[0].Split(' ').Last());
@@ -90,29 +97,38 @@ static class ApiSurface
         var lines = new List<string>();
         foreach (var t in asm.MainModule.GetTypes().Where(t => Visible(t) && Api(t)))
         {
+            if (PreviewType(t)) { Previews.Add(t.FullName.Replace("/", ".")); continue; }
             var tn = t.FullName.Replace("/", ".");
             string kind = t.IsEnum ? "enum" : t.IsInterface ? "interface" : t.IsValueType ? "struct" : t.IsAbstract && t.IsSealed ? "static class" : t.IsAbstract ? "abstract class" : t.IsSealed ? "sealed class" : "class";
             lines.Add(tn + " :: " + kind + (t.BaseType != null && t.BaseType.FullName != "System.Object" && !t.IsEnum && !t.IsValueType ? " : " + N(t.BaseType, tn) : "")
                 + (t.Interfaces.Count > 0 ? " (" + string.Join(", ", t.Interfaces.Select(i => N(i.InterfaceType, tn)).OrderBy(x => x)) + ")" : ""));
             if (t.IsEnum) { foreach (var f in t.Fields.Where(f => f.IsStatic && f.IsPublic)) lines.Add(tn + " :: " + f.Name + " = " + f.Constant); continue; }
-            foreach (var f in t.Fields.Where(Visible)) lines.Add(tn + " :: " + (f.IsStatic ? "static " : "") + (f.IsInitOnly ? "readonly " : f.HasConstant ? "const " : "") + "field " + N(f.FieldType, tn + "." + f.Name) + " " + f.Name + (f.HasConstant ? " = " + f.Constant : ""));
+            foreach (var f in t.Fields.Where(f => Visible(f) && !Preview(f))) lines.Add(tn + " :: " + (f.IsStatic ? "static " : "") + (f.IsInitOnly ? "readonly " : f.HasConstant ? "const " : "") + "field " + N(f.FieldType, tn + "." + f.Name) + " " + f.Name + (f.HasConstant ? " = " + f.Constant : ""));
             foreach (var p in t.Properties)
             {
                 var g = p.GetMethod != null && Visible(p.GetMethod); var s = p.SetMethod != null && Visible(p.SetMethod);
                 if (!g && !s) continue;
+                if (Preview(p)) { Previews.Add(tn + "." + p.Name); continue; }
                 var st = (p.GetMethod ?? p.SetMethod).IsStatic ? "static " : "";
                 lines.Add(tn + " :: " + st + "property " + N(p.PropertyType, tn + "." + p.Name) + " " + p.Name + (p.HasParameters ? "[" + string.Join(", ", p.Parameters.Select(x => N(x.ParameterType, tn + "." + p.Name))) + "]" : "") + " {" + (g ? " get;" : "") + (s ? " set;" : "") + " }");
             }
-            foreach (var e in t.Events) { if (e.AddMethod == null || !Visible(e.AddMethod)) continue; lines.Add(tn + " :: " + (e.AddMethod.IsStatic ? "static " : "") + "event " + N(e.EventType, tn + "." + e.Name) + " " + e.Name); }
+            foreach (var e in t.Events) { if (e.AddMethod == null || !Visible(e.AddMethod)) continue; if (Preview(e)) { Previews.Add(tn + "." + e.Name); continue; } lines.Add(tn + " :: " + (e.AddMethod.IsStatic ? "static " : "") + "event " + N(e.EventType, tn + "." + e.Name) + " " + e.Name); }
             foreach (var m in t.Methods.Where(Visible))
             {
                 if (m.IsGetter || m.IsSetter || m.IsAddOn || m.IsRemoveOn) continue;
+                if (Preview(m)) { Previews.Add(tn + "." + m.Name); continue; }
                 var where = tn + "." + m.Name;
                 var ps = string.Join(", ", m.Parameters.Select(x => (x.IsOut ? "out " : "") + N(x.ParameterType, where) + (x.HasDefault ? " = " + (x.Constant ?? "null") : "")));
                 var gen = m.HasGenericParameters ? "<" + string.Join(", ", m.GenericParameters.Select(x => x.Name)) + ">" : "";
                 lines.Add(tn + " :: " + (m.IsStatic ? "static " : "") + (m.IsAbstract ? "abstract " : m.IsVirtual && !m.IsFinal && !t.IsSealed ? "virtual " : "") + (m.IsConstructor ? "ctor" : "method " + N(m.ReturnType, where) + " " + m.Name) + gen + "(" + ps + ")");
             }
         }
+        // A stable member can't use a preview type (it would freeze it through the back door).
+        var previewTypes = new HashSet<string>(Previews.Where(x => asm.MainModule.GetType(x) != null || x.Count(ch => ch == '.') == 1));
+        foreach (var l in lines)
+            foreach (var pt in previewTypes)
+                if (System.Text.RegularExpressions.Regex.IsMatch(l.Substring(l.IndexOf(" :: ") + 4), @"\b" + System.Text.RegularExpressions.Regex.Escape(pt) + @"\b"))
+                    Leaks.Add("preview type " + pt + "\t" + l);
         lines.Sort(StringComparer.Ordinal);
         var v = VersionOf(asm);
         lines.Insert(0, "# UnderRailWorks API " + (v == null ? "0.0" : v.ToString(2)));

@@ -23,7 +23,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public abstract class CustomStat
-    {
+    { internal CustomStat() { }
         internal WorksMod Owner;
         public string Id { get; internal set; }
         public string Name { get; internal set; }
@@ -40,7 +40,7 @@ namespace UnderRailWorks
     }
 
     public sealed class ModBaseAbility : CustomStat
-    {
+    { internal ModBaseAbility() { }
         internal int Start;
         internal override string Key { get { return "works_ability_" + Id; } }
         internal override int Default { get { return Start; } }
@@ -48,7 +48,7 @@ namespace UnderRailWorks
     }
 
     public sealed class ModSkill : CustomStat
-    {
+    { internal ModSkill() { }
         internal Dictionary<string, float> Abilities;
         internal override string Key { get { return "works_skill_" + Id; } }
         internal override int Default { get { return 0; } }

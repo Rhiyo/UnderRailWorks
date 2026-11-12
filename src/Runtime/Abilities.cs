@@ -21,7 +21,7 @@ namespace UnderRailWorks
     public enum AbilityTarget { Self, Character }
 
     public sealed class ModAbility
-    {
+    { internal ModAbility() { }
         internal WorksMod Owner;
         public string Mod { get { return Owner.Id; } }
         public string Id { get; internal set; }

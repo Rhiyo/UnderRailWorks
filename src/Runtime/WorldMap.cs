@@ -13,7 +13,7 @@ using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
 {
-    public static class WorldMap
+    [Preview("multiplayer: built for Co-op so far")] public static class WorldMap
     {
         internal sealed class MarkInfo { public string Mod, Key, Zone; public Color Colour; }
         internal static readonly List<MarkInfo> Marks = new List<MarkInfo>();

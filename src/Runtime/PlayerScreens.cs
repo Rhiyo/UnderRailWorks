@@ -11,9 +11,9 @@ using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
 {
-    public enum PopupKind { Ask, AskNumber, Choose }
+    [Preview("multiplayer: built for Co-op so far")] public enum PopupKind { Ask, AskNumber, Choose }
 
-    public sealed class RemotePopup
+    [Preview("multiplayer: built for Co-op so far")] public sealed class RemotePopup
     {
         public PopupKind Kind { get; internal set; }
         public string Title { get; internal set; }       // Choose
@@ -25,7 +25,7 @@ namespace UnderRailWorks
         public string AlsoAllow { get; internal set; }   // Ask
     }
 
-    public interface IPlayerScreens
+    [Preview("multiplayer: built for Co-op so far")] public interface IPlayerScreens
     {
         // A popup on who's screen: true if it's shown there (the answer comes later: Ask text, AskNumber the number as
         // text, Choose the button's index as text; cancelled: never). False: not a remote player, show it here.
@@ -36,7 +36,7 @@ namespace UnderRailWorks
         bool IsRemote(Character who);
     }
 
-    public static class PlayerScreens
+    [Preview("multiplayer: built for Co-op so far")] public static class PlayerScreens
     {
         public static IPlayerScreens Provider { get; set; }
 

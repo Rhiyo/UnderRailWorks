@@ -37,7 +37,7 @@ namespace UnderRailWorks
 
 
 public abstract class ModConfig
-{
+{ protected ModConfig() { }
     public ModInfo Mod { get; internal set; }
     // Bumped whenever values change (load, Accept), so code reading settings per frame can keep its own copy.
     public int Changes { get; private set; }

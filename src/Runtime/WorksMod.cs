@@ -15,13 +15,13 @@ namespace UnderRailWorks
 {
 
 public abstract partial class WorksMod
-{
+{ protected WorksMod() { }
     public ModInfo Info { get; internal set; }
     public string Id { get { return Info.Id; } }
     // Lines in UnderRailWorks.log, marked with the mod's id (with Log=1 in UnderRailWorks.ini; errors always).
     public ModLog Log { get; internal set; }
     // A Harmony instance named after the mod, for patching the game where Works has no hook yet.
-    public Harmony Harmony { get; internal set; }
+    internal Harmony Harmony { get; set; }
     // This mod's plain values for the current game, inside the game's own save (its global variables). For anything
     // else (lists, dictionaries, more than a few values) use SaveData.Of(mod), kept next to the save.
     public ModData Data { get { return data ?? (data = new ModData(Id)); } }

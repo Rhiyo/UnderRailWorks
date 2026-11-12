@@ -13,7 +13,7 @@ namespace UnderRailWorks
 {
 
 public sealed class Detection
-{
+{ internal Detection() { }
     // The sneaking character, the observer's detection and the target's stealth (as the game counts them), the
     // distance and the observer's sight range in tiles, the angle off the observer's facing (degrees), the light on the
     // target (0 dark .. 1), whether the observer has darkvision.
@@ -30,7 +30,7 @@ public sealed class Detection
 }
 
 public sealed class InstantDetection
-{
+{ internal InstantDetection() { }
     public int ObserverDetection { get; internal set; }
     public int TargetStealth { get; internal set; }
     // The game's verdict: the stealth is hopeless against this observer. Change it.

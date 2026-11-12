@@ -86,7 +86,7 @@ namespace UnderRailWorks
     }
 
     public sealed class Tooltip
-    {
+    { internal Tooltip() { }
         internal ecs Game;
         // ecs.a (the lines) and dl6.a (a line's sections) clash with method names: read by reflection.
         static readonly FieldInfo LinesField = typeof(ecs).GetField("a");

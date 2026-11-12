@@ -53,8 +53,8 @@ public abstract class HookBase<T> : IModOwned where T : class
     // order: where among the handlers this one runs (First before the rest...); the same order keeps load order.
     public void Add(WorksMod mod, T handler, HookOrder order) { Add(mod.Id, handler, order); }
     // mod: the mod's id, for the log if the handler fails.
-    public void Add(string mod, T handler) { Add(mod, handler, HookOrder.Normal); }
-    public void Add(string mod, T handler, HookOrder order)
+    internal void Add(string mod, T handler) { Add(mod, handler, HookOrder.Normal); }
+    internal void Add(string mod, T handler, HookOrder order)
     {
         int at = 0;
         while (at < orders.Length && orders[at] <= (int)order) at++;     // after every handler of the same or an earlier order

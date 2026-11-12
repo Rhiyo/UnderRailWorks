@@ -12,7 +12,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public sealed class Shot
-    {
+    { internal Shot() { }
         public double Chance { get; internal set; }      // 0..1, as the game previews it
         public bool Ranged { get; internal set; }        // a gun, crossbow...: the range and light parts apply
         public double Distance { get; internal set; }    // tiles

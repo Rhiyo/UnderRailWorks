@@ -12,7 +12,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
 
-public static class WorldDraw
+[Preview("drawing: built for UnderRailFixes so far")] public static class WorldDraw
 {
     public delegate bool OffsetHandler(out Vector2 from);
 
@@ -51,7 +51,7 @@ public static class WorldDraw
 // combat with Always). A mod can ask for outlines for every creature Tab would outline, all the time and during zone
 // transitions too (Request); those extra outlines are hidden: Works takes them out of the game's shader pass, and
 // mods draw them as they like (e.g. only where the creature is covered). The game's own outlines stay as they are.
-public static class Outlines
+[Preview("drawing: built for UnderRailFixes so far")] public static class Outlines
 {
     static readonly List<Func<bool>> Requests = new List<Func<bool>>();
     static bool Requested()

@@ -24,7 +24,7 @@ namespace UnderRailWorks
         static string Item(string zone, string part) { return (Path.Combine(d5x.x, zone) + part).ToLowerInvariant(); }
 
         // Null: this game has never stored that zone (never visited).
-        public static byte[] Export(string zoneId)
+        [Preview("multiplayer: built for Co-op so far")] public static byte[] Export(string zoneId)
         {
             if (string.IsNullOrEmpty(zoneId)) return null;
             if (string.Equals(zoneId, World.ZoneId, StringComparison.OrdinalIgnoreCase) && StoreCurrent != null) StoreCurrent.Invoke(bpo.GetService<cnk>(), new object[] { false });
@@ -49,7 +49,7 @@ namespace UnderRailWorks
 
         // Replaces this game's stored copy of the zone in data (Export's). False: it's the current zone (live: leave it
         // first), or the data isn't a zone.
-        public static bool Import(byte[] data)
+        [Preview("multiplayer: built for Co-op so far")] public static bool Import(byte[] data)
         {
             if (data == null) return false;
             using (var r = new BinaryReader(new MemoryStream(data)))
@@ -70,13 +70,13 @@ namespace UnderRailWorks
         }
 
         // The zone id in data (Export's).
-        public static string ZoneOf(byte[] data) { if (data == null) return null; using (var r = new BinaryReader(new MemoryStream(data))) return r.ReadString(); }
+        [Preview("multiplayer: built for Co-op so far")] public static string ZoneOf(byte[] data) { if (data == null) return null; using (var r = new BinaryReader(new MemoryStream(data))) return r.ReadString(); }
     }
 
     public sealed partial class Variables
     {
         // Every variable with a plain value (bool, int, float, string), by name.
-        public Dictionary<string, object> Snapshot()
+        [Preview("multiplayer: built for Co-op so far")] public Dictionary<string, object> Snapshot()
         {
             var result = new Dictionary<string, object>(StringComparer.Ordinal);
             var p = source();
@@ -89,7 +89,7 @@ namespace UnderRailWorks
             return result;
         }
         // Sets a plain value (bool, int, float, string) as Snapshot gives it.
-        public void SetValue(string name, object value)
+        [Preview("multiplayer: built for Co-op so far")] public void SetValue(string name, object value)
         {
             if (value is bool) Set(name, (bool)value); else if (value is int) Set(name, (int)value); else if (value is float) Set(name, (float)value); else if (value is string) Set(name, (string)value);
         }

@@ -33,7 +33,7 @@ public sealed class ModSettings
     }
 
     // The mod's settings (made on first use).
-    public static ModSettings For(string mod, string defaults = null)
+    internal static ModSettings For(string mod, string defaults = null)
     {
         ModSettings s;
         if (!All.TryGetValue(mod, out s)) All[mod] = s = new ModSettings(mod, defaults);

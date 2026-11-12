@@ -16,7 +16,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public sealed class AreaTrigger
-    {
+    { internal AreaTrigger() { }
         public string Mod { get; internal set; }
         public string Zone { get; internal set; }
         public string Area { get; internal set; }

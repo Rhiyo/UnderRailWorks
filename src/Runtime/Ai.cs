@@ -15,29 +15,29 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public sealed class TargetChoice
-    {
+    { internal TargetChoice() { }
         public Character Npc { get; internal set; }
         // What the game chose (null: nothing to fight).
         public Character Chosen { get; internal set; }
     }
 
-    public sealed class NpcAction
-    {
+    public sealed class NpcAction : Cancellable
+    { internal NpcAction() { }
         public Character Npc { get; internal set; }
         public string Action { get; internal set; }     // the capability's name (a special attack, psi ability, item use...)
         public Item Item { get; internal set; }         // for item uses
         public object Target { get; internal set; }     // a Character, an Item or null
-        public bool Cancel { get; set; }                // the NPC doesn't do it (its tree tries something else)
+        // Cancel (Cancellable): the NPC doesn't do it (its tree tries something else)
     }
 
     public sealed class NpcFlight
-    {
+    { internal NpcFlight() { }
         public Character Npc { get; internal set; }
         public bool Fleeing { get; internal set; }     // the game's choice
     }
 
     public sealed class NpcTurn
-    {
+    { internal NpcTurn() { }
         public Character Npc { get; internal set; }
         // True: the NPC's turn ends now, before it acts further.
         public bool EndTurn { get; set; }
@@ -56,16 +56,16 @@ namespace UnderRailWorks
         // Characters an NPC leaves out when it chooses whom to fight (handler(npc, candidate) true: not a candidate).
         // The game's own choice then runs on the rest: detected, hostile, nearest, in sight first. None left: it does
         // what it does with no enemy. Example: a co-op mod leaves out players who are down.
-        public static readonly Hook<Func<Character, Character, bool>> IgnoresTarget = new Hook<Func<Character, Character, bool>>("Ai.IgnoresTarget");
+        [Preview("new")] public static readonly Hook<Func<Character, Character, bool>> IgnoresTarget = new Hook<Func<Character, Character, bool>>("Ai.IgnoresTarget");
 
         // The character an NPC's AI is after now (its memory's current target), or null. Set null: it chooses again.
-        public static Character CurrentTarget(Character npc)
+        [Preview("new")] public static Character CurrentTarget(Character npc)
         {
             var ai = npc == null ? null : (npc.Entity as c5x)?.GetAspect<bm6>();
             var t = ai == null ? null : new bzv(ai.y6()).g();
             return t == null ? null : Character.Of(t.a8());
         }
-        public static void SetCurrentTarget(Character npc, Character target)
+        [Preview("new")] public static void SetCurrentTarget(Character npc, Character target)
         {
             var ai = npc == null ? null : (npc.Entity as c5x)?.GetAspect<bm6>();
             if (ai == null) return;

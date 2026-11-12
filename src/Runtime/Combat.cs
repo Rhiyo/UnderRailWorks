@@ -23,14 +23,14 @@ namespace UnderRailWorks
 {
 
 public sealed class DamagePart
-{
+{ internal DamagePart() { }
     public string Type { get; set; }      // the game's damage type name: Mechanical, Heat, Cold, Electricity, Acid, Bio, Energy, Psionic...
     public int Amount { get; set; }
     public override string ToString() { return Amount + " " + Type; }
 }
 
-public sealed class IncomingDamage
-{
+public sealed class IncomingDamage : Cancellable
+{ internal IncomingDamage() { }
     public Character Target { get; internal set; }
     public string AttackerName { get; internal set; }     // as the game records it (no attacker for traps and the like: null)
     public bool ByPlayer { get; internal set; }           // the player attacked
@@ -38,12 +38,12 @@ public sealed class IncomingDamage
     public bool Critical { get; internal set; }
     public IList<DamagePart> Parts { get; internal set; }
     // Turns the attack into a miss.
-    public bool Cancel { get; set; }
+    // Cancel: Cancellable
     public void Scale(float factor) { foreach (var p in Parts) p.Amount = Math.Max(0, (int)Math.Round(p.Amount * factor)); }
 }
 
 public sealed class AttackOutcome
-{
+{ internal AttackOutcome() { }
     public Character Target { get; internal set; }
     public string AttackerName { get; internal set; }
     public bool ByPlayer { get; internal set; }
@@ -57,7 +57,7 @@ public sealed class AttackOutcome
 public enum AttackKind { Melee, Ranged, Thrown }
 
 public sealed class HitChance
-{
+{ internal HitChance() { }
     public Character Attacker { get; internal set; }
     public Character Target { get; internal set; }
     public AttackKind Kind { get; internal set; }
@@ -66,7 +66,7 @@ public sealed class HitChance
 }
 
 public sealed class TurnPoints
-{
+{ internal TurnPoints() { }
     public Character Character { get; internal set; }
     public int ActionPoints { get; set; }
     public int MovementPoints { get; set; }
@@ -99,7 +99,7 @@ public static partial class Combat
     // Takes c out of the fight (as the game removes one who leaves the zone or dies: crp.a(amc), its place in the turn
     // order goes; on its turn the turn ends first). For a character the game brought in that a mod wants out (a co-op
     // partner far from the enemies). False: not in the fight.
-    public static bool Leave(Character c)
+    [Preview("multiplayer: built for Co-op so far")] public static bool Leave(Character c)
     {
         var m = Manager;
         var e = c == null ? null : c.Entity as c5x;
@@ -114,7 +114,7 @@ public static partial class Combat
     // Puts c in the fight (starting one if there's none), as the game does for an attacker (crp.ahn(amc): a new fight
     // with it, or it joins the running one and gets its place in the turn order). For characters whose AI doesn't
     // notice enemies itself (a co-op partner a mod drives). False: not a character, dead, or no combat manager.
-    public static bool Join(Character c)
+    [Preview("multiplayer: built for Co-op so far")] public static bool Join(Character c)
     {
         var m = Manager;
         var e = c == null ? null : c.Entity as c5x;
@@ -171,7 +171,7 @@ public static partial class Combat
         return result == null ? 0 : result.a.Sum(p => p.Amount);
     }
 
-    public static void Float(Character over, string text, Color? colour = null, bool big = false) { Notify.Over(over, text, colour, big); }
+    internal static void Float(Character over, string text, Color? colour = null, bool big = false) { Notify.Over(over, text, colour, big); }
 
     // --- From character data (efk) to Works' Character: a scan of the zone, cached --------------------------------
     static readonly ConditionalWeakTable<efk, b0b> owners = new ConditionalWeakTable<efk, b0b>();

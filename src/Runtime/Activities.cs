@@ -31,8 +31,8 @@ namespace UnderRailWorks
         static cyt State { get { var g = bpo.GetService<cnk>(); return g == null ? null : g.aqu(); } }
     }
 
-    public sealed class ItemUse
-    {
+    public sealed class ItemUse : Cancellable
+    { internal ItemUse() { }
         public Character User { get; internal set; }
         public Item Item { get; internal set; }
         // The capability's name ("Use", "Throw", ...).
@@ -40,7 +40,7 @@ namespace UnderRailWorks
         // What it is used on: a Character, an Item, or null (a tile, itself).
         public object Target { get; internal set; }
         // ItemUsing: true stops the use (nothing happens, no AP spent).
-        public bool Cancel { get; set; }
+        // Cancel: Cancellable
     }
 
     public static partial class Items
@@ -69,7 +69,7 @@ namespace UnderRailWorks
     }
 
     public sealed class Blueprint
-    {
+    { internal Blueprint() { }
         public string Id { get; internal set; }         // the game's technical name, e.g. "throwingNet"
         public string Name { get; internal set; }       // as the crafting window shows it
         public string Category { get; internal set; }
@@ -121,13 +121,13 @@ namespace UnderRailWorks
     }
 
     public sealed class Crafted
-    {
+    { internal Crafted() { }
         public string Blueprint { get; internal set; }       // its name as the game shows it
         public IList<Item> Items { get; internal set; }
     }
 
     public sealed class Theft
-    {
+    { internal Theft() { }
         public Character Thief { get; internal set; }
         public Character Victim { get; internal set; }
         public Item Item { get; internal set; }

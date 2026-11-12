@@ -28,7 +28,7 @@ namespace UnderRailWorks
     }
 
     public sealed class ModFeat
-    {
+    { internal ModFeat() { }
         public string Mod { get; internal set; }
         public string Id { get; internal set; }
         public string Name { get; internal set; }

@@ -13,14 +13,14 @@ namespace UnderRailWorks
 {
     public sealed partial class Item
     {
-        public static byte[] Pack(IEnumerable<Item> items)
+        [Preview("multiplayer: built for Co-op so far")] public static byte[] Pack(IEnumerable<Item> items)
         {
             var list = (items ?? Enumerable.Empty<Item>()).Select(i => i.Game).ToList();
             var path = Path.GetTempFileName();
             try { eoq.SerializeToBinaryFileCompressed(path, list, dds.a(), eh9.c, embedDataModelVersion: true); return File.ReadAllBytes(path); }
             finally { try { File.Delete(path); } catch { } }
         }
-        public static IList<Item> Unpack(byte[] bytes)
+        [Preview("multiplayer: built for Co-op so far")] public static IList<Item> Unpack(byte[] bytes)
         {
             var path = Path.GetTempFileName();
             try { File.WriteAllBytes(path, bytes); var list = eoq.DeserializeFromBinaryFileCompressed<List<coh>>(path, dds.a(), tryToRetrieveDataModelVersion: true); return list == null ? new List<Item>() : list.Select(i => new Item(i)).ToList(); }
@@ -31,7 +31,7 @@ namespace UnderRailWorks
     public sealed partial class Character
     {
         // Replaces a merchant's stock with these items.
-        public bool SetStock(IEnumerable<Item> items)
+        [Preview("multiplayer: built for Co-op so far")] public bool SetStock(IEnumerable<Item> items)
         {
             var bag = StockBag;
             if (bag == null) return false;
@@ -46,7 +46,7 @@ namespace UnderRailWorks
     {
         // The game's barter screen between the player and merchant (as a conversation's "let's trade"). False: no
         // player, not a merchant.
-        public static bool OpenTrade(Character merchant)
+        [Preview("duplicate of Trade.Open")] public static bool OpenTrade(Character merchant)
         {
             var screen = bpo.GetService<ps>() as dka;
             var p = Player;
@@ -54,6 +54,6 @@ namespace UnderRailWorks
             return screen.amw(p.Entity, merchant.Entity);
         }
         // The barter screen is open.
-        public static bool IsTrading { get { return Windows.OpenWindows.Any(w => w.Kind == Window.Barter); } }
+        [Preview("duplicate of Trade.IsOpen")] public static bool IsTrading { get { return Windows.OpenWindows.Any(w => w.Kind == Window.Barter); } }
     }
 }

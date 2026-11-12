@@ -29,7 +29,7 @@ namespace UnderRailWorks
     {
         static List<string> paths;
         // Every item in the game's data (paths as Inventory.Add takes them).
-        public static IList<string> Paths { get { return paths ?? (paths = DataFiles.Under(Path.Combine("rules", "items"), ".item")); } }
+        public static IList<string> Paths { get { return (paths ?? (paths = DataFiles.Under(Path.Combine("rules", "items"), ".item"))).ToList(); } }     // a copy: changing it changes nothing
     }
 
     public static partial class Progression
@@ -51,7 +51,7 @@ namespace UnderRailWorks
     {
         static List<string> blueprints;
         // Every entity blueprint (creatures, objects...) as World.Spawn and placements take them.
-        public static IList<string> Blueprints { get { return blueprints ?? (blueprints = DataFiles.Under(Path.Combine("meta", "playfield", "blueprints", "locale"), ".upeb")); } }
+        public static IList<string> Blueprints { get { return (blueprints ?? (blueprints = DataFiles.Under(Path.Combine("meta", "playfield", "blueprints", "locale"), ".upeb"))).ToList(); } }     // a copy
 
         // A creature blueprint whose file name is the character's name (letters and digits, any case: "Ironhead
         // Gunner" -> ...\ironheadgunner). Entities don't keep their blueprint, so this is a guess; null if none matches.

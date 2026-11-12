@@ -9,7 +9,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public sealed class Reload : Cancellable
-    {
+    { internal Reload() { }
         public Character Character { get; internal set; }
         public Item Weapon { get; internal set; }     // null if it couldn't be told
         public Item Ammo { get; internal set; }       // null: unloading, or not known

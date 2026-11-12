@@ -11,20 +11,20 @@ using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
 {
-    public class Cancellable { public bool Cancel { get; set; } }
-    public sealed class TradeStart : Cancellable { public Character Merchant { get; internal set; } }
-    public sealed class ContainerOpen : Cancellable { public Container Container { get; internal set; } public Character Opener { get; internal set; } }
-    public sealed class ItemTake : Cancellable { public Container Container { get; internal set; } public Item Item { get; internal set; } public Character Taker { get; internal set; } }
-    public sealed class DialogStart : Cancellable { public string Name { get; set; } public Character With { get; internal set; } }
+    public class Cancellable { internal Cancellable() { } public bool Cancel { get; set; } }
+    public sealed class TradeStart : Cancellable { internal TradeStart() { } public Character Merchant { get; internal set; } }
+    public sealed class ContainerOpen : Cancellable { internal ContainerOpen() { } public Container Container { get; internal set; } public Character Opener { get; internal set; } }
+    public sealed class ItemTake : Cancellable { internal ItemTake() { } public Container Container { get; internal set; } public Item Item { get; internal set; } public Character Taker { get; internal set; } }
+    public sealed class DialogStart : Cancellable { internal DialogStart() { } public string Name { get; set; } public Character With { get; internal set; } }
     // The player putting an item into a gear or quick slot (Cancel: it stays where it was). The game's own scripted
     // equips (NPC loadouts, Items.ToQuickSlot) aren't asked.
-    public sealed class EquipAttempt : Cancellable { public Character Character { get; internal set; } public Item Item { get; internal set; } }
+    public sealed class EquipAttempt : Cancellable { internal EquipAttempt() { } public Character Character { get; internal set; } public Item Item { get; internal set; } }
     // The player about to leave the zone (an exit, a door between maps, a script, World.Travel). To: the destination
     // zone's id, Entry: the entry point there.
-    public sealed class ZoneLeave : Cancellable { public string From { get; internal set; } public string To { get; internal set; } public string Entry { get; internal set; } public Character Who { get; internal set; } }
+    public sealed class ZoneLeave : Cancellable { internal ZoneLeave() { } public string From { get; internal set; } public string To { get; internal set; } public string Entry { get; internal set; } public Character Who { get; internal set; } }
     // A character (the player or an NPC's AI) about to switch between its primary and secondary weapon.
-    public sealed class WeaponSwitch : Cancellable { public Character Character { get; internal set; } public bool ToSecondary { get; internal set; } }
-    public sealed class CraftAttempt : Cancellable { public string Blueprint { get; internal set; } }
+    public sealed class WeaponSwitch : Cancellable { internal WeaponSwitch() { } public Character Character { get; internal set; } public bool ToSecondary { get; internal set; } }
+    public sealed class CraftAttempt : Cancellable { internal CraftAttempt() { } public string Blueprint { get; internal set; } }
 
     public static partial class GameEvents
     {

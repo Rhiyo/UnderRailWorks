@@ -38,6 +38,7 @@ static class ModCheck
             {
                 var missing = new SortedSet<string>(StringComparer.Ordinal);
                 var internals = new SortedSet<string>(StringComparer.Ordinal);
+                var previews = new SortedSet<string>(StringComparer.Ordinal);
                 bool game = module.AssemblyReferences.Any(a => a.Name.Equals(GameName, StringComparison.OrdinalIgnoreCase));
                 foreach (var t in module.GetTypeReferences())
                 {
@@ -46,6 +47,7 @@ static class ModCheck
                     TypeDefinition def = null;
                     try { def = t.Resolve(); } catch (Exception) { }
                     if (def == null) missing.Add(t.FullName.Replace("/", "."));
+                    else if (PreviewType(def)) previews.Add(def.FullName.Replace("/", "."));
                 }
                 foreach (var m in module.GetMemberReferences())
                 {
@@ -55,10 +57,12 @@ static class ModCheck
                     IMemberDefinition def = null;
                     try { def = m.Resolve(); } catch (Exception) { }
                     if (def == null) missing.Add(Describe(m));
+                    else if (IsPreview(def as ICustomAttributeProvider) || AccessorPreview(def as MethodDefinition) || PreviewType(def.DeclaringType)) previews.Add(def.DeclaringType.FullName.Replace("/", ".") + "." + def.Name.Replace("get_", "").Replace("set_", "").Replace("add_", "").Replace("remove_", ""));
                 }
                 if (missing.Count > 0)
                     r.Error = "needs a newer UnderRailWorks (this is API " + WorksApi.Version.ToString(2) + "): not here: " + string.Join(", ", missing.Take(5).ToArray()) + (missing.Count > 5 ? " and " + (missing.Count - 5) + " more" : "");
                 if (internals.Count > 0) r.Warnings.Add("uses UnderRailWorks internals (may break with any Works update): " + string.Join(", ", internals.Take(3).ToArray()) + (internals.Count > 3 ? "..." : ""));
+                if (previews.Count > 0) r.Warnings.Add("uses preview API (may change in any Works update): " + string.Join(", ", previews.Take(3).ToArray()) + (previews.Count > 3 ? "..." : ""));
                 if (game) r.Warnings.Add("uses the game's own code directly (may break with a game update)");
                 else if (module.AssemblyReferences.Any(a => a.Name == "0Harmony")) r.Warnings.Add("patches code with Harmony (may break with a game update)");
             }
@@ -66,6 +70,16 @@ static class ModCheck
         catch (BadImageFormatException) { }     // not a .NET assembly (a native library the mod ships): nothing to check
         finally { resolver.Dispose(); }
         return r;
+    }
+
+    static bool IsPreview(ICustomAttributeProvider p) { return p != null && p.HasCustomAttributes && p.CustomAttributes.Any(a => a.AttributeType.Name == "PreviewAttribute"); }
+    static bool PreviewType(TypeDefinition t) { for (; t != null; t = t.DeclaringType) if (IsPreview(t)) return true; return false; }
+    // A property's or event's accessor: the attribute sits on the property or event.
+    static bool AccessorPreview(MethodDefinition m)
+    {
+        if (m == null || !(m.IsGetter || m.IsSetter || m.IsAddOn || m.IsRemoveOn)) return false;
+        var t = m.DeclaringType;
+        return t.Properties.Any(p => (p.GetMethod == m || p.SetMethod == m) && IsPreview(p)) || t.Events.Any(e => (e.AddMethod == m || e.RemoveMethod == m) && IsPreview(e));
     }
 
     static bool FromWorks(TypeReference t)

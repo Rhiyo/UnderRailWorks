@@ -18,7 +18,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public sealed class RecipeSlot
-    {
+    { internal RecipeSlot() { }
         internal string Label; internal string[] Codes; internal int Skill, Count; internal bool Optional;
         // A component by item code (Item.Code, e.g. "syringe"), the crafting skill it needs, how many.
         public static RecipeSlot Item(string label, string code, int skill = 0, int count = 1) { return new RecipeSlot { Label = label, Codes = new[] { code }, Skill = skill, Count = Math.Max(1, count) }; }
@@ -27,7 +27,7 @@ namespace UnderRailWorks
     }
 
     public sealed class ModRecipe
-    {
+    { internal ModRecipe() { }
         internal WorksMod Owner;
         public string Id { get; internal set; }
         public string Name { get; internal set; }

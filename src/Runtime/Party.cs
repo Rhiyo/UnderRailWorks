@@ -55,7 +55,7 @@ namespace UnderRailWorks
         internal static void End(Character before) { acting = before; }
 
         // A multiplayer mod: who reached a level on another machine; GameEvents.LevelledUp runs here with them as the player.
-        public static void LevelledUp(Character who, int level) { if (GameEvents.LevelledUp.Any) As(who, () => GameEvents.LevelledUp.Run(h => h(level))); }
+        [Preview("multiplayer: built for Co-op so far")] public static void LevelledUp(Character who, int level) { if (GameEvents.LevelledUp.Any) As(who, () => GameEvents.LevelledUp.Run(h => h(level))); }
 
         public static void Add(WorksMod mod, Character c) { if (c != null) lock (others) others[c] = mod.Id; }
         public static void Remove(Character c) { if (c != null) lock (others) others.Remove(c); }

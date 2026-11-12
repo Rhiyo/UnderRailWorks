@@ -65,7 +65,7 @@ namespace UnderRailWorks
                 World.Travel(toZone, toWaypoint);
             }, null);
         }
-        public sealed class EdgeExit { public string Id { get; internal set; } public string Zone { get; internal set; } public string Area { get; internal set; } public Rectangle Tiles { get; internal set; } public string ToZone { get; internal set; } }
+        public sealed class EdgeExit { internal EdgeExit() { } public string Id { get; internal set; } public string Zone { get; internal set; } public string Area { get; internal set; } public Rectangle Tiles { get; internal set; } public string ToZone { get; internal set; } }
         static readonly List<EdgeExit> edge = new List<EdgeExit>();
         // Mods' edge exits in the current zone (a map draws them like the game's exits).
         public static IList<EdgeExit> EdgeExits { get { var z = World.ZoneId; lock (edge) return edge.Where(e => string.Equals(e.Zone, z, StringComparison.OrdinalIgnoreCase)).ToList(); } }

@@ -55,7 +55,13 @@ In this order:
 4. **Last resort: raw game access.** Harmony on the game's types (by reflection, or by referencing the game yourself)
    works, but it breaks when the game updates and you're on your own. If you do it, keep it in one class, check every
    lookup for null and switch the feature off with a log line when one is missing, and never touch saves this way.
-   Then ask for the piece in Works (2), so you can drop it.
+   Then ask for the piece in Works (2), so you can drop it. Make your own Harmony instance
+   (`new HarmonyLib.Harmony("YourMod")`, with `<UseHarmony>true</UseHarmony>` in the project); the Mods tab notes that
+   the mod may break with a game update.
+
+Versions: your `mod.json` says which Works API you built for (`"works": "1.0"`), and Works refuses a mod that uses
+something it doesn't have, by name, instead of crashing later. Parts marked `[Preview]` may still change; the Mods tab
+notes mods that use them. Details: [Versioning](Versioning.md).
 
 ## 4. Testing
 

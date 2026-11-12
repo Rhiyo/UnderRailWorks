@@ -23,7 +23,7 @@ namespace UnderRailWorks
 {
 
 public sealed class ModDependency
-{
+{ internal ModDependency() { }
     public string Id { get; internal set; }
     public Version Min { get; set; }     // null: any version
     public override string ToString() { return Min == null ? Id : Id + " " + Min + "+"; }
@@ -37,7 +37,7 @@ public sealed class ModDependency
 }
 
 public sealed class ModInfo
-{
+{ internal ModInfo() { }
     public string Id { get; internal set; }
     public string Name { get; internal set; }
     public string Folder { get; internal set; }
@@ -48,7 +48,7 @@ public sealed class ModInfo
     public string Warning { get; internal set; }
     public Version Version { get; internal set; }
     public Version Works { get; internal set; }
-    public WorksMod Instance { get; internal set; }
+    internal WorksMod Instance { get; set; }
     public bool Enabled { get; internal set; }
     // mod.json "startsOff": true: switched off until the player switches it on (gameplay rules, difficulty changes).
     public bool StartsOff { get; internal set; }

@@ -6,11 +6,8 @@ UnderRailWorks.AbilityTarget :: Character = 1
 UnderRailWorks.AbilityTarget :: Self = 0
 UnderRailWorks.AbilityTarget :: enum
 UnderRailWorks.Ai :: static class
-UnderRailWorks.Ai :: static method System.Void SetCurrentTarget(UnderRailWorks.Character, UnderRailWorks.Character)
-UnderRailWorks.Ai :: static method UnderRailWorks.Character CurrentTarget(UnderRailWorks.Character)
 UnderRailWorks.Ai :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.NpcAction>> Acting
 UnderRailWorks.Ai :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.NpcTurn>> TakingTurn
-UnderRailWorks.Ai :: static readonly field UnderRailWorks.Hook<System.Func<UnderRailWorks.Character, UnderRailWorks.Character, System.Boolean>> IgnoresTarget
 UnderRailWorks.Ai :: static readonly field UnderRailWorks.Hook<System.Func<UnderRailWorks.NpcFlight, System.Nullable<System.Boolean>>> ShouldFlee
 UnderRailWorks.Ai :: static readonly field UnderRailWorks.Hook<System.Func<UnderRailWorks.TargetChoice, UnderRailWorks.Character>> ChooseTarget
 UnderRailWorks.ApplyResult :: Applied = 0
@@ -25,7 +22,6 @@ UnderRailWorks.Area :: property System.Int32 Height { get; }
 UnderRailWorks.Area :: property System.Int32 Width { get; }
 UnderRailWorks.Area :: property System.String Name { get; }
 UnderRailWorks.Area :: sealed class
-UnderRailWorks.AreaTrigger :: ctor()
 UnderRailWorks.AreaTrigger :: method System.Void Remove()
 UnderRailWorks.AreaTrigger :: property Microsoft.Xna.Framework.Rectangle Tiles { get; }
 UnderRailWorks.AreaTrigger :: property System.Boolean PlayerOnly { get; set; }
@@ -45,7 +41,6 @@ UnderRailWorks.AttackKind :: Melee = 0
 UnderRailWorks.AttackKind :: Ranged = 1
 UnderRailWorks.AttackKind :: Thrown = 2
 UnderRailWorks.AttackKind :: enum
-UnderRailWorks.AttackOutcome :: ctor()
 UnderRailWorks.AttackOutcome :: property System.Boolean ByPlayer { get; }
 UnderRailWorks.AttackOutcome :: property System.Boolean Critical { get; }
 UnderRailWorks.AttackOutcome :: property System.Boolean Hit { get; }
@@ -62,43 +57,29 @@ UnderRailWorks.Attitude :: Neutral = 3
 UnderRailWorks.Attitude :: None = 0
 UnderRailWorks.Attitude :: Unfriendly = 2
 UnderRailWorks.Attitude :: enum
-UnderRailWorks.Blueprint :: ctor()
 UnderRailWorks.Blueprint :: property System.String Category { get; }
 UnderRailWorks.Blueprint :: property System.String Id { get; }
 UnderRailWorks.Blueprint :: property System.String Name { get; }
 UnderRailWorks.Blueprint :: sealed class
 UnderRailWorks.Camera :: static class
-UnderRailWorks.Camera :: static method System.Void Follow(UnderRailWorks.Character)
 UnderRailWorks.Camera :: static property Microsoft.Xna.Framework.Point ViewSize { get; }
 UnderRailWorks.Camera :: static property System.Nullable<Microsoft.Xna.Framework.Vector2> Centre { get; set; }
 UnderRailWorks.Camera :: static property System.Single TileHeight { get; }
 UnderRailWorks.Camera :: static property System.Single TileWidth { get; }
 UnderRailWorks.Camera :: static property System.Single Zoom { get; }
 UnderRailWorks.Cancellable :: class
-UnderRailWorks.Cancellable :: ctor()
 UnderRailWorks.Cancellable :: property System.Boolean Cancel { get; set; }
 UnderRailWorks.Character :: method System.Boolean Attack(UnderRailWorks.Character)
 UnderRailWorks.Character :: method System.Boolean CanSee(UnderRailWorks.Character)
 UnderRailWorks.Character :: method System.Boolean EndTurn()
-UnderRailWorks.Character :: method System.Boolean ExportTo(System.String)
-UnderRailWorks.Character :: method System.Boolean ExportTo(System.String, System.DateTime)
 UnderRailWorks.Character :: method System.Boolean HasFeat(System.String)
 UnderRailWorks.Character :: method System.Boolean HasNoticed(UnderRailWorks.Character)
 UnderRailWorks.Character :: method System.Boolean HasStatusEffect(System.String)
 UnderRailWorks.Character :: method System.Boolean MakeMerchant(System.String)
 UnderRailWorks.Character :: method System.Boolean MoveTo(System.Int32, System.Int32)
-UnderRailWorks.Character :: method System.Boolean PlaceAt(Microsoft.Xna.Framework.Vector3, System.Int32 = -1)
 UnderRailWorks.Character :: method System.Boolean Reload()
-UnderRailWorks.Character :: method System.Boolean RemoveFromWorld()
-UnderRailWorks.Character :: method System.Boolean ReplaceSheet(System.String)
 UnderRailWorks.Character :: method System.Boolean Say(System.String, System.Boolean = True)
-UnderRailWorks.Character :: method System.Boolean SetStock(System.Collections.Generic.IEnumerable<UnderRailWorks.Item>)
-UnderRailWorks.Character :: method System.Boolean SwapWeapons()
-UnderRailWorks.Character :: method System.Boolean TakeExitAt(System.Int32, System.Int32)
-UnderRailWorks.Character :: method System.Boolean TalkTo(UnderRailWorks.Character)
 UnderRailWorks.Character :: method System.Boolean TeleportTo(System.Int32, System.Int32)
-UnderRailWorks.Character :: method System.Boolean UseAbility(System.String, System.String, System.Object)
-UnderRailWorks.Character :: method System.Boolean UseObject(System.String)
 UnderRailWorks.Character :: method System.Boolean WalkTo(System.Int32, System.Int32)
 UnderRailWorks.Character :: method System.Int32 Ability(System.String)
 UnderRailWorks.Character :: method System.Int32 BaseAbility(System.String)
@@ -119,7 +100,6 @@ UnderRailWorks.Character :: method UnderRailWorks.Attitude AttitudeTo(UnderRailW
 UnderRailWorks.Character :: property Microsoft.Xna.Framework.Color OutlineColor { get; }
 UnderRailWorks.Character :: property Microsoft.Xna.Framework.Vector3 Position { get; }
 UnderRailWorks.Character :: property System.Boolean CanTalk { get; }
-UnderRailWorks.Character :: property System.Boolean HasPlayerSheet { get; }
 UnderRailWorks.Character :: property System.Boolean IsCharacter { get; }
 UnderRailWorks.Character :: property System.Boolean IsDead { get; }
 UnderRailWorks.Character :: property System.Boolean IsFollowing { get; }
@@ -128,7 +108,6 @@ UnderRailWorks.Character :: property System.Boolean IsInCombat { get; }
 UnderRailWorks.Character :: property System.Boolean IsMerchant { get; }
 UnderRailWorks.Character :: property System.Boolean IsPlayer { get; }
 UnderRailWorks.Character :: property System.Boolean IsTakingTurn { get; }
-UnderRailWorks.Character :: property System.Boolean IsWalking { get; }
 UnderRailWorks.Character :: property System.Boolean Passive { get; set; }
 UnderRailWorks.Character :: property System.Boolean UsingSecondaryWeapon { get; }
 UnderRailWorks.Character :: property System.Collections.Generic.IDictionary<System.String, UnderRailWorks.Resistance> Resistances { get; }
@@ -139,19 +118,16 @@ UnderRailWorks.Character :: property System.Collections.Generic.IList<UnderRailW
 UnderRailWorks.Character :: property System.Int32 AbilityPoints { get; set; }
 UnderRailWorks.Character :: property System.Int32 Detection { get; }
 UnderRailWorks.Character :: property System.Int32 Experience { get; }
-UnderRailWorks.Character :: property System.Int32 Facing { get; }
 UnderRailWorks.Character :: property System.Int32 FeatPoints { get; set; }
 UnderRailWorks.Character :: property System.Int32 Initiative { get; }
 UnderRailWorks.Character :: property System.Int32 Level { get; }
 UnderRailWorks.Character :: property System.Int32 SkillPoints { get; set; }
-UnderRailWorks.Character :: property System.Nullable<Microsoft.Xna.Framework.Point> WalkTarget { get; }
 UnderRailWorks.Character :: property System.Nullable<Microsoft.Xna.Framework.Rectangle> ScreenBounds { get; }
 UnderRailWorks.Character :: property System.Single Health { get; set; }
 UnderRailWorks.Character :: property System.Single Markup { get; }
 UnderRailWorks.Character :: property System.Single MaxHealth { get; }
 UnderRailWorks.Character :: property System.Single SightRange { get; }
 UnderRailWorks.Character :: property System.String Blueprint { get; }
-UnderRailWorks.Character :: property System.String EntityId { get; }
 UnderRailWorks.Character :: property System.String Faction { get; set; }
 UnderRailWorks.Character :: property System.String Id { get; }
 UnderRailWorks.Character :: property System.String Key { get; }
@@ -165,11 +141,6 @@ UnderRailWorks.Character :: property UnderRailWorks.Equipment Equipment { get; }
 UnderRailWorks.Character :: property UnderRailWorks.Inventory Inventory { get; }
 UnderRailWorks.Character :: property UnderRailWorks.Variables Variables { get; }
 UnderRailWorks.Character :: sealed class
-UnderRailWorks.CharacterControl :: static class
-UnderRailWorks.CharacterControl :: static method System.Boolean IsControlled(UnderRailWorks.Character)
-UnderRailWorks.CharacterControl :: static method System.Boolean Take(UnderRailWorks.WorksMod, UnderRailWorks.Character)
-UnderRailWorks.CharacterControl :: static method System.Void Release(UnderRailWorks.Character)
-UnderRailWorks.CharacterControl :: static property System.Collections.Generic.IList<UnderRailWorks.Character> All { get; }
 UnderRailWorks.CharacterRules :: static class
 UnderRailWorks.CharacterRules :: static property System.Int32 AbilityMaxAtCreation { get; set; }
 UnderRailWorks.CharacterRules :: static property System.Int32 AbilityMinAtCreation { get; set; }
@@ -180,12 +151,9 @@ UnderRailWorks.CharacterRules :: static property System.Int32 FeatsAtCreation { 
 UnderRailWorks.CharacterRules :: static property System.Int32 SkillPointsAtCreation { get; set; }
 UnderRailWorks.CharacterRules :: static property System.Int32 SkillPointsPerLevel { get; set; }
 UnderRailWorks.Combat :: static class
-UnderRailWorks.Combat :: static method System.Boolean Join(UnderRailWorks.Character)
-UnderRailWorks.Combat :: static method System.Boolean Leave(UnderRailWorks.Character)
 UnderRailWorks.Combat :: static method System.Int32 ActionPoints(UnderRailWorks.Character)
 UnderRailWorks.Combat :: static method System.Int32 Damage(UnderRailWorks.Character, System.Int32, System.String = Mechanical, UnderRailWorks.Character = null, System.Boolean = True)
 UnderRailWorks.Combat :: static method System.Int32 MovementPoints(UnderRailWorks.Character)
-UnderRailWorks.Combat :: static method System.Void Float(UnderRailWorks.Character, System.String, System.Nullable<Microsoft.Xna.Framework.Color> = null, System.Boolean = False)
 UnderRailWorks.Combat :: static method System.Void Log(System.String, System.Nullable<Microsoft.Xna.Framework.Color> = null, UnderRailWorks.Character = null)
 UnderRailWorks.Combat :: static method System.Void SetActionPoints(UnderRailWorks.Character, System.Int32)
 UnderRailWorks.Combat :: static method UnderRailWorks.Shot ShotBreakdown(UnderRailWorks.Character)
@@ -227,9 +195,7 @@ UnderRailWorks.Container :: property System.String EntityId { get; }
 UnderRailWorks.Container :: property System.String Name { get; }
 UnderRailWorks.Container :: property UnderRailWorks.Area Area { get; }
 UnderRailWorks.Container :: property UnderRailWorks.Lock Lock { get; }
-UnderRailWorks.Container :: property UnderRailWorks.MapObject Entity { get; }
 UnderRailWorks.Container :: sealed class
-UnderRailWorks.ContainerOpen :: ctor()
 UnderRailWorks.ContainerOpen :: property UnderRailWorks.Character Opener { get; }
 UnderRailWorks.ContainerOpen :: property UnderRailWorks.Container Container { get; }
 UnderRailWorks.ContainerOpen :: sealed class : UnderRailWorks.Cancellable
@@ -239,10 +205,8 @@ UnderRailWorks.ContentIndex :: static method System.String Write()
 UnderRailWorks.ContentPack :: static class
 UnderRailWorks.ContentPack :: static method System.Void AddCondition(UnderRailWorks.WorksMod, System.String, System.Func<UnderRailWorks.PackArgs, System.Func<System.Boolean>>)
 UnderRailWorks.ContentPack :: static method System.Void AddEffect(UnderRailWorks.WorksMod, System.String, System.Func<UnderRailWorks.PackArgs, System.Action>)
-UnderRailWorks.CraftAttempt :: ctor()
 UnderRailWorks.CraftAttempt :: property System.String Blueprint { get; }
 UnderRailWorks.CraftAttempt :: sealed class : UnderRailWorks.Cancellable
-UnderRailWorks.CraftPlan :: ctor()
 UnderRailWorks.CraftPlan :: property System.Boolean CanCraft { get; }
 UnderRailWorks.CraftPlan :: property System.Boolean FromMod { get; }
 UnderRailWorks.CraftPlan :: property System.Collections.Generic.IDictionary<System.String, System.Int32> Lacks { get; }
@@ -251,7 +215,6 @@ UnderRailWorks.CraftPlan :: property System.Collections.Generic.IList<System.Str
 UnderRailWorks.CraftPlan :: property System.String Category { get; }
 UnderRailWorks.CraftPlan :: property System.String Name { get; }
 UnderRailWorks.CraftPlan :: sealed class
-UnderRailWorks.Crafted :: ctor()
 UnderRailWorks.Crafted :: property System.Collections.Generic.IList<UnderRailWorks.Item> Items { get; }
 UnderRailWorks.Crafted :: property System.String Blueprint { get; }
 UnderRailWorks.Crafted :: sealed class
@@ -263,7 +226,6 @@ UnderRailWorks.Crafting :: static property System.Collections.Generic.IList<Unde
 UnderRailWorks.Crafting :: static property System.Collections.Generic.IList<UnderRailWorks.Blueprint> Known { get; }
 UnderRailWorks.Crafting :: static property System.Collections.Generic.IList<UnderRailWorks.ModRecipe> ModRecipes { get; }
 UnderRailWorks.CustomStat :: abstract class
-UnderRailWorks.CustomStat :: ctor()
 UnderRailWorks.CustomStat :: property System.Int32 Base { get; set; }
 UnderRailWorks.CustomStat :: property System.Int32 Value { get; }
 UnderRailWorks.CustomStat :: property System.String Description { get; }
@@ -275,7 +237,6 @@ UnderRailWorks.CustomStats :: static method UnderRailWorks.ModSkill AddSkill(Und
 UnderRailWorks.CustomStats :: static property System.Collections.Generic.IList<UnderRailWorks.ModBaseAbility> Abilities { get; }
 UnderRailWorks.CustomStats :: static property System.Collections.Generic.IList<UnderRailWorks.ModSkill> SkillsAdded { get; }
 UnderRailWorks.CustomStats :: static readonly field UnderRailWorks.Hook<System.Action> Changed
-UnderRailWorks.DamagePart :: ctor()
 UnderRailWorks.DamagePart :: method System.String ToString()
 UnderRailWorks.DamagePart :: property System.Int32 Amount { get; set; }
 UnderRailWorks.DamagePart :: property System.String Type { get; set; }
@@ -284,15 +245,11 @@ UnderRailWorks.DamageRange :: property System.Int32 Max { get; set; }
 UnderRailWorks.DamageRange :: property System.Int32 Min { get; set; }
 UnderRailWorks.DamageRange :: property System.String Type { get; set; }
 UnderRailWorks.DamageRange :: struct
-UnderRailWorks.DeathAttempt :: ctor()
-UnderRailWorks.DeathAttempt :: property UnderRailWorks.Character Who { get; }
-UnderRailWorks.DeathAttempt :: sealed class : UnderRailWorks.Cancellable
 UnderRailWorks.DefenseStats :: property System.Int32 Dodge { get; }
 UnderRailWorks.DefenseStats :: property System.Int32 Evasion { get; }
 UnderRailWorks.DefenseStats :: property System.Int32 Fortitude { get; }
 UnderRailWorks.DefenseStats :: property System.Int32 Resolve { get; }
 UnderRailWorks.DefenseStats :: sealed class
-UnderRailWorks.Detection :: ctor()
 UnderRailWorks.Detection :: property System.Boolean Darkvision { get; }
 UnderRailWorks.Detection :: property System.Double Angle { get; }
 UnderRailWorks.Detection :: property System.Double Distance { get; }
@@ -308,7 +265,6 @@ UnderRailWorks.Dialog :: static const field System.String End =
 UnderRailWorks.DialogBranch :: method UnderRailWorks.DialogBranch Else(System.String)
 UnderRailWorks.DialogBranch :: method UnderRailWorks.DialogBranch If(UnderRailWorks.Condition, System.String)
 UnderRailWorks.DialogBranch :: sealed class
-UnderRailWorks.DialogBuilder :: ctor()
 UnderRailWorks.DialogBuilder :: method UnderRailWorks.DialogBranch Branch(System.String)
 UnderRailWorks.DialogBuilder :: method UnderRailWorks.DialogBuilder Cancellable(System.Boolean)
 UnderRailWorks.DialogBuilder :: method UnderRailWorks.DialogBuilder Start(System.String)
@@ -319,13 +275,11 @@ UnderRailWorks.DialogLine :: method UnderRailWorks.DialogLine Option(System.Stri
 UnderRailWorks.DialogLine :: method UnderRailWorks.DialogLine Option(System.String, System.String, UnderRailWorks.Outcome[])
 UnderRailWorks.DialogLine :: method UnderRailWorks.DialogLine OptionGreyed(System.String, System.String, UnderRailWorks.Condition, UnderRailWorks.Outcome[])
 UnderRailWorks.DialogLine :: sealed class
-UnderRailWorks.DialogPatch :: ctor()
 UnderRailWorks.DialogPatch :: method UnderRailWorks.DialogBranch Branch(System.String)
 UnderRailWorks.DialogPatch :: method UnderRailWorks.DialogLine Line(System.String, System.String, UnderRailWorks.Outcome[])
 UnderRailWorks.DialogPatch :: method UnderRailWorks.DialogPatch AddOption(System.String, System.String, System.String, UnderRailWorks.Condition = null, UnderRailWorks.Outcome[])
 UnderRailWorks.DialogPatch :: method UnderRailWorks.DialogPatch AddOptionGreyed(System.String, System.String, System.String, UnderRailWorks.Condition, UnderRailWorks.Outcome[])
 UnderRailWorks.DialogPatch :: sealed class
-UnderRailWorks.DialogStart :: ctor()
 UnderRailWorks.DialogStart :: property System.String Name { get; set; }
 UnderRailWorks.DialogStart :: property UnderRailWorks.Character With { get; }
 UnderRailWorks.DialogStart :: sealed class : UnderRailWorks.Cancellable
@@ -343,28 +297,9 @@ UnderRailWorks.DisarmOutcome :: Disarmed = 0
 UnderRailWorks.DisarmOutcome :: Failed = 2
 UnderRailWorks.DisarmOutcome :: Recovered = 1
 UnderRailWorks.DisarmOutcome :: enum
-UnderRailWorks.Door :: method System.Void Toggle()
-UnderRailWorks.Door :: property Microsoft.Xna.Framework.Vector3 Position { get; }
-UnderRailWorks.Door :: property System.Boolean IsLocked { get; }
-UnderRailWorks.Door :: property System.Boolean IsOpen { get; set; }
-UnderRailWorks.Door :: property System.String EntityId { get; }
-UnderRailWorks.Door :: sealed class
-UnderRailWorks.DrawContext :: method System.Boolean Equals(System.Object)
-UnderRailWorks.DrawContext :: method System.Boolean Equals(UnderRailWorks.DrawContext)
-UnderRailWorks.DrawContext :: method System.Int32 GetHashCode()
-UnderRailWorks.DrawContext :: method System.Void EndBatch()
-UnderRailWorks.DrawContext :: method System.Void ResumeBatch(Microsoft.Xna.Framework.Graphics.RasterizerState)
-UnderRailWorks.DrawContext :: property Microsoft.Xna.Framework.Graphics.GraphicsDevice Device { get; }
-UnderRailWorks.DrawContext :: property System.Boolean IsNull { get; }
-UnderRailWorks.DrawContext :: property UnderRailWorks.GameBatch Batch { get; }
-UnderRailWorks.DrawContext :: static method System.Boolean op_Equality(UnderRailWorks.DrawContext, UnderRailWorks.DrawContext)
-UnderRailWorks.DrawContext :: static method System.Boolean op_Inequality(UnderRailWorks.DrawContext, UnderRailWorks.DrawContext)
-UnderRailWorks.DrawContext :: struct (System.IEquatable<UnderRailWorks.DrawContext>)
-UnderRailWorks.EquipAttempt :: ctor()
 UnderRailWorks.EquipAttempt :: property UnderRailWorks.Character Character { get; }
 UnderRailWorks.EquipAttempt :: property UnderRailWorks.Item Item { get; }
 UnderRailWorks.EquipAttempt :: sealed class : UnderRailWorks.Cancellable
-UnderRailWorks.EquipChange :: ctor()
 UnderRailWorks.EquipChange :: property UnderRailWorks.Character Character { get; }
 UnderRailWorks.EquipChange :: property UnderRailWorks.Item Item { get; }
 UnderRailWorks.EquipChange :: sealed class
@@ -403,10 +338,6 @@ UnderRailWorks.Feats :: static method System.Boolean SetDescription(UnderRailWor
 UnderRailWorks.Feats :: static method System.Void AddBonuses(UnderRailWorks.WorksMod, System.String, UnderRailWorks.StatBonus[])
 UnderRailWorks.Feats :: static method System.Void SetRequirements(UnderRailWorks.WorksMod, System.String, UnderRailWorks.FeatRequirements)
 UnderRailWorks.Feats :: static method UnderRailWorks.ModFeat Add(UnderRailWorks.WorksMod, System.String, System.String, System.String, UnderRailWorks.FeatRequirements = null, System.String = null, UnderRailWorks.StatBonus[] = null)
-UnderRailWorks.GameBatch :: method System.Void Begin(Microsoft.Xna.Framework.Graphics.SpriteSortMode, Microsoft.Xna.Framework.Graphics.BlendState, Microsoft.Xna.Framework.Graphics.SamplerState, Microsoft.Xna.Framework.Graphics.DepthStencilState, Microsoft.Xna.Framework.Graphics.RasterizerState, Microsoft.Xna.Framework.Graphics.Effect)
-UnderRailWorks.GameBatch :: method System.Void End()
-UnderRailWorks.GameBatch :: property System.Boolean IsNull { get; }
-UnderRailWorks.GameBatch :: struct
 UnderRailWorks.GameClock :: static class
 UnderRailWorks.GameClock :: static property System.Boolean InTurnBasedCombat { get; }
 UnderRailWorks.GameClock :: static property System.Boolean Paused { get; }
@@ -435,25 +366,21 @@ UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Ac
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.ContainerOpen>> ContainerOpening
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.CraftAttempt>> Crafting
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.Crafted>> ItemCrafted
-UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.DeathAttempt>> Dying
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.DialogStart>> DialogStarting
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.EquipAttempt>> Equipping
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.EquipChange>> Equipped
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.EquipChange>> Unequipped
-UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.GameOverAttempt>> GameOver
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.Item>> ItemAdded
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.ItemTake>> ItemTaking
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.ItemUse>> ItemUsed
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.ItemUse>> ItemUsing
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.LockAttempt>> LockAttempted
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.LootTarget>> LootGenerated
-UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.PlayerOrder>> PlayerOrdering
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.Reload>> Reloaded
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.Reload>> Reloading
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.StatusChange>> StatusApplied
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.StatusChange>> StatusApplying
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.StatusChange>> StatusRemoved
-UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.TalkLine>> ConversationLine
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.Theft>> CaughtStealing
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.Theft>> ItemStolen
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.TradeStart>> TradeOpening
@@ -469,23 +396,17 @@ UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Ac
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action> GameLoaded
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action> GameStarted
 UnderRailWorks.GameEvents :: static readonly field UnderRailWorks.Hook<System.Action> NewGame
-UnderRailWorks.GameOverAttempt :: ctor()
-UnderRailWorks.GameOverAttempt :: property UnderRailWorks.Character Who { get; }
-UnderRailWorks.GameOverAttempt :: sealed class : UnderRailWorks.Cancellable
 UnderRailWorks.HeaderAttribute :: ctor(System.String)
 UnderRailWorks.HeaderAttribute :: readonly field System.String Text
 UnderRailWorks.HeaderAttribute :: sealed class : System.Attribute
 UnderRailWorks.HiddenAttribute :: ctor()
 UnderRailWorks.HiddenAttribute :: sealed class : System.Attribute
-UnderRailWorks.HitChance :: ctor()
 UnderRailWorks.HitChance :: property System.Double Chance { get; set; }
 UnderRailWorks.HitChance :: property UnderRailWorks.AttackKind Kind { get; }
 UnderRailWorks.HitChance :: property UnderRailWorks.Character Attacker { get; }
 UnderRailWorks.HitChance :: property UnderRailWorks.Character Target { get; }
 UnderRailWorks.HitChance :: sealed class
 UnderRailWorks.HookBase`1 :: abstract class (UnderRailWorks.Internal.IModOwned)
-UnderRailWorks.HookBase`1 :: method System.Void Add(System.String, T)
-UnderRailWorks.HookBase`1 :: method System.Void Add(System.String, T, UnderRailWorks.HookOrder)
 UnderRailWorks.HookBase`1 :: method System.Void Add(UnderRailWorks.WorksMod, T)
 UnderRailWorks.HookBase`1 :: method System.Void Add(UnderRailWorks.WorksMod, T, UnderRailWorks.HookOrder)
 UnderRailWorks.HookBase`1 :: method System.Void Remove(T)
@@ -534,7 +455,6 @@ UnderRailWorks.HudLines :: method UnderRailWorks.HudLines Add(System.String, Mic
 UnderRailWorks.HudLines :: property System.Int32 Count { get; }
 UnderRailWorks.HudLines :: sealed class
 UnderRailWorks.HudLines :: static readonly field Microsoft.Xna.Framework.Color Body
-UnderRailWorks.HudModPart :: ctor()
 UnderRailWorks.HudModPart :: property System.Int32 DefaultX { get; }
 UnderRailWorks.HudModPart :: property System.Int32 DefaultY { get; }
 UnderRailWorks.HudModPart :: property System.Nullable<UnderRailWorks.HudAnchor> Anchor { get; }
@@ -568,24 +488,17 @@ UnderRailWorks.HudText :: property System.Int32 MinWidth { get; set; }
 UnderRailWorks.HudText :: property System.Nullable<Microsoft.Xna.Framework.Color> Border { get; set; }
 UnderRailWorks.HudText :: sealed class
 UnderRailWorks.HudText :: static method UnderRailWorks.HudText Add(UnderRailWorks.WorksMod, System.String, UnderRailWorks.HudAnchor, System.Int32, System.Int32)
-UnderRailWorks.HudText :: static property System.Int32 LineHeight { get; }
-UnderRailWorks.IPlayerScreens :: abstract method System.Boolean IsRemote(UnderRailWorks.Character)
-UnderRailWorks.IPlayerScreens :: abstract method System.Boolean Message(UnderRailWorks.Character, System.String, Microsoft.Xna.Framework.Color)
-UnderRailWorks.IPlayerScreens :: abstract method System.Boolean Popup(UnderRailWorks.Character, UnderRailWorks.RemotePopup, System.Action<System.String>)
-UnderRailWorks.IPlayerScreens :: interface
 UnderRailWorks.Icons :: static class
 UnderRailWorks.Icons :: static method System.String Register(UnderRailWorks.WorksMod, System.String, System.String)
 UnderRailWorks.Icons :: static method System.Void SetItemIcon(UnderRailWorks.WorksMod, System.String, System.String)
-UnderRailWorks.IncomingDamage :: ctor()
 UnderRailWorks.IncomingDamage :: method System.Void Scale(System.Single)
 UnderRailWorks.IncomingDamage :: property System.Boolean ByPlayer { get; }
-UnderRailWorks.IncomingDamage :: property System.Boolean Cancel { get; set; }
 UnderRailWorks.IncomingDamage :: property System.Boolean Critical { get; }
 UnderRailWorks.IncomingDamage :: property System.Boolean Hit { get; }
 UnderRailWorks.IncomingDamage :: property System.Collections.Generic.IList<UnderRailWorks.DamagePart> Parts { get; }
 UnderRailWorks.IncomingDamage :: property System.String AttackerName { get; }
 UnderRailWorks.IncomingDamage :: property UnderRailWorks.Character Target { get; }
-UnderRailWorks.IncomingDamage :: sealed class
+UnderRailWorks.IncomingDamage :: sealed class : UnderRailWorks.Cancellable
 UnderRailWorks.IncrementAttribute :: ctor(System.Single)
 UnderRailWorks.IncrementAttribute :: readonly field System.Single Step
 UnderRailWorks.IncrementAttribute :: sealed class : System.Attribute
@@ -598,15 +511,10 @@ UnderRailWorks.Input :: static method System.Boolean Pressed(Microsoft.Xna.Frame
 UnderRailWorks.Input :: static property Microsoft.Xna.Framework.Point Mouse { get; }
 UnderRailWorks.Input :: static property System.Boolean Typing { get; }
 UnderRailWorks.Input :: static property System.Int32 Wheel { get; }
-UnderRailWorks.InstantDetection :: ctor()
 UnderRailWorks.InstantDetection :: property System.Boolean Instant { get; set; }
 UnderRailWorks.InstantDetection :: property System.Int32 ObserverDetection { get; }
 UnderRailWorks.InstantDetection :: property System.Int32 TargetStealth { get; }
 UnderRailWorks.InstantDetection :: sealed class
-UnderRailWorks.Interface :: static class
-UnderRailWorks.Interface :: static method Microsoft.Xna.Framework.Rectangle ToPixels(Microsoft.Xna.Framework.Rectangle)
-UnderRailWorks.Interface :: static method System.Boolean CapturingSaveScreenshot(Microsoft.Xna.Framework.Graphics.GraphicsDevice)
-UnderRailWorks.Interface :: static property System.Single Scale { get; }
 UnderRailWorks.Inventory :: method System.Boolean Add(System.String, System.Int32 = 1, System.Boolean = True)
 UnderRailWorks.Inventory :: method System.Boolean Has(System.String, System.Int32 = 1, System.Boolean = False)
 UnderRailWorks.Inventory :: method System.Boolean TakeMoney(System.Int32, System.Boolean = True)
@@ -628,15 +536,12 @@ UnderRailWorks.Item :: property System.Int32 StackValue { get; }
 UnderRailWorks.Item :: property System.Int32 Stacks { get; set; }
 UnderRailWorks.Item :: property System.Int32 Tier { get; }
 UnderRailWorks.Item :: property System.Int32 Value { get; }
-UnderRailWorks.Item :: property System.String AbilityId { get; }
 UnderRailWorks.Item :: property System.String Code { get; }
 UnderRailWorks.Item :: property System.String Id { get; }
 UnderRailWorks.Item :: property System.String Name { get; }
 UnderRailWorks.Item :: property UnderRailWorks.ItemDefinition Definition { get; }
 UnderRailWorks.Item :: property UnderRailWorks.ItemKind Kind { get; }
 UnderRailWorks.Item :: sealed class
-UnderRailWorks.Item :: static method System.Byte[] Pack(System.Collections.Generic.IEnumerable<UnderRailWorks.Item>)
-UnderRailWorks.Item :: static method System.Collections.Generic.IList<UnderRailWorks.Item> Unpack(System.Byte[])
 UnderRailWorks.ItemCodes :: static class
 UnderRailWorks.ItemCodes :: static const field System.String Charons = currency.sc
 UnderRailWorks.ItemDefinition :: method System.Void SetResistance(System.String, System.Int32, System.Int32)
@@ -667,25 +572,21 @@ UnderRailWorks.ItemKind :: Shield = 3
 UnderRailWorks.ItemKind :: Throwable = 7
 UnderRailWorks.ItemKind :: Weapon = 1
 UnderRailWorks.ItemKind :: enum
-UnderRailWorks.ItemTake :: ctor()
 UnderRailWorks.ItemTake :: property UnderRailWorks.Character Taker { get; }
 UnderRailWorks.ItemTake :: property UnderRailWorks.Container Container { get; }
 UnderRailWorks.ItemTake :: property UnderRailWorks.Item Item { get; }
 UnderRailWorks.ItemTake :: sealed class : UnderRailWorks.Cancellable
-UnderRailWorks.ItemUse :: ctor()
-UnderRailWorks.ItemUse :: property System.Boolean Cancel { get; set; }
 UnderRailWorks.ItemUse :: property System.Object Target { get; }
 UnderRailWorks.ItemUse :: property System.String Action { get; }
 UnderRailWorks.ItemUse :: property UnderRailWorks.Character User { get; }
 UnderRailWorks.ItemUse :: property UnderRailWorks.Item Item { get; }
-UnderRailWorks.ItemUse :: sealed class
+UnderRailWorks.ItemUse :: sealed class : UnderRailWorks.Cancellable
 UnderRailWorks.Items :: static class
 UnderRailWorks.Items :: static method System.Boolean Exists(System.String)
 UnderRailWorks.Items :: static method System.Boolean Use(UnderRailWorks.Character, UnderRailWorks.Item, UnderRailWorks.Character = null)
 UnderRailWorks.Items :: static method System.Boolean Use(UnderRailWorks.Character, UnderRailWorks.Item, UnderRailWorks.Item)
 UnderRailWorks.Items :: static method System.Collections.Generic.IList<System.String> All(System.Nullable<UnderRailWorks.ItemKind> = null)
 UnderRailWorks.Items :: static method System.String Code(System.String)
-UnderRailWorks.Items :: static method System.String DebugKind(UnderRailWorks.Item)
 UnderRailWorks.Items :: static method System.String Define(UnderRailWorks.WorksMod, System.String, System.String, System.Action<UnderRailWorks.ItemDefinition>)
 UnderRailWorks.Items :: static method System.String Name(System.String)
 UnderRailWorks.Items :: static method System.Void EditDefinition(UnderRailWorks.WorksMod, System.String, System.Action<UnderRailWorks.ItemDefinition>)
@@ -694,7 +595,6 @@ UnderRailWorks.Items :: static method UnderRailWorks.ItemDefinition Definition(S
 UnderRailWorks.Items :: static property System.Collections.Generic.IList<System.String> Defined { get; }
 UnderRailWorks.Items :: static property System.Collections.Generic.IList<System.String> Paths { get; }
 UnderRailWorks.Items :: static property UnderRailWorks.Item Hovered { get; }
-UnderRailWorks.Keybind :: ctor()
 UnderRailWorks.Keybind :: property Microsoft.Xna.Framework.Input.Keys DefaultKey { get; }
 UnderRailWorks.Keybind :: property Microsoft.Xna.Framework.Input.Keys Key { get; }
 UnderRailWorks.Keybind :: property System.Boolean Down { get; }
@@ -704,8 +604,6 @@ UnderRailWorks.Keybind :: property System.String Label { get; }
 UnderRailWorks.Keybind :: property System.String ModId { get; }
 UnderRailWorks.Keybind :: sealed class
 UnderRailWorks.Keybinds :: static class
-UnderRailWorks.Keybinds :: static event System.Action<UnderRailWorks.Keybind> NeedsTheRealGame
-UnderRailWorks.Keybinds :: static method System.Boolean Replay(System.String, System.String, UnderRailWorks.Character)
 UnderRailWorks.Keybinds :: static method System.Collections.Generic.IList<UnderRailWorks.Keybind> Of(System.String)
 UnderRailWorks.Keybinds :: static method System.String Name(Microsoft.Xna.Framework.Input.Keys)
 UnderRailWorks.Keybinds :: static method UnderRailWorks.Keybind Register(UnderRailWorks.WorksMod, System.String, System.String)
@@ -713,49 +611,6 @@ UnderRailWorks.Keybinds :: static method UnderRailWorks.Keybind Register(UnderRa
 UnderRailWorks.LabelAttribute :: ctor(System.String)
 UnderRailWorks.LabelAttribute :: readonly field System.String Text
 UnderRailWorks.LabelAttribute :: sealed class : System.Attribute
-UnderRailWorks.Layer :: method System.Boolean Equals(System.Object)
-UnderRailWorks.Layer :: method System.Boolean Equals(UnderRailWorks.Layer)
-UnderRailWorks.Layer :: method System.Int32 GetHashCode()
-UnderRailWorks.Layer :: method System.Object ShaderParameter(System.String)
-UnderRailWorks.Layer :: method System.Void Draw(UnderRailWorks.DrawContext, Microsoft.Xna.Framework.Color)
-UnderRailWorks.Layer :: method System.Void DrawAsGame(UnderRailWorks.DrawContext, UnderRailWorks.LayerView)
-UnderRailWorks.Layer :: method System.Void DrawAsGame(UnderRailWorks.DrawContext, UnderRailWorks.WorldView)
-UnderRailWorks.Layer :: method System.Void SetTint(System.Nullable<Microsoft.Xna.Framework.Color>)
-UnderRailWorks.Layer :: property Microsoft.Xna.Framework.Graphics.SpriteEffects Flip { get; }
-UnderRailWorks.Layer :: property Microsoft.Xna.Framework.Rectangle Bounds { get; }
-UnderRailWorks.Layer :: property Microsoft.Xna.Framework.Rectangle Source { get; }
-UnderRailWorks.Layer :: property System.Boolean Drawable { get; }
-UnderRailWorks.Layer :: property System.Boolean IsFlat { get; }
-UnderRailWorks.Layer :: property System.Boolean IsNull { get; }
-UnderRailWorks.Layer :: property System.Boolean IsPlainSprite { get; }
-UnderRailWorks.Layer :: property System.Nullable<Microsoft.Xna.Framework.Color> Tint { get; }
-UnderRailWorks.Layer :: property System.Object Key { get; }
-UnderRailWorks.Layer :: property System.Single Rotation { get; }
-UnderRailWorks.Layer :: property System.String Id { get; }
-UnderRailWorks.Layer :: property System.String ShaderName { get; }
-UnderRailWorks.Layer :: property System.String SpriteKind { get; }
-UnderRailWorks.Layer :: property UnderRailWorks.LayerSet Owner { get; }
-UnderRailWorks.Layer :: property UnderRailWorks.MapObject Entity { get; }
-UnderRailWorks.Layer :: static method System.Boolean op_Equality(UnderRailWorks.Layer, UnderRailWorks.Layer)
-UnderRailWorks.Layer :: static method System.Boolean op_Inequality(UnderRailWorks.Layer, UnderRailWorks.Layer)
-UnderRailWorks.Layer :: struct (System.IEquatable<UnderRailWorks.Layer>)
-UnderRailWorks.LayerSet :: method System.Boolean Equals(System.Object)
-UnderRailWorks.LayerSet :: method System.Boolean Equals(UnderRailWorks.LayerSet)
-UnderRailWorks.LayerSet :: method System.Int32 GetHashCode()
-UnderRailWorks.LayerSet :: property System.Boolean HasOutline { get; }
-UnderRailWorks.LayerSet :: property System.Boolean IsNull { get; }
-UnderRailWorks.LayerSet :: property System.Object Key { get; }
-UnderRailWorks.LayerSet :: property UnderRailWorks.MapObject Entity { get; }
-UnderRailWorks.LayerSet :: static method System.Boolean op_Equality(UnderRailWorks.LayerSet, UnderRailWorks.LayerSet)
-UnderRailWorks.LayerSet :: static method System.Boolean op_Inequality(UnderRailWorks.LayerSet, UnderRailWorks.LayerSet)
-UnderRailWorks.LayerSet :: struct (System.IEquatable<UnderRailWorks.LayerSet>)
-UnderRailWorks.LayerShader :: method Microsoft.Xna.Framework.Graphics.Effect Effect(UnderRailWorks.DrawContext, UnderRailWorks.WorldView)
-UnderRailWorks.LayerShader :: method System.Void SetParameters(Microsoft.Xna.Framework.Graphics.Effect, UnderRailWorks.Layer, UnderRailWorks.WorldView)
-UnderRailWorks.LayerShader :: property System.Boolean IsNull { get; }
-UnderRailWorks.LayerShader :: static method UnderRailWorks.LayerShader Find(System.String)
-UnderRailWorks.LayerShader :: struct
-UnderRailWorks.LayerView :: struct
-UnderRailWorks.LevelPoints :: ctor()
 UnderRailWorks.LevelPoints :: property System.Int32 Ability { get; set; }
 UnderRailWorks.LevelPoints :: property System.Int32 Feat { get; set; }
 UnderRailWorks.LevelPoints :: property System.Int32 Level { get; }
@@ -769,9 +624,7 @@ UnderRailWorks.Lock :: property System.Boolean Pickable { get; }
 UnderRailWorks.Lock :: property System.Int32 Difficulty { get; }
 UnderRailWorks.Lock :: property System.String KeyCode { get; }
 UnderRailWorks.Lock :: property UnderRailWorks.LockKind Kind { get; }
-UnderRailWorks.Lock :: property UnderRailWorks.MapObject Entity { get; }
 UnderRailWorks.Lock :: sealed class
-UnderRailWorks.LockAttempt :: ctor()
 UnderRailWorks.LockAttempt :: property System.Boolean Success { get; }
 UnderRailWorks.LockAttempt :: property System.Int32 Bonus { get; set; }
 UnderRailWorks.LockAttempt :: property System.Int32 Skill { get; }
@@ -789,7 +642,6 @@ UnderRailWorks.Locks :: static readonly field UnderRailWorks.Hook<System.Action<
 UnderRailWorks.Loot :: static class
 UnderRailWorks.Loot :: static method System.Void Add(UnderRailWorks.WorksMod, System.Func<UnderRailWorks.Character, UnderRailWorks.Container, System.Boolean>, System.String, System.Double, System.Int32 = 1)
 UnderRailWorks.Loot :: static method System.Void Add(UnderRailWorks.WorksMod, System.Func<UnderRailWorks.Character, UnderRailWorks.Container, System.Boolean>, System.String, System.Func<UnderRailWorks.Character, UnderRailWorks.Container, System.Double>, System.Int32 = 1)
-UnderRailWorks.LootTarget :: ctor()
 UnderRailWorks.LootTarget :: method System.Boolean Add(System.String, System.Int32 = 1)
 UnderRailWorks.LootTarget :: method System.Boolean Remove(UnderRailWorks.Item)
 UnderRailWorks.LootTarget :: property System.Collections.Generic.IList<UnderRailWorks.Item> Added { get; }
@@ -800,7 +652,6 @@ UnderRailWorks.LootTarget :: sealed class
 UnderRailWorks.MainMenu :: static class
 UnderRailWorks.MainMenu :: static method System.Void AddButton(UnderRailWorks.WorksMod, System.String, System.Action)
 UnderRailWorks.MainMenu :: static method System.Void SetBackground(UnderRailWorks.WorksMod, System.String)
-UnderRailWorks.MapMarker :: ctor()
 UnderRailWorks.MapMarker :: property Microsoft.Xna.Framework.Color Colour { get; }
 UnderRailWorks.MapMarker :: property System.Int32 X { get; }
 UnderRailWorks.MapMarker :: property System.Int32 Y { get; }
@@ -810,18 +661,6 @@ UnderRailWorks.MapMarker :: property System.String Label { get; }
 UnderRailWorks.MapMarker :: property System.String Mod { get; }
 UnderRailWorks.MapMarker :: property System.String Zone { get; }
 UnderRailWorks.MapMarker :: sealed class
-UnderRailWorks.MapObject :: method System.Boolean Equals(System.Object)
-UnderRailWorks.MapObject :: method System.Boolean Equals(UnderRailWorks.MapObject)
-UnderRailWorks.MapObject :: method System.Int32 GetHashCode()
-UnderRailWorks.MapObject :: property Microsoft.Xna.Framework.Vector3 MapPosition { get; }
-UnderRailWorks.MapObject :: property System.Boolean IsFlat { get; }
-UnderRailWorks.MapObject :: property System.Boolean IsNull { get; }
-UnderRailWorks.MapObject :: property System.Object Key { get; }
-UnderRailWorks.MapObject :: property UnderRailWorks.Character Character { get; }
-UnderRailWorks.MapObject :: static method System.Boolean op_Equality(UnderRailWorks.MapObject, UnderRailWorks.MapObject)
-UnderRailWorks.MapObject :: static method System.Boolean op_Inequality(UnderRailWorks.MapObject, UnderRailWorks.MapObject)
-UnderRailWorks.MapObject :: struct (System.IEquatable<UnderRailWorks.MapObject>)
-UnderRailWorks.MapTile :: struct
 UnderRailWorks.Markers :: static class
 UnderRailWorks.Markers :: static method System.Collections.Generic.IList<UnderRailWorks.MapMarker> Of(UnderRailWorks.WorksMod)
 UnderRailWorks.Markers :: static method System.Void Add(UnderRailWorks.WorksMod, System.String, System.String, System.Int32, System.Int32, System.String, System.Nullable<Microsoft.Xna.Framework.Color> = null, System.String = null)
@@ -829,7 +668,6 @@ UnderRailWorks.Markers :: static method System.Void Remove(UnderRailWorks.WorksM
 UnderRailWorks.Markers :: static property System.Collections.Generic.IList<UnderRailWorks.MapMarker> All { get; }
 UnderRailWorks.Markers :: static property System.Collections.Generic.IList<UnderRailWorks.MapMarker> Here { get; }
 UnderRailWorks.Markers :: static readonly field UnderRailWorks.Hook<System.Action> Changed
-UnderRailWorks.ModAbility :: ctor()
 UnderRailWorks.ModAbility :: event System.Action<UnderRailWorks.Character, UnderRailWorks.Character> Used
 UnderRailWorks.ModAbility :: method System.String Use(UnderRailWorks.Character = null)
 UnderRailWorks.ModAbility :: property System.Double CooldownLeft { get; }
@@ -844,7 +682,6 @@ UnderRailWorks.ModAbility :: property System.String Name { get; }
 UnderRailWorks.ModAbility :: property UnderRailWorks.AbilityTarget Target { get; }
 UnderRailWorks.ModAbility :: property UnderRailWorks.Keybind Key { get; }
 UnderRailWorks.ModAbility :: sealed class
-UnderRailWorks.ModBaseAbility :: ctor()
 UnderRailWorks.ModBaseAbility :: property System.Int32 Value { get; }
 UnderRailWorks.ModBaseAbility :: sealed class : UnderRailWorks.CustomStat
 UnderRailWorks.ModConfig :: abstract class
@@ -863,12 +700,10 @@ UnderRailWorks.ModData :: method System.Void Set(System.String, System.Int32)
 UnderRailWorks.ModData :: method System.Void Set(System.String, System.String)
 UnderRailWorks.ModData :: property System.Boolean Available { get; }
 UnderRailWorks.ModData :: sealed class
-UnderRailWorks.ModDependency :: ctor()
 UnderRailWorks.ModDependency :: method System.String ToString()
 UnderRailWorks.ModDependency :: property System.String Id { get; }
 UnderRailWorks.ModDependency :: property System.Version Min { get; set; }
 UnderRailWorks.ModDependency :: sealed class
-UnderRailWorks.ModFeat :: ctor()
 UnderRailWorks.ModFeat :: event System.Action<UnderRailWorks.Character> OnGain
 UnderRailWorks.ModFeat :: event System.Action<UnderRailWorks.Character> OnLose
 UnderRailWorks.ModFeat :: property System.String Description { get; }
@@ -879,7 +714,6 @@ UnderRailWorks.ModFeat :: property System.String Name { get; }
 UnderRailWorks.ModFeat :: property UnderRailWorks.FeatRequirements Requires { get; }
 UnderRailWorks.ModFeat :: property UnderRailWorks.StatBonus[] Bonuses { get; }
 UnderRailWorks.ModFeat :: sealed class
-UnderRailWorks.ModInfo :: ctor()
 UnderRailWorks.ModInfo :: property System.Boolean Enabled { get; }
 UnderRailWorks.ModInfo :: property System.Boolean Loaded { get; }
 UnderRailWorks.ModInfo :: property System.Boolean StartsOff { get; }
@@ -905,7 +739,6 @@ UnderRailWorks.ModInfo :: property System.String VersionText { get; }
 UnderRailWorks.ModInfo :: property System.String Warning { get; }
 UnderRailWorks.ModInfo :: property System.Version Version { get; }
 UnderRailWorks.ModInfo :: property System.Version Works { get; }
-UnderRailWorks.ModInfo :: property UnderRailWorks.WorksMod Instance { get; }
 UnderRailWorks.ModInfo :: sealed class
 UnderRailWorks.ModLoader :: static class
 UnderRailWorks.ModLoader :: static method System.Boolean IsLoaded(System.String)
@@ -928,7 +761,6 @@ UnderRailWorks.ModPage :: method System.Void Slider(System.String, System.String
 UnderRailWorks.ModPage :: method System.Void Subsection(System.String)
 UnderRailWorks.ModPage :: method System.Void Toggle(System.String, System.String, System.Boolean)
 UnderRailWorks.ModPage :: sealed class
-UnderRailWorks.ModRecipe :: ctor()
 UnderRailWorks.ModRecipe :: method System.Void Forget()
 UnderRailWorks.ModRecipe :: method System.Void Learn()
 UnderRailWorks.ModRecipe :: property System.Boolean Known { get; set; }
@@ -948,11 +780,8 @@ UnderRailWorks.ModSettings :: property System.Int32 Changes { get; }
 UnderRailWorks.ModSettings :: readonly field System.String Mod
 UnderRailWorks.ModSettings :: readonly field System.String Path
 UnderRailWorks.ModSettings :: sealed class
-UnderRailWorks.ModSettings :: static method UnderRailWorks.ModSettings For(System.String, System.String = null)
-UnderRailWorks.ModSkill :: ctor()
 UnderRailWorks.ModSkill :: property System.Int32 Value { get; }
 UnderRailWorks.ModSkill :: sealed class : UnderRailWorks.CustomStat
-UnderRailWorks.ModStatus :: ctor()
 UnderRailWorks.ModStatus :: event System.Action<UnderRailWorks.Character, System.Int32> OnTick
 UnderRailWorks.ModStatus :: method System.Boolean Has(UnderRailWorks.Character)
 UnderRailWorks.ModStatus :: method System.Void Apply(UnderRailWorks.Character, System.Int32)
@@ -968,7 +797,6 @@ UnderRailWorks.ModStatus :: sealed class
 UnderRailWorks.ModStatuses :: static class
 UnderRailWorks.ModStatuses :: static method UnderRailWorks.ModStatus Define(UnderRailWorks.WorksMod, System.String, System.String, System.String, System.String, UnderRailWorks.StatBonus[])
 UnderRailWorks.Mods :: static class
-UnderRailWorks.Mods :: static method System.Boolean IsLoaded(System.String)
 UnderRailWorks.Mods :: static method System.Object Call(System.String, System.String, System.Object[])
 UnderRailWorks.Mods :: static method System.Void Provide(UnderRailWorks.WorksMod, System.Object)
 UnderRailWorks.Mods :: static method System.Void Raise(System.String, System.Object = null)
@@ -990,7 +818,6 @@ UnderRailWorks.NewGameOptions :: static method System.Int32 Get(UnderRailWorks.W
 UnderRailWorks.NewGameOptions :: static method System.Void AddChoice(UnderRailWorks.WorksMod, System.String, System.String, System.String[], System.Int32 = 0)
 UnderRailWorks.NewGameOptions :: static method System.Void AddSlider(UnderRailWorks.WorksMod, System.String, System.String, System.Int32, System.Int32, System.Int32, System.Int32 = 1, System.Boolean = False)
 UnderRailWorks.NewGameOptions :: static readonly field UnderRailWorks.Hook<System.Action> Applied
-UnderRailWorks.Notice :: ctor()
 UnderRailWorks.Notice :: property System.Boolean Instant { get; }
 UnderRailWorks.Notice :: property System.Boolean Noticing { get; }
 UnderRailWorks.Notice :: property System.Double Distance { get; }
@@ -1001,22 +828,17 @@ UnderRailWorks.Notify :: static class
 UnderRailWorks.Notify :: static method System.Void Log(System.String, System.Nullable<Microsoft.Xna.Framework.Color> = null)
 UnderRailWorks.Notify :: static method System.Void Over(UnderRailWorks.Character, System.String, System.Nullable<Microsoft.Xna.Framework.Color> = null, System.Boolean = False)
 UnderRailWorks.Notify :: static method System.Void OverPlayer(System.String, System.Nullable<Microsoft.Xna.Framework.Color> = null, System.Boolean = False)
-UnderRailWorks.NpcAction :: ctor()
-UnderRailWorks.NpcAction :: property System.Boolean Cancel { get; set; }
 UnderRailWorks.NpcAction :: property System.Object Target { get; }
 UnderRailWorks.NpcAction :: property System.String Action { get; }
 UnderRailWorks.NpcAction :: property UnderRailWorks.Character Npc { get; }
 UnderRailWorks.NpcAction :: property UnderRailWorks.Item Item { get; }
-UnderRailWorks.NpcAction :: sealed class
-UnderRailWorks.NpcFlight :: ctor()
+UnderRailWorks.NpcAction :: sealed class : UnderRailWorks.Cancellable
 UnderRailWorks.NpcFlight :: property System.Boolean Fleeing { get; }
 UnderRailWorks.NpcFlight :: property UnderRailWorks.Character Npc { get; }
 UnderRailWorks.NpcFlight :: sealed class
-UnderRailWorks.NpcTurn :: ctor()
 UnderRailWorks.NpcTurn :: property System.Boolean EndTurn { get; set; }
 UnderRailWorks.NpcTurn :: property UnderRailWorks.Character Npc { get; }
 UnderRailWorks.NpcTurn :: sealed class
-UnderRailWorks.OpenWindow :: ctor()
 UnderRailWorks.OpenWindow :: property System.Boolean StaysOpen { get; set; }
 UnderRailWorks.OpenWindow :: property System.Int32 TitleHeight { get; }
 UnderRailWorks.OpenWindow :: property UnderRailWorks.UiElement Element { get; }
@@ -1032,13 +854,6 @@ UnderRailWorks.Outcome :: static method UnderRailWorks.Outcome SetFlag(System.St
 UnderRailWorks.Outcome :: static method UnderRailWorks.Outcome SetInt(System.String, System.Int32)
 UnderRailWorks.Outcome :: static method UnderRailWorks.Outcome SetString(System.String, System.String)
 UnderRailWorks.Outcome :: static method UnderRailWorks.Outcome StartQuest(System.String)
-UnderRailWorks.Outlines :: static class
-UnderRailWorks.Outlines :: static method System.Boolean Has(UnderRailWorks.LayerSet)
-UnderRailWorks.Outlines :: static method System.Boolean IsHidden(UnderRailWorks.Layer)
-UnderRailWorks.Outlines :: static method System.Collections.Generic.IList<System.Collections.Generic.KeyValuePair<UnderRailWorks.Layer, System.Boolean>> All(UnderRailWorks.WorldView)
-UnderRailWorks.Outlines :: static method System.Void PickThrough(System.String, System.Func<System.Boolean>)
-UnderRailWorks.Outlines :: static method System.Void Request(System.String, System.Func<System.Boolean>)
-UnderRailWorks.Outlines :: static property System.Boolean GameOff { get; }
 UnderRailWorks.PackArgs :: method System.Boolean Bool(System.String, System.Boolean = False)
 UnderRailWorks.PackArgs :: method System.Boolean Has(System.String)
 UnderRailWorks.PackArgs :: method System.Double Number(System.String, System.Double = 0)
@@ -1051,7 +866,6 @@ UnderRailWorks.Party :: static method System.Collections.Generic.IList<UnderRail
 UnderRailWorks.Party :: static method System.Void Add(UnderRailWorks.WorksMod, UnderRailWorks.Character)
 UnderRailWorks.Party :: static method System.Void As(UnderRailWorks.Character, System.Action)
 UnderRailWorks.Party :: static method System.Void DontNeedTogether(UnderRailWorks.WorksMod, UnderRailWorks.PartyNeed, System.String)
-UnderRailWorks.Party :: static method System.Void LevelledUp(UnderRailWorks.Character, System.Int32)
 UnderRailWorks.Party :: static method System.Void NeedTogether(UnderRailWorks.WorksMod, UnderRailWorks.PartyNeed, System.String, System.Single = 8)
 UnderRailWorks.Party :: static method System.Void Remove(UnderRailWorks.Character)
 UnderRailWorks.Party :: static property System.Collections.Generic.IList<UnderRailWorks.Character> Members { get; }
@@ -1089,31 +903,10 @@ UnderRailWorks.PlayerHouse :: static property System.Boolean Owned { get; }
 UnderRailWorks.PlayerHouse :: static property System.Collections.Generic.IDictionary<System.String, System.String> Elements { get; }
 UnderRailWorks.PlayerHouse :: static property System.Collections.Generic.IList<System.String> ElementNames { get; }
 UnderRailWorks.PlayerHouse :: static property System.Int32 SecurityLevel { get; }
-UnderRailWorks.PlayerOrder :: ctor()
-UnderRailWorks.PlayerOrder :: property System.Boolean TargetsSelf { get; }
-UnderRailWorks.PlayerOrder :: property System.Boolean TargetsTile { get; }
-UnderRailWorks.PlayerOrder :: property System.Int32 X { get; }
-UnderRailWorks.PlayerOrder :: property System.Int32 Y { get; }
-UnderRailWorks.PlayerOrder :: property System.String AbilityId { get; }
-UnderRailWorks.PlayerOrder :: property System.String ItemId { get; }
-UnderRailWorks.PlayerOrder :: property System.String TargetEntityId { get; }
-UnderRailWorks.PlayerOrder :: property UnderRailWorks.Character Target { get; }
-UnderRailWorks.PlayerOrder :: property UnderRailWorks.PlayerOrderKind Kind { get; }
-UnderRailWorks.PlayerOrder :: sealed class : UnderRailWorks.Cancellable
-UnderRailWorks.PlayerOrderKind :: Ability = 4
-UnderRailWorks.PlayerOrderKind :: Attack = 1
-UnderRailWorks.PlayerOrderKind :: Other = 6
-UnderRailWorks.PlayerOrderKind :: Talk = 2
-UnderRailWorks.PlayerOrderKind :: Travel = 5
-UnderRailWorks.PlayerOrderKind :: Use = 3
-UnderRailWorks.PlayerOrderKind :: Walk = 0
-UnderRailWorks.PlayerOrderKind :: enum
-UnderRailWorks.PlayerScreens :: static class
-UnderRailWorks.PlayerScreens :: static property UnderRailWorks.IPlayerScreens Provider { get; set; }
-UnderRailWorks.PopupKind :: Ask = 0
-UnderRailWorks.PopupKind :: AskNumber = 1
-UnderRailWorks.PopupKind :: Choose = 2
-UnderRailWorks.PopupKind :: enum
+UnderRailWorks.PreviewAttribute :: ctor()
+UnderRailWorks.PreviewAttribute :: ctor(System.String)
+UnderRailWorks.PreviewAttribute :: property System.String Why { get; }
+UnderRailWorks.PreviewAttribute :: sealed class : System.Attribute
 UnderRailWorks.Prices :: static class
 UnderRailWorks.Prices :: static readonly field UnderRailWorks.Hook<System.Func<System.Single, System.Single>> SellFactor
 UnderRailWorks.Prices :: static readonly field UnderRailWorks.Hook<System.Func<UnderRailWorks.Character, System.Single, System.Single>> BuyMarkup
@@ -1126,7 +919,6 @@ UnderRailWorks.Progression :: static property System.Int32 MaxLevel { get; }
 UnderRailWorks.Progression :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.LevelPoints>> ModifyLevelPoints
 UnderRailWorks.Progression :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.XpGain>> ModifyExperience
 UnderRailWorks.Progression :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.XpNeeded>> ModifyXpNeeded
-UnderRailWorks.QuestInfo :: ctor()
 UnderRailWorks.QuestInfo :: property System.Boolean FromMod { get; set; }
 UnderRailWorks.QuestInfo :: property System.Int32 OddityXp { get; set; }
 UnderRailWorks.QuestInfo :: property System.Int32 Xp { get; set; }
@@ -1156,28 +948,16 @@ UnderRailWorks.RangeAttribute :: ctor(System.Single, System.Single)
 UnderRailWorks.RangeAttribute :: readonly field System.Single Max
 UnderRailWorks.RangeAttribute :: readonly field System.Single Min
 UnderRailWorks.RangeAttribute :: sealed class : System.Attribute
-UnderRailWorks.RecipeSlot :: ctor()
 UnderRailWorks.RecipeSlot :: method UnderRailWorks.RecipeSlot AsOptional()
 UnderRailWorks.RecipeSlot :: sealed class
 UnderRailWorks.RecipeSlot :: static method UnderRailWorks.RecipeSlot AnyOf(System.String, System.String[], System.Int32 = 0, System.Int32 = 1)
 UnderRailWorks.RecipeSlot :: static method UnderRailWorks.RecipeSlot Item(System.String, System.String, System.Int32 = 0, System.Int32 = 1)
-UnderRailWorks.Reload :: ctor()
 UnderRailWorks.Reload :: property UnderRailWorks.Character Character { get; }
 UnderRailWorks.Reload :: property UnderRailWorks.Item Ammo { get; }
 UnderRailWorks.Reload :: property UnderRailWorks.Item Weapon { get; }
 UnderRailWorks.Reload :: sealed class : UnderRailWorks.Cancellable
 UnderRailWorks.ReloadRequiredAttribute :: ctor()
 UnderRailWorks.ReloadRequiredAttribute :: sealed class : System.Attribute
-UnderRailWorks.RemotePopup :: ctor()
-UnderRailWorks.RemotePopup :: property System.Int32 Max { get; }
-UnderRailWorks.RemotePopup :: property System.Int32 Min { get; }
-UnderRailWorks.RemotePopup :: property System.String AlsoAllow { get; }
-UnderRailWorks.RemotePopup :: property System.String Initial { get; }
-UnderRailWorks.RemotePopup :: property System.String Text { get; }
-UnderRailWorks.RemotePopup :: property System.String Title { get; }
-UnderRailWorks.RemotePopup :: property System.String[] Buttons { get; }
-UnderRailWorks.RemotePopup :: property UnderRailWorks.PopupKind Kind { get; }
-UnderRailWorks.RemotePopup :: sealed class
 UnderRailWorks.ReplaceHook`1 :: sealed class : UnderRailWorks.HookBase<T>
 UnderRailWorks.Resistance :: property System.Int32 Percent { get; set; }
 UnderRailWorks.Resistance :: property System.Int32 Threshold { get; set; }
@@ -1189,15 +969,10 @@ UnderRailWorks.SaveData :: method System.Void Remove(System.String)
 UnderRailWorks.SaveData :: method System.Void Set(System.String, System.Object)
 UnderRailWorks.SaveData :: method T Get<T>(System.String, T = null)
 UnderRailWorks.SaveData :: property System.Collections.Generic.IList<System.String> Keys { get; }
+UnderRailWorks.SaveData :: property System.Version WrittenBy { get; }
 UnderRailWorks.SaveData :: sealed class
 UnderRailWorks.SaveData :: static method UnderRailWorks.SaveData CharacterOf(UnderRailWorks.WorksMod)
 UnderRailWorks.SaveData :: static method UnderRailWorks.SaveData Of(UnderRailWorks.WorksMod)
-UnderRailWorks.SaveGames :: static class
-UnderRailWorks.SaveGames :: static method System.Boolean Load(System.String)
-UnderRailWorks.SaveGames :: static method System.Boolean SaveNow(System.String)
-UnderRailWorks.SaveGames :: static method System.String Folder(System.String)
-UnderRailWorks.SaveGames :: static property System.Boolean CanSave { get; }
-UnderRailWorks.Shot :: ctor()
 UnderRailWorks.Shot :: property System.Boolean Ranged { get; }
 UnderRailWorks.Shot :: property System.Double Chance { get; }
 UnderRailWorks.Shot :: property System.Double Distance { get; }
@@ -1205,10 +980,6 @@ UnderRailWorks.Shot :: property System.Double IfClose { get; }
 UnderRailWorks.Shot :: property System.Double IfLit { get; }
 UnderRailWorks.Shot :: property System.Double Light { get; }
 UnderRailWorks.Shot :: sealed class
-UnderRailWorks.Simulation :: static class
-UnderRailWorks.Simulation :: static method System.Void Apply(System.Action)
-UnderRailWorks.Simulation :: static property System.Boolean Frozen { get; set; }
-UnderRailWorks.Simulation :: static property System.Boolean IsMirror { get; set; }
 UnderRailWorks.Skills :: static class
 UnderRailWorks.Skills :: static method System.Void SetAbilities(UnderRailWorks.WorksMod, System.String, System.Collections.Generic.IDictionary<System.String, System.Single>)
 UnderRailWorks.Skills :: static method System.Void SetSynergies(UnderRailWorks.WorksMod, System.String, System.Collections.Generic.IDictionary<System.String, System.Single>)
@@ -1237,19 +1008,16 @@ UnderRailWorks.StatBonus :: static method UnderRailWorks.StatBonus Psi(System.In
 UnderRailWorks.StatBonus :: static method UnderRailWorks.StatBonus PsiRegeneration(System.Int32)
 UnderRailWorks.StatBonus :: static method UnderRailWorks.StatBonus Resolve(System.Int32)
 UnderRailWorks.StatBonus :: static method UnderRailWorks.StatBonus Skill(System.String, System.Int32)
-UnderRailWorks.StatRebuild :: ctor()
 UnderRailWorks.StatRebuild :: method System.Void Add(UnderRailWorks.StatBonus)
 UnderRailWorks.StatRebuild :: property UnderRailWorks.Character Character { get; }
 UnderRailWorks.StatRebuild :: sealed class
 UnderRailWorks.Stats :: static class
 UnderRailWorks.Stats :: static method System.Void Refresh(UnderRailWorks.Character)
 UnderRailWorks.Stats :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.StatRebuild>> Modify
-UnderRailWorks.StatusChange :: ctor()
-UnderRailWorks.StatusChange :: property System.Boolean Cancel { get; set; }
 UnderRailWorks.StatusChange :: property System.String Code { get; }
 UnderRailWorks.StatusChange :: property System.String Name { get; }
 UnderRailWorks.StatusChange :: property UnderRailWorks.Character Character { get; }
-UnderRailWorks.StatusChange :: sealed class
+UnderRailWorks.StatusChange :: sealed class : UnderRailWorks.Cancellable
 UnderRailWorks.StatusEffect :: method System.String ToString()
 UnderRailWorks.StatusEffect :: method System.Void Remove()
 UnderRailWorks.StatusEffect :: property System.Boolean Permanent { get; }
@@ -1272,24 +1040,6 @@ UnderRailWorks.Stealth :: static readonly field UnderRailWorks.Hook<System.Actio
 UnderRailWorks.Stores :: static class
 UnderRailWorks.Stores :: static method System.Void AddOnce(UnderRailWorks.WorksMod, System.String, System.String, System.Int32 = 1)
 UnderRailWorks.Stores :: static method System.Void AddRestock(UnderRailWorks.WorksMod, System.String, System.String, System.Int32 = 1)
-UnderRailWorks.TalkAs :: static class
-UnderRailWorks.TalkAs :: static method System.Boolean Choose(System.Int32)
-UnderRailWorks.TalkAs :: static method System.Boolean Talk(UnderRailWorks.Character, UnderRailWorks.Character, System.Action<UnderRailWorks.TalkLine>, System.Action)
-UnderRailWorks.TalkAs :: static method System.Boolean Talk(UnderRailWorks.Character, UnderRailWorks.Character, System.Action<UnderRailWorks.TalkLine>, System.Action, System.Boolean)
-UnderRailWorks.TalkAs :: static method System.Void Close()
-UnderRailWorks.TalkAs :: static property System.Boolean IsOpen { get; }
-UnderRailWorks.TalkChoice :: ctor()
-UnderRailWorks.TalkChoice :: property System.Boolean Enabled { get; }
-UnderRailWorks.TalkChoice :: property System.Int32 Index { get; }
-UnderRailWorks.TalkChoice :: property System.String Text { get; }
-UnderRailWorks.TalkChoice :: sealed class
-UnderRailWorks.TalkLine :: ctor()
-UnderRailWorks.TalkLine :: property System.Collections.Generic.IList<UnderRailWorks.TalkChoice> Choices { get; }
-UnderRailWorks.TalkLine :: property System.String Speaker { get; }
-UnderRailWorks.TalkLine :: property System.String Text { get; }
-UnderRailWorks.TalkLine :: property UnderRailWorks.Character Talker { get; }
-UnderRailWorks.TalkLine :: sealed class
-UnderRailWorks.TargetChoice :: ctor()
 UnderRailWorks.TargetChoice :: property UnderRailWorks.Character Chosen { get; }
 UnderRailWorks.TargetChoice :: property UnderRailWorks.Character Npc { get; }
 UnderRailWorks.TargetChoice :: sealed class
@@ -1297,7 +1047,6 @@ UnderRailWorks.Text :: static class
 UnderRailWorks.Text :: static method System.String Count(System.Int32, System.String, System.String = null)
 UnderRailWorks.Text :: static method System.String Get(System.String)
 UnderRailWorks.Text :: static method System.Void Set(System.String, System.String, System.String)
-UnderRailWorks.Theft :: ctor()
 UnderRailWorks.Theft :: property System.Double Suspicion { get; set; }
 UnderRailWorks.Theft :: property UnderRailWorks.Character Thief { get; }
 UnderRailWorks.Theft :: property UnderRailWorks.Character Victim { get; }
@@ -1309,7 +1058,6 @@ UnderRailWorks.TileKind :: Nothing = 0
 UnderRailWorks.TileKind :: Prop = 3
 UnderRailWorks.TileKind :: Wall = 2
 UnderRailWorks.TileKind :: enum
-UnderRailWorks.Tooltip :: ctor()
 UnderRailWorks.Tooltip :: method System.Int32 Find(System.String)
 UnderRailWorks.Tooltip :: method System.String Line(System.Int32)
 UnderRailWorks.Tooltip :: method System.Void AddLine(System.String)
@@ -1331,34 +1079,28 @@ UnderRailWorks.Trade :: static method System.Boolean Open(UnderRailWorks.Charact
 UnderRailWorks.Trade :: static method System.Boolean WillBuy(UnderRailWorks.Item)
 UnderRailWorks.Trade :: static property System.Boolean IsOpen { get; }
 UnderRailWorks.Trade :: static property UnderRailWorks.UiElement Window { get; }
-UnderRailWorks.TradeStart :: ctor()
 UnderRailWorks.TradeStart :: property UnderRailWorks.Character Merchant { get; }
 UnderRailWorks.TradeStart :: sealed class : UnderRailWorks.Cancellable
 UnderRailWorks.Translations :: static class
-UnderRailWorks.Translations :: static method System.String Get(UnderRailWorks.WorksMod, System.String, System.Object[])
 UnderRailWorks.Translations :: static property System.String Language { get; }
-UnderRailWorks.Trap :: ctor()
 UnderRailWorks.Trap :: method System.Boolean Disarm(UnderRailWorks.Character)
 UnderRailWorks.Trap :: method System.Boolean KnownTo(UnderRailWorks.Character)
 UnderRailWorks.Trap :: property Microsoft.Xna.Framework.Vector3 Position { get; }
 UnderRailWorks.Trap :: property System.Int32 DetectDifficulty { get; }
 UnderRailWorks.Trap :: property System.Int32 DisarmDifficulty { get; }
 UnderRailWorks.Trap :: sealed class
-UnderRailWorks.TrapDisarm :: ctor()
 UnderRailWorks.TrapDisarm :: property Microsoft.Xna.Framework.Vector3 Position { get; }
 UnderRailWorks.TrapDisarm :: property System.Boolean OwnTrap { get; }
 UnderRailWorks.TrapDisarm :: property System.Int32 Difficulty { get; set; }
 UnderRailWorks.TrapDisarm :: property System.Int32 Skill { get; }
 UnderRailWorks.TrapDisarm :: property UnderRailWorks.Character Character { get; }
 UnderRailWorks.TrapDisarm :: sealed class : UnderRailWorks.Cancellable
-UnderRailWorks.TrapDisarmResult :: ctor()
 UnderRailWorks.TrapDisarmResult :: property Microsoft.Xna.Framework.Vector3 Position { get; }
 UnderRailWorks.TrapDisarmResult :: property System.Int32 Difficulty { get; }
 UnderRailWorks.TrapDisarmResult :: property System.Int32 Skill { get; }
 UnderRailWorks.TrapDisarmResult :: property UnderRailWorks.Character Character { get; }
 UnderRailWorks.TrapDisarmResult :: property UnderRailWorks.DisarmOutcome Outcome { get; }
 UnderRailWorks.TrapDisarmResult :: sealed class
-UnderRailWorks.TrapSpotted :: ctor()
 UnderRailWorks.TrapSpotted :: property Microsoft.Xna.Framework.Vector3 Position { get; }
 UnderRailWorks.TrapSpotted :: property System.Int32 DetectDifficulty { get; }
 UnderRailWorks.TrapSpotted :: property System.Int32 DisarmDifficulty { get; }
@@ -1370,13 +1112,11 @@ UnderRailWorks.Traps :: static property System.Collections.Generic.IList<UnderRa
 UnderRailWorks.Traps :: static readonly field UnderRailWorks.Hook<System.Func<UnderRailWorks.Character, System.Int32, System.Int32>> ModifyDetection
 UnderRailWorks.Triggers :: static class
 UnderRailWorks.Triggers :: static method UnderRailWorks.AreaTrigger Add(UnderRailWorks.WorksMod, System.String, System.String, Microsoft.Xna.Framework.Rectangle, System.Action<UnderRailWorks.Character>, System.Action<UnderRailWorks.Character>)
-UnderRailWorks.TurnPoints :: ctor()
 UnderRailWorks.TurnPoints :: property System.Int32 ActionPoints { get; set; }
 UnderRailWorks.TurnPoints :: property System.Int32 MovementPoints { get; set; }
 UnderRailWorks.TurnPoints :: property UnderRailWorks.Character Character { get; }
 UnderRailWorks.TurnPoints :: sealed class
 UnderRailWorks.Ui :: static class
-UnderRailWorks.Ui :: static event System.Action<System.String, System.String> ButtonNeedsTheRealGame
 UnderRailWorks.Ui :: static method Microsoft.Xna.Framework.Point KeepInside(UnderRailWorks.UiElement, System.Int32, System.Int32)
 UnderRailWorks.Ui :: static method System.Boolean Ask(UnderRailWorks.WorksMod, System.String, System.String, System.Action<System.String>, System.String = OK, System.String = null)
 UnderRailWorks.Ui :: static method System.Boolean AskNumber(UnderRailWorks.WorksMod, System.String, System.Int32, System.Int32, System.Int32, System.Action<System.Int32>, System.String = OK)
@@ -1384,7 +1124,6 @@ UnderRailWorks.Ui :: static method System.Boolean Choose(UnderRailWorks.WorksMod
 UnderRailWorks.Ui :: static method System.Boolean Confirm(UnderRailWorks.WorksMod, System.String, System.String, System.Action, System.String = Yes, System.String = No, System.Action = null)
 UnderRailWorks.Ui :: static method System.Boolean IsHot(UnderRailWorks.UiElement)
 UnderRailWorks.Ui :: static method System.Boolean IsShown(UnderRailWorks.UiElement)
-UnderRailWorks.Ui :: static method System.Boolean PressButton(System.String, System.String, UnderRailWorks.Character)
 UnderRailWorks.Ui :: static method System.Boolean Restore(UnderRailWorks.UiElement, System.String)
 UnderRailWorks.Ui :: static method System.Collections.Generic.IList<System.String> Wrap(System.String, System.Int32)
 UnderRailWorks.Ui :: static method System.Int32 S(System.Int32)
@@ -1425,7 +1164,6 @@ UnderRailWorks.UiCanvas :: method System.Void Text(System.String, System.Int32, 
 UnderRailWorks.UiCanvas :: property Microsoft.Xna.Framework.Graphics.GraphicsDevice Device { get; }
 UnderRailWorks.UiCanvas :: property Microsoft.Xna.Framework.Rectangle Bounds { get; }
 UnderRailWorks.UiCanvas :: sealed class
-UnderRailWorks.UiChoice :: ctor()
 UnderRailWorks.UiChoice :: event System.Action<System.Int32> Changed
 UnderRailWorks.UiChoice :: property System.Collections.Generic.IList<System.String> Options { get; }
 UnderRailWorks.UiChoice :: property System.Int32 Index { get; set; }
@@ -1450,7 +1188,6 @@ UnderRailWorks.UiEvents :: static readonly field UnderRailWorks.Hook<System.Acti
 UnderRailWorks.UiEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.UiElement>> MainMenuCreated
 UnderRailWorks.UiEvents :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.UiElement>> OptionsCreated
 UnderRailWorks.UiEvents :: static readonly field UnderRailWorks.Hook<System.Action> HudDestroyed
-UnderRailWorks.UiList :: ctor()
 UnderRailWorks.UiList :: event System.Action<System.Int32> Selected
 UnderRailWorks.UiList :: property System.Collections.Generic.IList<Microsoft.Xna.Framework.Color> ItemColors { get; set; }
 UnderRailWorks.UiList :: property System.Collections.Generic.IList<System.String> Items { get; set; }
@@ -1469,9 +1206,7 @@ UnderRailWorks.UiRows :: property System.Int32 Count { get; }
 UnderRailWorks.UiRows :: sealed class
 UnderRailWorks.UiRows :: static method UnderRailWorks.UiRows In(UnderRailWorks.UiElement, System.Int32, System.Int32, System.Int32, System.Int32)
 UnderRailWorks.UiRows :: static method UnderRailWorks.UiRows.RowButton Button(System.String, System.Action)
-UnderRailWorks.UiRows.RowButton :: ctor()
 UnderRailWorks.UiRows.RowButton :: sealed class
-UnderRailWorks.UiSlider :: ctor()
 UnderRailWorks.UiSlider :: event System.Action<System.Double> Changed
 UnderRailWorks.UiSlider :: property System.Double Max { get; }
 UnderRailWorks.UiSlider :: property System.Double Min { get; }
@@ -1494,19 +1229,16 @@ UnderRailWorks.UiWindow :: sealed class : UnderRailWorks.UiPanel
 UnderRailWorks.UiWorldView :: property Microsoft.Xna.Framework.Vector2 Centre { get; set; }
 UnderRailWorks.UiWorldView :: sealed class : UnderRailWorks.UiElement
 UnderRailWorks.Variables :: method System.Boolean Has(System.String)
-UnderRailWorks.Variables :: method System.Collections.Generic.Dictionary<System.String, System.Object> Snapshot()
 UnderRailWorks.Variables :: method System.Void Remove(System.String)
 UnderRailWorks.Variables :: method System.Void Set(System.String, System.Boolean)
 UnderRailWorks.Variables :: method System.Void Set(System.String, System.Int32)
 UnderRailWorks.Variables :: method System.Void Set(System.String, System.Single)
 UnderRailWorks.Variables :: method System.Void Set(System.String, System.String)
-UnderRailWorks.Variables :: method System.Void SetValue(System.String, System.Object)
 UnderRailWorks.Variables :: method T Get<T>(System.String, T = null)
 UnderRailWorks.Variables :: property System.Boolean Available { get; }
 UnderRailWorks.Variables :: sealed class
 UnderRailWorks.Variables :: static readonly field UnderRailWorks.Variables Global
 UnderRailWorks.Variables :: static readonly field UnderRailWorks.Variables Zone
-UnderRailWorks.WeaponSwitch :: ctor()
 UnderRailWorks.WeaponSwitch :: property System.Boolean ToSecondary { get; }
 UnderRailWorks.WeaponSwitch :: property UnderRailWorks.Character Character { get; }
 UnderRailWorks.WeaponSwitch :: sealed class : UnderRailWorks.Cancellable
@@ -1537,7 +1269,6 @@ UnderRailWorks.WorksMod :: abstract class
 UnderRailWorks.WorksMod :: ctor()
 UnderRailWorks.WorksMod :: method System.String T(System.String, System.Object[])
 UnderRailWorks.WorksMod :: method T GetConfig<T>()
-UnderRailWorks.WorksMod :: property HarmonyLib.Harmony Harmony { get; }
 UnderRailWorks.WorksMod :: property System.String Id { get; }
 UnderRailWorks.WorksMod :: property System.String SettingsDefaults { get; }
 UnderRailWorks.WorksMod :: property UnderRailWorks.ModData Data { get; }
@@ -1552,31 +1283,21 @@ UnderRailWorks.WorksMod :: virtual method System.Void Unload()
 UnderRailWorks.WorksSettings :: static class
 UnderRailWorks.WorksSettings :: static method System.String Get(System.String)
 UnderRailWorks.World :: static class
-UnderRailWorks.World :: static method System.Boolean EndGame()
 UnderRailWorks.World :: static method System.Boolean ExportPlayer()
-UnderRailWorks.World :: static method System.Boolean MakePlayer(UnderRailWorks.Character)
-UnderRailWorks.World :: static method System.Boolean OpenTrade(UnderRailWorks.Character)
-UnderRailWorks.World :: static method System.Boolean StartNewGame()
 UnderRailWorks.World :: static method System.Boolean Travel(System.String, System.String)
 UnderRailWorks.World :: static method System.Boolean Use(UnderRailWorks.Character, System.String)
 UnderRailWorks.World :: static method System.Collections.Generic.IList<Microsoft.Xna.Framework.Point> FreeTilesNear(System.Int32, System.Int32, System.Int32)
 UnderRailWorks.World :: static method System.Collections.Generic.IList<UnderRailWorks.Character> CharactersNear(Microsoft.Xna.Framework.Vector3, System.Single)
 UnderRailWorks.World :: static method System.Void Despawn(UnderRailWorks.Character)
 UnderRailWorks.World :: static method System.Void Place(UnderRailWorks.Placement)
-UnderRailWorks.World :: static method UnderRailWorks.Character ByEntityId(System.String)
 UnderRailWorks.World :: static method UnderRailWorks.Character Placed(System.String)
-UnderRailWorks.World :: static method UnderRailWorks.Character Spawn(System.String, System.Int32, System.Int32, System.Boolean)
 UnderRailWorks.World :: static method UnderRailWorks.Character Spawn(System.String, System.Int32, System.Int32, UnderRailWorks.SpawnSide)
-UnderRailWorks.World :: static method UnderRailWorks.Character SpawnFromCharacterFile(System.String, System.Int32, System.Int32)
 UnderRailWorks.World :: static property System.Boolean FogOfWar { get; }
-UnderRailWorks.World :: static property System.Boolean IsTrading { get; }
-UnderRailWorks.World :: static property System.Collections.Generic.IList<Microsoft.Xna.Framework.Point> ExitTiles { get; }
 UnderRailWorks.World :: static property System.Collections.Generic.IList<System.String> Blueprints { get; }
 UnderRailWorks.World :: static property System.Collections.Generic.IList<UnderRailWorks.Area> ZoneAreas { get; }
 UnderRailWorks.World :: static property System.Collections.Generic.IList<UnderRailWorks.Character> Characters { get; }
 UnderRailWorks.World :: static property System.Collections.Generic.IList<UnderRailWorks.Character> Visible { get; }
 UnderRailWorks.World :: static property System.Collections.Generic.IList<UnderRailWorks.Container> Containers { get; }
-UnderRailWorks.World :: static property System.Collections.Generic.IList<UnderRailWorks.Door> Doors { get; }
 UnderRailWorks.World :: static property System.DateTime ZoneLoadedAt { get; }
 UnderRailWorks.World :: static property System.Nullable<Microsoft.Xna.Framework.Point> HoveredTile { get; }
 UnderRailWorks.World :: static property System.String ZoneId { get; }
@@ -1584,64 +1305,28 @@ UnderRailWorks.World :: static property UnderRailWorks.Character Hovered { get; 
 UnderRailWorks.World :: static property UnderRailWorks.Character Player { get; }
 UnderRailWorks.World :: static readonly field Microsoft.Xna.Framework.Color AreaExitColour
 UnderRailWorks.World :: static readonly field Microsoft.Xna.Framework.Color ZoneExitColour
-UnderRailWorks.WorldDraw :: static class
-UnderRailWorks.WorldDraw :: static method System.Void TileExtrasStep(UnderRailWorks.WorldView, UnderRailWorks.DrawContext, UnderRailWorks.MapTile)
-UnderRailWorks.WorldDraw :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.WorldView, UnderRailWorks.DrawContext, UnderRailWorks.Layer, System.Boolean>> LayerStarting
-UnderRailWorks.WorldDraw :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.WorldView, UnderRailWorks.DrawContext>> ShaderPassDone
-UnderRailWorks.WorldDraw :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.WorldView, UnderRailWorks.DrawContext>> WorldDone
-UnderRailWorks.WorldDraw :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.WorldView>> ShaderPassStarting
-UnderRailWorks.WorldDraw :: static readonly field UnderRailWorks.ReplaceHook<System.Func<UnderRailWorks.Layer, UnderRailWorks.DrawContext, UnderRailWorks.LayerView, System.Boolean>> DrawLayer
-UnderRailWorks.WorldDraw :: static readonly field UnderRailWorks.ReplaceHook<System.Func<UnderRailWorks.WorldView, UnderRailWorks.DrawContext, UnderRailWorks.MapTile, System.Boolean>> DrawTileExtras
-UnderRailWorks.WorldDraw :: static readonly field UnderRailWorks.ReplaceHook<UnderRailWorks.WorldDraw.OffsetHandler> InterfaceOffset
-UnderRailWorks.WorldDraw.OffsetHandler :: ctor(System.Object, System.IntPtr)
-UnderRailWorks.WorldDraw.OffsetHandler :: method System.Boolean EndInvoke(out ref Microsoft.Xna.Framework.Vector2, System.IAsyncResult)
-UnderRailWorks.WorldDraw.OffsetHandler :: method System.Boolean Invoke(out ref Microsoft.Xna.Framework.Vector2)
-UnderRailWorks.WorldDraw.OffsetHandler :: method System.IAsyncResult BeginInvoke(out ref Microsoft.Xna.Framework.Vector2, System.AsyncCallback, System.Object)
-UnderRailWorks.WorldDraw.OffsetHandler :: sealed class : System.MulticastDelegate
-UnderRailWorks.WorldMap :: static class
-UnderRailWorks.WorldMap :: static method System.Void Mark(UnderRailWorks.WorksMod, System.String, System.String, Microsoft.Xna.Framework.Color)
-UnderRailWorks.WorldMap :: static method System.Void Unmark(UnderRailWorks.WorksMod, System.String)
-UnderRailWorks.WorldView :: method System.Boolean Equals(System.Object)
-UnderRailWorks.WorldView :: method System.Boolean Equals(UnderRailWorks.WorldView)
-UnderRailWorks.WorldView :: method System.Int32 GetHashCode()
-UnderRailWorks.WorldView :: method System.Void BeginWorldBatch(UnderRailWorks.DrawContext, Microsoft.Xna.Framework.Graphics.SpriteSortMode, Microsoft.Xna.Framework.Graphics.BlendState, Microsoft.Xna.Framework.Graphics.SamplerState, Microsoft.Xna.Framework.Graphics.DepthStencilState, Microsoft.Xna.Framework.Graphics.RasterizerState)
-UnderRailWorks.WorldView :: property Microsoft.Xna.Framework.Graphics.RasterizerState Clip { get; }
-UnderRailWorks.WorldView :: property System.Boolean IsNull { get; }
-UnderRailWorks.WorldView :: property System.Collections.Generic.IDictionary<System.String, System.Collections.Generic.IList<UnderRailWorks.Layer>> ShaderLayers { get; }
-UnderRailWorks.WorldView :: property System.Object Key { get; }
-UnderRailWorks.WorldView :: property System.Single Zoom { get; }
-UnderRailWorks.WorldView :: static method System.Boolean op_Equality(UnderRailWorks.WorldView, UnderRailWorks.WorldView)
-UnderRailWorks.WorldView :: static method System.Boolean op_Inequality(UnderRailWorks.WorldView, UnderRailWorks.WorldView)
-UnderRailWorks.WorldView :: struct (System.IEquatable<UnderRailWorks.WorldView>)
-UnderRailWorks.XpGain :: ctor()
 UnderRailWorks.XpGain :: property System.Boolean FromOddity { get; }
 UnderRailWorks.XpGain :: property System.Boolean Oddity { get; }
 UnderRailWorks.XpGain :: property System.Int32 Amount { get; set; }
 UnderRailWorks.XpGain :: property System.String Reason { get; }
 UnderRailWorks.XpGain :: property UnderRailWorks.Character Who { get; }
 UnderRailWorks.XpGain :: sealed class
-UnderRailWorks.XpNeeded :: ctor()
 UnderRailWorks.XpNeeded :: property System.Boolean Oddity { get; }
 UnderRailWorks.XpNeeded :: property System.Int32 Level { get; }
 UnderRailWorks.XpNeeded :: property System.Int32 Needed { get; set; }
 UnderRailWorks.XpNeeded :: sealed class
-UnderRailWorks.ZoneLeave :: ctor()
 UnderRailWorks.ZoneLeave :: property System.String Entry { get; }
 UnderRailWorks.ZoneLeave :: property System.String From { get; }
 UnderRailWorks.ZoneLeave :: property System.String To { get; }
 UnderRailWorks.ZoneLeave :: property UnderRailWorks.Character Who { get; }
 UnderRailWorks.ZoneLeave :: sealed class : UnderRailWorks.Cancellable
 UnderRailWorks.Zones :: static class
-UnderRailWorks.Zones :: static method System.Boolean Import(System.Byte[])
 UnderRailWorks.Zones :: static method System.Boolean IsModZone(System.String)
-UnderRailWorks.Zones :: static method System.Byte[] Export(System.String)
-UnderRailWorks.Zones :: static method System.String ZoneOf(System.Byte[])
 UnderRailWorks.Zones :: static method System.Void Add(UnderRailWorks.WorksMod, System.String, System.String, System.String = null)
 UnderRailWorks.Zones :: static method UnderRailWorks.AreaTrigger AddEdgeExit(UnderRailWorks.WorksMod, System.String, System.String, System.String, Microsoft.Xna.Framework.Rectangle, System.String, System.String)
 UnderRailWorks.Zones :: static method UnderRailWorks.Placement AddExit(UnderRailWorks.WorksMod, System.String, System.String, System.String, System.Int32, System.Int32, System.String, System.String, System.String = null, System.String = objects\largemachines\tchortparts\tchortholes)
 UnderRailWorks.Zones :: static property System.Collections.Generic.IList<System.String> Added { get; }
 UnderRailWorks.Zones :: static property System.Collections.Generic.IList<UnderRailWorks.Zones.EdgeExit> EdgeExits { get; }
-UnderRailWorks.Zones.EdgeExit :: ctor()
 UnderRailWorks.Zones.EdgeExit :: property Microsoft.Xna.Framework.Rectangle Tiles { get; }
 UnderRailWorks.Zones.EdgeExit :: property System.String Area { get; }
 UnderRailWorks.Zones.EdgeExit :: property System.String Id { get; }

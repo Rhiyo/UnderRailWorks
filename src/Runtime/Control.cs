@@ -16,7 +16,7 @@ using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
 {
-    public static class CharacterControl
+    [Preview("multiplayer: built for Co-op so far")] public static class CharacterControl
     {
         sealed class Owners : IModOwned
         {

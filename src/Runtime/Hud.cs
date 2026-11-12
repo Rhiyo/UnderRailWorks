@@ -298,7 +298,7 @@ public static class Hud
 }
 
 public sealed class HudModPart
-{
+{ internal HudModPart() { }
     public string Name { get; internal set; }       // e.g. "Minimap"
     public string Mod { get; internal set; }        // the mod's id
     // Unique across mods ("Minimap/Minimap", "BountyHunter/Abilities"): two mods may use the same part name.
@@ -335,7 +335,7 @@ public sealed class HudText
     public Color Background { get; set; } = new Color(8, 8, 8) * 0.8f;
     public Color? Border { get; set; }
     // A line's height: the mod text font's (Ui.LineHeight), so it follows the interface size.
-    public static int LineHeight { get { return Ui.LineHeight; } }
+    internal static int LineHeight { get { return Ui.LineHeight; } }
 
     HudText(WorksMod mod, string name, HudAnchor anchor, int dx, int dy) { this.mod = mod; this.name = name; this.anchor = anchor; this.dx = dx; this.dy = dy; }
 
@@ -380,7 +380,7 @@ public enum Window { Inventory, CharacterSheet, CombatStats, Crafting, Notes, Od
 
 // An open window of the game with a title bar (a9t: the title, the close button at the right): inventory, notes...
 public sealed class OpenWindow
-{
+{ internal OpenWindow() { }
     public Window Kind { get; internal set; }
     public UiElement Element { get; internal set; }
     // The title bar's height (interface units): the strip at the top, the close button at its right end.

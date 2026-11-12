@@ -106,7 +106,7 @@ public sealed class DialogBranch
 }
 
 public sealed class DialogBuilder
-{
+{ internal DialogBuilder() { }
     internal readonly Dictionary<string, object> Nodes = new Dictionary<string, object>();
     internal string StartId;
     internal bool CanCancel = true;

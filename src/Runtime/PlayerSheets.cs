@@ -40,7 +40,7 @@ namespace UnderRailWorks
         // tile x, y of the player's area, facing south. Not the player: its sheet is its own, and its AI runs unless a mod
         // takes it (CharacterControl). Like Spawn it's never saved (taken out around saves) and stays in this zone.
         // Null: no such file, not a player sheet, or no room there.
-        public static Character SpawnFromCharacterFile(string path, int x, int y)
+        [Preview("multiplayer: built for Co-op so far")] public static Character SpawnFromCharacterFile(string path, int x, int y)
         {
             if (Simulation.Refuses("SpawnFromCharacterFile")) return null;
             var game = bpo.GetService<cnk>();
@@ -73,7 +73,7 @@ namespace UnderRailWorks
         // This machine's player becomes c (its HUD, inventory and character windows, quick bar, camera, fog of war); the
         // old player's body stays as a character with its own sheet. For a game shown from elsewhere (co-op): saving it
         // here afterwards would save c as the player.
-        public static bool MakePlayer(Character c)
+        [Preview("multiplayer: built for Co-op so far")] public static bool MakePlayer(Character c)
         {
             var game = bpo.GetService<cnk>();
             var state = game == null ? null : game.aqu();
@@ -109,7 +109,7 @@ namespace UnderRailWorks
 
         // On the main menu: the game's New Game (its rules screen, then character creation, then the first zone), as the
         // menu's button. False: not on the main menu.
-        public static bool StartNewGame()
+        [Preview("multiplayer: built for Co-op so far")] public static bool StartNewGame()
         {
             var menu = UiPopups.Screen() as a8k;
             var controller = menu == null ? null : typeof(a8k).GetFields(Inst | BindingFlags.DeclaredOnly).Where(f => f.FieldType == typeof(azl)).Select(f => f.GetValue(menu) as azl).FirstOrDefault(c => c != null);
@@ -129,7 +129,7 @@ namespace UnderRailWorks
     public sealed partial class Character
     {
         // Takes it out of the world now (as the game removes a character: c5x.w(), an()). Not the player.
-        public bool RemoveFromWorld()
+        [Preview("multiplayer: built for Co-op so far")] public bool RemoveFromWorld()
         {
             var e = Entity as c5x;
             if (e == null || e.IsPlayer || e.Area == null || Simulation.Refuses("RemoveFromWorld")) return false;
@@ -141,7 +141,7 @@ namespace UnderRailWorks
         // its health kept. For a character from SpawnFromCharacterFile (not the player: for the player the HUD's portrait
         // and some views stayed on the old sheet; build a new body and MakePlayer instead). Cheaper than a new body.
         // False: not such a character, or the file has no sheet.
-        public bool ReplaceSheet(string path)
+        [Preview("multiplayer: built for Co-op so far")] public bool ReplaceSheet(string path)
         {
             var body = Entity as c5x; var aspect = body == null ? null : body.GetAspect<amc>();
             var old = aspect == null ? null : aspect.aa() as au2;
@@ -158,14 +158,14 @@ namespace UnderRailWorks
         }
 
         // It has a whole player sheet (the player, or a character from SpawnFromCharacterFile).
-        public bool HasPlayerSheet { get { var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>(); return a != null && a.aa() is au2; } }
+        [Preview("multiplayer: built for Co-op so far")] public bool HasPlayerSheet { get { var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>(); return a != null && a.aa() is au2; } }
 
         // Writes its sheet as it is now to a .char file (the game's export format; a new game's Import reads it). False:
         // it has no player sheet.
-        public bool ExportTo(string path) { return ExportTo(path, DateTime.Now); }
+        [Preview("multiplayer: built for Co-op so far")] public bool ExportTo(string path) { return ExportTo(path, DateTime.Now); }
         // With the date the file says it was made (the import dialog shows it): a fixed one gives the same bytes for the same
         // sheet, to tell whether it changed.
-        public bool ExportTo(string path, DateTime made)
+        [Preview("multiplayer: built for Co-op so far")] public bool ExportTo(string path, DateTime made)
         {
             var body = Entity as c5x;
             var aspect = body == null ? null : body.GetAspect<amc>();

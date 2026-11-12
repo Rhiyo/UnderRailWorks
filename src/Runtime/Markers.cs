@@ -11,7 +11,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public sealed class MapMarker
-    {
+    { internal MapMarker() { }
         public string Mod { get; internal set; }
         public string Id { get; internal set; }
         public string Zone { get; internal set; }

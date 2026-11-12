@@ -20,7 +20,7 @@ namespace UnderRailWorks
     // A disarm attempt about to be decided: change Difficulty for this attempt only (the trap keeps its own), or Cancel
     // (nothing happens; the action ends).
     public sealed class TrapDisarm : Cancellable
-    {
+    { internal TrapDisarm() { }
         public Character Character { get; internal set; }
         public Vector3 Position { get; internal set; }
         public int Skill { get; internal set; }          // the character's effective Traps skill
@@ -30,7 +30,7 @@ namespace UnderRailWorks
 
     // A trap a character has just spotted (the player sees "Trap detected!").
     public sealed class TrapSpotted
-    {
+    { internal TrapSpotted() { }
         public Character Character { get; internal set; }
         public Vector3 Position { get; internal set; }
         public int DetectDifficulty { get; internal set; }
@@ -39,7 +39,7 @@ namespace UnderRailWorks
     }
 
     public sealed class TrapDisarmResult
-    {
+    { internal TrapDisarmResult() { }
         public Character Character { get; internal set; }
         public Vector3 Position { get; internal set; }
         public int Skill { get; internal set; }
@@ -57,7 +57,7 @@ namespace UnderRailWorks
 
     // A trap in the world (laid by a character or placed in the map).
     public sealed class Trap
-    {
+    { internal Trap() { }
         internal c5x Entity; internal ed2 Aspect;
         public Vector3 Position { get { return Entity.Location; } }
         public int DetectDifficulty { get { return TrapHooks.Detect(Aspect); } }

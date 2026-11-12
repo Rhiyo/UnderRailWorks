@@ -12,21 +12,21 @@ using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
 {
-    public sealed class DeathAttempt : Cancellable { public Character Who { get; internal set; } }
-    public sealed class GameOverAttempt : Cancellable { public Character Who { get; internal set; } }
+    [Preview("multiplayer: built for Co-op so far")] public sealed class DeathAttempt : Cancellable { public Character Who { get; internal set; } }
+    [Preview("multiplayer: built for Co-op so far")] public sealed class GameOverAttempt : Cancellable { public Character Who { get; internal set; } }
 
     public static partial class GameEvents
     {
         // A character is about to die (any cause). Cancel: it doesn't; it's left at 1 health.
-        public static readonly Hook<Action<DeathAttempt>> Dying = new Hook<Action<DeathAttempt>>("Dying");
+        [Preview("multiplayer: built for Co-op so far")] public static readonly Hook<Action<DeathAttempt>> Dying = new Hook<Action<DeathAttempt>>("Dying");
         // The game is about to end (a death in the player's faction: Who). Cancel: it goes on.
-        public static readonly Hook<Action<GameOverAttempt>> GameOver = new Hook<Action<GameOverAttempt>>("GameOver");
+        [Preview("multiplayer: built for Co-op so far")] public static readonly Hook<Action<GameOverAttempt>> GameOver = new Hook<Action<GameOverAttempt>>("GameOver");
     }
 
     public static partial class World
     {
         // The game's own game over (its death screen: Resume, Load, Quit), now.
-        public static bool EndGame()
+        [Preview("multiplayer: built for Co-op so far")] public static bool EndGame()
         {
             var screen = bpo.GetService<ps>() as dka;
             if (screen == null || DeathHooks.End == null) return false;

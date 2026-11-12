@@ -20,7 +20,7 @@ namespace UnderRailWorks
 {
 
 public sealed class DialogPatch
-{
+{ internal DialogPatch() { }
     internal readonly DialogBuilder Builder = new DialogBuilder();
     internal readonly List<KeyValuePair<string, DialogOption>> Added = new List<KeyValuePair<string, DialogOption>>();
     internal readonly List<KeyValuePair<string, bool>> First = new List<KeyValuePair<string, bool>>();

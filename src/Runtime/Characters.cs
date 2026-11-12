@@ -77,7 +77,7 @@ public static class ItemCodes { public const string Charons = "currency.sc"; }
 public static partial class Items
 {
     // The game's class for an item and its quick-slot flag (for tests).
-    public static string DebugKind(Item item) { return item == null ? "" : item.DebugKind; }
+    [Preview("the game's scrambled type name")] public static string DebugKind(Item item) { return item == null ? "" : item.DebugKind; }
     public static bool Exists(string path) { return RawDefinition(path) != null; }
     public static string Code(string path) { var d = RawDefinition(path); return d == null ? null : d.a5(); }
     public static string Name(string path) { var d = RawDefinition(path); return d == null ? null : d.az(); }
@@ -105,7 +105,7 @@ public sealed partial class Item
     internal string DebugKind { get { return Game.GetType().Name + (Game.Definition != null && Game.Definition.v ? " quickslot" : ""); } }
     public override string ToString() { return Name + (Stacks > 1 ? " x" + Stacks : ""); }
     // Its use as an ability (Character.UseAbility's id), null if it has none. Its id in its owner's bag or gear.
-    public string AbilityId { get { var u = Game.Definition == null ? null : Game.Definition.a2(); return u == null || u.Count == 0 || u[0].Value == null ? null : u[0].Value.GetType().FullName; } }
+    [Preview("the game's scrambled type name")] public string AbilityId { get { var u = Game.Definition == null ? null : Game.Definition.a2(); return u == null || u.Count == 0 || u[0].Value == null ? null : u[0].Value.GetType().FullName; } }
     public string Id { get { return Game.Id.ToString(); } }
 }
 
@@ -230,7 +230,7 @@ public static partial class World
     // A character from a blueprint, now, in the player's area at a tile (see FreeTilesNear). Unlike a placement it
     // is created once: never saved (taken out around saves like placements), gone when the zone is left or another
     // game loaded, never re-created. hostile: attacks the player (else neutral and passive).
-    public static Character Spawn(string blueprint, int x, int y, bool hostile) { return Spawn(blueprint, x, y, hostile ? SpawnSide.Hostile : SpawnSide.Neutral); }
+    internal static Character Spawn(string blueprint, int x, int y, bool hostile) { return Spawn(blueprint, x, y, hostile ? SpawnSide.Hostile : SpawnSide.Neutral); }
     // side: PlayerOnly fights the player and nobody else (a duel, an arena: a station's guards stay out of it). How:
     // a character's attitude to a faction is its own override (efk.an), else the faction table (oj.abu), else neutral;
     // the spawn gets a faction of its own that no table knows (everyone is neutral to it) and an override making it

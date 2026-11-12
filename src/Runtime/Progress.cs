@@ -15,13 +15,13 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
 
-public sealed class StatusChange
-{
+public sealed class StatusChange : Cancellable
+{ internal StatusChange() { }
     public Character Character { get; internal set; }
     public string Code { get; internal set; }
     public string Name { get; internal set; }
     // On StatusEffects.Applying: true stops the effect (it isn't applied).
-    public bool Cancel { get; set; }
+    // Cancel: Cancellable
 }
 
 public static partial class GameEvents

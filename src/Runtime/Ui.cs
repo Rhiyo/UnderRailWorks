@@ -64,9 +64,9 @@ public static partial class Ui
     static readonly List<ModButton> Buttons = new List<ModButton>();
     // On a copy of another game (Simulation.IsMirror): a mod button the player clicked whose handler was refused a
     // world change (mod id, its text): for a multiplayer mod to click it in the real game (PressButton there).
-    public static event Action<string, string> ButtonNeedsTheRealGame;
+    [Preview("multiplayer: built for Co-op so far")] public static event Action<string, string> ButtonNeedsTheRealGame;
     // Clicks that mod's button with that text (one on screen now) with who as the player (World.Player). False: none.
-    public static bool PressButton(string mod, string text, Character who)
+    [Preview("multiplayer: built for Co-op so far")] public static bool PressButton(string mod, string text, Character who)
     {
         ModButton b;
         lock (Buttons) b = Buttons.LastOrDefault(x => x.Mod == mod && x.Text == text && x.Control.IsAlive && ((euz)x.Control.Target).Parent != null);

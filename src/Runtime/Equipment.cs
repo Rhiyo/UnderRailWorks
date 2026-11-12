@@ -22,7 +22,7 @@ namespace UnderRailWorks
 public enum EquipSlot { Helmet, Armor, Belt, Boots, Shield, PrimaryWeapon, SecondaryWeapon }
 
 public sealed class EquipChange
-{
+{ internal EquipChange() { }
     public Character Character { get; internal set; }
     public Item Item { get; internal set; }
 }

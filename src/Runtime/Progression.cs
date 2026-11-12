@@ -17,7 +17,7 @@ namespace UnderRailWorks
 {
 
 public sealed class XpNeeded
-{
+{ internal XpNeeded() { }
     // The level being reached, whether the game uses the Oddity system (else Classic XP), and the cost.
     public int Level { get; internal set; }
     public bool Oddity { get; internal set; }
@@ -25,7 +25,7 @@ public sealed class XpNeeded
 }
 
 public sealed class LevelPoints
-{
+{ internal LevelPoints() { }
     // The level just reached, and the points it gives (change them).
     public int Level { get; internal set; }
     public int Ability { get; set; }
@@ -34,7 +34,7 @@ public sealed class LevelPoints
 }
 
 public sealed class XpGain
-{
+{ internal XpGain() { }
     // The game uses the Oddity experience system (XP from studying oddities and quests, none for kills).
     public bool Oddity { get; internal set; }
     // Who gets it (the player, or another character with a player sheet), and why, as the game says it ("studying an

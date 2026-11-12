@@ -28,7 +28,7 @@ namespace UnderRailWorks
         UiRows(UiElement parent, int x, int y, int width, int height) { this.parent = parent; this.x = x; this.y = y; this.width = width; this.height = height; }
         public static UiRows In(UiElement parent, int x, int y, int width, int rowHeight) { return new UiRows(parent, x, y, width, rowHeight); }
 
-        public sealed class RowButton { internal string Text; internal Action Click; }
+        public sealed class RowButton { internal RowButton() { } internal string Text; internal Action Click; }
         public static RowButton Button(string text, Action click) { return new RowButton { Text = text, Click = click }; }
 
         public void Clear() { foreach (var e in made) Ui.Remove(e); made.Clear(); Count = 0; Bottom = y; }
@@ -70,7 +70,7 @@ namespace UnderRailWorks
     }
 
     public sealed class UiList
-    {
+    { internal UiList() { }
         internal UiElement Element;
         public UiElement View { get { return Element; } }
         public IList<string> Items { get; set; } = new List<string>();
@@ -84,7 +84,7 @@ namespace UnderRailWorks
     }
 
     public sealed class UiSlider
-    {
+    { internal UiSlider() { }
         internal UiElement Element;
         public UiElement View { get { return Element; } }
         public double Min { get; internal set; }
@@ -102,7 +102,7 @@ namespace UnderRailWorks
     }
 
     public sealed class UiChoice
-    {
+    { internal UiChoice() { }
         internal UiElement Element;
         public UiElement View { get { return Element; } }
         public IList<string> Options { get; internal set; }

@@ -19,7 +19,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public sealed class StatRebuild
-    {
+    { internal StatRebuild() { }
         public Character Character { get; internal set; }
         internal readonly List<StatBonus> Added = new List<StatBonus>();
         public void Add(StatBonus bonus) { if (bonus != null) Added.Add(bonus); }

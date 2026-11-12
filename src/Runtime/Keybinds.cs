@@ -20,7 +20,7 @@ namespace UnderRailWorks
 {
 
 public sealed class Keybind
-{
+{ internal Keybind() { }
     internal Hotkey Slot;
     internal string Mod, ModName, Id;
     public string Label { get; internal set; }
@@ -43,7 +43,7 @@ public static class Keybinds
     // On a copy of another game (Simulation.IsMirror): a mod key the player pressed whose handler then tried to change
     // the world (Works refused it here). For a multiplayer mod to do it in the real game (Replay there). Keys that only
     // change this screen (a window, a minimap) aren't reported.
-    public static event Action<Keybind> NeedsTheRealGame;
+    [Preview("multiplayer: built for Co-op so far")] public static event Action<Keybind> NeedsTheRealGame;
     internal static Keybind Replaying;
     static readonly List<Keybind> pressed = new List<Keybind>();
     internal static void Tick()
@@ -64,7 +64,7 @@ public static class Keybinds
 
     // Runs the mod's Update handlers once (0 s passed) with that keybind pressed and who as the player (World.Player):
     // a key another player pressed on their machine, done here (the real game).
-    public static bool Replay(string modId, string keyId, Character who)
+    [Preview("multiplayer: built for Co-op so far")] public static bool Replay(string modId, string keyId, Character who)
     {
         var k = all.FirstOrDefault(x => x.Mod == modId && x.Id == keyId);
         if (k == null) return false;

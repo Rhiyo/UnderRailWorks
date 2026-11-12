@@ -12,7 +12,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public sealed class Notice
-    {
+    { internal Notice() { }
         public double Distance { get; internal set; }     // tiles from the observer to the player now
         public double SightRange { get; internal set; }   // the observer's
         public bool Instant { get; internal set; }        // its Detection beats the player's Stealth so far it sees them at once

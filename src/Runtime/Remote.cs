@@ -32,11 +32,11 @@ namespace UnderRailWorks
     {
         // The game's own id for this character: kept in saves, so a loaded copy of the save has the same one (characters
         // mods spawn get a new one each time they're spawned).
-        public string EntityId { get { return Entity.qe().ToString(); } }
+        [Preview("multiplayer: built for Co-op so far")] public string EntityId { get { return Entity.qe().ToString(); } }
         // Which way it faces: 0 north, 1 north-east ... 7 north-west (map directions).
-        public int Facing { get { return (int)Entity.VisualDirection; } }
+        [Preview("multiplayer: built for Co-op so far")] public int Facing { get { return (int)Entity.VisualDirection; } }
         // Where it is walking to (the tile of its current walk order), or null (not walking somewhere).
-        public Point? WalkTarget
+        [Preview("multiplayer: built for Co-op so far")] public Point? WalkTarget
         {
             get
             {
@@ -47,11 +47,11 @@ namespace UnderRailWorks
             }
         }
         // It has a walk order (going somewhere or following someone).
-        public bool IsWalking { get { var c = Entity as c5x; var w = c == null ? null : c.GetAspect<ny>(); return w != null && w.a() is em1; } }
+        [Preview("multiplayer: built for Co-op so far")] public bool IsWalking { get { var c = Entity as c5x; var w = c == null ? null : c.GetAspect<ny>(); return w != null && w.a() is em1; } }
 
         // Walks to the object with that EntityId (a door, lever, container, computer...) and uses it, as the player's click
         // does. False: no such object here, or it can't be used.
-        public bool UseObject(string entityId)
+        [Preview("multiplayer: built for Co-op so far")] public bool UseObject(string entityId)
         {
             var c = Entity as c5x; var area = Area; Guid g;
             var move = c == null ? null : c.GetAspect<ale>();
@@ -64,7 +64,7 @@ namespace UnderRailWorks
 
         // Talks to npc as the player's click does (walks there, opens its conversation; j7.a). For the player: the
         // ordinary conversation window. False: either can't talk.
-        public bool TalkTo(Character npc)
+        [Preview("multiplayer: built for Co-op so far")] public bool TalkTo(Character npc)
         {
             var me = Entity as c5x; var them = npc == null ? null : npc.Entity as c5x;
             var mine = me == null ? null : me.GetAspect<j7>(); var theirs = them == null ? null : them.GetAspect<j7>();
@@ -78,7 +78,7 @@ namespace UnderRailWorks
         // character's own skills). abilityId: PlayerOrder.AbilityId (the capability's type); itemId: the item in its bag
         // or gear (PlayerOrder.ItemId; matched by id, else by the same kind of item), null for none; target: a
         // Character, a Point (a tile), or null (itself). False: no such ability or item, or not usable now.
-        public bool UseAbility(string abilityId, string itemId, object target)
+        [Preview("ability ids are the game's scrambled type names")] public bool UseAbility(string abilityId, string itemId, object target)
         {
             var c = Entity as c5x; var data = c == null ? null : c.GetAspect<amc>(); var area = Area;
             var type = string.IsNullOrEmpty(abilityId) ? null : typeof(c3n).Assembly.GetType(abilityId);
@@ -111,13 +111,13 @@ namespace UnderRailWorks
         }
 
         // Swaps primary and secondary weapon (the X key: dcu.k()).
-        public bool SwapWeapons() { var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>(); if (a == null || Simulation.Refuses("SwapWeapons")) return false; a.aa().Offense.k(); return true; }
+        [Preview("multiplayer: built for Co-op so far")] public bool SwapWeapons() { var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>(); if (a == null || Simulation.Refuses("SwapWeapons")) return false; a.aa().Offense.k(); return true; }
         // Reloads the weapon in hand from its bag, as the AI does (d3k.a: ammo or a battery).
         public bool Reload() { var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>(); if (a == null || Simulation.Refuses("Reload")) return false; return d3k.a(a.aa(), a) != null; }
 
         // Walks to the zone exit on tile x, y and takes it (as the player's click on an exit). The game then changes zone:
         // for everyone, as when the player leaves. False: no exit there.
-        public bool TakeExitAt(int x, int y)
+        [Preview("multiplayer: built for Co-op so far")] public bool TakeExitAt(int x, int y)
         {
             var c = Entity as c5x; var area = Area;
             var move = c == null ? null : c.GetAspect<ale>();
@@ -131,7 +131,7 @@ namespace UnderRailWorks
         }
 
         // Puts it exactly there (map tiles, fractional allowed) at once, facing that way (-1: as it is).
-        public bool PlaceAt(Vector3 at, int facing = -1)
+        [Preview("multiplayer: built for Co-op so far")] public bool PlaceAt(Vector3 at, int facing = -1)
         {
             var c = Entity as c5x;
             var area = Area;
@@ -143,7 +143,7 @@ namespace UnderRailWorks
 
     // A door in the player's area. IsOpen set: opens or closes it at once (passability too), quietly, without its
     // scripts; Toggle: as a character using it would (sound, scripts).
-    public sealed class Door
+    [Preview("multiplayer: built for Co-op so far")] public sealed class Door
     {
         internal readonly c5x Entity; internal readonly cnb Aspect;
         internal Door(c5x e, cnb a) { Entity = e; Aspect = a; }
@@ -157,7 +157,7 @@ namespace UnderRailWorks
     public static partial class World
     {
         // The tiles of the player's area with a zone exit (what the player clicks to leave; Character.TakeExitAt).
-        public static IList<Point> ExitTiles
+        [Preview("multiplayer: built for Co-op so far")] public static IList<Point> ExitTiles
         {
             get
             {
@@ -177,7 +177,7 @@ namespace UnderRailWorks
         }
 
         // The doors in the player's area.
-        public static IList<Door> Doors
+        [Preview("multiplayer: built for Co-op so far")] public static IList<Door> Doors
         {
             get
             {
@@ -190,7 +190,7 @@ namespace UnderRailWorks
         }
 
         // The character with this EntityId in the player's area, or null.
-        public static Character ByEntityId(string id)
+        [Preview("multiplayer: built for Co-op so far")] public static Character ByEntityId(string id)
         {
             Guid g;
             var p = Player;
@@ -204,7 +204,7 @@ namespace UnderRailWorks
     public static partial class Camera
     {
         // The camera keeps that character in view (as it keeps the player); null: back to the player.
-        public static void Follow(Character c)
+        [Preview("multiplayer: built for Co-op so far")] public static void Follow(Character c)
         {
             var game = bpo.GetService<ps>();
             var follow = game == null ? null : game.akx();
@@ -214,12 +214,12 @@ namespace UnderRailWorks
         }
     }
 
-    public enum PlayerOrderKind { Walk, Attack, Talk, Use, Ability, Travel, Other }
+    [Preview("multiplayer: built for Co-op so far")] public enum PlayerOrderKind { Walk, Attack, Talk, Use, Ability, Travel, Other }
     // The player ordered their character to do something (a click on the world, the attack key). Cancel: it doesn't.
     // Walk: X, Y the tile; Attack / Talk: Target.
     // Walk / Travel: X, Y the tile (Travel: the exit's tile). Attack / Talk: Target. Use: TargetEntityId (a door, lever,
     // container...; also set for Attack and Talk) and X, Y its tile.
-    public sealed class PlayerOrder : Cancellable
+    [Preview("multiplayer: built for Co-op so far")] public sealed class PlayerOrder : Cancellable
     {
         public PlayerOrderKind Kind { get; internal set; }
         public int X { get; internal set; }
@@ -236,10 +236,10 @@ namespace UnderRailWorks
 
     public static partial class GameEvents
     {
-        public static readonly Hook<Action<PlayerOrder>> PlayerOrdering = new Hook<Action<PlayerOrder>>("PlayerOrdering");
+        [Preview("multiplayer: built for Co-op so far")] public static readonly Hook<Action<PlayerOrder>> PlayerOrdering = new Hook<Action<PlayerOrder>>("PlayerOrdering");
     }
 
-    public static class SaveGames
+    [Preview("multiplayer: built for Co-op so far")] public static class SaveGames
     {
         static cnk Game { get { return bpo.GetService<cnk>(); } }
         // The game would let the player save now (not in combat, not stopped by a script).
@@ -268,7 +268,7 @@ namespace UnderRailWorks
 
     // Frozen: nothing in the zone moves or acts by itself (no walking, attacks, AI, combat turns), while it is still drawn
     // and the UI works: for a world set from elsewhere (PlaceAt, Health).
-    public static class Simulation
+    [Preview("multiplayer: built for Co-op so far")] public static class Simulation
     {
         public static bool Frozen { get; set; }
 

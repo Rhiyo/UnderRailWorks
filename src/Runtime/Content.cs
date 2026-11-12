@@ -66,7 +66,7 @@ public sealed partial class Variables
 public enum QuestState { NotStarted, Active, Completed, Failed }
 
 public sealed class QuestInfo
-{
+{ internal QuestInfo() { }
     public string Id { get; set; }
     public string Group { get; set; }
     public string Text { get; set; }

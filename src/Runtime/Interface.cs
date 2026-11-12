@@ -4,7 +4,7 @@ using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
 {
-    public static class Interface
+    [Preview("drawing: built for UnderRailFixes so far")] public static class Interface
     {
         // Screen pixels per interface unit (Works' interface scale; 1 without it).
         public static float Scale { get { return UiScaleFix.Scale; } }

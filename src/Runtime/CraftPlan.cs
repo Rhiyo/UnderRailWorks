@@ -14,7 +14,7 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
     public sealed class CraftPlan
-    {
+    { internal CraftPlan() { }
         public string Name { get; internal set; }
         public string Category { get; internal set; }
         public bool FromMod { get; internal set; }

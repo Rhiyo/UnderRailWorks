@@ -85,7 +85,7 @@ namespace UnderRailWorks
         internal static void Forget() { loaded.Clear(); }
         static readonly HashSet<string> warned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        public static string Get(WorksMod mod, string key, params object[] args)
+        internal static string Get(WorksMod mod, string key, params object[] args)
         {
             string text = Lookup(mod.Info.Folder, Language, key) ?? Lookup(mod.Info.Folder, "english", key) ?? Lookup(mod.Info.Folder, "en", key);
             if (text == null)
@@ -127,7 +127,7 @@ namespace UnderRailWorks
         static readonly Dictionary<string, Hook<Action<object>>> events = new Dictionary<string, Hook<Action<object>>>(StringComparer.OrdinalIgnoreCase);
 
         // Is that mod loaded (the same as ModLoader.IsLoaded).
-        public static bool IsLoaded(string id) { return ModLoader.IsLoaded(id); }
+        internal static bool IsLoaded(string id) { return ModLoader.IsLoaded(id); }
 
         // Publishes this mod's API object (call in Load). Others get it by the mod's id.
         public static void Provide(WorksMod mod, object api) { apis[mod.Id] = api; }

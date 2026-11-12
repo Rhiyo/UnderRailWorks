@@ -20,8 +20,8 @@ using UnderRailWorks.Internal;
 
 namespace UnderRailWorks
 {
-    public sealed class TalkChoice { public int Index { get; internal set; } public string Text { get; internal set; } public bool Enabled { get; internal set; } }
-    public sealed class TalkLine
+    [Preview("multiplayer: built for Co-op so far")] public sealed class TalkChoice { public int Index { get; internal set; } public string Text { get; internal set; } public bool Enabled { get; internal set; } }
+    [Preview("multiplayer: built for Co-op so far")] public sealed class TalkLine
     {
         // Who holds the conversation (the player, or TalkAs's speaker).
         public Character Talker { get; internal set; }
@@ -35,10 +35,10 @@ namespace UnderRailWorks
     {
         // Every line any conversation shows (the player's own, or one held through TalkAs): who holds it, the line, the
         // answers. For showing it elsewhere (co-op players listening, a log). GameEvents.DialogEnded when it closes.
-        public static readonly Hook<Action<TalkLine>> ConversationLine = new Hook<Action<TalkLine>>("ConversationLine");
+        [Preview("multiplayer: built for Co-op so far")] public static readonly Hook<Action<TalkLine>> ConversationLine = new Hook<Action<TalkLine>>("ConversationLine");
     }
 
-    public static class TalkAs
+    [Preview("multiplayer: built for Co-op so far")] public static class TalkAs
     {
         // False: no such characters, the speaker has no player sheet, or a conversation is already going.
         public static bool Talk(Character speaker, Character npc, Action<TalkLine> onLine, Action onEnd) { return Talk(speaker, npc, onLine, onEnd, false); }

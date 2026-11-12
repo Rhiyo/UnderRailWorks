@@ -241,7 +241,7 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
   `nw.a(cwt)`, the one damage pipeline every source goes through: parts per damage type, `Scale`, `Cancel` = miss),
   `AttackResolved` (its postfix: HP lost, killed; a miss returns an outcome with a null damage list), `ByPlayer`
   from the attacker's uid (`cwt.i.d` vs the player's `efk.Uid`), `Combat.ActionPoints`, `Combat.Log` (the combat
-  feed: `vr` + `bey.a` + `a7v.a`; `Notify.Log` goes to the chat feed, which a fight hides), `Combat.Float`.
+  feed: `vr` + `bey.a` + `a7v.a`; `Notify.Log` goes to the chat feed, which a fight hides), `Notify.Over` (floating text).
   Character data has no link back to its entity: Works finds it by scanning the zone once, cached.
 - **HUD** (`ci3` builds its parts once, in its constructor; a new `ci3` after loads and resolution changes):
   `Hud.Get(HudPart)` handles for the portrait, action bar, system bar, combat panel... (move/hide with `Ui`),
