@@ -145,6 +145,9 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `bool IsWalking` — It has a walk order (going somewhere or following someone).
 - `bool UseObject(string entityId)` — Walks to the object with that EntityId (a door, lever, container, computer...) and uses it, as the player's click does. False: no such object here, or it can't be used.
 - `bool TalkTo(Character npc)` — Talks to npc as the player's click does (walks there, opens its conversation; j7.a). For the player: the ordinary conversation window. False: either can't talk.
+- `bool UseAbility(string abilityId, string itemId, object target)` — Uses an ability (a psi power, a feat's ability, an item's use: a grenade thrown, a hypo injected; a toggle such as stealth) as this character, as the game's own AI does (cp.b / cp.a: walking into range, AP, cooldowns, the character's own skills). abilityId: PlayerOrder.AbilityId (the capability's type); itemId: the item in its bag or gear (PlayerOrder.ItemId; matched by id, else by the same kind of item), null for none; target: a Character, a Point (a tile), or null (itself). False: no such ability or item, or not usable now.
+- `bool SwapWeapons()` — Swaps primary and secondary weapon (the X key: dcu.k()).
+- `bool Reload()` — Reloads the weapon in hand from its bag, as the AI does (d3k.a: ammo or a battery).
 - `bool TakeExitAt(int x, int y)` — Walks to the zone exit on tile x, y and takes it (as the player's click on an exit). The game then changes zone: for everyone, as when the player leaves. False: no exit there.
 - `bool PlaceAt(Vector3 at, int facing = -1)` — Puts it exactly there (map tiles, fractional allowed) at once, facing that way (-1: as it is).
 - `bool SetStock(IEnumerable<Item> items)` — Replaces a merchant's stock with these items.
@@ -739,6 +742,8 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 - `int StackValue`
 - `double Weight`
 - `override string ToString()`
+- `string AbilityId` — Its use as an ability (Character.UseAbility's id), null if it has none. Its id in its owner's bag or gear.
+- `string Id`
 - `ItemKind Kind` — What sort of item it is (from the definition's class).
 - `int Tier` — Quality tier 0 (junk) .. 5 (the game's cr1), and how worn it is (0..1; 1 for items without durability).
 - `double Condition`
@@ -1330,6 +1335,10 @@ The player ordered their character to do something (a click on the world, the at
 - `int Y`
 - `Character Target`
 - `string TargetEntityId`
+- `string AbilityId` — Ability: the capability (Character.UseAbility's id: its type's full name), the item it's used from (a grenade, a hypo: the item's id in the user's bag or gear; null: none), and whether it targets a tile (X, Y) or itself.
+- `string ItemId`
+- `bool TargetsTile`
+- `bool TargetsSelf`
 
 ## PlayerOrderKind  _(enum, Remote.cs)_
 

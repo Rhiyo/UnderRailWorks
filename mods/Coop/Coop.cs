@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.4.0")]
+[assembly: System.Reflection.AssemblyVersion("1.5.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -387,6 +387,18 @@ public sealed partial class Coop : WorksMod
                 seat.Peer.Send("STOCK", KeyOf(m), Convert.ToBase64String(Item.Pack(m.Stock))); seat.Peer.Send("TRADE", KeyOf(m));
                 return "";
             }
+            case "ABILITY":
+            {
+                if (w.Length < 4) return "";
+                object target = null;
+                if (w[3].StartsWith("tile:")) { var xy = w[3].Substring(5).Split(','); int tx, ty; if (xy.Length == 2 && int.TryParse(xy[0], out tx) && int.TryParse(xy[1], out ty)) target = new Point(tx, ty); }
+                else if (w[3] != "self") { target = Resolve(w[3]); if (target == null) return "no such target"; }
+                bool ok = c.UseAbility(w[1], w[2].Length == 0 ? null : w[2], target);
+                Log.Info(c.Name + ": ability " + w[1] + (w[2].Length > 0 ? " (item " + w[2] + ")" : "") + " at " + w[3] + ": " + (ok ? "used" : "refused") + Points(c));
+                return ok ? "" : "can't do that now" + (Combat.InCombat && !c.IsTakingTurn ? " (not your turn)" : "");
+            }
+            case "SWAP": return c.SwapWeapons() ? "" : "can't swap weapons now";
+            case "RELOAD": return c.Reload() ? "" : "can't reload now";
             case "TALK": return w.Length > 1 ? Talk(c, w[1]) : "talk to whom?";
             case "DLGPICK": return w.Length > 1 ? Pick(c, w[1]) : "";
             case "DLGCLOSE": if (talking != null && talking.Character == c) { TalkAs.Close(); talking = null; } return "";

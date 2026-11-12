@@ -134,6 +134,9 @@ public static class Hud
         modParts.Add(part);
         if (anchor != null) Flow(anchor.Value);
         if (PartAdded.Any) PartAdded.Run(h => h(part));
+        // A handler may have put it (or another part) where the player saved it (HUD Layout): the stack again, so parts
+        // that asked for the same spot don't end up under it.
+        if (anchor != null && PartAdded.Any) Flow(anchor.Value);
     }
 
     // --- Stacking: anchored mod parts sharing an anchor don't cover each other ------------------------------------

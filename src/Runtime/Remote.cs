@@ -73,6 +73,48 @@ namespace UnderRailWorks
             return true;
         }
 
+        // Uses an ability (a psi power, a feat's ability, an item's use: a grenade thrown, a hypo injected; a toggle such
+        // as stealth) as this character, as the game's own AI does (cp.b / cp.a: walking into range, AP, cooldowns, the
+        // character's own skills). abilityId: PlayerOrder.AbilityId (the capability's type); itemId: the item in its bag
+        // or gear (PlayerOrder.ItemId; matched by id, else by the same kind of item), null for none; target: a
+        // Character, a Point (a tile), or null (itself). False: no such ability or item, or not usable now.
+        public bool UseAbility(string abilityId, string itemId, object target)
+        {
+            var c = Entity as c5x; var data = c == null ? null : c.GetAspect<amc>(); var area = Area;
+            var type = string.IsNullOrEmpty(abilityId) ? null : typeof(c3n).Assembly.GetType(abilityId);
+            var cap = type == null ? null : dgk.c(type);
+            if (data == null || cap == null || Simulation.Refuses("UseAbility")) return false;
+            coh item = null;
+            if (!string.IsNullOrEmpty(itemId))
+            {
+                Guid g; Guid.TryParse(itemId, out g);
+                var sheet = data.aa();
+                var all = sheet.Bag.z2().Concat(sheet.Gear.d().Select(s => s.pp()).OfType<coh>()).ToList();
+                item = all.FirstOrDefault(i => i.Id == g) ?? all.FirstOrDefault(i => i.Definition != null && i.Definition.a2() != null && i.Definition.a2().Any(u => u.Value == cap));
+                if (item == null) return false;
+            }
+            object at = c;
+            if (target is Character) at = ((Character)target).Entity;
+            else if (target is Point && area != null) at = Areas.Tile(area.Game, ((Point)target).X, ((Point)target).Y);
+            var proxy = ecf.a(cap, new eru(new Ouroboros.Playfield.References.EntityAspectReference<amc, amc>(data)), item);
+            var aimed = proxy as eu7;
+            if (aimed != null)
+            {
+                if (!aimed.yw()) { Log.Write("ability " + cap.GetType().Name + " for " + Name + ": not usable now (ready " + aimed.t() + ", allowed " + aimed.r() + ", cooled " + aimed.x() + ", in control " + data.aa().IsInControl + ", item " + (item != null) + ")"); return false; }
+                if (cp.b(aimed, c, at) == null) { Log.Write("ability " + cap.GetType().Name + " for " + Name + ": refused at " + (at is ak1 ? "a tile" : "a character")); return false; }
+                return true;
+            }
+            var toggle = proxy as bl6;
+            if (toggle != null) return toggle.yw() && cp.a(toggle, c) != null;
+            Log.Write("ability " + cap.GetType().Name + ": not an ability that can be used (" + (proxy == null ? "none" : proxy.GetType().Name) + ")");
+            return false;
+        }
+
+        // Swaps primary and secondary weapon (the X key: dcu.k()).
+        public bool SwapWeapons() { var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>(); if (a == null || Simulation.Refuses("SwapWeapons")) return false; a.aa().Offense.k(); return true; }
+        // Reloads the weapon in hand from its bag, as the AI does (d3k.a: ammo or a battery).
+        public bool Reload() { var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>(); if (a == null || Simulation.Refuses("Reload")) return false; return d3k.a(a.aa(), a) != null; }
+
         // Walks to the zone exit on tile x, y and takes it (as the player's click on an exit). The game then changes zone:
         // for everyone, as when the player leaves. False: no exit there.
         public bool TakeExitAt(int x, int y)
@@ -184,6 +226,12 @@ namespace UnderRailWorks
         public int Y { get; internal set; }
         public Character Target { get; internal set; }
         public string TargetEntityId { get; internal set; }
+        // Ability: the capability (Character.UseAbility's id: its type's full name), the item it's used from (a grenade,
+        // a hypo: the item's id in the user's bag or gear; null: none), and whether it targets a tile (X, Y) or itself.
+        public string AbilityId { get; internal set; }
+        public string ItemId { get; internal set; }
+        public bool TargetsTile { get; internal set; }
+        public bool TargetsSelf { get; internal set; }
     }
 
     public static partial class GameEvents
@@ -265,7 +313,19 @@ namespace UnderRailWorks.Internal
                 else if (__0 is mm) o.Kind = PlayerOrderKind.Attack;
                 else if (__0 is c5o) o.Kind = PlayerOrderKind.Talk;
                 else if (__0 is buw) o.Kind = PlayerOrderKind.Use;
-                else if (__0 is du) o.Kind = PlayerOrderKind.Ability;
+                else if (__0 is du || __0 is e06)
+                {
+                    o.Kind = PlayerOrderKind.Ability;
+                    var proxy = ((em8)__0).ati();
+                    var cap = proxy == null ? null : proxy.p();
+                    o.AbilityId = cap == null ? null : cap.GetType().FullName;
+                    var medium = proxy == null ? null : proxy.b9() as coh;
+                    o.ItemId = medium == null ? null : medium.Id.ToString();
+                    var t = target as ak1;
+                    if (t != null) { o.TargetsTile = true; o.X = t.Location.X; o.Y = t.Location.Y; }
+                    var me = World.Player;
+                    o.TargetsSelf = target == null || (me != null && target == me.Entity);
+                }
                 else if (__0 is f3) { o.Kind = PlayerOrderKind.Travel; var t = target as ak1; if (t != null) { o.X = t.Location.X; o.Y = t.Location.Y; } }
                 var e = target as b0b;
                 if (e != null)

@@ -1727,3 +1727,10 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
 - **Keys for the real game:** `Keybinds.NeedsTheRealGame` (on a copy: a mod key whose handler was refused a world
   change), `Keybinds.Replay(mod, key, who)` (that mod's Update handlers once with the key pressed, who as the player),
   `IPlayerScreens.IsRemote` (Ui.Window isn't opened here for a remote acting player), `Party.LevelledUp(who, level)`.
+- **Abilities for any character:** `Character.UseAbility(abilityId, itemId, target)` (as the AI: ecf.a(capability,
+  eru(the character), item), cp.b for aimed ones, cp.a for toggles; target a Character, a Point or null for itself),
+  `Character.SwapWeapons()`, `Character.Reload()` (d3k.a), `Item.AbilityId`, `Item.Id`; `PlayerOrder.AbilityId` /
+  `ItemId` / `TargetsTile` / `TargetsSelf` for the player's du and e06 orders. The game's em8.f1 always acts as the
+  player, so orders aren't replayed: the ability is built for the character.
+- `Hud.AddPart` stacks again after PartAdded handlers (a part moved to a saved place by HUD Layout no longer covers
+  another).

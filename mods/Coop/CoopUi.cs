@@ -32,6 +32,7 @@ public sealed partial class Coop
         {
             var button = Ui.Button("Co-op", Toggle);
             Hud.AddPart(this, "Co-op button", button, HudAnchor.TopRight, 70, 62);
+
         });
         GameEvents.Update.Add(this, dt => { if (windowKey.Pressed) Toggle(); });
         MainMenu.AddButton(this, "Join a Game", AskJoin);

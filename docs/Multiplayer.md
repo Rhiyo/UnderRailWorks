@@ -205,6 +205,18 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
 
+## Abilities and items (Co-op 1.5, 2026-11-12)
+
+- A joiner's ability or item use (a psi power, a feat's ability, a hypo, a grenade, a toggle like stealth: the game's
+  du / e06 orders) is cancelled on their machine and sent (ABILITY <capability type> <item id> <target>); the host
+  builds the same ability for their character as the game's AI does (Works' Character.UseAbility: ecf.a with the
+  character's own invoker, cp.b / cp.a), so their own skills, AP and cooldowns apply. Weapon swap (SWAP) and reload
+  (RELOAD) likewise. Tested: a health hypo used from the joiner's inventory healed Mira 42 -> 90 on the host; a frag
+  grenade thrown by Mira hit a Rathound four times. The game's own rule holds: grenades are thrown from the belt.
+- Works fix: a HUD part could end up under another after a HUD rebuild (HUD Layout put its button back at the saved
+  place after the stack was worked out): the stack is worked out again after PartAdded handlers. Seen as the joiner's
+  Co-op button vanishing after their character was rebuilt.
+
 ## Saving and loading (Co-op 1.4, 2026-11-12)
 
 - A save keeps every co-op character (Co-op's save data next to it): name, sheet, zone and tile (written on every save).

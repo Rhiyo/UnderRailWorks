@@ -104,6 +104,9 @@ public sealed partial class Item
     public double Weight { get { return Game.Weight; } }
     internal string DebugKind { get { return Game.GetType().Name + (Game.Definition != null && Game.Definition.v ? " quickslot" : ""); } }
     public override string ToString() { return Name + (Stacks > 1 ? " x" + Stacks : ""); }
+    // Its use as an ability (Character.UseAbility's id), null if it has none. Its id in its owner's bag or gear.
+    public string AbilityId { get { var u = Game.Definition == null ? null : Game.Definition.a2(); return u == null || u.Count == 0 || u[0].Value == null ? null : u[0].Value.GetType().FullName; } }
+    public string Id { get { return Game.Id.ToString(); } }
 }
 
 public enum SpawnSide { Neutral, Hostile, PlayerOnly, Ally }

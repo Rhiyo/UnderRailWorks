@@ -330,6 +330,13 @@ public sealed partial class Coop
 
     void LoadMirror()
     {
+        // The joiner's own weapon swap (X): done on the host (the game's swap needs no order: it's direct).
+        GameEvents.WeaponSwitching.Add(this, e =>
+        {
+            if (!inWorld || host == null || host.Closed || e.Character == null || !e.Character.IsPlayer) return;
+            e.Cancel = true;
+            host.Send("SWAP");
+        });
         GameEvents.Update.Add(this, dt => { if (listener != null) { HostMirror(dt); HostSheets(dt); } });
         // A character made in the game's creation for co-op: when its new game's first zone is there, it goes to the host.
         GameEvents.ZoneLoaded.Add(this, (zone, first) =>
@@ -364,7 +371,14 @@ public sealed partial class Coop
                     if (key != null) host.Send("TALK", key);
                     break;
                 }
-                default: Tell("abilities aren't relayed in co-op yet"); break;
+                case PlayerOrderKind.Ability:
+                {
+                    if (o.AbilityId == null) { Tell("that can't be done in co-op yet"); break; }
+                    string at = o.TargetsTile ? "tile:" + o.X + "," + o.Y : o.Target != null && !o.TargetsSelf ? KeyHere(o.Target) : o.TargetEntityId != null && !o.TargetsSelf ? o.TargetEntityId : "self";
+                    host.Send("ABILITY", o.AbilityId, o.ItemId ?? "", at);
+                    break;
+                }
+                default: Tell("that can't be done in co-op yet"); break;
             }
         });
     }
