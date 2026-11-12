@@ -1448,7 +1448,8 @@ The first handler that returns true replaces the game's step.
 - `bool Has(string key)`
 - `void Remove(string key)`
 - `IList<string> Keys`
-- `void Clear()` — Everything, e.g. to migrate an older layout (keep a "version" key of your own).
+- `void Clear()` — Everything, e.g. to migrate an older layout.
+- `Version WrittenBy` — The version of the mod that wrote this data (the save's, as loaded; this version's once the game is saved). Null: none yet, or a save from before Works recorded it. For migrating an older layout when the save loads: GameEvents.GameLoaded.Add(this, () => { var v = SaveData.WrittenBy; if (v != null && v < new Version(2, 0)) Migrate(); });
 
 ## SaveGames  _(class, Remote.cs)_
 

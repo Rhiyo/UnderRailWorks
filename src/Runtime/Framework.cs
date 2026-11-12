@@ -67,8 +67,12 @@ namespace UnderRailWorks
         public bool Has(string key) { return Section.ContainsKey(key); }
         public void Remove(string key) { Section.Remove(key); }
         public IList<string> Keys { get { return Section.Keys.ToList(); } }
-        // Everything, e.g. to migrate an older layout (keep a "version" key of your own).
+        // Everything, e.g. to migrate an older layout.
         public void Clear() { Section.Clear(); }
+        // The version of the mod that wrote this data (the save's, as loaded; this version's once the game is saved).
+        // Null: none yet, or a save from before Works recorded it. For migrating an older layout when the save loads:
+        //   GameEvents.GameLoaded.Add(this, () => { var v = SaveData.WrittenBy; if (v != null && v < new Version(2, 0)) Migrate(); });
+        public Version WrittenBy { get { string v; return SaveFiles.Versions.TryGetValue(mod, out v) ? ModInfo.ParseVersion(v) : null; } }
     }
 
     public static class Translations
@@ -176,11 +180,15 @@ namespace UnderRailWorks.Internal
 
         static string Folder(string save) { try { return d5x.d(save); } catch { return null; } }
 
-        internal static void NewGame() { Current = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase); }
+        // Section key -> the version of the mod that wrote it ("versions" in the file).
+        internal static Dictionary<string, string> Versions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+        internal static void NewGame() { Current = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase); Versions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); }
 
         internal static void Load(string save)
         {
             Current = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            Versions = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var dir = Folder(save);
             var file = dir == null ? null : Path.Combine(dir, FileName);
             if (file == null || !File.Exists(file)) return;
@@ -189,6 +197,10 @@ namespace UnderRailWorks.Internal
                 var d = Json.Parse(File.ReadAllText(file)) as Dictionary<string, object>;
                 if (d != null && d.ContainsKey("mods") && d["mods"] is Dictionary<string, object>)
                     foreach (var kv in (Dictionary<string, object>)d["mods"]) Current[kv.Key] = kv.Value;
+                if (d != null && d.ContainsKey("versions") && d["versions"] is Dictionary<string, object>)
+                    foreach (var kv in (Dictionary<string, object>)d["versions"]) Versions[kv.Key] = Convert.ToString(kv.Value, CultureInfo.InvariantCulture);
+                double format = d != null && d.ContainsKey("format") ? Convert.ToDouble(d["format"], CultureInfo.InvariantCulture) : 1;
+                if (format >= 2) Log.Always("saves: " + save + ": mod data written by a newer UnderRailWorks (format " + format + "); read as well as this version can");
                 Log.Write("saves: mod data for " + Current.Count + " mods from " + save);
             }
             catch (Exception ex) { Log.Write("saves: " + file + ": " + ex.Message); }
@@ -204,7 +216,15 @@ namespace UnderRailWorks.Internal
                 var empty = Current.Where(kv => kv.Value is Dictionary<string, object> && ((Dictionary<string, object>)kv.Value).Count == 0).Select(kv => kv.Key).ToList();
                 foreach (var k in empty) Current.Remove(k);
                 if (Current.Count == 0) { if (File.Exists(file)) File.Delete(file); return; }
-                var root = new Dictionary<string, object> { { "format", 1.0 }, { "works", FixVersion.Value }, { "mods", Current } };
+                // Who wrote each section: installed mods their version now; a missing mod's data keeps the version it had.
+                foreach (var key in Current.Keys)
+                {
+                    var id = key.StartsWith(CharacterFiles.Prefix, StringComparison.Ordinal) ? key.Substring(CharacterFiles.Prefix.Length) : key;
+                    var m = ModLoader.Find(id);
+                    if (m != null && m.Loaded && m.Version != null) Versions[key] = m.VersionText;
+                }
+                var versions = Versions.Where(kv => Current.ContainsKey(kv.Key)).ToDictionary(kv => kv.Key, kv => (object)kv.Value);
+                var root = new Dictionary<string, object> { { "format", 1.0 }, { "works", FixVersion.Value }, { "mods", Current }, { "versions", versions } };
                 File.WriteAllText(file, Json.Write(root));
             }
             catch (Exception ex) { Log.Write("saves: " + file + ": " + ex.Message); }

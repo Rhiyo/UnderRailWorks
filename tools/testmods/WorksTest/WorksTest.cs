@@ -79,6 +79,7 @@ public sealed class WorksTest : WorksMod
         Commands.Add(this, "wt.release", "wt.release <name>: release a controlled character (its AI back)", a => { var c = World.Characters.FirstOrDefault(x => x.Name == a[0]); if (c == null) return "none"; CharacterControl.Release(c); Log.Info("released " + c.Name); return "ok"; });
         Commands.Add(this, "wt.att", "wt.att <a> <b>: a's attitude to b", a => { var x = World.Characters.FirstOrDefault(c => c.Name == a[0]); var y = World.Characters.FirstOrDefault(c => c.Name == a[1]); Log.Info("att " + a[0] + " -> " + a[1] + ": " + (x == null || y == null ? "?" : x.AttitudeTo(y) + " (factions " + x.Faction + " / " + y.Faction + ", passive " + x.Passive + "/" + y.Passive + ")")); return "ok"; });
         Commands.Add(this, "wt.unclone", "wt.unclone: the clone taken out of the world", a => { var ok = clone != null && clone.RemoveFromWorld(); Log.Info("unclone " + ok); return "ok"; });
+        Commands.Add(this, "wt.sd", "wt.sd [set]: save data and the version that wrote it", a => { if (a.Length > 0) SaveData.Set("probe", "v" + Info.VersionText); Log.Info("savedata probe=" + SaveData.Get<string>("probe") + " writtenBy=" + (SaveData.WrittenBy == null ? "null" : SaveData.WrittenBy.ToString())); return "ok"; });
         Commands.Add(this, "wt.coopping", "wt.coopping: a WorksTest message to the co-op host", a => { Mods.Call("Coop", "SendToHost", this, "ping", new object[] { "hello", "host" }); return "sent"; });
     }
     bool logOutlines, hoverWatch;
