@@ -136,6 +136,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `void SwitchWeapons()`
 - `int Initiative` — Its initiative (efk.Offense ay(): what StatBonus.Initiative changes).
 - `bool RemoveFromWorld()` — Takes it out of the world now (as the game removes a character: c5x.w(), an()). Not the player.
+- `bool ReplaceSheet(string path)` — Swaps in the sheet from a .char file (its items, XP, skills, level...) in place: the same body, where it stands, its health kept. For a character from SpawnFromCharacterFile (not the player: for the player the HUD's portrait and some views stayed on the old sheet; build a new body and MakePlayer instead). Cheaper than a new body. False: not such a character, or the file has no sheet.
 - `bool HasPlayerSheet` — It has a whole player sheet (the player, or a character from SpawnFromCharacterFile).
 - `bool ExportTo(string path)` — Writes its sheet as it is now to a .char file (the game's export format; a new game's Import reads it). False: it has no player sheet.
 - `bool ExportTo(string path, DateTime made)` — With the date the file says it was made (the import dialog shows it): a fixed one gives the same bytes for the same sheet, to tell whether it changed.

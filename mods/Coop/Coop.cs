@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.9.0")]
+[assembly: System.Reflection.AssemblyVersion("1.10.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -212,7 +212,8 @@ public sealed partial class Coop : WorksMod
             seat.Record = r; seat.Character = c;
         }
         CharacterControl.Take(this, seat.Character);
-        Party.Add(this, seat.Character);     // other mods' "everyone" (Works' Party) includes it
+        Party.Add(this, seat.Character);
+        seat.LastSign = SignOf(seat.Character);     // what the joiner has: changes from here are sent     // other mods' "everyone" (Works' Party) includes it
         var at = seat.Character.Position;
         Log.Info(seat.Peer.Name + " plays " + r.Name + " at " + (int)at.X + "," + (int)at.Y);
         Notify.Log("Co-op: " + seat.Peer.Name + " plays " + r.Name, Say);

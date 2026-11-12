@@ -247,7 +247,12 @@ public sealed partial class Coop
                 sheets[w[1]] = w[2];
                 Character old;
                 if (!inWorld || !spawned.TryGetValue(w[1], out old) || old.Area == null) return;
-                // A new sheet (XP, items...): a new body from it where the old one stands.
+                // A new sheet (XP, items...): swapped in place (the same body), else a new body where the old one stands.
+                bool inPlace = false;
+                // Another player's character: in place. Our own (this machine's player): a new body, the HUD built for it
+                // (swapping the player's sheet in place left the HUD's portrait and the bag view behind).
+                if (w[1] != myKey) try { inPlace = old.ReplaceSheet(WriteSheet("mirror-" + w[1].Substring(2), w[2])); } catch (Exception ex) { Log.Warn("sheet in place: " + ex.Message); }
+                if (inPlace) { if (w[1] == myKey) { lastSign = SignOf(old); Build(); } return; }
                 var at = old.Position;
                 var c = SpawnSheet(w[1], (int)Math.Round(at.X), (int)Math.Round(at.Y));
                 if (c == null) return;

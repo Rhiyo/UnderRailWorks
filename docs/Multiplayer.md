@@ -205,6 +205,15 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
 
+## Lighter sheet updates (Co-op 1.10, 2026-11-12)
+
+- A changed sheet (items, XP, level) is swapped into the existing body (Works' Character.ReplaceSheet: the provider
+  gets the new sheet, its Uid kept) on the host and for other players' characters on joiners, instead of a new body.
+  A joiner's own character still gets a new body (swapping the local player's sheet in place left the HUD portrait
+  and Works' bag view on the old one). Tested: the joiner put a hypo on its belt; the host took the sheet in place.
+- Fixed on the way: the first sheet-change check recorded a starting point lazily, so a change made right after
+  joining was never sent; the starting point is now recorded when the character enters.
+
 ## Status effects, mod buttons (Co-op 1.9, 2026-11-12)
 
 - NPCs' status effects (stunned, burning...) mirror to joiners (FX <key> <codes>): applied or removed on the copy.

@@ -132,6 +132,26 @@ namespace UnderRailWorks
             return true;
         }
 
+        // Swaps in the sheet from a .char file (its items, XP, skills, level...) in place: the same body, where it stands,
+        // its health kept. For a character from SpawnFromCharacterFile (not the player: for the player the HUD's portrait
+        // and some views stayed on the old sheet; build a new body and MakePlayer instead). Cheaper than a new body.
+        // False: not such a character, or the file has no sheet.
+        public bool ReplaceSheet(string path)
+        {
+            var body = Entity as c5x; var aspect = body == null ? null : body.GetAspect<amc>();
+            var old = aspect == null ? null : aspect.aa() as au2;
+            if (old == null || IsPlayer || !System.IO.File.Exists(path) || World.SheetProvider == null || Simulation.Refuses("ReplaceSheet")) return false;
+            var file = World.ReadFile.Invoke(null, new object[] { path });
+            var sheet = file == null ? null : World.FileSheet.GetValue(file) as au2;
+            if (sheet == null) return false;
+            float health = Health;
+            sheet.Uid = old.Uid;     // the same character to the game (who did what)
+            sheet.a((b0b)body);
+            World.SheetProvider.SetValue(aspect, new StandAloneProvider<efk>(sheet));
+            Health = Math.Min(health, MaxHealth);
+            return true;
+        }
+
         // It has a whole player sheet (the player, or a character from SpawnFromCharacterFile).
         public bool HasPlayerSheet { get { var a = (Entity as c5x) == null ? null : ((c5x)Entity).GetAspect<amc>(); return a != null && a.aa() is au2; } }
 

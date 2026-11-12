@@ -50,6 +50,18 @@ public sealed partial class Coop
     {
         var old = seat.Character;
         if (old == null || old.Area == null || seat.Record == null) return;
+        // In place (Works' ReplaceSheet: the same body), else a new body from it.
+        int before = old.Level;
+        bool swapped = false;
+        try { swapped = old.ReplaceSheet(WriteSheet(seat.Record.Name, sheet)); } catch (Exception ex) { Log.Warn("sheet in place: " + ex.Message); }
+        if (swapped)
+        {
+            seat.Record.Sheet = sheet; seat.LastSign = SignOf(old);
+            Log.Info(seat.Record.Name + ": sheet from " + seat.Peer.Name + " (in place)");
+            if (old.Level > before) Party.LevelledUp(old, old.Level);
+            foreach (var s in seats.Values.Where(x => x != seat && x.InWorld && x.Peer != null)) s.Peer.Send("SHEET", "c:" + seat.Record.Name, sheet);
+            return;
+        }
         Character c = null;
         try { c = World.SpawnFromCharacterFile(WriteSheet(seat.Record.Name, sheet), (int)Math.Round(old.Position.X), (int)Math.Round(old.Position.Y)); }
         catch (Exception ex) { Log.Error("can't build " + seat.Record.Name + ": " + ex.Message); }
