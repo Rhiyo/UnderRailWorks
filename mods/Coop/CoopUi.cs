@@ -82,6 +82,7 @@ public sealed partial class Coop
                 button("Join a game...", AskJoin);
                 break;
             case "host":
+                button("Revive", () => { var p = World.Player; var r = p == null ? "" : ReviveNear(p); if (!string.IsNullOrEmpty(r)) Notify.Log("Co-op: " + r, Grey); });
                 button("Stop hosting", () => StopHosting());
                 break;
             case "connecting":
@@ -107,6 +108,7 @@ public sealed partial class Coop
                 button("End turn", () => Run("END"));
                 button("Attack nearest", () => Run("ATTACK"));
                 button("Follow host", () => Run("FOLLOW"));
+                button("Revive", () => Run("REVIVE"));
                 button("Walk to...", () => Ui.Ask(this, "Walk to tile (x y)", "", text =>
                 {
                     var p = (text ?? "").Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
@@ -197,6 +199,11 @@ public sealed partial class Coop
         var text = s[1] + ": " + s[2] + "/" + s[3] + " HP";
         if (s[4] == "1") text += s[5] == s[1] ? "  -  your turn: AP " + s[6] + ", MP " + s[7] : "  -  " + s[5] + "'s turn";
         else text += "  -  at " + s[8] + "," + s[9];
+        // The others: name and health.
+        var p = party;
+        if (p != null)
+            for (int i = 0; i + 3 < p.Length; i += 4)
+                if (p[i] != s[1]) text += "   |   " + p[i] + (p[i + 3] == "1" ? " (down)" : " " + p[i + 1] + "/" + p[i + 2]);
         return text;
     }
 

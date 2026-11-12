@@ -135,6 +135,7 @@ public sealed partial class Coop
             foreach (var a in apply) a();
             foreach (var o in options) Settings.Set("option." + o.Mod + "." + o.Key, o.Value.ToString());
             xpShare = Option(Id, "xpshare").Value;
+            deathRule = Option(Id, "death").Value; Settings.Set("death.rule", deathRule.ToString());
             Settings.Set("xp.share", xpShare.ToString());
             if (hostWindow != null) hostWindow.Close();
             Commands.Print("co-op: " + Host(new string[0]));

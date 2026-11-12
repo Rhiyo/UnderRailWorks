@@ -1734,3 +1734,6 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
   player, so orders aren't replayed: the ability is built for the character.
 - `Hud.AddPart` stacks again after PartAdded handlers (a part moved to a saved place by HUD Layout no longer covers
   another).
+- **Deaths and game over:** `GameEvents.Dying` (DeathAttempt: cancel and the character is left at 1 health; prefix on
+  efk.a(cwt, cru, bool), every death's path), `GameEvents.GameOver` (cancel: the game goes on; dgz.cr, which fires
+  for any death in the player's faction), `World.EndGame()` (the game's death screen, dka.y()).

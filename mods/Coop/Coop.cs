@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.5.0")]
+[assembly: System.Reflection.AssemblyVersion("1.6.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -122,6 +122,7 @@ public sealed partial class Coop : WorksMod
                 if (talking == seat) { TalkAs.Close(); talking = null; }     // left mid-conversation: it ends
                 seats.Remove(p);
                 if (Api != null) Api.RaiseLeft(p.Name);
+                CheckGameOver();
                 if (seat.Character != null) { Remember(seat); seat.Peer = null; orphans.Add(seat); }
                 Log.Info(p.Name + " left" + (seat.Character != null ? " (" + seat.Character.Name + " stays, passing its turns)" : ""));
                 Notify.Log("Co-op: " + p.Name + " left", Say);
@@ -179,6 +180,7 @@ public sealed partial class Coop : WorksMod
             }
         }
         if (seat.Character == null || seat.Character.IsDead || seat.Character.Area == null) { p.Send("SAID", seat.Character != null && seat.Character.IsDead ? "your character is dead" : "pick a character first"); return; }
+        if (downed.Contains(seat.Character) && w[0] != "STATUS" && w[0] != "DLGPICK") { p.Send("SAID", "you're down"); return; }
         var said = Act(seat.Character, w);
         if (!string.IsNullOrEmpty(said)) p.Send("SAID", said);
     }
@@ -255,6 +257,7 @@ public sealed partial class Coop : WorksMod
     readonly List<KeyValuePair<string, bool>> choices = new List<KeyValuePair<string, bool>>();     // name, taken
     readonly List<string> messages = new List<string>();
     string[] state;     // the host's last STATE for our character
+    string[] party;     // the host's last PARTY: name, health, max, dead... for every player
 
     string Join(string[] args)
     {
@@ -292,7 +295,12 @@ public sealed partial class Coop : WorksMod
                 Changed(); return;
             case "PLAYING": playing = true; Tell("You play " + w[1] + " (at " + w[2] + "," + w[3] + ")"); Changed(); return;
             case "STATE": state = w; Changed(false); return;
-            case "TURN": Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")"); return;
+            case "TURN":
+                Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")");
+                if (World.Player != null) Notify.OverPlayer("Your turn", new Color(255, 210, 90), true);     // big, over your character
+                return;
+            case "DIED": playing = false; state = null; LeftWorld(); Changed(); return;
+            case "PARTY": party = w.Skip(1).ToArray(); Changed(false); return;
             case "SAID": Tell(w.Length > 1 ? w[1] : ""); return;
         }
         if (w[0] == "POPUP") { ShowPopup(w); return; }
@@ -399,6 +407,7 @@ public sealed partial class Coop : WorksMod
             }
             case "SWAP": return c.SwapWeapons() ? "" : "can't swap weapons now";
             case "RELOAD": return c.Reload() ? "" : "can't reload now";
+            case "REVIVE": return ReviveNear(c);
             case "TALK": return w.Length > 1 ? Talk(c, w[1]) : "talk to whom?";
             case "DLGPICK": return w.Length > 1 ? Pick(c, w[1]) : "";
             case "DLGCLOSE": if (talking != null && talking.Character == c) { TalkAs.Close(); talking = null; } return "";
@@ -440,6 +449,7 @@ public sealed partial class Coop : WorksMod
         LoadHost();
         LoadListening();
         LoadScreens();
+        LoadDeath();
         LoadUi();
         LoadMirror();
         LoadLoot();
@@ -472,6 +482,8 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.trade", "coop.trade <name>: trade with that merchant (testing)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 200).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0 && x.IsMerchant); return t == null ? "no merchant called that" : Mine("TRADEWITH", KeyHere(t)); });
         Commands.Add(this, "coop.xpshare", "coop.xpshare <0-100>: the Shared XP percentage (Host this game... asks)", a => { int v; if (a.Length > 0 && int.TryParse(a[0], out v)) xpShare = Math.Max(0, Math.Min(100, v)); return "shared XP: " + xpShare + "%"; });
         Commands.Add(this, "coop.exit", "coop.exit x y: your character takes the exit on that tile", a => a.Length < 2 ? "coop.exit x y" : Mine("EXIT", a[0], a[1]));
+        Commands.Add(this, "coop.deathrule", "coop.deathrule <0 get up after the fight|1 others revive|2 dead for good>", a => { int v; if (a.Length > 0 && int.TryParse(a[0], out v) && v >= 0 && v <= 2) deathRule = v; return "death: " + DeathRules[deathRule]; });
+        Commands.Add(this, "coop.revive", "coop.revive: revive a downed player next to you", a => listener != null && World.Player != null ? (ReviveNear(World.Player).Length == 0 ? "revived" : ReviveNear(World.Player)) : Mine("REVIVE"));
         Commands.Add(this, "coop.status", "coop.status: your character's state", a => Mine("STATUS"));
         Commands.Add(this, "coop.spawn", "coop.spawn [blueprint]: a local test partner next to you (no network)", a =>
         {
@@ -495,6 +507,20 @@ public sealed partial class Coop : WorksMod
                 try { if (m.Key == host) Simulation.Apply(() => JoinerMessage(m.Value)); else if (listener != null) HostMessage(m.Key, m.Value); }
                 catch (Exception ex) { Log.Error("message " + m.Value[0] + ": " + ex); }
             }
+        });
+        // Everyone's health (the host's character and each joined one), for the players' Co-op windows.
+        double partyTimer = 0; string lastParty = null;
+        GameEvents.Update.Add(this, dt =>
+        {
+            if (listener == null || (partyTimer -= dt) > 0) return;
+            partyTimer = 1;
+            var list = new List<object> { "PARTY" };
+            foreach (var c in Party.Members.Concat(seats.Values.Concat(orphans).Where(s => s.Character != null && s.Character.IsDead).Select(s => s.Character)).Distinct())
+            { list.Add(c.Name); list.Add((int)c.Health); list.Add((int)c.MaxHealth); list.Add(c.IsDead ? 1 : 0); }
+            var key = string.Join("|", list.Select(o => o.ToString()).ToArray());
+            if (key == lastParty) return;
+            lastParty = key;
+            foreach (var s in seats.Values.Where(x => x.Peer != null)) s.Peer.Send(list.ToArray());
         });
         // Each joined player's state, sent when it changes (checked twice a second).
         double stateTimer = 0;
@@ -528,7 +554,7 @@ public sealed partial class Coop : WorksMod
         {
             foreach (var s in seats.Values.Where(s => s.Character != null))
             {
-                if (o.Target == s.Character) s.Peer.Send("SAID", o.AttackerName + (o.Hit ? " hit you for " + o.HealthLost : " missed you") + (o.Killed ? " - you're dead" : ""));
+                if (o.Target == s.Character) s.Peer.Send("SAID", o.AttackerName + (o.Hit ? " hit you for " + o.HealthLost : " missed you") + (downed.Contains(s.Character) ? " - you're down" : o.Killed ? " - you're dead" : ""));
                 else if (o.AttackerName == s.Character.Name && o.Target != null) s.Peer.Send("SAID", "you " + (o.Hit ? "hit " + o.Target.Name + " for " + o.HealthLost : "missed " + o.Target.Name) + (o.Killed ? ", killed" : ""));
             }
         });
@@ -564,7 +590,7 @@ public sealed partial class Coop : WorksMod
         {
             ReadRecords();
             if (listener == null) return;
-            reloaded = true;
+            reloaded = true; downed.Clear(); ending = false;
             if (talking != null) talking = null;
             foreach (var s in seats.Values) { s.Character = null; s.InWorld = false; s.Sent.Clear(); s.Walks.Clear(); s.Doors.Clear(); s.LastSign = null; s.Peer.Send("SAID", (World.Player == null ? "the host" : World.Player.Name) + " loaded a game: you'll be back in a moment"); }
             orphans.Clear();

@@ -361,6 +361,9 @@ The game's content, listed for modders: item paths with their codes and names, c
 - `int Min`
 - `int Max`
 
+## DeathAttempt  _(class, Death.cs)_
+
+
 ## DefenseStats  _(class, Movement.cs)_
 
 The defense values the character sheet's Defense tab shows (what StatBonus.Dodge / Evasion / Fortitude / Resolve change; not the Dodge and Evasion skills): efk.Defense (nw) v() dodge, z() evasion, ab() fortitude, ae() resolve.
@@ -551,6 +554,8 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<Container, Item, Character>> ItemTaken = new Hook<Action<Container, Item, Character>>("ItemTaken")`
 - `static readonly Hook<Action<LootTarget>> LootGenerated = new Hook<Action<LootTarget>>("LootGenerated")`
 - `static readonly Hook<Action<LockAttempt>> LockAttempted = new Hook<Action<LockAttempt>>("LockAttempted")`
+- `static readonly Hook<Action<DeathAttempt>> Dying = new Hook<Action<DeathAttempt>>("Dying")` — A character is about to die (any cause). Cancel: it doesn't; it's left at 1 health.
+- `static readonly Hook<Action<GameOverAttempt>> GameOver = new Hook<Action<GameOverAttempt>>("GameOver")` — The game is about to end (a death in the player's faction: Who). Cancel: it goes on.
 - `static readonly Hook<Action<EquipChange>> Equipped = new Hook<Action<EquipChange>>("Equipped")` — An item went into one of a character's slots (gear or quick slot), or came out of one.
 - `static readonly Hook<Action<EquipChange>> Unequipped = new Hook<Action<EquipChange>>("Unequipped")`
 - `static readonly Hook<Action<StatusChange>> StatusApplying = new Hook<Action<StatusChange>>("StatusApplying")` — A status effect is about to be applied (set Cancel to refuse it), was applied, or was removed (also on expiry).
@@ -585,6 +590,9 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<TrapDisarmResult>> TrapDisarmed = new Hook<Action<TrapDisarmResult>>("TrapDisarmed")`
 - `static readonly Hook<Action<TrapSpotted>> TrapDetected = new Hook<Action<TrapSpotted>>("TrapDetected")` — A character spotted a trap (its scan every couple of seconds; the player's included).
 - `static readonly Hook<Action<double>> Update = new Hook<Action<double>>("Update")` — Once per game update; the argument is the time since the last one, in seconds.
+
+## GameOverAttempt  _(class, Death.cs)_
+
 
 ## HitChance  _(class, Combat.cs)_
 
@@ -1897,6 +1905,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static void Despawn(Character c)` — Removes a spawned (or placed) character from the world now.
 - `static IList<Point> FreeTilesNear(int x, int y, int radius)` — Floor tiles in the player's area within radius, nearest first, not taken by a character or a solid object.
 - `static Character Placed(string id)` — The character a placement put in the world (null if it isn't there now).
+- `static bool EndGame()` — The game's own game over (its death screen: Resume, Load, Quit), now.
 - `static bool ExportPlayer()` — Exports the player character as the game does at its end (My Games/Underrail/Characters/<name>.char, for the import button of a new game), with the mods' CharacterData beside it. False outside a game.
 - `static bool Travel(string zone, string entry)` — Sends the player to another zone as an exit does (zone id and entry point, as the game's maps name them, e.g. "lu-c1b", "entry"; the ids are in UnderRailWorks-content.txt). False if there's no player.
 - `static bool Use(Character user, string placementId)` — A character uses a placed object (as clicking it does, without walking there or the game's checks).

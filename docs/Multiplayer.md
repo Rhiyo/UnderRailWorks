@@ -100,7 +100,7 @@ character placed by the mod and controlled by those commands instead of by the A
 7. Zone changes: anyone taking an exit takes the group (unless Party.NeedTogether says everyone must be near).
    Separate zones: see below.
 8. Real time: a joiner's conversation doesn't pause the host; the host's own menus do pause the host's world.
-9. Death: not handled beyond the mirror (the body dies on both sides).
+9. Death: the host's choice (get up after the fight, others revive, dead for good); see Death (Co-op 1.6).
 10. Loot: each takes into their own bag; trading between players not built.
 11. Saving: only the host; joined characters' sheets and places are saved with the host's save data; loading puts
     them back there (Co-op 1.4).
@@ -204,6 +204,22 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
   and each other (Works). Before, a co-op character next to the host couldn't walk past them.
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
+
+## Death (Co-op 1.6, 2026-11-12)
+
+Decided with the player: the host chooses the rule when hosting; the host's character follows the same rule; game
+over only when every player is down or dead, or the host is out and nobody else is playing (the last joiner leaving
+ends it).
+- Rules: **Get up after the fight** (downed at 1 health, incapacitated; up at a third of their health when the fight
+  ends, or after a moment outside a fight), **Others revive them** (Revive in the Co-op window next to them; in a fight
+  it takes the reviver's turn), **Dead for good** (as single player; a joined player chooses or makes another).
+- Measured: every death goes through efk.a(cwt, cru, bool); the game over is dgz.cr(f8), which ends the game for any
+  death in the player's faction (a co-op character's death would have ended it). Works: GameEvents.Dying
+  (cancellable, left at 1 health), GameEvents.GameOver (cancellable), World.EndGame (dka.y()).
+- Tested each: rule 0 Mira downed and back up; rule 1 the host revived her; rule 2 she died, the game went on and the
+  joiner got the character list without her; the host downed and back up at 30/90 while the joiner played; both
+  down under rule 1: the game's death screen.
+- Also: a "Your turn" floating line for joiners and everyone's health in the Co-op window (PARTY).
 
 ## Abilities and items (Co-op 1.5, 2026-11-12)
 
