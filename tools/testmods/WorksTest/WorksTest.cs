@@ -68,6 +68,7 @@ public sealed class WorksTest : WorksMod
             Log.Info("unaware key: " + World.Player.Name + " pressed the gift key: coins " + ok + ", window " + (w != null));
         });
         GameEvents.LevelledUp.Add(this, level => Log.Info("unaware: " + World.Player.Name + " reached level " + level));
+        Commands.Add(this, "wt.load", "wt.load <save>: load that save", a => "load: " + SaveGames.Load(a[0]));
         Commands.Add(this, "wt.coopping", "wt.coopping: a WorksTest message to the co-op host", a => { Mods.Call("Coop", "SendToHost", this, "ping", new object[] { "hello", "host" }); return "sent"; });
     }
     bool logOutlines, hoverWatch;

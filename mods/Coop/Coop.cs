@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.3.0")]
+[assembly: System.Reflection.AssemblyVersion("1.4.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -79,6 +79,7 @@ public sealed partial class Coop : WorksMod
     readonly Inbox inbox = new Inbox();
     readonly Dictionary<Peer, Seat> seats = new Dictionary<Peer, Seat>();
     readonly List<Seat> orphans = new List<Seat>();     // joiners who left: their character stays, passing its turns
+    bool reloaded;     // a game was loaded while hosting: place players from its records
 
     string Host(string[] args)
     {
@@ -526,10 +527,18 @@ public sealed partial class Coop : WorksMod
         GameEvents.ZoneLoaded.Add(this, (zone, first) =>
         {
             if (listener == null) return;
+            bool fromSave = reloaded; reloaded = false;
             foreach (var s in seats.Values.Where(s => s.Record != null).ToList())
             {
                 if (s.Character != null && s.Character.Area != null) continue;
-                var c = SpawnFor(s.Record, false);
+                // After a load: the character as that save has it (its place, its sheet), if the save knew it.
+                bool saved = false;
+                if (fromSave)
+                {
+                    var r = records.FirstOrDefault(x => x.Name.Equals(s.Record.Name, StringComparison.OrdinalIgnoreCase));
+                    if (r != null) { s.Record = r; saved = true; } else records.Add(s.Record);
+                }
+                var c = SpawnFor(s.Record, saved);
                 if (c == null) continue;
                 s.Character = c; CharacterControl.Take(this, c); Party.Add(this, c);
                 s.Peer.Send("PLAYING", s.Record.Name, (int)c.Position.X, (int)c.Position.Y);
@@ -537,7 +546,18 @@ public sealed partial class Coop : WorksMod
             foreach (var s in seats.Values.Where(s => s.Character != null)) SendWorld(s);     // the joiners follow into the new zone
             orphans.RemoveAll(o => o.Character == null || o.Character.Area == null);
         });
-        GameEvents.GameStarted.Add(this, () => { if (listener != null) StopHosting(); ReadRecords(); });
+        // The host loaded a save (or started a new game) while hosting: everyone stays connected; each one's character
+        // from that save is placed where it was saved (in this zone), else next to the host, when the zone is there.
+        GameEvents.GameStarted.Add(this, () =>
+        {
+            ReadRecords();
+            if (listener == null) return;
+            reloaded = true;
+            if (talking != null) talking = null;
+            foreach (var s in seats.Values) { s.Character = null; s.InWorld = false; s.Sent.Clear(); s.Walks.Clear(); s.Doors.Clear(); s.LastSign = null; s.Peer.Send("SAID", (World.Player == null ? "the host" : World.Player.Name) + " loaded a game: you'll be back in a moment"); }
+            orphans.Clear();
+            Log.Info("a game was loaded while hosting: players placed when its zone is there");
+        });
     }
 
     public override void Unload()

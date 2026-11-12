@@ -102,7 +102,8 @@ character placed by the mod and controlled by those commands instead of by the A
 8. Real time: a joiner's conversation doesn't pause the host; the host's own menus do pause the host's world.
 9. Death: not handled beyond the mirror (the body dies on both sides).
 10. Loot: each takes into their own bag; trading between players not built.
-11. Saving: only the host; joined characters' sheets are saved with the host's save data.
+11. Saving: only the host; joined characters' sheets and places are saved with the host's save data; loading puts
+    them back there (Co-op 1.4).
 12. Versions: Co-op's version must match exactly.
 13-14. As planned: friends only, direct connections.
 
@@ -203,6 +204,15 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
   and each other (Works). Before, a co-op character next to the host couldn't walk past them.
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
+
+## Saving and loading (Co-op 1.4, 2026-11-12)
+
+- A save keeps every co-op character (Co-op's save data next to it): name, sheet, zone and tile (written on every save).
+- The host loading a save (or starting a new game) while hosting keeps everyone connected: each connected player's
+  character as that save has it (its sheet, its place) is placed where it was saved if the host is in that zone, else
+  next to the host; a save that never had them puts them next to the host (with the character they had). Then the
+  world goes to everyone again. Tested: saved with Mira at 34,21, moved her to 29,24, quickloaded: back at 34,21; loaded
+  an older save without her: next to the host (31,23).
 
 ## Other mods in co-op (Co-op 1.1, 2026-11-12)
 
