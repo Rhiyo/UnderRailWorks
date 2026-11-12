@@ -220,8 +220,17 @@ on top of Co-op.
   (IPlayerScreens: Co-op sends POPUP to that joiner, the answer comes back and the callback runs on the host as that
   player). Tested with an unaware ContainerOpening handler asking "Search the Desk?": shown on Mira's player's screen
   only, "Yes" there ran the callback on the host with World.Player = Mira.
-- **Not covered (and why):** a mod's own windows (Ui.Window: drawn live, not a question) opened by a joiner's action
-  show on the host; a mod's keys
+- **Keys and windows (Co-op 1.3).** A mod's key pressed on a joiner's machine runs there (a window it opens shows
+  there, built from the mirrored world). If the handler tried to change the world (Works refused it on the copy) the
+  key goes to the host (Keybinds.NeedsTheRealGame), which runs that mod's Update handlers once with the key pressed and
+  the joiner's character as World.Player (Keybinds.Replay). On the host, a mod window for a player on another machine
+  isn't opened (Ui.Window returns null, as with no HUD). Tested: Minimap's key stayed local; a test key giving 7 coins
+  and opening a window: refused + window on the joiner, then on the host coins given and no window, the coins in the
+  joiner's bag.
+- **Level-ups:** spent on the joiner's own character screen; when their sheet comes back with a higher level the host
+  raises GameEvents.LevelledUp as them (Party.LevelledUp). Not seen in game yet.
+- **Still not covered:** mod buttons (Ui.Button) clicked on a joiner's machine that change the world: refused there,
+  not forwarded (a button can't be found again on the host the way a key can); and before that a mod's keys
   and buttons on a joiner's machine run against the copy (refused); level-ups happen on the joiner's screen
   (LevelledUp doesn't fire on the host). World.Player is not changed outside an action: HUD mods, minimaps and windows
   mean "this screen's player".

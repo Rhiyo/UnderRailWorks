@@ -44,6 +44,7 @@ public static partial class Ui
     // (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
     public static UiWindow Window(WorksMod mod, string id, string title, int width, int height)
     {
+        if (PlayerScreens.ActingIsRemote) { Log.Write("mods: " + mod.Id + ": a window (" + title + ") for a player on another machine: not opened here"); return null; }
         var hud = Hud.Root;
         if (hud == null) { var screen = UiPopups.Screen(); if (screen is a8k) hud = UiElement.Of(screen); }     // on the main menu: over it (closed when a game starts)
         if (hud == null) return null;

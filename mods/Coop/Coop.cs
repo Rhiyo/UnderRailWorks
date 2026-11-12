@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.2.0")]
+[assembly: System.Reflection.AssemblyVersion("1.3.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -142,6 +142,7 @@ public sealed partial class Coop : WorksMod
         if (w[0] == "LOADED") { HostMirrorMessage(seat, w); return; }
         if (ModMessage(p.Name, w)) return;
         if (w[0] == "POPUPANS") { PopupAnswered(w); return; }
+        if (w[0] == "KEY") { KeyFrom(seat, w); return; }
         switch (w[0])
         {
             case "PICK":

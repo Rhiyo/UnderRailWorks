@@ -815,10 +815,14 @@ Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medic
 - `Keys DefaultKey`
 - `Keys Key` — The key the player chose (Keys.None: unbound).
 - `bool Pressed` — True on the update the key went down (not while typing in a text box: the game's own hotkeys don't fire then either).
+- `string ModId`
+- `string KeyId`
 - `bool Down`
 
 ## Keybinds  _(class, Keybinds.cs)_
 
+- `static event Action<Keybind> NeedsTheRealGame` — On a copy of another game (Simulation.IsMirror): a mod key the player pressed whose handler then tried to change the world (Works refused it here). For a multiplayer mod to do it in the real game (Replay there). Keys that only change this screen (a window, a minimap) aren't reported.
+- `static bool Replay(string modId, string keyId, Character who)` — Runs the mod's Update handlers once (0 s passed) with that keybind pressed and who as the player (World.Player): a key another player pressed on their machine, done here (the real game).
 - `static Keybind Register(WorksMod mod, string id, string label)` — Registers an action (call from Load). id: unique within the mod; label: what the Controls tab shows after the mod's name ("Minimap: Show/hide"): keep it short, the column is narrow. The player's key is kept in the mod's settings.ini (key.<id>).
 - `static Keybind Register(WorksMod mod, string id, string label, Keys defaultKey)` — (Not an optional parameter: an enum default value makes the build's retargeting resolve XNA itself.)
 - `static IList<Keybind> Of(string modId)` — A mod's keys (for its settings page).
@@ -1271,6 +1275,7 @@ A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
 - `static IList<Character> Members` — The player and the characters added (living, in this zone).
 - `static Character Acting` — The party member whose action is running (Party.As): World.Player is that character meanwhile, so mods written for one player do for whoever acted what they'd do for the player. Null: the player's own.
 - `static void As(Character who, Action a)` — Runs a with who as the acting player (World.Player), back after (nests).
+- `static void LevelledUp(Character who, int level)` — A multiplayer mod: who reached a level on another machine; GameEvents.LevelledUp runs here with them as the player.
 - `static void Add(WorksMod mod, Character c)`
 - `static void Remove(Character c)`
 - `static bool Contains(Character c)`

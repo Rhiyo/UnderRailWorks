@@ -32,6 +32,26 @@ public sealed partial class Coop : IPlayerScreens
         return true;
     }
 
+    public bool IsRemote(Character who) { return listener != null && seats.Values.Any(s => s.Character == who); }
+
+    // A joiner's mod keys: the key works on their machine (a window it opens shows there, from the mirrored world); one
+    // whose handler tried to change the world (refused there: a copy) is sent to the host, where the mod's handler runs
+    // again as that player and its changes happen in the real game.
+    void LoadKeys()
+    {
+        Keybinds.NeedsTheRealGame += k =>
+        {
+            if (host == null || host.Closed || !inWorld || k.ModId == Id) return;
+            host.Send("KEY", k.ModId, k.KeyId);
+        };
+    }
+
+    void KeyFrom(Seat seat, string[] w)
+    {
+        if (w.Length < 3 || seat.Character == null) return;
+        if (Keybinds.Replay(w[1], w[2], seat.Character)) Log.Info(seat.Peer.Name + " pressed " + w[1] + "/" + w[2]);
+    }
+
     void PopupAnswered(string[] w)
     {
         int id; Action<string> a;
@@ -56,5 +76,5 @@ public sealed partial class Coop : IPlayerScreens
         }
     }
 
-    void LoadScreens() { PlayerScreens.Provider = this; }
+    void LoadScreens() { PlayerScreens.Provider = this; LoadKeys(); }
 }

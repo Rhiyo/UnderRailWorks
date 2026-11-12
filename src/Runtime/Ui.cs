@@ -649,6 +649,7 @@ static class UiHooks
     static void Updated(GameTime __0)
     {
         Input.Tick();
+        Keybinds.Tick();
         UiWindows.Tick();
         AssetStore.Apply();
         try { World.FollowTick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("follow: " + ex.Message); }
@@ -666,6 +667,7 @@ static class UiHooks
         try { ModReloader.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("reload: " + ex); }
         double dt = __0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds;
         if (GameEvents.Update.Any) GameEvents.Update.Run(h => h(dt));
+        try { Keybinds.After(); } catch (Exception ex) { Log.Write("keybinds: " + ex.Message); }
     }
 }
 }

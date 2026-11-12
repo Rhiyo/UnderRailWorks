@@ -237,9 +237,12 @@ namespace UnderRailWorks
         }
         [ThreadStatic] static int scope;
         // A world-changing call now: refused (once logged per caller) when this is a mirror outside Apply.
+        // Mods whose code was refused a world change (Keybinds: their key needs the real game).
+        internal static readonly HashSet<string> RefusedBy = new HashSet<string>();
         internal static bool Refuses(string what)
         {
             if (!IsMirror || scope > 0) return false;
+            if (ModScope.Current != null) RefusedBy.Add(ModScope.Current);
             lock (logged) if (logged.Add(what)) Log.Write("mirror: " + what + " refused (this game is a copy of another; logged once)");
             return true;
         }

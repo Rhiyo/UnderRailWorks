@@ -54,7 +54,7 @@ public sealed partial class Coop
         try { c = World.SpawnFromCharacterFile(WriteSheet(seat.Record.Name, sheet), (int)Math.Round(old.Position.X), (int)Math.Round(old.Position.Y)); }
         catch (Exception ex) { Log.Error("can't build " + seat.Record.Name + ": " + ex.Message); }
         if (c == null) return;
-        float health = old.Health;
+        float health = old.Health; int levelBefore = old.Level;
         bool fighting = old.IsInCombat;
         c.Name = seat.Record.Name;
         c.PlaceAt(old.Position, old.Facing);
@@ -67,6 +67,7 @@ public sealed partial class Coop
         seat.LastSign = SignOf(c);
         World.Despawn(old);
         Log.Info(seat.Record.Name + ": sheet from " + seat.Peer.Name);
+        if (c.Level > levelBefore) Party.LevelledUp(c, c.Level);     // levelled up on their machine: mods here hear it
         foreach (var s in seats.Values.Where(x => x != seat && x.InWorld && x.Peer != null)) s.Peer.Send("SHEET", "c:" + seat.Record.Name, sheet);
     }
 

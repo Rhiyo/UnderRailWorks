@@ -54,6 +54,9 @@ namespace UnderRailWorks
         internal static Character Begin(Character who) { var before = acting; acting = who != null && !who.IsPlayer && Contains(who) ? who : before; return before; }
         internal static void End(Character before) { acting = before; }
 
+        // A multiplayer mod: who reached a level on another machine; GameEvents.LevelledUp runs here with them as the player.
+        public static void LevelledUp(Character who, int level) { if (GameEvents.LevelledUp.Any) As(who, () => GameEvents.LevelledUp.Run(h => h(level))); }
+
         public static void Add(WorksMod mod, Character c) { if (c != null) lock (others) others[c] = mod.Id; }
         public static void Remove(Character c) { if (c != null) lock (others) others.Remove(c); }
         public static bool Contains(Character c) { if (c == null) return false; if (c.IsPlayer) return true; lock (others) return others.ContainsKey(c); }

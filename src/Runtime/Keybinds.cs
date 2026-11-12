@@ -28,7 +28,9 @@ public sealed class Keybind
     // The key the player chose (Keys.None: unbound).
     public Keys Key { get; internal set; }
     // True on the update the key went down (not while typing in a text box: the game's own hotkeys don't fire then either).
-    public bool Pressed { get { return Key != Keys.None && !Input.Typing && Input.Pressed(Key); } }
+    public bool Pressed { get { return Keybinds.Replaying == this || (Key != Keys.None && !Input.Typing && Input.Pressed(Key)); } }
+    public string ModId { get { return Mod; } }
+    public string KeyId { get { return Id; } }
     public bool Down { get { return Key != Keys.None && !Input.Typing && Input.Down(Key); } }
     internal string SettingKey { get { return "key." + Id; } }
 }
@@ -37,6 +39,40 @@ public static class Keybinds
 {
     const int First = 100000;
     static readonly List<Keybind> all = new List<Keybind>();
+
+    // On a copy of another game (Simulation.IsMirror): a mod key the player pressed whose handler then tried to change
+    // the world (Works refused it here). For a multiplayer mod to do it in the real game (Replay there). Keys that only
+    // change this screen (a window, a minimap) aren't reported.
+    public static event Action<Keybind> NeedsTheRealGame;
+    internal static Keybind Replaying;
+    static readonly List<Keybind> pressed = new List<Keybind>();
+    internal static void Tick()
+    {
+        pressed.Clear();
+        if (NeedsTheRealGame == null || !Simulation.IsMirror || Input.Typing) return;
+        foreach (var k in all) if (k.Key != Keys.None && Input.Pressed(k.Key)) pressed.Add(k);
+        if (pressed.Count > 0) Simulation.RefusedBy.Clear();
+    }
+    // After the mods' Update handlers.
+    internal static void After()
+    {
+        if (pressed.Count == 0) return;
+        var h = NeedsTheRealGame;
+        foreach (var k in pressed.ToList()) if (h != null && Simulation.RefusedBy.Contains(k.Mod)) try { h(k); } catch (Exception ex) { Log.Write("keybinds: " + ex.Message); }
+        pressed.Clear();
+    }
+
+    // Runs the mod's Update handlers once (0 s passed) with that keybind pressed and who as the player (World.Player):
+    // a key another player pressed on their machine, done here (the real game).
+    public static bool Replay(string modId, string keyId, Character who)
+    {
+        var k = all.FirstOrDefault(x => x.Mod == modId && x.Id == keyId);
+        if (k == null) return false;
+        Replaying = k;
+        try { Party.As(who, () => GameEvents.Update.RunFor(modId, h => h(0))); }
+        finally { Replaying = null; }
+        return true;
+    }
 
     // Registers an action (call from Load). id: unique within the mod; label: what the Controls tab shows after the mod's
     // name ("Minimap: Show/hide"): keep it short, the column is narrow. The player's key is kept in the mod's

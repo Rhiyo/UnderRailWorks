@@ -59,6 +59,15 @@ public sealed class WorksTest : WorksMod
         });
         GameEvents.ExperienceGained.Add(this, xp => Log.Info("unaware: " + World.Player.Name + " gained " + xp + " XP"));
         Commands.Add(this, "wt.coopfree", "wt.coopfree: Co-op's travel-together rule off (a mod replacing it)", a => { var api = Mods.Api<object>("Coop"); api.GetType().GetProperty("TravelTogether").SetValue(api, false, null); return "travel together: " + api.GetType().GetProperty("TravelTogether").GetValue(api, null); });
+        var gift = Keybinds.Register(this, "gift", "Test gift", Microsoft.Xna.Framework.Input.Keys.U);
+        GameEvents.Update.Add(this, dt =>
+        {
+            if (!gift.Pressed) return;
+            var ok = World.Player.Inventory.Add("currency\\StygianCoin", 7);
+            var w = Ui.Window(this, "gift", "Gift", Ui.S(300), Ui.S(120));
+            Log.Info("unaware key: " + World.Player.Name + " pressed the gift key: coins " + ok + ", window " + (w != null));
+        });
+        GameEvents.LevelledUp.Add(this, level => Log.Info("unaware: " + World.Player.Name + " reached level " + level));
         Commands.Add(this, "wt.coopping", "wt.coopping: a WorksTest message to the co-op host", a => { Mods.Call("Coop", "SendToHost", this, "ping", new object[] { "hello", "host" }); return "sent"; });
     }
     bool logOutlines, hoverWatch;
@@ -633,7 +642,7 @@ public sealed class WorksTest : WorksMod
             if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
             if (Input.Pressed(Keys.J) && Input.Down(Keys.LeftControl) && Input.Down(Keys.LeftShift)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
             if (Input.Pressed(Keys.U) && !Input.Down(Keys.LeftControl)) Log.Info("trade with the test merchant: " + Trade.Open(World.Placed("workstest_merchant")));
-            if (Input.Pressed(Keys.F11)) { p.GiveExperience(5000, "test"); Log.Info("XP now " + p.Experience + ", level " + p.Level + ", skill points " + p.SkillPoints + ", ability points " + p.AbilityPoints); }
+            if (Input.Pressed(Keys.U)) { p.GiveExperience(5000, "test"); Log.Info("XP now " + p.Experience + ", level " + p.Level + ", skill points " + p.SkillPoints + ", ability points " + p.AbilityPoints); }
             if (Input.Pressed(Keys.F12))
             {
                 var s = World.Placed("stranger_npc");

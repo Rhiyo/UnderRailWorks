@@ -1724,3 +1724,6 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
   AskNumber, Confirm, Choose and Notify.Log go to the acting player's screen when that's another player's; the answer
   runs the callback here as that player. Single player: unchanged. A mod can aim one at a player with
   `Party.As(player, () => Ui.Confirm(...))`.
+- **Keys for the real game:** `Keybinds.NeedsTheRealGame` (on a copy: a mod key whose handler was refused a world
+  change), `Keybinds.Replay(mod, key, who)` (that mod's Update handlers once with the key pressed, who as the player),
+  `IPlayerScreens.IsRemote` (Ui.Window isn't opened here for a remote acting player), `Party.LevelledUp(who, level)`.

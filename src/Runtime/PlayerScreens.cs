@@ -32,6 +32,8 @@ namespace UnderRailWorks
         bool Popup(Character who, RemotePopup popup, Action<string> answer);
         // A line in who's message log. False: show it here.
         bool Message(Character who, string text, Color colour);
+        // who is played on another machine (their windows can't be shown here).
+        bool IsRemote(Character who);
     }
 
     public static class PlayerScreens
@@ -46,6 +48,9 @@ namespace UnderRailWorks
             try { return p.Popup(who, popup, text => Party.As(who, () => answer(text))); }
             catch (Exception ex) { Log.Write("player screens: " + ex.Message); return false; }
         }
+        // The acting player is on another machine: a mod's live window for them isn't opened here.
+        internal static bool ActingIsRemote { get { var who = Party.Acting; var p = Provider; try { return who != null && p != null && p.IsRemote(who); } catch { return false; } } }
+
         internal static bool RouteMessage(string text, Color colour)
         {
             var who = Party.Acting; var p = Provider;
