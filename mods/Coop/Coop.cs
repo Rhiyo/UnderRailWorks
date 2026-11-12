@@ -442,7 +442,7 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.box", "coop.box <id start>: your character opens that container", a => { var b = a.Length == 0 ? null : World.Containers.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return b == null ? "no such container" : Mine("USE", b.EntityId); });
         Commands.Add(this, "coop.threats", "coop.threats: for each joined character, the enemies in the fight and who has noticed whom", a =>
         {
-            var lines = seats.Values.Concat(orphans).Where(x => x.Character != null).Select(x => x.Character.Name + " at " + (int)x.Character.Position.X + "," + (int)x.Character.Position.Y + (x.Character.IsInCombat ? " (in the fight)" : "") + ": " + string.Join("; ", World.CharactersNear(x.Character.Position, 60).Where(e => e != x.Character && e.IsInCombat && e.AttitudeTo(x.Character) == Attitude.Hostile).Select(e => e.Name + " " + (int)Vector2.Distance(new Vector2(e.Position.X, e.Position.Y), new Vector2(x.Character.Position.X, x.Character.Position.Y)) + " tiles" + ", its sight " + e.SightRange + (e.HasNoticed(x.Character) ? ", knows of it" : "")).ToArray())).ToArray();
+            var lines = seats.Values.Concat(orphans).Where(x => x.Character != null).Select(x => x.Character.Name + " at " + (int)x.Character.Position.X + "," + (int)x.Character.Position.Y + (x.Character.IsInCombat ? " (in the fight)" : "") + ": " + string.Join("; ", World.CharactersNear(x.Character.Position, 60).Where(e => e != x.Character && e.IsInCombat && e.AttitudeTo(x.Character) == Attitude.Hostile).Select(e => e.Name + " " + (int)Vector2.Distance(new Vector2(e.Position.X, e.Position.Y), new Vector2(x.Character.Position.X, x.Character.Position.Y)) + " tiles" + ", its sight " + e.SightRange + (e.CanSee(x.Character) ? ", sees it" : "") + (x.Character.CanSee(e) ? ", seen by it" : "")).ToArray())).ToArray();
             var t = string.Join(" | ", lines); Log.Info("threats: " + t); return t;
         });
         Commands.Add(this, "coop.trade", "coop.trade <name>: trade with that merchant (testing)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 200).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0 && x.IsMerchant); return t == null ? "no merchant called that" : Mine("TRADEWITH", KeyHere(t)); });
@@ -510,16 +510,9 @@ public sealed partial class Coop : WorksMod
             foreach (var s in seats.Values.Concat(orphans).Where(x => x.Character != null && !x.Character.IsDead && x.Character.Area != null).ToList())
             {
                 var c = s.Character;
-                // In sight, by each one's own sight range (the sheet's SightRange: the player 13, a Rathound Alpha 8, a
-                // Commoner 10): an enemy in the fight close enough to see this character, or that it can see. Walls aren't
-                // counted. (The enemies' AI memory, HasNoticed, isn't sight: a fight that starts tells them about the
-                // player's whole side.)
-                var foe = World.CharactersNear(c.Position, 60).FirstOrDefault(e =>
-                {
-                    if (e == c || !e.IsInCombat || e.AttitudeTo(c) != Attitude.Hostile) return false;
-                    float d = Vector2.Distance(new Vector2(e.Position.X, e.Position.Y), new Vector2(c.Position.X, c.Position.Y));
-                    return d <= e.SightRange || d <= c.SightRange;
-                });
+                // In sight as the game decides it for the player: an enemy in the fight that can see this character, or that
+                // it can see (each one's own field of view: walls, sight range; Works' Character.CanSee).
+                var foe = World.CharactersNear(c.Position, 60).FirstOrDefault(e => e != c && e.IsInCombat && e.AttitudeTo(c) == Attitude.Hostile && (e.CanSee(c) || c.CanSee(e)));
                 if (!c.IsInCombat)
                 {
                     if (foe != null && Combat.Join(c)) { Log.Info(c.Name + " joins the fight (" + foe.Name + " in sight" + ")"); if (s.Peer != null) s.Peer.Send("SAID", foe.Name + " is in sight: you're in the fight"); }

@@ -169,6 +169,7 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `bool IsDead`
 - `bool IsInCombat` — In the fight: its own flag, or a combatant in the combat manager's list (characters with a player sheet that aren't the player don't get the flag).
 - `void Kill()`
+- `bool CanSee(Character other)` — Its AI can see where other stands now: the game's own field of view (walls and all), as enemies notice the player (bm6.a(tile): in a fight the tiles the fight worked out it sees, else its vision's visible points). False for one without an AI, or in another area.
 - `float SightRange` — How far it sees (tiles): its sheet's SightRange, what its AI's vision uses.
 - `bool HasNoticed(Character other)` — Its AI has detected other (the game's own awareness: unaware -> suspicious -> detected; bm6.e). What makes characters join a fight. False for one without an AI.
 - `float Health`

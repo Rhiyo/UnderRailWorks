@@ -1697,7 +1697,7 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
   quests and the console, never went through amc.a); `Progression.ModifyExperience` now says `Who`, `Reason` (from
   awq.a / amc.a) and `FromOddity` ("studying an oddity: ..."); `GameEvents.CharacterExperienceGained(character, xp)`;
   `GiveExperience` works for any player sheet.
-- **Sight:** `Character.SightRange` (the sheet's: the player 13, a Commoner 10, a Rathound Alpha 8),
+- **Sight:** `Character.CanSee(other)` (the game's field of view, walls and all: bm6.a(tile)), `Character.SightRange` (the sheet's: the player 13, a Commoner 10, a Rathound Alpha 8),
   `Character.HasNoticed(other)` (its AI's detected state, bm6.e; not sight: a starting fight tells the enemies about
   the player's whole side).
 - **A copy of another game:** `Simulation.IsMirror` makes Works' world-changing calls refuse (logged once each) and

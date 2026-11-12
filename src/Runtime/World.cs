@@ -87,6 +87,20 @@ public sealed partial class Character
     public bool IsInCombat { get { if (Need.IsInCombat) return true; var m = Combat.Manager; return m != null && m.ahg() && m.ahu(Data) != null; } }
     public void Kill() { Need.a((cwt)null, (cru)null, false); }
 
+    // Its AI can see where other stands now: the game's own field of view (walls and all), as enemies notice the player
+    // (bm6.a(tile): in a fight the tiles the fight worked out it sees, else its vision's visible points). False for one
+    // without an AI, or in another area.
+    public bool CanSee(Character other)
+    {
+        var me = Entity as c5x;
+        var ai = me == null ? null : me.GetAspect<bm6>();
+        var area = other == null ? null : other.Area;
+        if (ai == null || area == null || Area == null || area.Game != Area.Game) return false;
+        var at = other.Position;
+        var tile = Areas.Tile(area.Game, (int)Math.Round(at.X), (int)Math.Round(at.Y));
+        return tile != null && ai.a(tile);
+    }
+
     // How far it sees (tiles): its sheet's SightRange, what its AI's vision uses.
     public float SightRange { get { return Need.SightRange; } }
     // Its AI has detected other (the game's own awareness: unaware -> suspicious -> detected; bm6.e). What makes

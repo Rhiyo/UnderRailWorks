@@ -206,8 +206,11 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 
 ## Round 3 (2026-11-12, Co-op 0.8-0.9): built from the design below
 
-- **Fights by sight:** a joined character is in a fight when an enemy in it is within the enemy's own sight range of
-  it, or within its own range of the enemy (each sheet's SightRange; walls not counted). Tested 16 tiles out, 12 in.
+- **Fights by sight:** a joined character is in a fight when an enemy in it can see it, or it can see the enemy, by
+  the game's own field of view (Works' Character.CanSee: bm6.a(tile), the tiles a fight works out each combatant sees,
+  else its vision's visible points: walls and sight ranges as for the player). Tested: 16 and 10 tiles away without a
+  line of sight it stayed out, and joined when it could see the Rathound. (A first version used distance against each
+  sheet's SightRange; the player pointed out single player uses line of sight.)
 - **Trading:** a conversation's trade opens on the joiner's machine (their character, their money, the merchant's
   stock packed and sent); on closing, the merchant's stock and the joiner's sheet go back. Tested: a throwing net
   blueprint bought, 500 -> 458 charons. A mod's spawned merchant gets its store on the joiner too.
