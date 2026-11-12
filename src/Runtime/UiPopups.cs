@@ -112,7 +112,8 @@ static class UiPopups
 
     internal static void Answer(WorksMod mod, Action run)
     {
-        try { run(); } catch (Exception ex) { Log.Write("mods: " + mod.Id + ": an answer failed: " + ex.Message); }
+        try { run(); }
+        catch (Exception ex) { if (mod != null) ModErrors.Report(mod.Id, "a popup's answer", ex); else Log.Write("ui: a popup's answer failed: " + ex.Message); }
     }
 
     // Modal on the interface's root, centred on the screen as it is now.
