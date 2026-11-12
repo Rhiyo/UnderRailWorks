@@ -205,6 +205,18 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
 
+## Enemy targeting (Co-op 1.11, 2026-11-13)
+
+- Bug: after the first save while a player character was in the world (and the world is saved for every join),
+  enemies stopped starting fights. Works' World.Adopt made a Placement with the default Friendly = true, so putting
+  the character back after the save made it passive and neutral. Adopt now leaves the character as it is.
+- Enemies go for joined players as for the host (tested: a Rathound next to Mira targeted and bit her).
+- A downed player is left alone: enemies after them drop them (Works' Ai.SetCurrentTarget), choose again among the
+  players still standing (Ai.ChooseTarget) and any action aimed at someone downed is called off (Ai.Acting).
+  Tested: Mira downed, the Rathound turned on the host.
+- A downed joiner no longer gets "Your turn".
+- Status effects mirrored to joiners also wear off there (tested: a stun, then Second Wind, then nothing, both sides).
+
 ## Lighter sheet updates (Co-op 1.10, 2026-11-12)
 
 - A changed sheet (items, XP, level) is swapped into the existing body (Works' Character.ReplaceSheet: the provider

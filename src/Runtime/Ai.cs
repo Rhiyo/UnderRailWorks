@@ -52,6 +52,20 @@ namespace UnderRailWorks
         // Whether an NPC flees this step (the game's reasons: fear, civilians in danger, Scrambled Cortex). A handler
         // returns true (flee), false (don't: it fights or acts normally) or null (the game's choice). First answer wins.
         public static readonly Hook<Func<NpcFlight, bool?>> ShouldFlee = new Hook<Func<NpcFlight, bool?>>("Ai.ShouldFlee");
+
+        // The character an NPC's AI is after now (its memory's current target), or null. Set null: it chooses again.
+        public static Character CurrentTarget(Character npc)
+        {
+            var ai = npc == null ? null : (npc.Entity as c5x)?.GetAspect<bm6>();
+            var t = ai == null ? null : new bzv(ai.y6()).g();
+            return t == null ? null : Character.Of(t.a8());
+        }
+        public static void SetCurrentTarget(Character npc, Character target)
+        {
+            var ai = npc == null ? null : (npc.Entity as c5x)?.GetAspect<bm6>();
+            if (ai == null) return;
+            new bzv(ai.y6()).a(target == null ? null : (target.Entity as c5x)?.GetAspect<amc>());
+        }
     }
 }
 

@@ -57,6 +57,14 @@ public sealed partial class Coop
             outOfFight = 0;
             foreach (var c in downed.ToList()) Revive(c, null);
         });
+        // Enemies leave a downed player alone: one whose target is down goes for the nearest player still standing.
+        Ai.ChooseTarget.Add(this, t =>
+        {
+            if (listener == null || t.Chosen == null || !downed.Contains(t.Chosen) || t.Npc == null) return null;
+            return Party.Members.Where(c => !c.IsDead && !downed.Contains(c) && t.Npc.AttitudeTo(c) == Attitude.Hostile).OrderBy(c => Dist(c, t.Npc)).FirstOrDefault();
+        });
+        // ...and any action aimed at a downed player is called off (the NPC's tree tries something else).
+        Ai.Acting.Add(this, a => { var t = a.Target as Character; if (listener != null && t != null && downed.Contains(t)) a.Cancel = true; });
         // A downed joined character's turn passes; the host's own is theirs to end (the game shows it as incapacitated).
         Combat.TurnStarted.Add(this, c => { if (listener != null && c != null && downed.Contains(c) && !c.IsPlayer) c.EndTurn(); });
     }
@@ -66,6 +74,8 @@ public sealed partial class Coop
         if (!downed.Add(c)) return;
         c.Health = 1;
         StatusEffects.Apply(c, "incapacitated", 0, true);
+        // Enemies after them drop them (they choose again: ChooseTarget below sends them to someone standing).
+        foreach (var e in World.CharactersNear(c.Position, 60).Where(e => e != c && !e.IsDead && Ai.CurrentTarget(e) == c)) Ai.SetCurrentTarget(e, null);
         Notify.Log("Co-op: " + c.Name + " is down" + (deathRule == 1 ? ": another player can revive them (Revive, next to them)" : ": they'll get up when the fight is over"), Bad);
         foreach (var s in seats.Values.Where(x => x.Peer != null)) s.Peer.Send("SAID", (s.Character == c ? "you're" : c.Name + " is") + " down" + (deathRule == 1 ? " (another player can revive " + (s.Character == c ? "you" : "them") + ")" : " until the fight is over"));
         if (c.IsTakingTurn && !c.IsPlayer) c.EndTurn();

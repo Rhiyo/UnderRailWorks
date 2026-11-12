@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.10.0")]
+[assembly: System.Reflection.AssemblyVersion("1.11.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -557,7 +557,8 @@ public sealed partial class Coop : WorksMod
             if (c == null) return;
             if (partner != null && c == partner) Log.Info("partner's turn" + Points(c));
             var seat = seats.Values.FirstOrDefault(s => s.Character == c);
-            if (seat != null) { seat.Peer.Send("TURN", Combat.ActionPoints(c), Combat.MovementPoints(c)); Log.Info(c.Name + "'s turn (" + seat.Peer.Name + ")" + Points(c)); }
+            if (seat != null && downed.Contains(c)) { }     // down: its turn passes (CoopDeath), no "your turn"
+            else if (seat != null) { seat.Peer.Send("TURN", Combat.ActionPoints(c), Combat.MovementPoints(c)); Log.Info(c.Name + "'s turn (" + seat.Peer.Name + ")" + Points(c)); }
             else if (orphans.Any(o => o.Character == c)) { c.EndTurn(); Log.Info(c.Name + "'s turn passed (no player)"); }
         });
         // In a fight the whole zone is turn-based and every character is in the turn order (the game's rule): joined

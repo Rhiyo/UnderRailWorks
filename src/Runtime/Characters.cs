@@ -264,7 +264,8 @@ public static partial class World
         var zone = ZoneId; var area = c.Area;
         if (e == null || zone == null || area == null) return;
         var id = "spawn:" + (++spawned);
-        var p = new Placement { Id = id, Zone = zone, Area = area.Name, X = (int)c.Position.X, Y = (int)c.Position.Y, Blueprint = name, Temporary = true };
+        // Friendly false: put back after a save (Apply), it's left as it is (the default made it passive and neutral).
+        var p = new Placement { Id = id, Zone = zone, Area = area.Name, X = (int)c.Position.X, Y = (int)c.Position.Y, Blueprint = name, Temporary = true, Friendly = false };
         p.When = Condition.Code(() => false);
         lock (placements) placements.Add(p);
         placed[id] = e;

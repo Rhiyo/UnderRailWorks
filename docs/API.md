@@ -32,6 +32,8 @@ Values: `Self, Character`
 - `static readonly Hook<Action<NpcAction>> Acting = new Hook<Action<NpcAction>>("Ai.Acting")`
 - `static readonly Hook<Action<NpcTurn>> TakingTurn = new Hook<Action<NpcTurn>>("Ai.TakingTurn")`
 - `static readonly Hook<Func<NpcFlight, bool?>> ShouldFlee = new Hook<Func<NpcFlight, bool?>>("Ai.ShouldFlee")` — Whether an NPC flees this step (the game's reasons: fear, civilians in danger, Scrambled Cortex). A handler returns true (flee), false (don't: it fights or acts normally) or null (the game's choice). First answer wins.
+- `static Character CurrentTarget(Character npc)` — The character an NPC's AI is after now (its memory's current target), or null. Set null: it chooses again.
+- `static void SetCurrentTarget(Character npc, Character target)`
 
 ## ApplyResult  _(enum, Hud.cs)_
 

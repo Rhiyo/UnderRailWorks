@@ -1740,3 +1740,4 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
 - **Buttons for the real game:** `Ui.ButtonNeedsTheRealGame` (on a copy: a mod button whose click was refused a world
   change), `Ui.PressButton(mod, text, who)`; a Ui.Button's click runs as its mod (ModScope.Current).
 - `Character.ReplaceSheet(path)`: a player-style character (not the player) takes the sheet from a .char in place.
+- `Ai.CurrentTarget(npc)` / `Ai.SetCurrentTarget(npc, target)`: the character an NPC's AI is after (null: it chooses again).

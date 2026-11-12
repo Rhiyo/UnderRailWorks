@@ -76,6 +76,9 @@ public sealed class WorksTest : WorksMod
         Commands.Add(this, "wt.fx", "wt.fx <name> [code]: apply a status (none: list them)", a => { var c = World.Characters.FirstOrDefault(x => x.Name == a[0]); if (c == null) return "none"; if (a.Length > 1) StatusEffects.Apply(c, a[1], 3); Log.Info("fx " + c.Name + ": " + string.Join(",", c.StatusEffects.Select(e => e.Code).ToArray())); return "ok"; });
         Hud.WhenReady(this, root => { var b = Ui.Button("Test gift", () => { var ok = World.Player.Inventory.Add("currency\\StygianCoin", 7); Log.Info("unaware button: " + World.Player.Name + " clicked Test gift: coins " + ok); }); Hud.AddPart(this, "Test gift", b, HudAnchor.TopRight, 70, 62); });
         Commands.Add(this, "wt.belt", "wt.belt: the player's first bag item onto the belt", a => { var p = World.Player; var i = p.Inventory.Items.FirstOrDefault(); var ok = i != null && p.Equipment.ToQuickSlot(i); Log.Info("belt " + (i == null ? "nothing" : i.ToString()) + ": " + ok); return "belt " + ok; });
+        Commands.Add(this, "wt.release", "wt.release <name>: release a controlled character (its AI back)", a => { var c = World.Characters.FirstOrDefault(x => x.Name == a[0]); if (c == null) return "none"; CharacterControl.Release(c); Log.Info("released " + c.Name); return "ok"; });
+        Commands.Add(this, "wt.att", "wt.att <a> <b>: a's attitude to b", a => { var x = World.Characters.FirstOrDefault(c => c.Name == a[0]); var y = World.Characters.FirstOrDefault(c => c.Name == a[1]); Log.Info("att " + a[0] + " -> " + a[1] + ": " + (x == null || y == null ? "?" : x.AttitudeTo(y) + " (factions " + x.Faction + " / " + y.Faction + ", passive " + x.Passive + "/" + y.Passive + ")")); return "ok"; });
+        Commands.Add(this, "wt.unclone", "wt.unclone: the clone taken out of the world", a => { var ok = clone != null && clone.RemoveFromWorld(); Log.Info("unclone " + ok); return "ok"; });
         Commands.Add(this, "wt.coopping", "wt.coopping: a WorksTest message to the co-op host", a => { Mods.Call("Coop", "SendToHost", this, "ping", new object[] { "hello", "host" }); return "sent"; });
     }
     bool logOutlines, hoverWatch;
@@ -352,7 +355,7 @@ public sealed class WorksTest : WorksMod
         Commands.Add(this, "wt.feat", "wt.feat: give the test feat", args => { Commands.CloseConsole(); var before = "Str " + World.Player.Ability("Strength") + " Guns " + World.Player.Skill("Guns"); return before + " -> give: " + Feats.Give(World.Player, grit.Key) + " Str " + World.Player.Ability("Strength") + " Guns " + World.Player.Skill("Guns") + ", has: " + World.Player.HasFeat(grit.Key) + "; feats: " + string.Join(", ", World.Player.Feats); });
         Ai.ChooseTarget.Add(this, c => { if (++aiLogs < 12) Log.Info("ai: " + c.Npc + " targets " + c.Chosen); return null; });
         Ai.TakingTurn.Add(this, t => { if (aiHold && !t.Npc.Name.Contains("Rathound")) { t.EndTurn = true; if (++aiLogs < 30) Log.Info("ai: held " + t.Npc); } });
-        Ai.Acting.Add(this, a => Log.Info("ai: " + a.Npc + " uses " + a.Action));
+        Ai.Acting.Add(this, a => Log.Info("ai: " + a.Npc + " uses " + a.Action + (a.Target is Character ? " on " + ((Character)a.Target).Name : "")));
         Ai.ShouldFlee.Add(this, f => { if (aiFlee && f.Npc.Name.Contains("Rathound")) { if (++aiLogs < 40) Log.Info("ai: rathound flees (game: " + f.Fleeing + ")"); return true; } return null; });
         var wind = Abilities.Add(this, "wind", "Second Wind", "Heals 20 health.", "art/wind.png", cooldown: 3, key: Microsoft.Xna.Framework.Input.Keys.F12);
         wind.Used += (user, target) => { user.Health += 20; Log.Info("ability: second wind, health " + user.Health); };
