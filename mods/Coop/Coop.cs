@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.8.0")]
+[assembly: System.Reflection.AssemblyVersion("1.9.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -72,7 +72,7 @@ public sealed partial class Coop : WorksMod
     string WriteSheet(string name, string base64) { var path = SheetPath(name); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); System.IO.File.WriteAllBytes(path, Convert.FromBase64String(base64)); return path; }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(); }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
     Listener listener;
     static float Dist(Character a, Character b) { return Vector2.Distance(new Vector2(a.Position.X, a.Position.Y), new Vector2(b.Position.X, b.Position.Y)); }
     static bool Sees(Character who, Character other) { return who.CanSee(other) && Dist(who, other) <= who.SightRange; }
@@ -145,6 +145,7 @@ public sealed partial class Coop : WorksMod
         if (ModMessage(p.Name, w)) return;
         if (w[0] == "POPUPANS") { PopupAnswered(w); return; }
         if (w[0] == "KEY") { KeyFrom(seat, w); return; }
+        if (w[0] == "BUTTON") { ButtonFrom(seat, w); return; }
         switch (w[0])
         {
             case "PICK":

@@ -109,6 +109,8 @@ public sealed partial class Coop
         var walks = new Dictionary<string, string>();
         foreach (var c in everyone) { var key = KeyOf(c); var t = c.WalkTarget; if (key != null) walks[key] = t == null ? "" : t.Value.X + " " + t.Value.Y; }
         var doors = World.Doors.ToDictionary(d => d.EntityId, d => d.IsOpen ? "1" : "0");
+        var statuses = new Dictionary<string, string>();
+        foreach (var c in everyone) { var key = KeyOf(c); if (key == null || key.StartsWith("c:") || c.IsPlayer) continue; statuses[key] = string.Join(",", c.StatusEffects.Select(e => e.Code).Distinct().OrderBy(x => x).ToArray()); }
         foreach (var s in watching)
         {
             foreach (var kv in walks)
@@ -117,6 +119,13 @@ public sealed partial class Coop
                 if (s.Walks.TryGetValue(kv.Key, out old) && old == kv.Value) continue;
                 s.Walks[kv.Key] = kv.Value;
                 if (kv.Value.Length > 0 && s.Sent.ContainsKey(kv.Key)) { var xy = kv.Value.Split(' '); s.Peer.Send("WALK", kv.Key, xy[0], xy[1]); }
+            }
+            foreach (var kv in statuses)
+            {
+                string old;
+                if (s.Statuses.TryGetValue(kv.Key, out old) ? old == kv.Value : kv.Value.Length == 0) continue;
+                s.Statuses[kv.Key] = kv.Value;
+                s.Peer.Send("FX", kv.Key, kv.Value);
             }
             foreach (var kv in doors)
             {
@@ -153,7 +162,7 @@ public sealed partial class Coop
 
     void HostMirrorMessage(Seat seat, string[] w)
     {
-        if (w[0] == "LOADED") { seat.InWorld = true; seat.Sent.Clear(); seat.Walks.Clear(); seat.Doors.Clear(); seat.Peer.Send("YOU", "c:" + (seat.Character == null ? "" : seat.Character.Name)); Log.Info(seat.Peer.Name + " is in the world"); }
+        if (w[0] == "LOADED") { seat.InWorld = true; seat.Sent.Clear(); seat.Walks.Clear(); seat.Doors.Clear(); seat.Statuses.Clear(); seat.Peer.Send("YOU", "c:" + (seat.Character == null ? "" : seat.Character.Name)); Log.Info(seat.Peer.Name + " is in the world"); }
     }
 
     // --- Joiner -------------------------------------------------------------------------------------------------
@@ -198,6 +207,17 @@ public sealed partial class Coop
                 Character c; int x, y;
                 if (!spawned.TryGetValue(w[1], out c)) c = w[1].StartsWith("c:") ? null : World.ByEntityId(w[1]);
                 if (c != null && int.TryParse(w[2], out x) && int.TryParse(w[3], out y)) c.WalkTo(x, y);
+                return;
+            }
+            case "FX":
+            {
+                // A character's status effects on the host (stunned, burning...): the same here, for what they show.
+                if (!inWorld || w.Length < 3) return;
+                var c = Local(w[1]);
+                if (c == null || c.IsDead) return;
+                var want = new HashSet<string>(w[2].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries));
+                foreach (var e in c.StatusEffects.Where(e => !want.Contains(e.Code)).ToList()) e.Remove();
+                foreach (var code in want.Where(x => !c.HasStatusEffect(x))) StatusEffects.Apply(c, code, 0, true);
                 return;
             }
             case "DOOR":

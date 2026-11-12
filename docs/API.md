@@ -1683,6 +1683,8 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static float Scale` — How much bigger the interface is than Small: the game's own factor for its sizes (wj.g4: Small 1, Large 1.5, Huge 1.75; Classic 1). Design a mod's layout at Small and pass its sizes through S.
 - `static int S(int small)`
 - `static UiElement Label(string text, int width = 300)` — A line of text in the game's interface font (left-aligned).
+- `static event Action<string, string> ButtonNeedsTheRealGame` — On a copy of another game (Simulation.IsMirror): a mod button the player clicked whose handler was refused a world change (mod id, its text): for a multiplayer mod to click it in the real game (PressButton there).
+- `static bool PressButton(string mod, string text, Character who)` — Clicks that mod's button with that text (one on screen now) with who as the player (World.Player). False: none.
 - `static UiElement Button(string text, Action onClick)` — A button styled like the options window's (Accept, Cancel), as wide as its text needs.
 - `static UiTickBox TickBox(bool value)` — The game's tick box (as in its options).
 - `static UiTextBox TextBox(int width, int maxLength = 40)` — A text box (the game's own field, c68, as its split-stack dialog sets one up): click it to type; Text reads it. Asking the player for a name or a number? Don't build a window around this: use Ui.Ask (text) or Ui.AskNumber, the game's own popups, right at every interface size (UI.md). This is for a field that stays in your own panel.

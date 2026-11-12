@@ -205,6 +205,16 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
 
+## Status effects, mod buttons (Co-op 1.9, 2026-11-12)
+
+- NPCs' status effects (stunned, burning...) mirror to joiners (FX <key> <codes>): applied or removed on the copy.
+  Tested: Waylon stunned on the host, stunned on the joiner.
+- Mod buttons (Works' Ui.Button) clicked on a joiner's machine whose handler was refused a world change are forwarded
+  (Ui.ButtonNeedsTheRealGame); the host clicks its own button of that mod with that text (Ui.PressButton), as the
+  joiner. A button's click now runs as its mod (ModScope), which is also how the refusal is told apart. Works for
+  buttons on screen on both machines (a mod's HUD buttons); one only in a joiner's window can't be found on the host
+  (they're told). Tested with a HUD button giving 7 coins: refused on the joiner, given on the host as Mira.
+
 ## Classic XP, level-ups, rejoining mid-fight (Co-op 1.8, 2026-11-12)
 
 - Tested in a new Classic-XP game made in the test copy (New Game, Classic, the imported character, intro skipped):

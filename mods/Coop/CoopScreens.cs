@@ -46,6 +46,18 @@ public sealed partial class Coop : IPlayerScreens
         };
     }
 
+    void LoadButtons()
+    {
+        Ui.ButtonNeedsTheRealGame += (mod, text) => { if (host != null && !host.Closed && inWorld && mod != Id) host.Send("BUTTON", mod, text); };
+    }
+
+    void ButtonFrom(Seat seat, string[] w)
+    {
+        if (w.Length < 3 || seat.Character == null) return;
+        if (Ui.PressButton(w[1], w[2], seat.Character)) Log.Info(seat.Peer.Name + " clicked " + w[1] + "/" + w[2]);
+        else seat.Peer.Send("SAID", "that button (" + w[2] + ") can't be pressed from your machine");
+    }
+
     void KeyFrom(Seat seat, string[] w)
     {
         if (w.Length < 3 || seat.Character == null) return;
@@ -76,5 +88,5 @@ public sealed partial class Coop : IPlayerScreens
         }
     }
 
-    void LoadScreens() { PlayerScreens.Provider = this; LoadKeys(); }
+    void LoadScreens() { PlayerScreens.Provider = this; LoadKeys(); LoadButtons(); }
 }

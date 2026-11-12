@@ -60,6 +60,21 @@ public static partial class Ui
         return UiElement.Of(label);
     }
 
+    sealed class ModButton { public string Mod, Text; public Action Run; public WeakReference Control; }
+    static readonly List<ModButton> Buttons = new List<ModButton>();
+    // On a copy of another game (Simulation.IsMirror): a mod button the player clicked whose handler was refused a
+    // world change (mod id, its text): for a multiplayer mod to click it in the real game (PressButton there).
+    public static event Action<string, string> ButtonNeedsTheRealGame;
+    // Clicks that mod's button with that text (one on screen now) with who as the player (World.Player). False: none.
+    public static bool PressButton(string mod, string text, Character who)
+    {
+        ModButton b;
+        lock (Buttons) b = Buttons.LastOrDefault(x => x.Mod == mod && x.Text == text && x.Control.IsAlive && ((euz)x.Control.Target).Parent != null);
+        if (b == null) return false;
+        Party.As(who, b.Run);
+        return true;
+    }
+
     // A button styled like the options window's (Accept, Cancel), as wide as its text needs.
     public static UiElement Button(string text, Action onClick)
     {
@@ -70,7 +85,17 @@ public static partial class Ui
         var font = resources == null || button.Font == null ? null : resources.GetResource<Microsoft.Xna.Framework.Graphics.SpriteFont>(button.Font);
         if (font != null) button.Size = new esj(Math.Max(UnderrailDropdownScroll.W(button.Size), (int)font.MeasureString(text).X + 40), UnderrailDropdownScroll.H(button.Size));
         e4z.j(button);     // its click sound
-        button.c(new EventHandler<b25>((sender, e) => { try { onClick(); } catch (Exception ex) { Log.Write("mods: a button failed: " + ex); } }));
+        var owner = ModScope.Current;
+        Action run = () => { var was = ModScope.Current; ModScope.Current = owner; try { onClick(); } catch (Exception ex) { Log.Write("mods: a button failed: " + ex); } finally { ModScope.Current = was; } };     // the mod's own code while it runs
+        button.c(new EventHandler<b25>((sender, e) =>
+        {
+            // On a copy of another game: a click whose handler was refused a world change goes to the real game.
+            if (Simulation.IsMirror && owner != null) Simulation.RefusedBy.Remove(owner);
+            run();
+            if (Simulation.IsMirror && owner != null && Simulation.RefusedBy.Contains(owner) && ButtonNeedsTheRealGame != null)
+                try { ButtonNeedsTheRealGame(owner, text); } catch (Exception ex) { Log.Write("buttons: " + ex.Message); }
+        }));
+        lock (Buttons) { Buttons.RemoveAll(b => !b.Control.IsAlive); Buttons.Add(new ModButton { Mod = owner, Text = text, Run = run, Control = new WeakReference(button) }); }
         return UiElement.Of(button);
     }
 

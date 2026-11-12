@@ -1737,3 +1737,5 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
 - **Deaths and game over:** `GameEvents.Dying` (DeathAttempt: cancel and the character is left at 1 health; prefix on
   efk.a(cwt, cru, bool), every death's path), `GameEvents.GameOver` (cancel: the game goes on; dgz.cr, which fires
   for any death in the player's faction), `World.EndGame()` (the game's death screen, dka.y()).
+- **Buttons for the real game:** `Ui.ButtonNeedsTheRealGame` (on a copy: a mod button whose click was refused a world
+  change), `Ui.PressButton(mod, text, who)`; a Ui.Button's click runs as its mod (ModScope.Current).
