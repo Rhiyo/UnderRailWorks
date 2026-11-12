@@ -2,6 +2,31 @@
 
 Working list for UnderRailWorks. Design, decisions and status are in UnderRailWorks.md.
 
+## Before releasing the API as 1.0 (Nov 2026 review; decisions for Sean)
+
+Done (Nov 13): the API baseline and build gate (docs/Versioning.md), the load-time check of mods (ModCheck), [Preview]
+for parts not ready to freeze, the implicit public constructors, Cancellable everywhere, owner-less registrations,
+Func hooks turned into argument objects, the obvious duplicates made internal. Still to decide:
+
+- [ ] **When to call it 1.0.** Raise `WorksApi.Major`/`Minor` to 1.0 (WorksMod.cs) and every shipped mod's
+  `"works"` to "1.0" (one sed), and release; from then on the build refuses breaking changes.
+- [ ] **What stays Preview at 1.0**: co-op's plumbing (Simulation, PlayerScreens, TalkAs, PlayerOrder, CharacterControl,
+  remote Character members...) and the drawing surface (Layer, WorldDraw, Outlines...). Promote (drop [Preview]) only
+  what has a second user or a shape we're sure of.
+- [ ] **Two save-data stores**: `WorksMod.Data` (ModData: the save's own global variables) and `SaveData` (JSON beside
+  the save; also CharacterData). Keep both, or mark one [Obsolete] (Data: 4 mods use it).
+- [ ] **Overlapping names**: `GameEvents.Dying` (cancellable, preview) / `CharacterDying` / `CharacterDied`;
+  `Hud.WhenReady` / `UiEvents.HudCreated`; `Ui.Scale` / `Interface.Scale`; `World.Despawn` / `Character.RemoveFromWorld`.
+- [ ] **Naming consistency** (cheap now, costly after 1.0): Add / Register / Define for registering; Colour vs Color
+  and Centre vs Center (pick one, keep the other as [Obsolete] aliases); "Ability" for both base stats and usable
+  abilities; actor property names (Who / Character / Npc / User / Taker / Opener).
+- [ ] **Positional GameEvents** (ZoneLoaded(string, bool), ContainerOpened(...), CharacterDying(...)...): kept; new
+  information comes as a new event or an args overload, never a changed delegate.
+- [ ] `WorksMod.Load/PostLoad/Unload` are public (another mod could call them if handed the object): protected would
+  need `public override` -> `protected override` in every mod.
+- [ ] Reference assemblies per API version for the SDK (a mod built against 1.0 can't use 1.1 members by accident);
+  ModCheck already refuses such a mod at load, by name.
+
 ## More save testing (.NET 10)
 
 Every file the game writes must load in the stock, unmodded game. `tools/savecheck/check-saves.sh [--play]` checks
