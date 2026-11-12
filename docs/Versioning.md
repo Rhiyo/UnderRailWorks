@@ -86,6 +86,10 @@ Mods built only on the API need nothing: the same mod DLL keeps working on the u
 
 ## Testing aids
 
+- `tools/smoketest/smoke.sh`: one scripted session with the build and the test mods, 38 checks over the loader's
+  rules and the API areas mods use most (release.sh runs it). `tools/savecheck/check-saves.sh --play`: saves stay
+  loadable by the stock game.
+
 - `WORKS_FAIL_GROUP=<group name>` (environment): that hook group fails at start, as after a game update.
 - `tools/testmods/HalfBroken`: fails in Load after registering things; nothing it registered may stay.
 - `tools/testmods/NeedsNewer`: built against a stand-in for a newer Works; must be refused by name.

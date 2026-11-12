@@ -53,6 +53,7 @@ grep -q "Value = \"$VERSION\"" "$VFILE" || die "couldn't set the version in $VFI
 API_RELEASE=1 ./build.sh
 tools/check-release.sh
 tools/savecheck/check-saves.sh --play
+tools/smoketest/smoke.sh
 
 # 5. Package.
 ORIG="$GAME/underrail.exe"; [ -f "$GAME/underrail.exe.backup" ] && ORIG="$GAME/underrail.exe.backup"

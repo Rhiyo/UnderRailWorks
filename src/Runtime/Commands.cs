@@ -46,7 +46,7 @@ namespace UnderRailWorks
             Command c;
             if (words.Count == 0 || !all.TryGetValue(words[0], out c)) return false;
             var was = ModScope.Current; ModScope.Current = c.Mod;
-            try { var r = c.Run(words.Skip(1).ToArray()); if (r != null) Print(r); }
+            try { var r = c.Run(words.Skip(1).ToArray()); if (r != null) { Print(r); Log.Write("console: " + line + " -> " + r); } }
             catch (Exception ex) { Print("[error]" + c.Name + " failed: " + ex.Message); ModErrors.Report(c.Mod, "command " + c.Name, ex); }
             finally { ModScope.Current = was; }
             return true;
