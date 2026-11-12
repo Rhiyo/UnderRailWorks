@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.7.0")]
+[assembly: System.Reflection.AssemblyVersion("1.8.0")]
 
 public sealed partial class Coop : WorksMod
 {

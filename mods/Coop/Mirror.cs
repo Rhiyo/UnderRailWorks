@@ -43,9 +43,15 @@ public sealed partial class Coop
     {
         if (seat.Peer == null || seat.Peer.Closed) return;
         seat.InWorld = false; seat.Sent.Clear();
-        if (!SaveGames.CanSave) { if (!seat.WorldPending) seat.Peer.Send("SAID", "you'll see the world when the host can save (after this fight)"); seat.WorldPending = true; return; }
+        // The game's own "may save now" says no in a fight (a rule for the player's saves); this save is only for sending,
+        // so in a fight it's written anyway (cnk.arg works then), and only if that fails does the joiner wait.
+        if (!SaveGames.CanSave && !Combat.InCombat) { if (!seat.WorldPending) seat.Peer.Send("SAID", "you'll see the world when the host can save"); seat.WorldPending = true; return; }
         seat.WorldPending = false;
-        if (!SaveGames.SaveNow(HostSave)) { seat.Peer.Send("SAID", "the host couldn't save the game to send it"); Log.Warn("couldn't save " + HostSave); return; }
+        if (!SaveGames.SaveNow(HostSave))
+        {
+            if (Combat.InCombat) { if (!seat.WorldPending) seat.Peer.Send("SAID", "you'll see the world after this fight"); seat.WorldPending = true; return; }
+            seat.Peer.Send("SAID", "the host couldn't save the game to send it"); Log.Warn("couldn't save " + HostSave); return;
+        }
         var folder = SaveGames.Folder(HostSave);
         var files = Directory.GetFiles(folder, "*", SearchOption.AllDirectories).Select(f => new KeyValuePair<string, byte[]>(f.Substring(folder.Length).TrimStart('\\', '/').Replace('\\', '/'), File.ReadAllBytes(f))).ToList();
         Log.Info("sending the world to " + seat.Peer.Name + ": " + files.Count + " files, " + files.Sum(f => f.Value.Length) / 1024 + " KB");
@@ -83,7 +89,7 @@ public sealed partial class Coop
     readonly Dictionary<string, Character> known = new Dictionary<string, Character>();     // what each key was, to tell dead from gone
     void HostMirror(double dt)
     {
-        foreach (var s in seats.Values.Where(s => s.WorldPending && s.Character != null).ToList()) if (SaveGames.CanSave) SendWorld(s);
+        foreach (var s in seats.Values.Where(s => s.WorldPending && s.Character != null).ToList()) if (SaveGames.CanSave) SendWorld(s);     // (a fight's save failed: after it)
         if ((mirrorTimer -= dt) > 0) return;
         mirrorTimer = 0.1;
         var watching = seats.Values.Where(s => s.InWorld && s.Peer != null && !s.Peer.Closed).ToList();

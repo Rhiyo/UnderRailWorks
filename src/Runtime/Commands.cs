@@ -94,7 +94,7 @@ namespace UnderRailWorks
                 var c = World.Player == null || a.Length == 0 ? null : World.CharactersNear(World.Player.Position, 100).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0);
                 if (c == null) return "nobody";
                 var e = c.Entity; var z = typeof(b0b).GetField("z").GetValue(e);
-                var line = c.Name + ": footprint " + (z == null ? "none" : z.ToString()) + ", size " + e.Size + ", sheet " + c.HasPlayerSheet + ", state " + typeof(b0b).GetField("j").GetValue(e) + ", in combat " + c.IsInCombat + ", sight " + c.SightRange;
+                var line = c.Name + ": footprint " + (z == null ? "none" : z.ToString()) + ", size " + e.Size + ", sheet " + c.HasPlayerSheet + ", state " + typeof(b0b).GetField("j").GetValue(e) + ", in combat " + c.IsInCombat + ", sight " + c.SightRange + ", XP " + c.Experience + ", level " + c.Level;
                 Log.Write(line); return line;
             });
             Add("UnderRailWorks", "works.export", "works.export: export the player character (for a new game's Import)", a => World.ExportPlayer() ? "exported" : "[error]no game");

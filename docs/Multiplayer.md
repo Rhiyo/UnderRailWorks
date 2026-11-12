@@ -205,6 +205,17 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
 
+## Classic XP, level-ups, rejoining mid-fight (Co-op 1.8, 2026-11-12)
+
+- Tested in a new Classic-XP game made in the test copy (New Game, Classic, the imported character, intro skipped):
+  Mira killed a Rathound: "XP 70 earned by Mira, 35 to each other player (50%)"; her XP 70, the host's 35. The game
+  gives kill XP to the host's player; Co-op moves it to the killer.
+- Level-up: Mira given 3000 XP on the host; on the joiner's machine the game's level-up screen (Level 2) opened from
+  her character screen; her sheet came back at level 2 and the host's mods heard "Mira reached level 2" as her.
+- Rejoining (or joining) during a fight: the world is now saved and sent during the fight too (the game's "may save"
+  is a rule for the player's saves; cnk.arg works in a fight). Tested: left and rejoined mid-fight, the world came at
+  once ("asd's turn").
+
 ## Corpses and hostility (Co-op 1.7, 2026-11-12)
 
 - Deaths now play out on joiners (the frozen world also runs the dying action d3q, the body's fade ad6 and removal
