@@ -5,7 +5,7 @@
 // detection difficulty, every couple of seconds.
 //   GameEvents.TrapDisarming.Add(this, d => { if (d.Character.HasFeat(feat.Key)) d.Difficulty -= 10; });
 //   GameEvents.TrapDisarmed.Add(this, r => { if (r.Outcome == DisarmOutcome.CriticalFailure) Notify.OverPlayer("Ouch"); });
-//   Traps.ModifyDetection.Add(this, (who, score) => who.IsPlayer ? score + 5 : score);
+//   Traps.ModifyDetection.Add(this, t => { if (t.Who.IsPlayer) t.Score += 5; });
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -77,6 +77,9 @@ namespace UnderRailWorks
         }
     }
 
+    // A character's trap detection score (the game's: Perception and Traps skill), against each trap's difficulty.
+    public sealed class TrapScore { internal TrapScore() { } public Character Who { get; internal set; } public int Score { get; set; } }
+
     public static class Traps
     {
         // The traps in the current zone (all its areas).
@@ -99,7 +102,7 @@ namespace UnderRailWorks
 
         // A character's trap detection score (the player's is then x1.25 against the trap's difficulty): each handler
         // gets the score so far and returns the new one. Also what the character sheet shows.
-        public static readonly Hook<Func<Character, int, int>> ModifyDetection = new Hook<Func<Character, int, int>>("Traps.ModifyDetection");
+        public static readonly Hook<Action<TrapScore>> ModifyDetection = new Hook<Action<TrapScore>>("Traps.ModifyDetection");
     }
 }
 
@@ -209,8 +212,9 @@ namespace UnderRailWorks.Internal
             {
                 var who = Combat.OfData(data);
                 if (who == null) return v;
-                Traps.ModifyDetection.Run(h => v = h(who, v));
-                return Math.Max(0, v);
+                var score = new TrapScore { Who = who, Score = v };
+                Traps.ModifyDetection.Run(h => h(score));
+                return Math.Max(0, score.Score);
             }
             catch (Exception ex) { Log.Write("traps: " + ex.Message); return v; }
         }

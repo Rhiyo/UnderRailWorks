@@ -553,29 +553,33 @@ public static partial class Trade
     }
 }
 
+// What a merchant charges: Markup is the multiplier so far (the game's: about 1.15-3.5, lower with Mercantile).
+public sealed class BuyPrice { internal BuyPrice() { } public Character Merchant { get; internal set; } public float Markup { get; set; } }
+// What the player gets for selling: Factor is the multiplier so far (the difficulty's sold item value).
+public sealed class SellPrice { internal SellPrice() { } public float Factor { get; set; } }
+
 public static class Prices
 {
-    // Change what merchants charge: each handler gets the merchant and the markup so far (the game's: about 1.15-3.5,
-    // lower with Mercantile) and returns the new one. Read when the barter window opens.
-    public static readonly Hook<Func<Character, float, float>> BuyMarkup = new Hook<Func<Character, float, float>>("BuyMarkup");
-    // Change what the player gets for selling: the factor so far (the difficulty's sold item value) -> the new one.
-    public static readonly Hook<Func<float, float>> SellFactor = new Hook<Func<float, float>>("SellFactor");
+    // Change what merchants charge (each handler sees the markup the earlier ones left). Read when the barter window opens.
+    //   Prices.ModifyBuying.Add(this, p => p.Markup *= 0.9f);
+    public static readonly Hook<Action<BuyPrice>> ModifyBuying = new Hook<Action<BuyPrice>>("Prices.ModifyBuying");
+    // Change what the player gets for selling.
+    public static readonly Hook<Action<SellPrice>> ModifySelling = new Hook<Action<SellPrice>>("Prices.ModifySelling");
 
     internal static float Buy(dvp merchant, float markup)
     {
-        if (!BuyMarkup.Any) return markup;
-        var who = Character.Of(merchant.a8());
-        float v = markup;
-        BuyMarkup.Run(h => v = h(who, v));
-        return Math.Max(0.01f, v);
+        if (!ModifyBuying.Any) return markup;
+        var p = new BuyPrice { Merchant = Character.Of(merchant.a8()), Markup = markup };
+        ModifyBuying.Run(h => h(p));
+        return Math.Max(0.01f, p.Markup);
     }
 
     internal static float Sell(float factor)
     {
-        if (!SellFactor.Any) return factor;
-        float v = factor;
-        SellFactor.Run(h => v = h(v));
-        return Math.Max(0f, v);
+        if (!ModifySelling.Any) return factor;
+        var p = new SellPrice { Factor = factor };
+        ModifySelling.Run(h => h(p));
+        return Math.Max(0f, p.Factor);
     }
 }
 

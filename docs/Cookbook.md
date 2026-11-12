@@ -265,7 +265,7 @@ void TrapsExample()
 {
     GameEvents.TrapDisarming.Add(this, d => { if (d.Character.IsPlayer) d.Difficulty -= 5; });     // this attempt only
     GameEvents.TrapDisarmed.Add(this, r => { if (r.Outcome == DisarmOutcome.Recovered) Notify.OverPlayer("Got it back"); });
-    Traps.ModifyDetection.Add(this, (who, score) => who.IsPlayer ? score + 10 : score);
+    Traps.ModifyDetection.Add(this, t => { if (t.Who.IsPlayer) t.Score += 10; });
 }
 ```
 

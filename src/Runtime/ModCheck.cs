@@ -46,7 +46,7 @@ static class ModCheck
                     if (Internal(t)) internals.Add(t.FullName);
                     TypeDefinition def = null;
                     try { def = t.Resolve(); } catch (Exception) { }
-                    if (def == null) missing.Add(t.FullName.Replace("/", "."));
+                    if (def == null || !Reachable(def)) missing.Add(t.FullName.Replace("/", "."));
                     else if (PreviewType(def)) previews.Add(def.FullName.Replace("/", "."));
                 }
                 foreach (var m in module.GetMemberReferences())
@@ -56,11 +56,11 @@ static class ModCheck
                     if (Internal(owner)) internals.Add(owner.FullName);
                     IMemberDefinition def = null;
                     try { def = m.Resolve(); } catch (Exception) { }
-                    if (def == null) missing.Add(Describe(m));
+                    if (def == null || !Reachable(def)) missing.Add(Describe(m));
                     else if (IsPreview(def as ICustomAttributeProvider) || AccessorPreview(def as MethodDefinition) || PreviewType(def.DeclaringType)) previews.Add(def.DeclaringType.FullName.Replace("/", ".") + "." + def.Name.Replace("get_", "").Replace("set_", "").Replace("add_", "").Replace("remove_", ""));
                 }
                 if (missing.Count > 0)
-                    r.Error = "needs a newer UnderRailWorks (this is API " + WorksApi.Version.ToString(2) + "): not here: " + string.Join(", ", missing.Take(5).ToArray()) + (missing.Count > 5 ? " and " + (missing.Count - 5) + " more" : "");
+                    r.Error = "built for a different UnderRailWorks than this one (API " + WorksApi.Version.ToString(2) + "; it needs an update, or a newer Works): not here: " + string.Join(", ", missing.Take(5).ToArray()) + (missing.Count > 5 ? " and " + (missing.Count - 5) + " more" : "");
                 if (internals.Count > 0) r.Warnings.Add("uses UnderRailWorks internals (may break with any Works update): " + string.Join(", ", internals.Take(3).ToArray()) + (internals.Count > 3 ? "..." : ""));
                 if (previews.Count > 0) r.Warnings.Add("uses preview API (may change in any Works update): " + string.Join(", ", previews.Take(3).ToArray()) + (previews.Count > 3 ? "..." : ""));
                 if (game) r.Warnings.Add("uses the game's own code directly (may break with a game update)");
@@ -80,6 +80,15 @@ static class ModCheck
         if (m == null || !(m.IsGetter || m.IsSetter || m.IsAddOn || m.IsRemoveOn)) return false;
         var t = m.DeclaringType;
         return t.Properties.Any(p => (p.GetMethod == m || p.SetMethod == m) && IsPreview(p)) || t.Events.Any(e => (e.AddMethod == m || e.RemoveMethod == m) && IsPreview(e));
+    }
+
+    // Existing isn't enough: a member that was public and became internal fails at the call (MethodAccessException).
+    static bool Reachable(TypeDefinition t) { for (; t != null; t = t.DeclaringType) if (!(t.IsPublic || t.IsNestedPublic || t.IsNestedFamily || t.IsNestedFamilyOrAssembly)) return false; return true; }
+    static bool Reachable(IMemberDefinition d)
+    {
+        var m = d as MethodDefinition; if (m != null) return (m.IsPublic || m.IsFamily || m.IsFamilyOrAssembly) && Reachable(m.DeclaringType);
+        var f = d as FieldDefinition; if (f != null) return (f.IsPublic || f.IsFamily || f.IsFamilyOrAssembly) && Reachable(f.DeclaringType);
+        return Reachable(d.DeclaringType);
     }
 
     static bool FromWorks(TypeReference t)

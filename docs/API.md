@@ -110,6 +110,11 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 - `string Name`
 - `string Category`
 
+## BuyPrice  _(class, Hud.cs)_
+
+What a merchant charges: Markup is the multiplier so far (the game's: about 1.15-3.5, lower with Mercantile).
+
+
 ## Camera  _(class, Camera.cs)_
 
 - `static Vector2? Centre` — The map position the view is centred on (tiles), or null (no world view). Setting it moves the view there.
@@ -408,7 +413,7 @@ The defense values the character sheet's Defense tab shows (what StatBonus.Dodge
 - `static string WriteDescription(string dialog)` — Writes the outline into the game folder; returns the file's path.
 - `static void Patch(WorksMod mod, string dialog, Action<DialogPatch> patch)` — Adds to a stock dialog each time it opens. Several mods may patch the same dialog (in load order).
 - `static IList<string> StockLines(string dialog)` — The NPC lines of a stock dialog (English text), for finding where to patch. Loads it from disk.
-- `static void Define(string name, Action<DialogBuilder> build)` — A conversation, by name (prefix it with the mod's id). The builder runs each time it is opened, so it may read game state (but conditions are the cleaner way).
+- `static void Define(WorksMod mod, string name, Action<DialogBuilder> build)` — A conversation, by name (prefix it with the mod's id). The builder runs each time it is opened, so it may read game state (but conditions are the cleaner way).
 - `static bool IsDefined(string name)`
 - `static void Override(Character npc, string name)` — Talking to this character opens the named conversation (Works' or the game's). Kept in memory only: the character's own dialog stays as saved.
 - `static bool Start(Character npc, string name)` — Opens a conversation between the player and npc now (false if the game refuses: combat, hostile, one is open).
@@ -1182,8 +1187,8 @@ A character placed by a mod: re-created each time its zone loads, while When hol
 
 ## Prices  _(class, Hud.cs)_
 
-- `static readonly Hook<Func<Character, float, float>> BuyMarkup = new Hook<Func<Character, float, float>>("BuyMarkup")` — Change what merchants charge: each handler gets the merchant and the markup so far (the game's: about 1.15-3.5, lower with Mercantile) and returns the new one. Read when the barter window opens.
-- `static readonly Hook<Func<float, float>> SellFactor = new Hook<Func<float, float>>("SellFactor")` — Change what the player gets for selling: the factor so far (the difficulty's sold item value) -> the new one.
+- `static readonly Hook<Action<BuyPrice>> ModifyBuying = new Hook<Action<BuyPrice>>("Prices.ModifyBuying")` — Change what merchants charge (each handler sees the markup the earlier ones left). Read when the barter window opens. Prices.ModifyBuying.Add(this, p => p.Markup *= 0.9f);
+- `static readonly Hook<Action<SellPrice>> ModifySelling = new Hook<Action<SellPrice>>("Prices.ModifySelling")` — Change what the player gets for selling.
 
 ## Progression  _(class, Catalogue.cs)_
 
@@ -1207,7 +1212,7 @@ A character placed by a mod: re-created each time its zone loads, while When hol
 
 ## Quests  _(class, Content.cs)_
 
-- `static void Define(string id, string group, string journalText, int xp = 0, int oddityXp = 0)` — A new quest: id (unique: prefix it with the mod's id), the journal heading it's listed under (the game uses area names: "South Gate Station"), its journal text, and the XP completing it gives (classic and oddity systems). Call it from Load: the game resolves quest names once per save it loads.
+- `static void Define(WorksMod mod, string id, string group, string journalText, int xp = 0, int oddityXp = 0)` — A new quest: id (unique: prefix it with the mod's id), the journal heading it's listed under (the game uses area names: "South Gate Station"), its journal text, and the XP completing it gives (classic and oddity systems). Call it from Load: the game resolves quest names once per save it loads.
 - `static bool Start(string id, bool announce = true)` — As the game's dialogs and scripts do: announce = the chat line ("New journal entry: ...") and, on completion, the XP. Each returns whether the quest changed state.
 - `static bool Complete(string id, bool announce = true)`
 - `static bool Fail(string id, bool announce = true)`
@@ -1257,6 +1262,11 @@ The first handler that returns true replaces the game's step.
 - `void Clear()` — Everything, e.g. to migrate an older layout.
 - `Version WrittenBy` — The version of the mod that wrote this data (the save's, as loaded; this version's once the game is saved). Null: none yet, or a save from before Works recorded it. For migrating an older layout when the save loads: GameEvents.GameLoaded.Add(this, () => { var v = SaveData.WrittenBy; if (v != null && v < new Version(2, 0)) Migrate(); });
 
+## SellPrice  _(class, Hud.cs)_
+
+What the player gets for selling: Factor is the multiplier so far (the difficulty's sold item value).
+
+
 ## Shot  _(class, ShotBreakdown.cs)_
 
 - `double Chance`
@@ -1277,7 +1287,7 @@ The first handler that returns true replaces the game's step.
 - `static void Replace(WorksMod mod, string id, string wavFile)` — The sound id plays the mod's WAV (16-bit PCM) instead.
 - `static void Add(WorksMod mod, string id, string wavFile)` — A new sound id the game's id-based paths (and Play) can use.
 - `static void Play(string id, float volume = 1f)` — Plays a sound by id at volume 0..1 (as an interface sound).
-- `static void Remap(string oldId, string newId)` — Wherever the game plays oldId, newId plays instead.
+- `static void Remap(WorksMod mod, string oldId, string newId)` — Wherever the game plays oldId, newId plays instead.
 
 ## SpawnSide  _(enum, Characters.cs)_
 
@@ -1356,7 +1366,7 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 
 - `static string Get(string path)` — The game's text for "category/key" (e.g. "quests/jonaswatch", "ui/..."), in the player's language; "" if none.
 - `static string Count(int n, string one, string many = null)` — "1 turn", "3 turns": a count with its noun, plural with an s unless given (Count(n, "enemy", "enemies")).
-- `static void Set(string category, string key, string text)` — Text a mod adds (or replaces), in every language: "category/key". In memory only.
+- `static void Set(WorksMod mod, string category, string key, string text)` — Text a mod adds (or replaces), in every language: "category/key". In memory only.
 
 ## Theft  _(class, Activities.cs)_
 
@@ -1430,7 +1440,12 @@ A disarm attempt about to be decided: change Difficulty for this attempt only (t
 ## Traps  _(class, Traps.cs)_
 
 - `static IList<Trap> InZone` — The traps in the current zone (all its areas).
-- `static readonly Hook<Func<Character, int, int>> ModifyDetection = new Hook<Func<Character, int, int>>("Traps.ModifyDetection")` — A character's trap detection score (the player's is then x1.25 against the trap's difficulty): each handler gets the score so far and returns the new one. Also what the character sheet shows.
+- `static readonly Hook<Action<TrapScore>> ModifyDetection = new Hook<Action<TrapScore>>("Traps.ModifyDetection")` — A character's trap detection score (the player's is then x1.25 against the trap's difficulty): each handler gets the score so far and returns the new one. Also what the character sheet shows.
+
+## TrapScore  _(class, Traps.cs)_
+
+A character's trap detection score (the game's: Perception and Traps skill), against each trap's difficulty.
+
 
 ## TrapSpotted  _(class, Traps.cs)_
 

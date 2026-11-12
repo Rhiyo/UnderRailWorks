@@ -2,7 +2,7 @@
 // (Game Rules -> Mods tab, NewGameOptions) pick Off, Tough, Brutal or Custom (the values in Options -> Mods ->
 // Gauntlet, taken when the game starts). The choice is kept with that game (SaveData), so it can't be switched off
 // mid-fight; games started before Gauntlet are Off. Effects: damage the player takes and deals (Combat.ModifyIncomingDamage), action points per turn
-// (Combat.ModifyTurnPoints), merchants' prices (Prices.BuyMarkup), experience (Progression.ModifyExperience). A HUD
+// (Combat.ModifyTurnPoints), merchants' prices (Prices.ModifyBuying), experience (Progression.ModifyExperience). A HUD
 // note lists what's on. Built from Works' API only.
 using System;
 using System.Collections.Generic;
@@ -43,7 +43,7 @@ public sealed class Gauntlet : WorksMod
             else if (d.ByPlayer && now.Dealt != 100) d.Scale(now.Dealt / 100f);
         });
         Combat.ModifyTurnPoints.Add(this, t => { if (t.Character != null && t.Character.IsPlayer && now.ApLess > 0) t.ActionPoints = Math.Max(1, t.ActionPoints - now.ApLess); });
-        Prices.BuyMarkup.Add(this, (merchant, markup) => now.Prices == 100 ? markup : markup * now.Prices / 100f);
+        Prices.ModifyBuying.Add(this, p => { if (now.Prices != 100) p.Markup *= now.Prices / 100f; });
         Progression.ModifyExperience.Add(this, x => { if (now.Xp != 100) x.Amount = Math.Max(0, x.Amount * now.Xp / 100); });
         note = HudText.Add(this, "Gauntlet", HudAnchor.TopRight, 12, 110);
         config.Changed += Show;

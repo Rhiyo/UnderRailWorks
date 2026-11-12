@@ -61,6 +61,9 @@ UnderRailWorks.Blueprint :: property System.String Category { get; }
 UnderRailWorks.Blueprint :: property System.String Id { get; }
 UnderRailWorks.Blueprint :: property System.String Name { get; }
 UnderRailWorks.Blueprint :: sealed class
+UnderRailWorks.BuyPrice :: property System.Single Markup { get; set; }
+UnderRailWorks.BuyPrice :: property UnderRailWorks.Character Merchant { get; }
+UnderRailWorks.BuyPrice :: sealed class
 UnderRailWorks.Camera :: static class
 UnderRailWorks.Camera :: static property Microsoft.Xna.Framework.Point ViewSize { get; }
 UnderRailWorks.Camera :: static property System.Nullable<Microsoft.Xna.Framework.Vector2> Centre { get; set; }
@@ -908,8 +911,8 @@ UnderRailWorks.PreviewAttribute :: ctor(System.String)
 UnderRailWorks.PreviewAttribute :: property System.String Why { get; }
 UnderRailWorks.PreviewAttribute :: sealed class : System.Attribute
 UnderRailWorks.Prices :: static class
-UnderRailWorks.Prices :: static readonly field UnderRailWorks.Hook<System.Func<System.Single, System.Single>> SellFactor
-UnderRailWorks.Prices :: static readonly field UnderRailWorks.Hook<System.Func<UnderRailWorks.Character, System.Single, System.Single>> BuyMarkup
+UnderRailWorks.Prices :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.BuyPrice>> ModifyBuying
+UnderRailWorks.Prices :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.SellPrice>> ModifySelling
 UnderRailWorks.Progression :: static class
 UnderRailWorks.Progression :: static method System.Int32 XpFor(System.Int32)
 UnderRailWorks.Progression :: static property System.Boolean CanLevelUp { get; }
@@ -973,6 +976,8 @@ UnderRailWorks.SaveData :: property System.Version WrittenBy { get; }
 UnderRailWorks.SaveData :: sealed class
 UnderRailWorks.SaveData :: static method UnderRailWorks.SaveData CharacterOf(UnderRailWorks.WorksMod)
 UnderRailWorks.SaveData :: static method UnderRailWorks.SaveData Of(UnderRailWorks.WorksMod)
+UnderRailWorks.SellPrice :: property System.Single Factor { get; set; }
+UnderRailWorks.SellPrice :: sealed class
 UnderRailWorks.Shot :: property System.Boolean Ranged { get; }
 UnderRailWorks.Shot :: property System.Double Chance { get; }
 UnderRailWorks.Shot :: property System.Double Distance { get; }
@@ -1101,6 +1106,9 @@ UnderRailWorks.TrapDisarmResult :: property System.Int32 Skill { get; }
 UnderRailWorks.TrapDisarmResult :: property UnderRailWorks.Character Character { get; }
 UnderRailWorks.TrapDisarmResult :: property UnderRailWorks.DisarmOutcome Outcome { get; }
 UnderRailWorks.TrapDisarmResult :: sealed class
+UnderRailWorks.TrapScore :: property System.Int32 Score { get; set; }
+UnderRailWorks.TrapScore :: property UnderRailWorks.Character Who { get; }
+UnderRailWorks.TrapScore :: sealed class
 UnderRailWorks.TrapSpotted :: property Microsoft.Xna.Framework.Vector3 Position { get; }
 UnderRailWorks.TrapSpotted :: property System.Int32 DetectDifficulty { get; }
 UnderRailWorks.TrapSpotted :: property System.Int32 DisarmDifficulty { get; }
@@ -1109,7 +1117,7 @@ UnderRailWorks.TrapSpotted :: property UnderRailWorks.Trap Trap { get; }
 UnderRailWorks.TrapSpotted :: sealed class
 UnderRailWorks.Traps :: static class
 UnderRailWorks.Traps :: static property System.Collections.Generic.IList<UnderRailWorks.Trap> InZone { get; }
-UnderRailWorks.Traps :: static readonly field UnderRailWorks.Hook<System.Func<UnderRailWorks.Character, System.Int32, System.Int32>> ModifyDetection
+UnderRailWorks.Traps :: static readonly field UnderRailWorks.Hook<System.Action<UnderRailWorks.TrapScore>> ModifyDetection
 UnderRailWorks.Triggers :: static class
 UnderRailWorks.Triggers :: static method UnderRailWorks.AreaTrigger Add(UnderRailWorks.WorksMod, System.String, System.String, Microsoft.Xna.Framework.Rectangle, System.Action<UnderRailWorks.Character>, System.Action<UnderRailWorks.Character>)
 UnderRailWorks.TurnPoints :: property System.Int32 ActionPoints { get; set; }

@@ -290,7 +290,7 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
   `OpenWindow` (Kind: Inventory, Notes, Crafting, Oddities, Psi, Map, CombatStats, Barter, Container; Element;
   TitleHeight). The character sheet (`iw`) has no title bar of that kind.
 - **Windows**: `Windows.Open/Close(Window.Inventory | Notes | Map | ...)` (the `ps` methods the HUD buttons call,
-  refused while `ps.alg()`). **Trade.Open(merchant)** (`ps.amw`), **Prices.BuyMarkup / SellFactor** (postfixes of
+  refused while `ps.alg()`). **Trade.Open(merchant)** (`ps.amw`), **Prices.ModifyBuying / ModifySelling** (postfixes of
   `dvp.aqd`, `b6o.d`). `Character.IsMerchant`.
 - **Status effects**: no registry by code in the game (types obfuscated, the console's lookup fails): Works builds one
   from the effect types it can construct (127 codes); `StatusEffects.Apply(character, code, turns)` through the

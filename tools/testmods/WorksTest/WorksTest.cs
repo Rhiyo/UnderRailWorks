@@ -695,7 +695,7 @@ public sealed class WorksTest : WorksMod
         GameEvents.Saved.Add(this, folder => Log.Info("saved " + folder));
         GameEvents.GameLoaded.Add(this, () => Log.Info("game loaded"));
         int trapScans = 0;
-        Traps.ModifyDetection.Add(this, (who, score) => { if (who.IsPlayer && trapScans++ < 2) Log.Info("trap detection score " + score + " -> " + (score + 100)); return who.IsPlayer ? score + 100 : score; });
+        Traps.ModifyDetection.Add(this, t => { if (t.Who.IsPlayer && trapScans++ < 2) Log.Info("trap detection score " + t.Score + " -> " + (t.Score + 100)); if (t.Who.IsPlayer) t.Score += 100; });
         GameEvents.TrapDisarming.Add(this, d => { if (Variables.Global.Get("wt_easy", false)) d.Difficulty = 0; Log.Info("disarming: skill " + d.Skill + " vs " + d.Difficulty + (d.OwnTrap ? " (own)" : "")); });
         GameEvents.TrapDisarmed.Add(this, r => Log.Info("disarmed: " + r.Outcome));
         GameEvents.Reloading.Add(this, r => { if (!r.Character.IsPlayer && Variables.Global.Get("wt_noreload", false)) { r.Cancel = true; Log.Info("reload cancelled for " + r.Character.Name); } });

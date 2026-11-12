@@ -39,7 +39,7 @@ Semantic versioning, applied to the API:
 
 A mod built for `"works": "1.2"` loads on any 1.x from 1.2 up, and is refused on 1.0-1.1 (too old) and on 2.0
 (a break). Before loading, Works also checks every type and member the mod's DLL uses from Works (`ModCheck`); if one
-is missing (a mod built for a newer Works than its `mod.json` says), it isn't loaded, and the Mods tab names what's
+is missing or no longer public (a mod built for a newer Works than its `mod.json` says, or an old build after a change), it isn't loaded, and the Mods tab names what's
 missing. The game never crashes later on a missing method.
 
 ## How the build enforces it

@@ -18,7 +18,7 @@ public sealed class FairTrade : WorksMod
     public override void Load()
     {
         var config = GetConfig<FairTradeConfig>();
-        Prices.BuyMarkup.Add(this, (merchant, markup) => markup * config.Buy / 100f);
-        Prices.SellFactor.Add(this, factor => factor * config.Sell / 100f);
+        Prices.ModifyBuying.Add(this, p => p.Markup *= config.Buy / 100f);
+        Prices.ModifySelling.Add(this, p => p.Factor *= config.Sell / 100f);
     }
 }
