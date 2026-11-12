@@ -28,7 +28,7 @@ public sealed partial class Coop
             peer.Send("DLG", line.Speaker, line.Text);
             foreach (var o in line.Choices) peer.Send("DLGOPT", o.Index, o.Enabled ? 1 : 0, o.Text);
             peer.Send("DLGSHOW");
-        }, () => { peer.Send("DLGEND"); if (talking == seat) talking = null; }, true);     // the game pauses, as for any conversation: everyone listens
+        }, () => { peer.Send("DLGEND"); if (talking == seat) talking = null; }, conversationsPause);     // the game pauses, as for any conversation: everyone listens
         if (!ok) return "can't talk to " + npc.Name + " now";
         talking = seat;
         Log.Info(c.Name + " talks to " + npc.Name);
@@ -40,7 +40,7 @@ public sealed partial class Coop
     {
         GameEvents.ConversationLine.Add(this, line =>
         {
-            if (listener == null) return;
+            if (listener == null || !everyoneListens) return;
             var talker = line.Talker == null ? "?" : line.Talker.Name;
             foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null && x.Character != line.Talker))
             {

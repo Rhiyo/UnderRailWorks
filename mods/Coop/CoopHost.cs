@@ -31,6 +31,28 @@ public sealed class CoopApi
     // The Shared XP percentage this game is hosted with.
     public int XpShare { get { return coop.xpShare; } }
 
+    // --- Co-op's own rules, each one switchable by a mod that does it its own way --------------------------------
+    // The group travels together (every player within 10 tiles of whoever takes an exit). Off: Co-op doesn't stop
+    // anyone (a mod with players in different zones decides; Works: Party.NeedTogether, GameEvents.ZoneLeaving /
+    // CharacterLeavingZone, Zones.Export / Import).
+    public bool TravelTogether { get { return coop.travelTogether; } set { coop.travelTogether = value; coop.ApplyTravelRule(); } }
+    // Everyone listens to every conversation (a read-only window). Off: only the one talking sees it (Works:
+    // GameEvents.ConversationLine for a mod's own way).
+    public bool EveryoneListens { get { return coop.everyoneListens; } set { coop.everyoneListens = value; } }
+    // A joiner's conversation pauses the game, as any conversation does. Off: it runs while the others play.
+    public bool ConversationsPause { get { return coop.conversationsPause; } set { coop.conversationsPause = value; } }
+    // Co-op's Shared XP. Off: XP is the game's (a mod's own rule: Works' Progression.ModifyExperience, XpGain.Who).
+    public bool SharesXp { get { return coop.sharesXp; } set { coop.sharesXp = value; } }
+
+    // --- For mods that change how co-op plays -------------------------------------------------------------------
+    // Joiner: this game is a copy of the host's (Works refuses world changes here; Simulation.IsMirror).
+    public bool IsMirror { get { return Simulation.IsMirror; } }
+    // Host: the player playing a character (null: the host's own or nobody's), and a player's character.
+    public string PlayerOf(Character c) { return coop.PlayerOf(c); }
+    public Character CharacterOf(string player) { Character c; return Players.TryGetValue(player ?? "", out c) ? c : null; }
+    // Host: send a player the host's world again (save, send, their game loads it: after a mod changed what they see).
+    public void SendWorld(string player) { coop.ResendWorld(player); }
+
     // An option on the Host window: a number (slider) or one of a few names (dropdown). Its value: HostOption.
     public void AddHostOption(WorksMod mod, string key, string label, int min, int max, int step, int value) { coop.AddOption(new Coop.HostOption { Mod = mod.Id, Key = key, Label = label, Min = min, Max = max, Step = Math.Max(1, step), Value = value }); }
     public void AddHostChoice(WorksMod mod, string key, string label, string[] names, int value) { coop.AddOption(new Coop.HostOption { Mod = mod.Id, Key = key, Label = label, Names = names, Value = value }); }
@@ -50,6 +72,14 @@ public sealed partial class Coop
     internal readonly Dictionary<string, Action<string, string[]>> Handlers = new Dictionary<string, Action<string, string[]>>();
     internal CoopApi Api;
 
+    internal bool travelTogether = true, everyoneListens = true, conversationsPause = true, sharesXp = true;
+    internal void ApplyTravelRule()
+    {
+        if (listener != null && travelTogether) Party.NeedTogether(this, PartyNeed.EnterZone, null, TogetherTiles);
+        else Party.DontNeedTogether(this, PartyNeed.EnterZone, null);
+    }
+    internal string PlayerOf(Character c) { var s = seats.Values.FirstOrDefault(x => x.Character == c); return s == null ? null : s.Peer.Name; }
+    internal void ResendWorld(string player) { var s = seats.Values.FirstOrDefault(x => x.Peer.Name == player && x.Character != null); if (s != null) SendWorld(s); }
     internal bool IsHosting { get { return listener != null; } }
     internal bool IsJoined { get { return host != null && !host.Closed; } }
     internal new ModLog Log { get { return base.Log; } }

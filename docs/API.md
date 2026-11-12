@@ -1266,6 +1266,8 @@ A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
 ## Party  _(class, Party.cs)_
 
 - `static IList<Character> Members` — The player and the characters added (living, in this zone).
+- `static Character Acting` — The party member whose action is running (Party.As): World.Player is that character meanwhile, so mods written for one player do for whoever acted what they'd do for the player. Null: the player's own.
+- `static void As(Character who, Action a)` — Runs a with who as the acting player (World.Player), back after (nests).
 - `static void Add(WorksMod mod, Character c)`
 - `static void Remove(Character c)`
 - `static bool Contains(Character c)`

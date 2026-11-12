@@ -23,7 +23,7 @@ public sealed partial class Coop
         });
         Progression.ModifyExperience.Add(this, g =>
         {
-            if (listener == null || sharing || g.Who == null || g.Amount <= 0 || !Party.Contains(g.Who)) return;
+            if (listener == null || sharing || !sharesXp || g.Who == null || g.Amount <= 0 || !Party.Contains(g.Who)) return;
             var members = Party.Members;
             if (members.Count < 2) return;
             var earner = g.Who;

@@ -39,6 +39,21 @@ namespace UnderRailWorks
                 return list;
             }
         }
+        // The party member whose action is running (Party.As): World.Player is that character meanwhile, so mods written
+        // for one player do for whoever acted what they'd do for the player. Null: the player's own.
+        public static Character Acting { get { return acting; } }
+        [ThreadStatic] static Character acting;
+        // Runs a with who as the acting player (World.Player), back after (nests).
+        public static void As(Character who, Action a)
+        {
+            var before = acting;
+            acting = who != null && !who.IsPlayer && Contains(who) ? who : before;
+            try { a(); } finally { acting = before; }
+        }
+        // As As, for a game step that starts and ends in two hooks (a prefix and a finalizer): Begin returns the previous.
+        internal static Character Begin(Character who) { var before = acting; acting = who != null && !who.IsPlayer && Contains(who) ? who : before; return before; }
+        internal static void End(Character before) { acting = before; }
+
         public static void Add(WorksMod mod, Character c) { if (c != null) lock (others) others[c] = mod.Id; }
         public static void Remove(Character c) { if (c != null) lock (others) others.Remove(c); }
         public static bool Contains(Character c) { if (c == null) return false; if (c.IsPlayer) return true; lock (others) return others.ContainsKey(c); }

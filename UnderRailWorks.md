@@ -1717,3 +1717,6 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
 - **Conversations for everyone:** `GameEvents.ConversationLine(TalkLine)` (zq.nz: every line of any conversation;
   `TalkLine.Talker` is who holds it, from zq's initiator), `TalkAs.Talk(..., pause)` (pause as for the player's own),
   `Character.TalkTo(npc)` (j7.a, the player's click).
+- **The acting player:** `Party.Acting`, `Party.As(character, action)`: while a party member acts, `World.Player` is
+  that member for mods' handlers (object use, container opening, item taking, items into their bag, their XP). So
+  mods written for one player act for whoever did it in co-op.

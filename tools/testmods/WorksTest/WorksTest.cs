@@ -50,6 +50,11 @@ public sealed class WorksTest : WorksMod
         Action<string, string[]> ping = (from, words) => { Log.Info("coop message from " + (from ?? "the host") + ": " + string.Join(" ", words)); if (from != null) Mods.Call("Coop", "SendTo", from, this, "pong", new object[] { "back" }); };
         Mods.Call("Coop", "Handle", this, "ping", ping);
         Mods.Call("Coop", "Handle", this, "pong", ping);
+        // A single-player mod's way: "the player" in handlers. In co-op it should be whoever acted.
+        GameEvents.ItemAdded.Add(this, item => Log.Info("unaware: " + World.Player.Name + " got " + item));
+        GameEvents.ContainerOpening.Add(this, e => Log.Info("unaware: " + World.Player.Name + " opens " + e.Container.Name));
+        GameEvents.ExperienceGained.Add(this, xp => Log.Info("unaware: " + World.Player.Name + " gained " + xp + " XP"));
+        Commands.Add(this, "wt.coopfree", "wt.coopfree: Co-op's travel-together rule off (a mod replacing it)", a => { var api = Mods.Api<object>("Coop"); api.GetType().GetProperty("TravelTogether").SetValue(api, false, null); return "travel together: " + api.GetType().GetProperty("TravelTogether").GetValue(api, null); });
         Commands.Add(this, "wt.coopping", "wt.coopping: a WorksTest message to the co-op host", a => { Mods.Call("Coop", "SendToHost", this, "ping", new object[] { "hello", "host" }); return "sent"; });
     }
     bool logOutlines, hoverWatch;

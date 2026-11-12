@@ -99,7 +99,7 @@ namespace UnderRailWorks.Internal
         {
             if (!GameEvents.ContainerOpening.Any) return true;
             var e = new ContainerOpen { Container = new Container(__instance), Opener = __0 == null ? null : Character.Of(__0) };
-            GameEvents.ContainerOpening.Run(h => h(e));
+            Party.As(e.Opener, () => GameEvents.ContainerOpening.Run(h => h(e)));
             return !e.Cancel;
         }
 
@@ -107,7 +107,7 @@ namespace UnderRailWorks.Internal
         {
             if (!GameEvents.ItemTaking.Any || __1 == null) return true;
             var e = new ItemTake { Container = new Container(__instance), Item = new Item(__1), Taker = __2 is amc ? Character.Of(((amc)__2).a8()) : World.Player };
-            GameEvents.ItemTaking.Run(h => h(e));
+            Party.As(e.Taker, () => GameEvents.ItemTaking.Run(h => h(e)));
             if (!e.Cancel) return true;
             __result = false;
             return false;

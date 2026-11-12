@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.1.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -90,7 +90,7 @@ public sealed partial class Coop : WorksMod
         catch (Exception ex) { listener = null; return "can't host on port " + port + ": " + ex.Message; }
         ReadRecords();
         // The group travels together: an exit is taken only with every player near the one taking it (Works' Party).
-        Party.NeedTogether(this, PartyNeed.EnterZone, null, TogetherTiles);
+        ApplyTravelRule();
         Log.Info("hosting on port " + port);
         Changed();
         Notify.Log("Co-op: hosting on port " + port + ". Others join with coop.join <your address>" + (port == DefaultPort ? "" : ":" + port), Say);
@@ -364,7 +364,7 @@ public sealed partial class Coop : WorksMod
             case "EXIT":
             {
                 int x, y;
-                var away = Party.Missing(c, TogetherTiles);
+                var away = travelTogether ? Party.Missing(c, TogetherTiles) : new List<Character>();
                 if (away.Count > 0) return "everyone needs to be near you to go (" + string.Join(", ", away.Select(a => a.Name).ToArray()) + " isn't)";
                 bool ok = w.Length > 2 && int.TryParse(w[1], out x) && int.TryParse(w[2], out y) && c.TakeExitAt(x, y);
                 Log.Info(c.Name + ": exit " + (w.Length > 2 ? w[1] + "," + w[2] : "?") + ": " + (ok ? "going" : "refused"));

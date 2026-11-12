@@ -132,9 +132,16 @@ namespace UnderRailWorks.Internal
             catch (Exception ex) { Log.Write("objects: use failed: " + ex.Message); return true; }
         }
 
+        // A party member using something: mods' handlers during the use (OnUse, ContainerOpening, ItemTaking...) see
+        // that member as World.Player. Runs before Using (priority) and ends after the use, whatever happened.
+        [HarmonyLib.HarmonyPriority(HarmonyLib.Priority.First)]
+        static void Acting(c5x __0, out Character __state) { __state = Party.Begin(__0 == null ? null : Character.Of(__0)); }
+        static void Acted(Character __state) { Party.End(__state); }
+
         internal static void Install(HarmonyLib.Harmony harmony)
         {
             var use = typeof(bim).GetMethods(BindingFlags.Instance | BindingFlags.Public).First(m => m.Name == "a" && m.GetParameters().Length == 4 && m.GetParameters()[0].ParameterType == typeof(c5x) && m.ReturnType == typeof(bool));
+            harmony.Patch(use, prefix: new HarmonyLib.HarmonyMethod(typeof(UseHooks).GetMethod("Acting", BindingFlags.Static | BindingFlags.NonPublic)), finalizer: new HarmonyLib.HarmonyMethod(typeof(UseHooks).GetMethod("Acted", BindingFlags.Static | BindingFlags.NonPublic)));
             harmony.Patch(use, prefix: new HarmonyLib.HarmonyMethod(typeof(UseHooks).GetMethod("Using", BindingFlags.Static | BindingFlags.NonPublic)));
         }
     }

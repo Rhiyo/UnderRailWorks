@@ -290,6 +290,8 @@ public static partial class World
     {
         get
         {
+            var acting = Party.Acting;
+            if (acting != null) return acting;     // a party member's action: mods see that character as the player
             var game = bpo.GetService<cnk>();
             var data = game == null ? null : game.aqu();
             var player = data == null || data.v() == null ? null : data.v().b();

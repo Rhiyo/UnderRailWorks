@@ -204,6 +204,25 @@ joiner makes theirs (they only enter once it's done); conversations don't interr
 - **Party rules (Works):** Party.NeedTogether for entering a zone / a conversation / an object; Exits.Disable. Co-op
   adds joined characters to Party.Members. Tested: an exit off refused; travel refused while a member was far away.
 
+## Other mods in co-op (Co-op 1.1, 2026-11-12)
+
+Goal (the player's): as many mods as possible work in co-op without being written for it, and co-op mods can be built
+on top of Co-op.
+- **Unaware mods.** Mods run on the host (the real game); joiners see the result through the mirror; on a joiner's
+  machine Works refuses world changes (Simulation.IsMirror), so nothing appears that only one machine has.
+- **The acting player (Works, `Party.Acting` / `Party.As`).** While a party member does something, `World.Player` is
+  that member for mods' handlers: using an object (bim.a, so OnUse, ContainerOpening, ItemTaking...), taking from a
+  container, items going into their bag (GameEvents.ItemAdded), XP they gain (GameEvents.ExperienceGained), their
+  conversation (TalkAs already swaps the sheet). Tested with handlers written for single player: "Mira opens Desk",
+  "Mira got SGS Credits x200", "asd gained 40 XP" then "Mira gained 20 XP".
+- **Not covered (and why):** a mod's own windows and popups opened by a joiner's action show on the host; a mod's keys
+  and buttons on a joiner's machine run against the copy (refused); level-ups happen on the joiner's screen
+  (LevelledUp doesn't fire on the host). World.Player is not changed outside an action: HUD mods, minimaps and windows
+  mean "this screen's player".
+- **Building on Co-op.** Co-op's rules can each be switched off by a mod doing it its own way (CoopApi):
+  TravelTogether, EveryoneListens, ConversationsPause, SharesXp; plus IsMirror, PlayerOf, CharacterOf, SendWorld,
+  host options, mod messages. Tested: with TravelTogether off (from WorksTest) the host left alone.
+
 ## Co-op 1.0: the bare minimum (decided 2026-11-12)
 
 The player split the work: Co-op is plain multiplayer that keeps the game's own rules, and anything that bends them

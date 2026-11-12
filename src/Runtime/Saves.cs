@@ -268,10 +268,12 @@ static class Saves
     static void ItemAddedHook(dcw __instance, coh __0)
     {
         if (!GameEvents.ItemAdded.Any || __0 == null) return;
-        var player = World.Player;
-        if (player == null || !player.IsCharacter || __instance != PlayerBag()) return;
         var item = new Item(__0);
-        GameEvents.ItemAdded.Run(h => h(item));
+        var player = World.Player;
+        if (player != null && player.IsCharacter && __instance == PlayerBag()) { GameEvents.ItemAdded.Run(h => h(item)); return; }
+        // A party member's bag: the same event, with that member as the player meanwhile.
+        var owner = Party.Members.FirstOrDefault(c => !c.IsPlayer && c.IsCharacter && c.GameData.Bag == __instance);
+        if (owner != null) Party.As(owner, () => GameEvents.ItemAdded.Run(h => h(item)));
     }
     static dcw PlayerBag() { var game = bpo.GetService<cnk>(); var p = game == null || game.aqu() == null ? null : game.aqu().v(); return p == null ? null : p.Bag; }
 
@@ -282,6 +284,7 @@ static class Saves
         var sheet = __instance as au2;
         var body = sheet == null ? null : sheet.b() as c5x;
         if (body != null && body.IsPlayer) { if (GameEvents.ExperienceGained.Any) GameEvents.ExperienceGained.Run(h => h(__0)); }
+        else if (body != null && GameEvents.ExperienceGained.Any && Party.Contains(Character.Of(body))) Party.As(Character.Of(body), () => GameEvents.ExperienceGained.Run(h => h(__0)));
         if (GameEvents.CharacterExperienceGained.Any && body != null) { var c = Character.Of(body); GameEvents.CharacterExperienceGained.Run(h => h(c, __0)); }
     }
 
