@@ -67,7 +67,7 @@ an UnderRailFixes 1.x install and takes over its settings. After a game update, 
    Mods tab (Options -> Mods) shows which mod had errors.
 
 After a game update, the main menu says if parts of Works don't fit the new version; mods using them may not work
-until Works is updated. Saves are never at risk: they stay loadable by the game without Works.
+until Works is updated. Saves stay loadable by the unmodded game either way (checked before every release).
 
 ## For modders
 
