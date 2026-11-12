@@ -42,16 +42,18 @@ A mod built for `"works": "1.2"` loads on any 1.x from 1.2 up, and is refused on
 is missing or no longer public (a mod built for a newer Works than its `mod.json` says, or an old build after a change), it isn't loaded, and the Mods tab names what's
 missing. The game never crashes later on a missing method.
 
-## How the build enforces it
+## When it's locked: at GitHub releases only
 
-`build.sh` compares the API it just built with `api/UnderRailWorks.api.txt`:
+Between releases nothing is locked and no version number changes: development is free to change anything.
 
-- removed or changed lines without a new major (a new minor while 0.x): **the build fails**, listing them;
-- added lines without a new minor: a warning (`release.sh` makes it an error);
-- a game type in the API: the build fails.
-
-`release.sh` builds with that check strict, and after the release writes the new API into
-`api/UnderRailWorks.api.txt`, committed with the release.
+- `api/UnderRailWorks.api.txt` is the API **of the last GitHub release**, written by `release.sh` when it releases.
+  Until the first release there is none, and nothing is locked.
+- `build.sh` reports how the API changed since that release (a line per change); it never fails a build for it.
+- `release.sh` refuses to release when the changes aren't covered by `WorksApi`'s version (a removal or change needs
+  a new major, a new minor while 0.x; an addition a new minor), or when a game or third-party type is in the API.
+- Version numbers (Works' `FixVersion`, `WorksApi`, each mod's `"version"`) go up only for a release. Between
+  releases, changes are tracked in git. Where builds must recognise each other (Co-op's host and joiners), a separate
+  protocol number goes up with each incompatible change (`Coop.Protocol`); the handshake compares version and protocol.
 
 ## Changing the API without breaking mods
 
@@ -88,7 +90,8 @@ Mods built only on the API need nothing: the same mod DLL keeps working on the u
 
 - `tools/smoketest/smoke.sh`: one scripted session with the build and the test mods, 38 checks over the loader's
   rules and the API areas mods use most (release.sh runs it). `tools/smoketest/coop.sh`: a host and a joiner on this
-  machine (a test port, never Co-op's own): join, mirrored walking, a fight, a downed player left alone. `tools/savecheck/check-saves.sh --play`: saves stay
+  machine (a test port, never Co-op's own): join, mirrored walking, a fight, a downed player left alone.
+  `tools/smoketest/coop-midfight.sh`: joining mid-fight, and loading that mid-fight save without the joiner. `tools/savecheck/check-saves.sh --play`: saves stay
   loadable by the stock game.
 
 - `WORKS_FAIL_GROUP=<group name>` (environment): that hook group fails at start, as after a game update.

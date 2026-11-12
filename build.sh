@@ -52,11 +52,11 @@ MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/Retarget.exe" "$REF" "$FNA" "$
 # The runtime (assembly UnderRailWorks), straight into dist.
 WORKS="$OUT/UnderRailWorks.dll"
 mcs -nologo -optimize+ -target:library -out:"$WORKS" -r:"$GAMEREF" -r:"$FNA" -r:"$NVORBIS" -r:"$HARMONY" -r:"$CECIL" -r:System.Core.dll -r:System.Drawing.dll -r:System.Windows.Forms.dll -r:System.Configuration.dll "$HERE"/src/Runtime/*.cs
-# The public API against the last release's (api/UnderRailWorks.api.txt, docs/Versioning.md): a break the API version
-# doesn't account for, or a game type in the API, stops the build; additions without a new minor are a warning.
+# The public API against the last GitHub release's (api/UnderRailWorks.api.txt, docs/Versioning.md). Locked only at a
+# release: a build reports what changed since then; release.sh (API_RELEASE=1) refuses what the version doesn't cover.
 mcs -nologo -out:"$HERE/build/ApiSurface.exe" -r:"$CECIL" "$HERE/tools/apicheck/ApiSurface.cs"
 api=0; MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/ApiSurface.exe" --check "$WORKS" "$HERE/api/UnderRailWorks.api.txt" ${API_RELEASE:+--release} || api=$?
-[ "$api" -lt 2 ] || { echo "build.sh: the API check failed (above)"; exit 1; }
+if [ -n "${API_RELEASE:-}" ] && [ "$api" -ne 0 ]; then echo "build.sh: the API changed in a way its version doesn't cover (above): not releasable"; exit 1; fi
 # A mod: against FNA and Works only, never the game (a mod that uses Works' API can't reach the game's scrambled names,
 # which change between game versions; any it used would fail to compile here). mod <name> <into> <source dir or file>
 mod() {

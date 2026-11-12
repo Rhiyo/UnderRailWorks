@@ -22,6 +22,12 @@ using UnderRailWorks;
 
 public sealed partial class Coop : WorksMod
 {
+    // What host and joiner compare when connecting: the release version and the message protocol. The protocol goes up
+    // whenever the messages change, also between releases (dev builds with different protocols can't play together;
+    // the release version itself only changes at a GitHub release).
+    const int Protocol = 12;
+    string Handshake { get { return Info.VersionText + "/" + Protocol; } }
+
     const int DefaultPort = 27650;
     const float TogetherTiles = 10;     // every player within this of whoever takes an exit, or nobody goes
     const string DefaultBlueprint = "creatures\\generichumans\\jkkgunslinger";
@@ -130,7 +136,7 @@ public sealed partial class Coop : WorksMod
                 return;
             case "HELLO":
                 p.Name = w.Length > 2 && w[2].Trim().Length > 0 ? w[2].Trim() : "Player " + p.Id;
-                if (w.Length < 2 || w[1] != Info.VersionText) { p.Send("BYE", "the host has Co-op " + Info.VersionText + ", you have " + (w.Length > 1 ? w[1] : "?")); p.Close(); return; }
+                if (w.Length < 2 || w[1] != Handshake) { p.Send("BYE", "the host has Co-op " + Handshake + ", you have " + (w.Length > 1 ? w[1] : "?") + " (both need the same)"); p.Close(); return; }
                 seats[p] = new Seat { Peer = p };
                 Log.Info(p.Name + " connected from " + p.Address);
                 Changed(false);
@@ -278,7 +284,7 @@ public sealed partial class Coop : WorksMod
         }
         catch (Exception ex) { host = null; return "can't reach " + args[0] + ": " + ex.Message; }
         playing = false; state = null; choices.Clear();
-        host.Send("HELLO", Info.VersionText, name);
+        host.Send("HELLO", Handshake, name);
         Log.Info("connected to " + args[0] + " as " + name);
         return "connected to " + args[0] + ", waiting for the character list";
     }

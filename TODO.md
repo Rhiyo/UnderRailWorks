@@ -4,7 +4,7 @@ Working list for UnderRailWorks. Design, decisions and status are in UnderRailWo
 
 ## Before releasing the API as 1.0 (Nov 2026 review; decisions for Sean)
 
-Done (Nov 13): the API baseline and build gate (docs/Versioning.md), the load-time check of mods (ModCheck), [Preview]
+Done (Nov 13): the API check (locked at GitHub releases only, docs/Versioning.md), the load-time check of mods (ModCheck), [Preview]
 for parts not ready to freeze, the implicit public constructors, Cancellable everywhere, owner-less registrations,
 Func hooks turned into argument objects, the obvious duplicates made internal. Still to decide:
 

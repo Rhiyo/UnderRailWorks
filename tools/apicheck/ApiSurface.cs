@@ -3,10 +3,11 @@
 // update renames those, which would break every mod using them: there must be none).
 //   mono ApiSurface.exe UnderRailWorks.dll api.txt              writes the API
 //   mono ApiSurface.exe --check UnderRailWorks.dll baseline.txt [--release]
-//       compares with the last release's API. Exit 0: the same, or the differences are covered by the version (a
-//       removal or change needs a new major, or a new minor while 0.x; an addition a new minor). Exit 1: additions
-//       without a new minor (a warning while building; --release makes it an error). Exit 2: a break the version
-//       doesn't cover, or a game type in the API. Prints what changed.
+//       compares with the last GitHub release's API (no file: nothing released, nothing locked). Exit 0: the same,
+//       or the differences are covered by the version (a removal or change needs a new major, or a new minor while
+//       0.x; an addition a new minor). Exit 1: additions without a new minor. Exit 2: a break the version doesn't
+//       cover, or a game/third-party type in the API. Prints what changed. build.sh only reports; release.sh
+//       (--release) refuses anything but 0.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -69,7 +70,8 @@ static class ApiSurface
     {
         var now = Surface(dll);
         if (Leaks.Count > 0) { Console.WriteLine("API: game types, or preview types in stable members, in the public API (mark those members [Preview], or don't use the type):"); foreach (var l in Leaks.OrderBy(x => x)) Console.WriteLine("  " + l); return 2; }
-        if (!File.Exists(baselinePath)) { Console.WriteLine("API: no baseline (" + baselinePath + "): writing it"); File.WriteAllLines(baselinePath, now); return 0; }
+        // No release yet: nothing is locked (the first release records the baseline).
+        if (!File.Exists(baselinePath)) { Console.WriteLine("API " + new Version(now[0].Split(' ').Last()).ToString(2) + ": no release yet, nothing locked (" + (now.Count - 1) + " API lines)"); return 0; }
         var was = File.ReadAllLines(baselinePath).ToList();
         Version vNow = new Version(now[0].Split(' ').Last()), vWas = new Version(was[0].Split(' ').Last());
         var removed = was.Skip(1).Except(now.Skip(1)).ToList(); var added = now.Skip(1).Except(was.Skip(1)).ToList();

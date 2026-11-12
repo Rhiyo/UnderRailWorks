@@ -490,7 +490,7 @@ public static partial class World
     }
 
     // A game is loading or starting: the placed entities belong to the game state being replaced.
-    internal static void ForgetAll() { placed.Clear(); travelling.Clear(); lock (placements) placements.RemoveAll(p => p.Temporary); }
+    internal static void ForgetAll() { placed.Clear(); travelling.Clear(); lock (placements) placements.RemoveAll(p => p.Temporary); Party.ForgetMembers(); }
 
     internal static void Forget(c1a zone)
     {

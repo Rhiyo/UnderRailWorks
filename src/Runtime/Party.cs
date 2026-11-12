@@ -90,6 +90,10 @@ namespace UnderRailWorks
             return false;
         }
 
+        // A save is loading: the characters added belong to the world that's going away (a co-op mod adds its players
+        // again once they're placed in the loaded one).
+        internal static void ForgetMembers() { lock (others) others.Clear(); }
+
         internal static void Forget(string mod)
         {
             lock (rules) rules.RemoveAll(r => r.Mod == mod);

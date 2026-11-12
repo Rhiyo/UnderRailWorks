@@ -55,6 +55,7 @@ tools/check-release.sh
 tools/savecheck/check-saves.sh --play
 tools/smoketest/smoke.sh
 tools/smoketest/coop.sh
+tools/smoketest/coop-midfight.sh
 
 # 5. Package.
 ORIG="$GAME/underrail.exe"; [ -f "$GAME/underrail.exe.backup" ] && ORIG="$GAME/underrail.exe.backup"
