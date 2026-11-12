@@ -58,6 +58,17 @@ an UnderRailFixes 1.x install and takes over its settings. After a game update, 
 `System.Runtime.Serialization.Formatters.dll`, `UnderrailSteamHost.exe`, `Mono.Cecil.dll`, `README.md`, `LICENSE.txt`,
 `THIRD-PARTY-NOTICES.txt`, `linux`, `x64` and, if you don't want them any more, `Mods` and `UnderRailWorks.ini`.
 
+## Reporting a problem
+
+1. Set `Log=1` in `UnderRailWorks.ini` (in the game folder) and play until it happens again.
+2. In the game, open the console (the ` key) and type `works.health`: it lists the versions, any part of Works that
+   didn't start, and mods with problems.
+3. Send `UnderRailWorks.log` (in the game folder) with what you did. Mods' own problems go to their authors; the
+   Mods tab (Options -> Mods) shows which mod had errors.
+
+After a game update, the main menu says if parts of Works don't fit the new version; mods using them may not work
+until Works is updated. Saves are never at risk: they stay loadable by the game without Works.
+
 ## For modders
 
 Start with `docs/ModdingGuide.md` (setup, the rules, what to do when Works lacks something), then `docs/Cookbook.md` (an example per API area, compiled and run on every build). The API reference is `docs/API.md` (generated from the code's comments on every build); the guide with how each part

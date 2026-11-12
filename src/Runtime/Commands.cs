@@ -89,6 +89,16 @@ namespace UnderRailWorks
                 return a[0] + " = " + (Variables.Global.Get<object>(a[0], null) ?? "(unset)");
             });
             Add("UnderRailWorks", "works.mods", "works.mods: the mods and their state", a => string.Join("\n", ModLoader.Mods.Select(m => m.Name + " " + m.VersionText + ": " + (m.Loaded ? "loaded" : m.Enabled ? "not loaded (" + m.Error + ")" : "off") + (m.Failures > 0 ? ", " + m.Failures + " errors" : ""))));
+            Add("UnderRailWorks", "works.health", "works.health: versions, parts that didn't start, patch errors, mods with problems (for bug reports)", a =>
+            {
+                var lines = new List<string>();
+                lines.Add("UnderRailWorks " + FixVersion.Value + ", API " + WorksApi.Version.ToString(2) + ", game " + WorksApi.GameVersion + " (made for " + WorksApi.MadeForGameVersion + "), .NET " + Environment.Version);
+                lines.Add("parts that didn't start: " + (WorksApi.Unavailable.Count == 0 ? "none" : string.Join(", ", WorksApi.Unavailable.ToArray())) + "; game members not found: " + WorksHealth.MissingNames + "; patch errors: " + PatchGuard.Count);
+                foreach (var m in ModLoader.Mods.Where(m => m.Error != null || m.Warning != null || m.Failures > 0))
+                    lines.Add(m.Id + " " + m.VersionText + ": " + (m.Error != null ? "not loaded: " + m.Error : m.Failures > 0 ? m.Failures + " errors (last: " + m.LastFailure + ")" : "note: " + m.Warning));
+                var text = string.Join("\n", lines.ToArray());
+                Log.Write("health:\n" + text); return text;
+            });
             Add("UnderRailWorks", "works.memory", "works.memory <name>: whom an NPC's AI has noticed (debugging)", a =>
             {
                 var c = a.Length == 0 ? null : World.Characters.FirstOrDefault(x => string.Equals(x.Name, string.Join(" ", a), StringComparison.OrdinalIgnoreCase));
