@@ -140,7 +140,7 @@ public sealed class WorksTest : WorksMod
             var p = World.Player; if (p == null) return "no player";
             var ammo = p.Inventory.Items.FirstOrDefault(i => i.Code != null && i.Code.StartsWith("Ammo.Caliber_5"));
             var gun = p.Equipment[EquipSlot.PrimaryWeapon];
-            bool ok = ammo != null && Items.Use(p, ammo, gun);     // the ammo's use, on the weapon
+            bool ok = ammo != null && Items.UseOn(p, ammo, gun);     // the ammo's use, on the weapon
             Log.Info("reload command: " + ok + (gun == null ? " (no gun found)" : ""));
             return "used: " + ok;
         });

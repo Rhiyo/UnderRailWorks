@@ -49,12 +49,13 @@ namespace UnderRailWorks
         // a grenade is thrown at target), as the game's own AI does: queued as the character's next action, with the AP
         // cost, cooldowns and checks of a normal use. target: the character it is used on (null: the user itself).
         // False if the item has no use or the game refuses it now (e.g. a bandage below 40 % health, in combat).
-        public static bool Use(Character user, Item item, Character target = null) { return UseOn(user, item, target == null ? null : target.Entity); }
+        public static bool Use(Character user, Item item, Character target = null) { return UseWith(user, item, target == null ? null : target.Entity); }
 
-        // The same, used on another item: ammo on a weapon (reloads it), a repair kit on armour...
-        public static bool Use(Character user, Item item, Item target) { return UseOn(user, item, target == null ? null : (object)target.Game); }
+        // The same, used on another item: ammo on a weapon (reloads it), a repair kit on armour... (Its own name: an
+        // overload of Use made Use(c, item, null) ambiguous.)
+        public static bool UseOn(Character user, Item item, Item target) { return UseWith(user, item, target == null ? null : (object)target.Game); }
 
-        static bool UseOn(Character user, Item item, object target)
+        static bool UseWith(Character user, Item item, object target)
         {
             var c = user == null ? null : user.Entity as c5x;
             var data = c == null ? null : c.GetAspect<amc>();

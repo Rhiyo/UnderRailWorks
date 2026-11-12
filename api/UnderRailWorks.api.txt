@@ -587,7 +587,7 @@ UnderRailWorks.ItemUse :: sealed class : UnderRailWorks.Cancellable
 UnderRailWorks.Items :: static class
 UnderRailWorks.Items :: static method System.Boolean Exists(System.String)
 UnderRailWorks.Items :: static method System.Boolean Use(UnderRailWorks.Character, UnderRailWorks.Item, UnderRailWorks.Character = null)
-UnderRailWorks.Items :: static method System.Boolean Use(UnderRailWorks.Character, UnderRailWorks.Item, UnderRailWorks.Item)
+UnderRailWorks.Items :: static method System.Boolean UseOn(UnderRailWorks.Character, UnderRailWorks.Item, UnderRailWorks.Item)
 UnderRailWorks.Items :: static method System.Collections.Generic.IList<System.String> All(System.Nullable<UnderRailWorks.ItemKind> = null)
 UnderRailWorks.Items :: static method System.String Code(System.String)
 UnderRailWorks.Items :: static method System.String Define(UnderRailWorks.WorksMod, System.String, System.String, System.Action<UnderRailWorks.ItemDefinition>)

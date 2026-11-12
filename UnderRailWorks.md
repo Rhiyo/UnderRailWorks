@@ -1314,7 +1314,7 @@ the game decides. What it took (each measured, don't redo):
 
 `GameEvents.Reloading` (cancellable: Character, Weapon, Ammo) and `GameEvents.Reloaded` (after a reload that loaded
 ammo), on the game's reload action nh.fr, which the player and NPCs' AI both use. The weapon is worked out as nh.fr
-does (its mode field: 0 the weapon in hand, 2 the target item, else the action's item). `Items.Use(user, item, Item
+does (its mode field: 0 the weapon in hand, 2 the target item, else the action's item). `Items.UseOn(user, item, Item
 target)` uses an item on another item (the game's use call takes any object as its target): ammo on a weapon reloads
 it. Tested in game (`wt.gun`, `wt.reload`): Reloading with the weapon and ammo, Reloaded, the magazine full. Before
 the item overload, Items.Use(ammo) aimed at the player and the game's reload failed (mode 1, no weapon). NPCs in
