@@ -153,7 +153,9 @@ public static class ModLoader
         // Content packs (content/*.json), after every mod's code: packs may use conditions and effects a DLL registered.
         foreach (var mod in order.Where(m => m.Loaded))
         {
+            ModScope.Current = mod.Id;     // what the pack registers is the mod's (forgotten when it's reloaded)
             try { ContentPacks.Load(mod); } catch (Exception ex) { Log.Write("content: " + mod.Id + ": " + ex.Message); }
+            ModScope.Current = null;
             try { AssetStore.ScanTexturePack(mod); } catch (Exception ex) { Log.Write("assets: " + mod.Id + ": " + ex.Message); }
         }
         // PostLoad: after every mod's Load, in the same order.

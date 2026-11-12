@@ -13,9 +13,9 @@ public sealed class TheStranger : WorksMod
 
     public override void Load()
     {
-        Quests.Define(Quest, "South Gate Station", "A stranger at the north gate says he's owed " + Price + " charons by someone who looks just like me. Pay him, or don't.", xp: 75, oddityXp: 1);
+        Quests.Define(this, Quest, "South Gate Station", "A stranger at the north gate says he's owed " + Price + " charons by someone who looks just like me. Pay him, or don't.", xp: 75, oddityXp: 1);
 
-        Dialogs.Define("stranger/talk", d =>
+        Dialogs.Define(this, "stranger/talk", d =>
         {
             d.Branch("entry")
                 .If(Condition.Flag(Paid), "after")

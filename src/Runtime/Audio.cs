@@ -48,7 +48,9 @@ namespace UnderRailWorks
         // Plays a sound by id at volume 0..1 (as an interface sound).
         public static void Play(string id, float volume = 1f) { var a = bpo.GetService<dd7>(); if (a != null) a.aeb(id, volume, false, c9z.e); }
         // Wherever the game plays oldId, newId plays instead.
-        public static void Remap(string oldId, string newId) { AudioHooks.Remaps[oldId] = newId; }
+        public static void Remap(WorksMod mod, string oldId, string newId) { AudioHooks.Remaps[oldId] = newId; remappedBy[oldId] = mod.Id; }
+        static readonly System.Collections.Generic.Dictionary<string, string> remappedBy = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        internal static void Forget(string mod) { foreach (var k in System.Linq.Enumerable.ToList(System.Linq.Enumerable.Where(remappedBy, kv => string.Equals(kv.Value, mod, StringComparison.OrdinalIgnoreCase)))) { AudioHooks.Remaps.Remove(k.Key); remappedBy.Remove(k.Key); } }
     }
 }
 

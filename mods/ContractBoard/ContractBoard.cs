@@ -36,11 +36,13 @@ public sealed class ContractBoard : WorksMod
 
     static readonly string[] Supplies = { "consumables\\food\\cavehoppermeat", "consumables\\food\\cannedmeat", "consumables\\medicine\\bandage" };
 
+    static ContractBoard me;     // the static helpers' owner for Text.Set
     public override void Load()
     {
-        for (int i = 1; i <= Pool; i++) Quests.Define(QuestId(i), "Contracts", "A contract from the gate.", xp: 40, oddityXp: 1);
+        me = this;
+        for (int i = 1; i <= Pool; i++) Quests.Define(this, QuestId(i), "Contracts", "A contract from the gate.", xp: 40, oddityXp: 1);
 
-        Dialogs.Define("contracts/board", d =>
+        Dialogs.Define(this, "contracts/board", d =>
         {
             var line = d.Line("start", "Got work, if you can handle it. Pays in charons.");
             foreach (var job in ActiveJobs())
@@ -149,7 +151,7 @@ public sealed class ContractBoard : WorksMod
 
     static void SetText(Job j)
     {
-        Text.Set("quests", QuestId(j.Number), "The contractor at the north gate: " + j.Describe() + ". Progress: " + Progress(j) + "/" + j.Count + ". Pays " + j.Reward + " charons.");
+        Text.Set(me, "quests", QuestId(j.Number), "The contractor at the north gate: " + j.Describe() + ". Progress: " + Progress(j) + "/" + j.Count + ". Pays " + j.Reward + " charons.");
     }
 
     static void RefreshTexts() { foreach (var j in ActiveJobs()) SetText(j); }

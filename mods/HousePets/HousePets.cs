@@ -132,7 +132,7 @@ public sealed class HousePets : WorksMod
             World.Place(placement);
             var placed = World.Placed(placement.Id);
             if (placed != null) active[placed] = number;
-            Dialogs.Define(DialogOf(number), b => Talk(b, number));
+            Dialogs.Define(this, DialogOf(number), b => Talk(b, number));
         }
     }
 

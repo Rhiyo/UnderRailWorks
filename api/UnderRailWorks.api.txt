@@ -289,7 +289,7 @@ UnderRailWorks.Dialogs :: static method System.Boolean Start(UnderRailWorks.Char
 UnderRailWorks.Dialogs :: static method System.Collections.Generic.IList<System.String> StockLines(System.String)
 UnderRailWorks.Dialogs :: static method System.String Describe(System.String)
 UnderRailWorks.Dialogs :: static method System.String WriteDescription(System.String)
-UnderRailWorks.Dialogs :: static method System.Void Define(System.String, System.Action<UnderRailWorks.DialogBuilder>)
+UnderRailWorks.Dialogs :: static method System.Void Define(UnderRailWorks.WorksMod, System.String, System.Action<UnderRailWorks.DialogBuilder>)
 UnderRailWorks.Dialogs :: static method System.Void Override(UnderRailWorks.Character, System.String)
 UnderRailWorks.Dialogs :: static method System.Void Patch(UnderRailWorks.WorksMod, System.String, System.Action<UnderRailWorks.DialogPatch>)
 UnderRailWorks.DisarmOutcome :: CriticalFailure = 3
@@ -937,7 +937,7 @@ UnderRailWorks.Quests :: static method System.Boolean Fail(System.String, System
 UnderRailWorks.Quests :: static method System.Boolean Start(System.String, System.Boolean = True)
 UnderRailWorks.Quests :: static method System.String JournalText(System.String)
 UnderRailWorks.Quests :: static method System.Void Advance(System.String, System.String, System.Boolean = True)
-UnderRailWorks.Quests :: static method System.Void Define(System.String, System.String, System.String, System.Int32 = 0, System.Int32 = 0)
+UnderRailWorks.Quests :: static method System.Void Define(UnderRailWorks.WorksMod, System.String, System.String, System.String, System.Int32 = 0, System.Int32 = 0)
 UnderRailWorks.Quests :: static method UnderRailWorks.QuestInfo Info(System.String)
 UnderRailWorks.Quests :: static method UnderRailWorks.QuestState State(System.String)
 UnderRailWorks.Quests :: static property System.Collections.Generic.IList<System.String> Active { get; }
@@ -986,7 +986,7 @@ UnderRailWorks.Skills :: static method System.Void SetSynergies(UnderRailWorks.W
 UnderRailWorks.Sound :: static class
 UnderRailWorks.Sound :: static method System.Void Add(UnderRailWorks.WorksMod, System.String, System.String)
 UnderRailWorks.Sound :: static method System.Void Play(System.String, System.Single = 1)
-UnderRailWorks.Sound :: static method System.Void Remap(System.String, System.String)
+UnderRailWorks.Sound :: static method System.Void Remap(UnderRailWorks.WorksMod, System.String, System.String)
 UnderRailWorks.Sound :: static method System.Void Replace(UnderRailWorks.WorksMod, System.String, System.String)
 UnderRailWorks.Sound :: static property System.Collections.Generic.IList<System.String> Ids { get; }
 UnderRailWorks.SpawnSide :: Ally = 3
@@ -1046,7 +1046,7 @@ UnderRailWorks.TargetChoice :: sealed class
 UnderRailWorks.Text :: static class
 UnderRailWorks.Text :: static method System.String Count(System.Int32, System.String, System.String = null)
 UnderRailWorks.Text :: static method System.String Get(System.String)
-UnderRailWorks.Text :: static method System.Void Set(System.String, System.String, System.String)
+UnderRailWorks.Text :: static method System.Void Set(UnderRailWorks.WorksMod, System.String, System.String, System.String)
 UnderRailWorks.Theft :: property System.Double Suspicion { get; set; }
 UnderRailWorks.Theft :: property UnderRailWorks.Character Thief { get; }
 UnderRailWorks.Theft :: property UnderRailWorks.Character Victim { get; }

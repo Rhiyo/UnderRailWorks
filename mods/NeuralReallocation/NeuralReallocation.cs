@@ -24,7 +24,7 @@ public sealed class NeuralReallocation : WorksMod
     public override void Load()
     {
         config = GetConfig<NeuralReallocationConfig>();
-        Dialogs.Define("neural/technician", d =>
+        Dialogs.Define(this, "neural/technician", d =>
         {
             int skills = SpentSkills(), abilities = SpentAbilities();
             d.Line("start", "Neural reallocation. I unwire what you've learned; you wire it back however you like at your next level-up. Skills: "

@@ -84,12 +84,19 @@ public static class Quests
     // A new quest: id (unique: prefix it with the mod's id), the journal heading it's listed under (the game uses area
     // names: "South Gate Station"), its journal text, and the XP completing it gives (classic and oddity systems).
     // Call it from Load: the game resolves quest names once per save it loads.
-    public static void Define(string id, string group, string journalText, int xp = 0, int oddityXp = 0)
+    public static void Define(WorksMod mod, string id, string group, string journalText, int xp = 0, int oddityXp = 0) { Define(mod.Id, id, group, journalText, xp, oddityXp); }
+    static readonly Dictionary<string, string> questOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    internal static void Define(string id, string group, string journalText, int xp = 0, int oddityXp = 0) { Define(ModScope.Current, id, group, journalText, xp, oddityXp); }
+    internal static void Define(string owner, string id, string group, string journalText, int xp, int oddityXp)
     {
         if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(journalText)) throw new ArgumentException("a quest needs an id and journal text");
+        string had;
+        // The same mod again (it was reloaded): the game's registry keeps the quest; its text is updated.
+        if (modQuests.Contains(id) && questOwners.TryGetValue(id, out had) && string.Equals(had, owner, StringComparison.OrdinalIgnoreCase)) { Text.Set(owner, "quests", id, journalText); return; }
         if (ao5.a(id) != null) throw new InvalidOperationException("a quest named " + id + " already exists");
+        questOwners[id] = owner;
         ao5.a(group ?? "", id, xp, oddityXp, journalText);     // the game's own registry (b4m adds the stock quests the same way)
-        Text.Set("quests", id, journalText);                    // the journal shows the knowledge text, not the definition's
+        Text.Set(owner, "quests", id, journalText);             // the journal shows the knowledge text, not the definition's
         modQuests.Add(id);
     }
 
@@ -175,7 +182,11 @@ public static class Text
     public static string Count(int n, string one, string many = null) { return n + " " + (n == 1 || n == -1 ? one : many ?? one + "s"); }
 
     // Text a mod adds (or replaces), in every language: "category/key". In memory only.
-    public static void Set(string category, string key, string text) { added[category + "/" + key] = text; }
+    public static void Set(WorksMod mod, string category, string key, string text) { Set(mod.Id, category, key, text); }
+    internal static void Set(string category, string key, string text) { Set(ModScope.Current, category, key, text); }
+    static readonly Dictionary<string, string> textOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    internal static void Set(string owner, string category, string key, string text) { added[category + "/" + key] = text; textOwners[category + "/" + key] = owner ?? ""; }
+    internal static void Forget(string mod) { foreach (var k in textOwners.Where(kv => string.Equals(kv.Value, mod, StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key).ToList()) { added.Remove(k); textOwners.Remove(k); } }
 
     // The hook at the start of qv.b: Works' text first.
     internal static bool Lookup(string path, out string text) { return added.TryGetValue(path ?? "", out text); }

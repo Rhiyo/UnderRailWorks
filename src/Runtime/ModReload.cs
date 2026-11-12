@@ -220,7 +220,9 @@ namespace UnderRailWorks.Internal
             step("triggers", () => { lock (Triggers.All) Triggers.All.RemoveAll(t => t.Mod == id); });
             step("loot", () => LootHooks.Rules.RemoveAll(r => r.Mod == id));
             step("stores", () => StoreHooks.Forget(id));
-            step("dialogs", () => Dialogs.Forget(id));
+            step("dialogs", () => { Dialogs.Forget(id); Dialogs.ForgetDefined(id); });
+            step("texts", () => Text.Forget(id));
+            step("sound remaps", () => Sound.Forget(id));
             step("item edits", () => ItemHooks.Forget(id));
             step("api", () => Mods.Forget(id));
             step("new game options", () => NewGameOptions.Forget(id));

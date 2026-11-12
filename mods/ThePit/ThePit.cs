@@ -40,7 +40,7 @@ public sealed class ThePit : WorksMod
     public override void Load()
     {
         config = GetConfig<ThePitConfig>();
-        Dialogs.Define("pit/master", d =>
+        Dialogs.Define(this, "pit/master", d =>
         {
             int best = Data.GetInt("best");
             d.Line("start", "The Pit. You pay, I let the beasts out, you try not to die. Every wave you clear pays better than the last."
