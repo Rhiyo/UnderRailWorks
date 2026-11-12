@@ -215,7 +215,13 @@ on top of Co-op.
   container, items going into their bag (GameEvents.ItemAdded), XP they gain (GameEvents.ExperienceGained), their
   conversation (TalkAs already swaps the sheet). Tested with handlers written for single player: "Mira opens Desk",
   "Mira got SGS Credits x200", "asd gained 40 XP" then "Mira gained 20 XP".
-- **Not covered (and why):** a mod's own windows and popups opened by a joiner's action show on the host; a mod's keys
+- **Popups on the right screen (Works' PlayerScreens, Co-op 1.2).** Ui.Ask / AskNumber / Confirm / Choose and
+  Notify.Log go to the acting player's screen (or one named with Party.As); a multiplayer mod provides the screens
+  (IPlayerScreens: Co-op sends POPUP to that joiner, the answer comes back and the callback runs on the host as that
+  player). Tested with an unaware ContainerOpening handler asking "Search the Desk?": shown on Mira's player's screen
+  only, "Yes" there ran the callback on the host with World.Player = Mira.
+- **Not covered (and why):** a mod's own windows (Ui.Window: drawn live, not a question) opened by a joiner's action
+  show on the host; a mod's keys
   and buttons on a joiner's machine run against the copy (refused); level-ups happen on the joiner's screen
   (LevelledUp doesn't fire on the host). World.Player is not changed outside an action: HUD mods, minimaps and windows
   mean "this screen's player".

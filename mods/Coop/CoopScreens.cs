@@ -1,0 +1,60 @@
+// Co-op as Works' player screens: a mod's popup or message meant for a joined player (the acting player, or named with
+// Party.As) is shown on that player's machine, and their answer comes back to run the mod's callback on the host.
+// Messages, host to joiner: POPUP <id> <kind> <title> <text> <initial> <min> <max> <alsoAllow> <buttons...>,
+// SAID <text>. Joiner to host: POPUPANS <id> <answer>.
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Microsoft.Xna.Framework;
+using UnderRailWorks;
+
+public sealed partial class Coop : IPlayerScreens
+{
+    readonly Dictionary<int, Action<string>> popupAnswers = new Dictionary<int, Action<string>>();
+    int nextPopup;
+
+    // --- Host ---------------------------------------------------------------------------------------------------
+    public bool Popup(Character who, RemotePopup p, Action<string> answer)
+    {
+        var seat = listener == null ? null : seats.Values.FirstOrDefault(s => s.Character == who && s.Peer != null && !s.Peer.Closed);
+        if (seat == null) return false;
+        int id = ++nextPopup;
+        popupAnswers[id] = answer;
+        seat.Peer.Send(new object[] { "POPUP", id, p.Kind.ToString(), p.Title ?? "", p.Text ?? "", p.Initial ?? "", p.Min, p.Max, p.AlsoAllow ?? "" }.Concat((p.Buttons ?? new string[0]).Cast<object>()).ToArray());
+        return true;
+    }
+
+    public bool Message(Character who, string text, Color colour)
+    {
+        var seat = listener == null ? null : seats.Values.FirstOrDefault(s => s.Character == who && s.Peer != null && !s.Peer.Closed);
+        if (seat == null) return false;
+        seat.Peer.Send("SAID", text);
+        return true;
+    }
+
+    void PopupAnswered(string[] w)
+    {
+        int id; Action<string> a;
+        if (w.Length < 3 || !int.TryParse(w[1], out id) || !popupAnswers.TryGetValue(id, out a)) return;
+        popupAnswers.Remove(id);
+        try { a(w[2]); } catch (Exception ex) { Log.Error("popup answer: " + ex.Message); }
+    }
+
+    // --- Joiner -------------------------------------------------------------------------------------------------
+    void ShowPopup(string[] w)
+    {
+        if (w.Length < 9) return;
+        var id = w[1]; var kind = w[2]; var title = w[3]; var text = w[4]; var initial = w[5];
+        int min, max; int.TryParse(w[6], out min); int.TryParse(w[7], out max);
+        var also = w[8]; var buttons = w.Skip(9).ToArray();
+        Action<string> reply = a => { if (host != null && !host.Closed) host.Send("POPUPANS", id, a); };
+        switch (kind)
+        {
+            case "Ask": Ui.Ask(this, text, initial, t => reply(t), buttons.Length > 0 ? buttons[0] : "OK", also.Length > 0 ? also : null); break;
+            case "AskNumber": { int n; int.TryParse(initial, out n); Ui.AskNumber(this, text, min, max, n, v => reply(v.ToString()), buttons.Length > 0 ? buttons[0] : "OK"); break; }
+            case "Choose": Ui.Choose(this, title, text, i => reply(i.ToString()), buttons); break;
+        }
+    }
+
+    void LoadScreens() { PlayerScreens.Provider = this; }
+}

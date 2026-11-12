@@ -18,7 +18,7 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("1.1.0")]
+[assembly: System.Reflection.AssemblyVersion("1.2.0")]
 
 public sealed partial class Coop : WorksMod
 {
@@ -141,6 +141,7 @@ public sealed partial class Coop : WorksMod
         if (w[0] == "MYSHEET" && seat.Character == null && seat.Record != null) { if (w.Length > 1) seat.Record.Sheet = w[1]; return; }     // apart: kept with the record
         if (w[0] == "LOADED") { HostMirrorMessage(seat, w); return; }
         if (ModMessage(p.Name, w)) return;
+        if (w[0] == "POPUPANS") { PopupAnswered(w); return; }
         switch (w[0])
         {
             case "PICK":
@@ -292,6 +293,7 @@ public sealed partial class Coop : WorksMod
             case "TURN": Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")"); return;
             case "SAID": Tell(w.Length > 1 ? w[1] : ""); return;
         }
+        if (w[0] == "POPUP") { ShowPopup(w); return; }
         if (!TalkMessage(w) && !LootMessage(w) && !TradeMessage(w) && !ModMessage(null, w)) MirrorMessage(w);
     }
 
@@ -423,6 +425,7 @@ public sealed partial class Coop : WorksMod
         LoadXp();
         LoadHost();
         LoadListening();
+        LoadScreens();
         LoadUi();
         LoadMirror();
         LoadLoot();
@@ -538,6 +541,7 @@ public sealed partial class Coop : WorksMod
 
     public override void Unload()
     {
+        if (PlayerScreens.Provider == this) PlayerScreens.Provider = null;
         StopHosting();
         if (host != null) { host.Close(); host = null; }
     }

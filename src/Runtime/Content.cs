@@ -190,6 +190,7 @@ public static class Notify
     // A line in the game's chat/log (where "New journal entry: ..." appears).
     public static void Log(string text, Color? colour = null)
     {
+        if (PlayerScreens.RouteMessage(text, colour ?? Color.White)) return;     // for another player's screen
         var pen = (d22)PenCtor.Invoke(new object[] { b94.a(), colour ?? Default });
         var rich = new ecs(new[] { new dl6(new[] { new bph(pen, text) }) });
         a7v.a(new dx(rich));

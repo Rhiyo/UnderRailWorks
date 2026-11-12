@@ -25,6 +25,7 @@ public static partial class Ui
     //   Ui.Ask(this, "What will you call your dog?", "Rex", name => { ... });
     public static bool Ask(WorksMod mod, string question, string initial, Action<string> onAnswer, string okText = "OK", string alsoAllow = null)
     {
+        if (PlayerScreens.Route(new RemotePopup { Kind = PopupKind.Ask, Text = question, Initial = initial, Buttons = new[] { okText }, AlsoAllow = alsoAllow }, t => { if (onAnswer != null && !string.IsNullOrEmpty(t)) onAnswer(t); })) return true;
         var screen = UiPopups.Screen();
         if (screen == null) return false;
         var popup = new e4u(string.IsNullOrEmpty(initial) ? "<New>" : initial);
@@ -44,6 +45,7 @@ public static partial class Ui
     //   Ui.AskNumber(this, "How many rations?", 1, 20, 5, n => { ... });
     public static bool AskNumber(WorksMod mod, string question, int min, int max, int initial, Action<int> onAnswer, string okText = "OK")
     {
+        if (PlayerScreens.Route(new RemotePopup { Kind = PopupKind.AskNumber, Text = question, Min = min, Max = max, Initial = initial.ToString(), Buttons = new[] { okText } }, t => { int n; if (onAnswer != null && int.TryParse(t, out n)) onAnswer(n); })) return true;
         var screen = UiPopups.Screen();
         if (screen == null) return false;
         if (max < min) { var t = min; min = max; max = t; }
@@ -80,6 +82,7 @@ public static partial class Ui
     // Enter: the first; Escape: the last.
     public static bool Choose(WorksMod mod, string title, string text, Action<int> onChoice, params string[] buttons)
     {
+        if (PlayerScreens.Route(new RemotePopup { Kind = PopupKind.Choose, Title = title, Text = text, Buttons = buttons }, t => { int n; if (onChoice != null && int.TryParse(t, out n)) onChoice(n); })) return true;
         var screen = UiPopups.Screen();
         if (screen == null || buttons == null || buttons.Length == 0) return false;
         var choices = buttons.Select((b, i) => new cpk(i.ToString(), b)).ToArray();

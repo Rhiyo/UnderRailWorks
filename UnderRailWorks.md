@@ -1720,3 +1720,7 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
 - **The acting player:** `Party.Acting`, `Party.As(character, action)`: while a party member acts, `World.Player` is
   that member for mods' handlers (object use, container opening, item taking, items into their bag, their XP). So
   mods written for one player act for whoever did it in co-op.
+- **Player screens:** `PlayerScreens.Provider` (`IPlayerScreens`: Popup, Message), set by a multiplayer mod. Ui.Ask,
+  AskNumber, Confirm, Choose and Notify.Log go to the acting player's screen when that's another player's; the answer
+  runs the callback here as that player. Single player: unchanged. A mod can aim one at a player with
+  `Party.As(player, () => Ui.Confirm(...))`.

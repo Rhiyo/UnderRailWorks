@@ -727,6 +727,9 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 - `void AddMoney(int amount, bool notify = true)`
 - `bool TakeMoney(int amount, bool notify = true)`
 
+## IPlayerScreens  _(interface, PlayerScreens.cs)_
+
+
 ## Item  _(class, Characters.cs)_
 
 - `string Code`
@@ -1327,6 +1330,14 @@ The player ordered their character to do something (a click on the world, the at
 
 Values: `Walk, Attack, Talk, Use, Ability, Travel, Other`
 
+## PlayerScreens  _(class, PlayerScreens.cs)_
+
+- `static IPlayerScreens Provider`
+
+## PopupKind  _(enum, PlayerScreens.cs)_
+
+Values: `Ask, AskNumber, Choose`
+
 ## Prices  _(class, Hud.cs)_
 
 - `static readonly Hook<Func<Character, float, float>> BuyMarkup = new Hook<Func<Character, float, float>>("BuyMarkup")` — Change what merchants charge: each handler gets the merchant and the markup so far (the game's: about 1.15-3.5, lower with Mercantile) and returns the new one. Read when the barter window opens.
@@ -1382,6 +1393,17 @@ Values: `NotStarted, Active, Completed, Failed`
 - `Character Character`
 - `Item Weapon`
 - `Item Ammo`
+
+## RemotePopup  _(class, PlayerScreens.cs)_
+
+- `PopupKind Kind`
+- `string Title`
+- `string Text`
+- `string Initial`
+- `int Min`
+- `int Max`
+- `string[] Buttons`
+- `string AlsoAllow`
 
 ## ReplaceHook<T>  _(class, Hooks.cs)_
 
