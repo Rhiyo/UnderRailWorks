@@ -274,19 +274,21 @@ namespace UnderRailWorks.Internal
         }
 
         static void Loaded(string __0, bk3 __result)
-        {
+        { try {
             List<Edit_> list;
             if (__result == null || __0 == null || inside || !edits.TryGetValue(Norm(__0), out list)) return;
             foreach (var e in list) Apply(e.Mod, e.Edit, __result, __0);
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("ItemDefinitions.Loaded", ex_); }
+    }
 
         static void Tooltip(coh __0, eg __5, ecs __result)
-        {
+        { try {
             if (!Tooltips.Any || __0 == null || __result == null) return;
             var item = new Item(__0);
             var tip = new Tooltip { Game = __result, InTrade = __5 != null };
             Tooltips.Run(h => h(item, tip));
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("ItemDefinitions.Tooltip", ex_); }
+    }
 
         internal static void Install(HarmonyLib.Harmony harmony)
         {

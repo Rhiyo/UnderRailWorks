@@ -226,11 +226,12 @@ static class ContentHooks
     }
 
     static bool TextFirst(string __0, ref string __result)
-    {
+    { try {
         string text;
         if (!Text.Lookup(__0, out text)) return true;
         __result = text;
         return false;
+    } catch (Exception ex_) { PatchGuard.Failed("Content.TextFirst", ex_); return true; }
     }
 }
 }

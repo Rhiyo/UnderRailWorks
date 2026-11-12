@@ -298,34 +298,37 @@ namespace UnderRailWorks.Internal
 
         // ejh.b(name): any icon by name.
         static bool IconByName(string __0, ref c3i __result)
-        {
+        { try {
             if (__0 == null || (!__0.StartsWith("works:", StringComparison.Ordinal) && !aliases.Contains(__0))) return true;
             __result = IconFor(__0) as c3i;
             return false;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Assets.IconByName", ex_); return true; }
+    }
 
         // ejh.a(item): an item's icon.
         static bool ItemIconOf(coh __0, ref c3i __result)
-        {
+        { try {
             string name;
             if (__0 == null || __0.Definition == null || itemIcons.Count == 0 || !itemIcons.TryGetValue(__0.Definition.a5() ?? "", out name)) return true;
             var icon = IconFor(name) as c3i;
             if (icon == null) return true;
             __result = icon;
             return false;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Assets.ItemIconOf", ex_); return true; }
+    }
 
         // bk3.a3(): an item definition's icon name, which most of the game passes to ejh.b. The mod's icon for
         // registered item codes. The quick-slot proxy saves the name it copies in ejh.a(av) (CP:I): there the game's own
         // name is put back, so saves only ever hold stock icon names.
         [ThreadStatic] static bool stockName;
         static bool IconNameOf(bk3 __instance, ref string __result)
-        {
+        { try {
             string name;
             if (stockName || itemIcons.Count == 0 || !itemIcons.TryGetValue(__instance.a5() ?? "", out name) || IconFor(name) == null) return true;
             __result = name;
             return false;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Assets.IconNameOf", ex_); return true; }
+    }
 
         static void ProxyIconCopied(av __0)
         {

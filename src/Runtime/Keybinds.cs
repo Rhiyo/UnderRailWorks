@@ -146,38 +146,42 @@ public static class Keybinds
     // ar4.a(size) builds the rows from its list (field b): the mods' actions go at its end.
     static readonly FieldInfo ListField = typeof(ar4).GetField("b", BindingFlags.Instance | BindingFlags.NonPublic);
     static void AddRows(ar4 __instance)
-    {
+    { try {
         var list = ListField.GetValue(__instance) as List<Hotkey>;
         if (list == null) return;
         foreach (var k in all) if (!list.Contains(k.Slot)) list.Add(k.Slot);
+    } catch (Exception ex_) { PatchGuard.Failed("Keybinds.AddRows", ex_); }
     }
 
     static bool LabelOf(Hotkey __0, ref string __result)
-    {
+    { try {
         var k = Find(__0);
         if (k == null) return true;
         __result = k.ModName + ": " + k.Label;
         return false;
+    } catch (Exception ex_) { PatchGuard.Failed("Keybinds.LabelOf", ex_); return true; }
     }
 
     static bool KeyOf(Hotkey __0, ref Keys __result)
-    {
+    { try {
         var k = Find(__0);
         if (k == null) return true;
         __result = k.Key;
         return false;
+    } catch (Exception ex_) { PatchGuard.Failed("Keybinds.KeyOf", ex_); return true; }
     }
 
     // cbx.a(settings) on Accept: a mod's row is saved in the mod's settings.ini, not in config.dat.
     static readonly FieldInfo RowHotkey = typeof(cbx).GetFields(BindingFlags.Instance | BindingFlags.NonPublic).First(f => f.FieldType == typeof(Hotkey));
     static readonly MethodInfo RowKey = typeof(cbx).GetMethod("d", BindingFlags.Instance | BindingFlags.Public, null, Type.EmptyTypes, null);
     static bool Save(cbx __instance)
-    {
+    { try {
         var k = Find((Hotkey)RowHotkey.GetValue(__instance));
         if (k == null) return true;
         k.Key = (Keys)Convert.ToInt32(RowKey.Invoke(__instance, null));     // cbx.d(): XNA's Keys in its signature
         ModSettings.For(k.Mod).Set(k.SettingKey, k.Key.ToString());
         return false;
+    } catch (Exception ex_) { PatchGuard.Failed("Keybinds.Save", ex_); return true; }
     }
 }
 }

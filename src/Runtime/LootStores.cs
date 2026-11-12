@@ -88,7 +88,8 @@ namespace UnderRailWorks.Internal
         internal static readonly List<Rule> Rules = new List<Rule>();
         [ThreadStatic] static ery rolling;
 
-        static void Before(ery __instance) { rolling = Rules.Count > 0 && !__instance.a() ? __instance : null; }
+        static void Before(ery __instance) { try { rolling = Rules.Count > 0 && !__instance.a() ? __instance : null; } catch (Exception ex_) { PatchGuard.Failed("LootStores.Before", ex_); }
+    }
         static void After() { rolling = null; }
 
         // c9y.c(): a loot table rolled. Only while ery.mx rolls an entity's loot (not stores or scripts).

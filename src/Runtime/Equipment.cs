@@ -131,8 +131,10 @@ static class EquipmentHooks
         harmony.Patch(notifier("b"), postfix: m("On"));      // its new one (c1.a())
     }
 
-    static void On(acd __instance, coh __0) { Raise(GameEvents.Equipped, __instance, __0); }
-    static void Off(acd __instance, coh __0) { Raise(GameEvents.Unequipped, __instance, __0); }
+    static void On(acd __instance, coh __0) { try { Raise(GameEvents.Equipped, __instance, __0); } catch (Exception ex_) { PatchGuard.Failed("Equipment.On", ex_); }
+    }
+    static void Off(acd __instance, coh __0) { try { Raise(GameEvents.Unequipped, __instance, __0); } catch (Exception ex_) { PatchGuard.Failed("Equipment.Off", ex_); }
+    }
 
     static void Raise(Hook<Action<EquipChange>> hook, acd gear, coh item)
     {

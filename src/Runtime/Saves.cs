@@ -110,12 +110,13 @@ static class Saves
     // --- Zones -------------------------------------------------------------------------------------------------
 
     static void ZoneStoring(c1a __1, out List<KeyValuePair<c5x, aud>> __state)
-    {
+    { try {
         Run("taking mod statuses out", ModStatusStore.Strip);
         List<KeyValuePair<c5x, aud>> removed = null;
         Run("removing placed characters", () => removed = World.RemovePlaced(__1));
         __state = removed;
         if (removed != null && removed.Count > 0) Log.Write("saves: kept " + removed.Count + " placed character(s) out of the stored zone");
+    } catch (Exception ex_) { PatchGuard.Failed("Saves.ZoneStoring", ex_); __state = default(List<KeyValuePair<c5x, aud>>); }
     }
 
     static Exception ZoneStored(bool __2, List<KeyValuePair<c5x, aud>> __state, Exception __exception)
@@ -139,7 +140,8 @@ static class Saves
     // First visit: arp calls d6f.a(bfc), which copies the map's own layer into the save's storage and returns true
     // only when the zone has never been stored (the game's own test).
     static bool firstVisit;
-    static void FirstVisitHook(bool __result) { if (__result) firstVisit = true; }
+    static void FirstVisitHook(bool __result) { try { if (__result) firstVisit = true; } catch (Exception ex_) { PatchGuard.Failed("Saves.FirstVisitHook", ex_); }
+    }
 
     static void ZoneLoadedHook() { zonePending = true; }
 
@@ -225,11 +227,14 @@ static class Saves
 
     // --- Lifecycle -----------------------------------------------------------------------------------------------
 
-    static void SaveStarting(string __0) { Run("recording mod statuses", ModStatusStore.Record); Log.Write("saves: saving " + __0); if (GameEvents.Saving.Any) GameEvents.Saving.Run(h => h(__0)); }
-    static void SaveDone(string __0) { Run("writing mod save data", () => SaveFiles.Save(__0)); Run("re-applying placements", World.ReapplyAll); if (GameEvents.Saved.Any) GameEvents.Saved.Run(h => h(__0)); }
+    static void SaveStarting(string __0) { try { Run("recording mod statuses", ModStatusStore.Record); Log.Write("saves: saving " + __0); if (GameEvents.Saving.Any) GameEvents.Saving.Run(h => h(__0)); } catch (Exception ex_) { PatchGuard.Failed("Saves.SaveStarting", ex_); }
+    }
+    static void SaveDone(string __0) { try { Run("writing mod save data", () => SaveFiles.Save(__0)); Run("re-applying placements", World.ReapplyAll); if (GameEvents.Saved.Any) GameEvents.Saved.Run(h => h(__0)); } catch (Exception ex_) { PatchGuard.Failed("Saves.SaveDone", ex_); }
+    }
     static void NewGameCreated() { SaveFiles.NewGame(); World.ForgetAll(); Run("imported character data", CharacterFiles.NewGame); if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); if (GameEvents.GameStarted.Any) GameEvents.GameStarted.Run(h => h()); }
 
-    static void Loading(string __0) { loading = true; CharacterFiles.Forget(); SaveFiles.Load(__0); World.ForgetAll(); Log.Write("saves: loading " + __0); }
+    static void Loading(string __0) { try { loading = true; CharacterFiles.Forget(); SaveFiles.Load(__0); World.ForgetAll(); Log.Write("saves: loading " + __0); } catch (Exception ex_) { PatchGuard.Failed("Saves.Loading", ex_); }
+    }
 
     static Exception LoadFinished(Exception __exception)
     {
@@ -245,14 +250,16 @@ static class Saves
         return null;
     }
 
-    static void QuestHook(string __0) { if (GameEvents.QuestChanged.Any) { var s = Quests.State(__0); GameEvents.QuestChanged.Run(h => h(__0, s)); } }
+    static void QuestHook(string __0) { try { if (GameEvents.QuestChanged.Any) { var s = Quests.State(__0); GameEvents.QuestChanged.Run(h => h(__0, s)); } } catch (Exception ex_) { PatchGuard.Failed("Saves.QuestHook", ex_); }
+    }
 
     static string openDialog;
     static void DialogOpened(bool __result, e89 __0)
-    {
+    { try {
         if (!__result) return;
         openDialog = __0.d() == null ? null : __0.d().e();
         if (GameEvents.DialogStarted.Any) { var npc = Character.Of(__0.e()); var name = openDialog; GameEvents.DialogStarted.Run(h => h(name, npc)); }
+    } catch (Exception ex_) { PatchGuard.Failed("Saves.DialogOpened", ex_); }
     }
     static void DialogClosed()
     {
@@ -261,12 +268,13 @@ static class Saves
     }
 
     static void TradeHook(bool __result, b0b __1)
-    {
+    { try {
         if (__result && GameEvents.TradeOpened.Any) { var merchant = Character.Of(__1); GameEvents.TradeOpened.Run(h => h(merchant)); }
+    } catch (Exception ex_) { PatchGuard.Failed("Saves.TradeHook", ex_); }
     }
 
     static void ItemAddedHook(dcw __instance, coh __0)
-    {
+    { try {
         if (!GameEvents.ItemAdded.Any || __0 == null) return;
         var item = new Item(__0);
         var player = World.Player;
@@ -274,11 +282,12 @@ static class Saves
         // A party member's bag: the same event, with that member as the player meanwhile.
         var owner = Party.Members.FirstOrDefault(c => !c.IsPlayer && c.IsCharacter && c.GameData.Bag == __instance);
         if (owner != null) Party.As(owner, () => GameEvents.ItemAdded.Run(h => h(item)));
+    } catch (Exception ex_) { PatchGuard.Failed("Saves.ItemAddedHook", ex_); }
     }
     static dcw PlayerBag() { var game = bpo.GetService<cnk>(); var p = game == null || game.aqu() == null ? null : game.aqu().v(); return p == null ? null : p.Bag; }
 
     static void XpHook(e3q __instance, int __result)
-    {
+    { try {
         int __0 = __result;
         if (__0 <= 0) return;
         var sheet = __instance as au2;
@@ -286,6 +295,7 @@ static class Saves
         if (body != null && body.IsPlayer) { if (GameEvents.ExperienceGained.Any) GameEvents.ExperienceGained.Run(h => h(__0)); }
         else if (body != null && GameEvents.ExperienceGained.Any && Party.Contains(Character.Of(body))) Party.As(Character.Of(body), () => GameEvents.ExperienceGained.Run(h => h(__0)));
         if (GameEvents.CharacterExperienceGained.Any && body != null) { var c = Character.Of(body); GameEvents.CharacterExperienceGained.Run(h => h(c, __0)); }
+    } catch (Exception ex_) { PatchGuard.Failed("Saves.XpHook", ex_); }
     }
 
     static void Dying(amc __instance, cwt __0)
@@ -305,11 +315,15 @@ static class Saves
         }
         catch (Exception ex) { Log.Write("dying: " + ex.Message); }
     }
-    static void Died(amc __instance) { if (GameEvents.CharacterDied.Any) { var c = Character.Of(__instance.a8()); GameEvents.CharacterDied.Run(h => h(c)); } }
+    static void Died(amc __instance) { try { if (GameEvents.CharacterDied.Any) { var c = Character.Of(__instance.a8()); GameEvents.CharacterDied.Run(h => h(c)); } } catch (Exception ex_) { PatchGuard.Failed("Saves.Died", ex_); }
+    }
 
-    static void CombatBefore(crp __instance, out bool __state) { __state = __instance.ahg(); }
-    static void CombatStartedHook(crp __instance, bool __state) { if (!__state && __instance.ahg() && GameEvents.CombatStarted.Any) GameEvents.CombatStarted.Run(h => h()); }
-    static void CombatEnding(crp __instance) { if (__instance.ahg() && GameEvents.CombatEnded.Any) GameEvents.CombatEnded.Run(h => h()); }
+    static void CombatBefore(crp __instance, out bool __state) { try { __state = __instance.ahg(); } catch (Exception ex_) { PatchGuard.Failed("Saves.CombatBefore", ex_); __state = default(bool); }
+    }
+    static void CombatStartedHook(crp __instance, bool __state) { try { if (!__state && __instance.ahg() && GameEvents.CombatStarted.Any) GameEvents.CombatStarted.Run(h => h()); } catch (Exception ex_) { PatchGuard.Failed("Saves.CombatStartedHook", ex_); }
+    }
+    static void CombatEnding(crp __instance) { try { if (__instance.ahg() && GameEvents.CombatEnded.Any) GameEvents.CombatEnded.Run(h => h()); } catch (Exception ex_) { PatchGuard.Failed("Saves.CombatEnding", ex_); }
+    }
 }
 
 // The last line of defence: the binder (e6e.av5 -> FnaMode.SavedName) sees every type the game writes. A type from

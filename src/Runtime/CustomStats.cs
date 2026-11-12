@@ -143,19 +143,21 @@ namespace UnderRailWorks.Internal
 
         // The screen opened: the values to go back to on Cancel (and the floor for minus).
         static void Opened(iw __instance)
-        {
+        { try {
             screen = __instance;
             opened.Clear();
             foreach (var s in All()) opened[s] = s.Base;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("CustomStats.Opened", ex_); }
+    }
 
         // iw.a(cku): closing; cku.b is Cancel.
         static void Closing(object __instance, cku __0)
-        {
+        { try {
             if (!(__instance is iw) || __0 != cku.b) return;     // amm.a(cku) closes every window: the character screen's Cancel
             if (Hud.Current == null) CharacterFiles.CreationCancelled();     // no game on screen: the creation screen (an import is a9m.b at any level)
             foreach (var kv in opened) if (kv.Key.Base != kv.Value) kv.Key.Base = kv.Value;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("CustomStats.Closing", ex_); }
+    }
 
         static IEnumerable<CustomStat> All() { return CustomStats.AbilityList.Cast<CustomStat>().Concat(CustomStats.SkillList); }
 

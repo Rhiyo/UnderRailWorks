@@ -177,7 +177,8 @@ static class ContainerHooks
         harmony.Patch(typeof(d2b).GetMethod("a", any, null, new[] { typeof(amc), typeof(LockType), typeof(int) }, null), prefix: m("LockBefore"), postfix: m("LockAfter"));
     }
 
-    static void OpenBefore(c7j __instance, out bool __state) { __state = !__instance.Inspected; }
+    static void OpenBefore(c7j __instance, out bool __state) { try { __state = !__instance.Inspected; } catch (Exception ex_) { PatchGuard.Failed("Containers.OpenBefore", ex_); __state = default(bool); }
+    }
     static void Opened(c7j __instance, c5x __0, bool __state)
     {
         if (!GameEvents.ContainerOpened.Any) return;
@@ -199,11 +200,12 @@ static class ContainerHooks
 
     // ery.mx: rolls once (its flag a() turns true); the target is the character's bag or the container's items.
     static void RollBefore(ery __instance, out HashSet<coh> __state)
-    {
+    { try {
         __state = null;
         if (!GameEvents.LootGenerated.Any || __instance.a()) return;
         var bag = Target(__instance);
         if (bag != null) __state = new HashSet<coh>(bag.z2());
+    } catch (Exception ex_) { PatchGuard.Failed("Containers.RollBefore", ex_); __state = default(HashSet<coh>); }
     }
 
     static void Rolled(ery __instance, HashSet<coh> __state)

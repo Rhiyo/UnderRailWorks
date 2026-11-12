@@ -662,14 +662,16 @@ static class UiHooks
     }
 
     static string loggedSize;
-    static void Hud(object __instance) { var size = wj.a() == null ? "?" : wj.a().d.ToString(); if (size != loggedSize) { loggedSize = size; Log.Write("ui: interface size " + size + ", text font " + Ui.TextFontName() + ", line " + Ui.LineHeight); } UnderRailWorks.Hud.Created((ci3)__instance); var root = UiElement.Of((euz)__instance); if (UiEvents.HudCreated.Any) UiEvents.HudCreated.Run(h => h(root)); }
+    static void Hud(object __instance) { try { var size = wj.a() == null ? "?" : wj.a().d.ToString(); if (size != loggedSize) { loggedSize = size; Log.Write("ui: interface size " + size + ", text font " + Ui.TextFontName() + ", line " + Ui.LineHeight); } UnderRailWorks.Hud.Created((ci3)__instance); var root = UiElement.Of((euz)__instance); if (UiEvents.HudCreated.Any) UiEvents.HudCreated.Run(h => h(root)); } catch (Exception ex_) { PatchGuard.Failed("Ui.Hud", ex_); }
+    }
     static void MainMenu(object __instance)
-    {
+    { try {
         if (UnderRailWorks.Hud.Exists) { UnderRailWorks.Hud.Gone(); if (UiEvents.HudDestroyed.Any) UiEvents.HudDestroyed.Run(h => h()); }     // back to the main menu: no HUD
         UnderRailWorks.MainMenu.Built((a8k)__instance);
         WorksHealth.Tell();
         var root = UiElement.Of((euz)__instance);
         if (UiEvents.MainMenuCreated.Any) UiEvents.MainMenuCreated.Run(h => h(root));
+    } catch (Exception ex_) { PatchGuard.Failed("Ui.MainMenu", ex_); }
     }
     internal static t1 CurrentOptions;
     internal static void Options(t1 options) { CurrentOptions = options; if (UiEvents.OptionsCreated.Any) UiEvents.OptionsCreated.Run(h => h(UiElement.Of(options))); }

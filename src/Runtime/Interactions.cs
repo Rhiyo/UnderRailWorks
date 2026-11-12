@@ -135,8 +135,10 @@ namespace UnderRailWorks.Internal
         // A party member using something: mods' handlers during the use (OnUse, ContainerOpening, ItemTaking...) see
         // that member as World.Player. Runs before Using (priority) and ends after the use, whatever happened.
         [HarmonyLib.HarmonyPriority(HarmonyLib.Priority.First)]
-        static void Acting(c5x __0, out Character __state) { __state = Party.Begin(__0 == null ? null : Character.Of(__0)); }
-        static void Acted(Character __state) { Party.End(__state); }
+        static void Acting(c5x __0, out Character __state) { try { __state = Party.Begin(__0 == null ? null : Character.Of(__0)); } catch (Exception ex_) { PatchGuard.Failed("Interactions.Acting", ex_); __state = default(Character); }
+    }
+        static void Acted(Character __state) { try { Party.End(__state); } catch (Exception ex_) { PatchGuard.Failed("Interactions.Acted", ex_); }
+    }
 
         internal static void Install(HarmonyLib.Harmony harmony)
         {

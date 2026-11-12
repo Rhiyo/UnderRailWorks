@@ -108,12 +108,13 @@ namespace UnderRailWorks.Internal
         static void SwapOut(Run r) { if (r.Saved != null) { bpo.GetService<cnk>().aqu().a(r.Saved); r.Saved = null; } }
 
         static void Opening(zq __instance, e89 __0)
-        {
+        { try {
             var p = Pending;
             if (p == null || __0 == null || __0.h() != p.Speaker) return;
             Pending = null; Active = p; p.Controller = __instance;
             SwapIn(p);
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("TalkAs.Opening", ex_); }
+    }
 
         static void Opened(zq __instance, bool __result)
         {
@@ -182,20 +183,22 @@ namespace UnderRailWorks.Internal
 
         // zq.n2 lowers the counters n1 raised: ours were lowered already, so they go back up first.
         static void Closing(zq __instance)
-        {
+        { try {
             var a = Active;
             if (a == null || a.Controller != __instance) return;
             var game = Game;
             if (game != null && !a.KeepPaused) { game.aml(); game.amf(); if (a.Paused) game.amh(); }
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("TalkAs.Closing", ex_); }
+    }
 
         static void Closed(zq __instance)
-        {
+        { try {
             var a = Active;
             if (a == null || a.Controller != __instance) return;
             Active = null;
             End(a);
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("TalkAs.Closed", ex_); }
+    }
 
         static void End(Run a) { try { if (a.OnEnd != null) a.OnEnd(); } catch (Exception ex) { Log.Write("talk: an end handler failed: " + ex.Message); } }
 

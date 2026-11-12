@@ -66,11 +66,12 @@ static class StealthHooks
     }
 
     static void Instant(int __0, int __1, ref bool __result)
-    {
+    { try {
         if (!Stealth.ModifyInstant.Any) return;
         var d = new InstantDetection { ObserverDetection = __0, TargetStealth = __1, Instant = __result };
         Stealth.ModifyInstant.Run(h => h(d));
         __result = d.Instant;
+    } catch (Exception ex_) { PatchGuard.Failed("Stealth.Instant", ex_); }
     }
 }
 }

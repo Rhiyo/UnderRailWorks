@@ -95,22 +95,24 @@ namespace UnderRailWorks.Internal
             .ToDictionary(g => g.Key, g => g.First().t, StringComparer.OrdinalIgnoreCase);
 
         static void AbilityBonuses(csn __instance, ref Dictionary<Type, float> __result)
-        {
+        { try {
             Dictionary<string, float> w;
             if (Skills.Abilities.Count == 0 || !Skills.Abilities.TryGetValue(__instance.Name, out w)) return;
             var d = new Dictionary<Type, float>();
             foreach (var kv in w) { Type t; if (AbilityTypes.TryGetValue(kv.Key, out t)) d[t] = kv.Value; }
             __result = d;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Stats.AbilityBonuses", ex_); }
+    }
 
         static void SkillSynergies(csn __instance, ref Dictionary<Type, float> __result)
-        {
+        { try {
             Dictionary<string, float> w;
             if (Skills.Synergies.Count == 0 || !Skills.Synergies.TryGetValue(__instance.Name, out w)) return;
             var d = new Dictionary<Type, float>();
             foreach (var kv in w) { Type t; if (SkillTypes.TryGetValue(kv.Key, out t)) d[t] = kv.Value; }
             __result = d;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Stats.SkillSynergies", ex_); }
+    }
 
         internal static void Install(HarmonyLib.Harmony harmony)
         {

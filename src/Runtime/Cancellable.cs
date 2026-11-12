@@ -88,34 +88,37 @@ namespace UnderRailWorks.Internal
         }
 
         static bool Trade(object __1)
-        {
+        { try {
             if (!GameEvents.TradeOpening.Any || !(__1 is b0b)) return true;
             var e = new TradeStart { Merchant = Character.Of((b0b)__1) };
             GameEvents.TradeOpening.Run(h => h(e));
             return !e.Cancel;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Cancellable.Trade", ex_); return true; }
+    }
 
         static bool Open(c7j __instance, c5x __0)
-        {
+        { try {
             if (!GameEvents.ContainerOpening.Any) return true;
             var e = new ContainerOpen { Container = new Container(__instance), Opener = __0 == null ? null : Character.Of(__0) };
             Party.As(e.Opener, () => GameEvents.ContainerOpening.Run(h => h(e)));
             return !e.Cancel;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Cancellable.Open", ex_); return true; }
+    }
 
         static bool Take(c7j __instance, coh __1, object __2, ref bool __result)
-        {
+        { try {
             if (!GameEvents.ItemTaking.Any || __1 == null) return true;
             var e = new ItemTake { Container = new Container(__instance), Item = new Item(__1), Taker = __2 is amc ? Character.Of(((amc)__2).a8()) : World.Player };
             Party.As(e.Taker, () => GameEvents.ItemTaking.Run(h => h(e)));
             if (!e.Cancel) return true;
             __result = false;
             return false;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Cancellable.Take", ex_); return true; }
+    }
 
         static readonly FieldInfo Blueprint = typeof(ahu).GetField("m_b", BindingFlags.Instance | BindingFlags.NonPublic) ?? typeof(ahu).GetField("b", BindingFlags.Instance | BindingFlags.NonPublic);
         static bool Craft(ahu __instance, ref cfe __result)
-        {
+        { try {
             if (!GameEvents.Crafting.Any) return true;
             var bp = Blueprint.GetValue(__instance) as cwp;
             var e = new CraftAttempt { Blueprint = bp == null ? null : bp.LocalizedName };
@@ -124,7 +127,8 @@ namespace UnderRailWorks.Internal
             craftRefused = true;
             __result = null;
             return false;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Cancellable.Craft", ex_); return true; }
+    }
 
         // "Craft all" (eed.a(object, b25)) loops while its button is enabled, and the window's refresh (eed.b()) enables it
         // again while the components are there: refused, nothing is used up, so it would loop forever. After a refused
@@ -132,12 +136,13 @@ namespace UnderRailWorks.Internal
         static bool craftRefused;
         static readonly FieldInfo CraftAllButton = typeof(eed).GetField("m_e", BindingFlags.Instance | BindingFlags.NonPublic) ?? typeof(eed).GetField("e", BindingFlags.Instance | BindingFlags.NonPublic);
         static void Refreshed(eed __instance)
-        {
+        { try {
             if (!craftRefused) return;
             craftRefused = false;
             var button = CraftAllButton == null ? null : CraftAllButton.GetValue(__instance) as euz;
             if (button != null) button.Enabled = false;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Cancellable.Refreshed", ex_); }
+    }
 
         // The inventory screen moves an item with c69.a(source, target, item): it takes the item out of the source
         // (A_0.yd(), inside the condition) before it asks the target (A_1.ye), so a refusal anywhere inside the move

@@ -81,16 +81,18 @@ static class ProgressionHooks
     }
 
     static void Needed(int __0, ExperienceSystem __1, ref int __result)
-    {
+    { try {
         if (!Progression.ModifyXpNeeded.Any) return;
         var x = new XpNeeded { Level = __0, Oddity = __1 == ExperienceSystem.Oddity, Needed = __result };
         Progression.ModifyXpNeeded.Run(h => h(x));
         __result = Math.Max(1, x.Needed);     // 0 would level forever in c2h.b's loop
+    } catch (Exception ex_) { PatchGuard.Failed("Progression.Needed", ex_); }
     }
 
     static void PointsBefore(e3q __instance, out int[] __state)
-    {
+    { try {
         __state = Progression.ModifyLevelPoints.Any ? new[] { __instance.g(), __instance.h(), __instance.j() } : null;
+    } catch (Exception ex_) { PatchGuard.Failed("Progression.PointsBefore", ex_); __state = default(int[]); }
     }
 
     static void PointsAfter(e3q __instance, int[] __state)
@@ -110,16 +112,18 @@ static class ProgressionHooks
 
     // The reason the XP is given with (awq.a(int, string) for the player, amc.a(int, string) for any sheet), for e3q.c.
     [ThreadStatic] internal static string XpReason;
-    static void Giving(string __1) { XpReason = __1; }
+    static void Giving(string __1) { try { XpReason = __1; } catch (Exception ex_) { PatchGuard.Failed("Progression.Giving", ex_); }
+    }
     static void Given() { XpReason = null; }
 
     static void Gain(e3q __instance, ref int __0)
-    {
+    { try {
         if (!Progression.ModifyExperience.Any) return;
         var sheet = __instance as au2; var body = sheet == null ? null : sheet.b() as c5x;
         var g = new XpGain { Oddity = __instance.e() == ExperienceSystem.Oddity, Amount = __0, Who = body == null ? null : Character.Of(body), Reason = XpReason };
         Progression.ModifyExperience.Run(h => h(g));
         __0 = Math.Max(0, g.Amount);
+    } catch (Exception ex_) { PatchGuard.Failed("Progression.Gain", ex_); }
     }
 }
 }

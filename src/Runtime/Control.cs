@@ -127,10 +127,11 @@ namespace UnderRailWorks.Internal
         // ordering again, a mod's character doesn't. So while a controlled character steps, the player and other
         // controlled characters don't stop it; in a frozen world (positions set from elsewhere) nobody stops anybody.
         [ThreadStatic] static b0b stepping;
-        static void StepStarting(bpr __instance) { var m = __instance.l(); stepping = m == null ? null : m.a8(); }
+        static void StepStarting(bpr __instance) { try { var m = __instance.l(); stepping = m == null ? null : m.a8(); } catch (Exception ex_) { PatchGuard.Failed("Control.StepStarting", ex_); }
+    }
         static void StepDone() { stepping = null; }
         static void Passable(b0b __0, ref bool? __result)
-        {
+        { try {
             var m = stepping;
             var other = __0 as c5x;
             if (m == null || other == null || other == m || other.GetAspect<amc>() == null) return;
@@ -138,7 +139,8 @@ namespace UnderRailWorks.Internal
             bool mine, theirs;
             lock (CharacterControl.Taken) { mine = CharacterControl.Taken.ContainsKey(m); theirs = CharacterControl.Taken.ContainsKey(other); }
             if (mine && (other.IsPlayer || theirs)) __result = false;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Control.Passable", ex_); }
+    }
 
         internal static void Install(HarmonyLib.Harmony harmony)
         {

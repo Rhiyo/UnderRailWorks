@@ -145,8 +145,10 @@ namespace UnderRailWorks.Internal
         }
 
         // --- Ticks: els.o() (an owner's combat turn) and els.e(ms) (real time; true when a tick fired) ----------
-        static void TurnTick(els __instance) { Tick(__instance); }
-        static void TimeTick(els __instance, bool __result) { if (__result) Tick(__instance); }
+        static void TurnTick(els __instance) { try { Tick(__instance); } catch (Exception ex_) { PatchGuard.Failed("ModStatus.TurnTick", ex_); }
+    }
+        static void TimeTick(els __instance, bool __result) { try { if (__result) Tick(__instance); } catch (Exception ex_) { PatchGuard.Failed("ModStatus.TimeTick", ex_); }
+    }
         static void Tick(els e)
         {
             ModStatus s;

@@ -74,7 +74,8 @@ namespace UnderRailWorks.Internal
 
         internal static void Reapply() { if (Bank != null) try { Apply(Bank); } catch (Exception ex) { Log.Write("audio: " + ex.Message); } }
 
-        static void Built(b6d __instance) { Bank = __instance; Reapply(); }
+        static void Built(b6d __instance) { try { Bank = __instance; Reapply(); } catch (Exception ex_) { PatchGuard.Failed("Audio.Built", ex_); }
+    }
 
         static void Apply(b6d b)
         {
@@ -141,7 +142,8 @@ namespace UnderRailWorks.Internal
             return false;
         }
 
-        static void Remap(ref string __0) { string to; if (__0 != null && Remaps.Count > 0 && Remaps.TryGetValue(__0, out to)) __0 = to; }
+        static void Remap(ref string __0) { try { string to; if (__0 != null && Remaps.Count > 0 && Remaps.TryGetValue(__0, out to)) __0 = to; } catch (Exception ex_) { PatchGuard.Failed("Audio.Remap", ex_); }
+    }
 
         internal static void Install(HarmonyLib.Harmony harmony)
         {

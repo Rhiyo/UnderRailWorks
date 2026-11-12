@@ -185,11 +185,12 @@ namespace UnderRailWorks.Internal
         }
 
         static void Time(c4i __1)
-        {
+        { try {
             if (!GameEvents.GameTimeAdvanced.Any || __1 == null) return;
             var d = __1.a;
             GameEvents.GameTimeAdvanced.Run(h => h(d));
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Activities.Time", ex_); }
+    }
 
         static Character Of(object entity) { return entity is c5x ? Character.Of((c5x)entity) : null; }
         static Character OfData(efk data) { return Combat.OfData(data); }

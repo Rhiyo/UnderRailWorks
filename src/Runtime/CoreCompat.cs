@@ -37,9 +37,10 @@ public static class CoreCompat
     }
 
     static void Made(object __instance)
-    {
+    { try {
         var f = (IFormatter)__instance;
         if (!(f.SurrogateSelector is Selector)) f.SurrogateSelector = new Selector(f.SurrogateSelector);
+    } catch (Exception ex_) { PatchGuard.Failed("CoreCompat.Made", ex_); }
     }
 
     sealed class Selector : ISurrogateSelector

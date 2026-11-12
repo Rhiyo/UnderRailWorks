@@ -221,12 +221,14 @@ static class CombatHooks
     static void Run(string what, Action a) { try { a(); } catch (Exception ex) { Log.Write("combat: " + what + ": " + ex.Message); } }
 
     static void CombatStart() { Combat.Round = 1; }
-    static void TurnStart(crp __instance) { Run("turn start", () => { if (Combat.TurnStarted.Any) { var c = Combat.Current; if (c != null) Combat.TurnStarted.Run(h => h(c)); } }); }
-    static void TurnEnd(d4n __0, bool __1) { if (__1 && Combat.Fighter(__0) != null && Combat.TurnEnding.Any) Run("turn end", () => { var c = Character.Of(Combat.Fighter(__0).a8()); Combat.TurnEnding.Run(h => h(c)); }); }
+    static void TurnStart(crp __instance) { try { Run("turn start", () => { if (Combat.TurnStarted.Any) { var c = Combat.Current; if (c != null) Combat.TurnStarted.Run(h => h(c)); } }); } catch (Exception ex_) { PatchGuard.Failed("Combat.TurnStart", ex_); }
+    }
+    static void TurnEnd(d4n __0, bool __1) { try { if (__1 && Combat.Fighter(__0) != null && Combat.TurnEnding.Any) Run("turn end", () => { var c = Character.Of(Combat.Fighter(__0).a8()); Combat.TurnEnding.Run(h => h(c)); }); } catch (Exception ex_) { PatchGuard.Failed("Combat.TurnEnd", ex_); }
+    }
     static void RoundEnd() { Run("round end", () => { var r = Combat.Round++; if (Combat.RoundEnded.Any) Combat.RoundEnded.Run(h => h(r)); }); }
 
     static void Refill(d4n __instance)
-    {
+    { try {
         if (!Combat.ModifyTurnPoints.Any || Combat.Fighter(__instance) == null) return;
         Run("turn points", () =>
         {
@@ -234,10 +236,11 @@ static class CombatHooks
             Combat.ModifyTurnPoints.Run(h => h(p));
             Combat.SetAp(__instance, Math.Max(0, p.ActionPoints)); Combat.SetMp(__instance, Math.Max(0, p.MovementPoints));
         });
+    } catch (Exception ex_) { PatchGuard.Failed("Combat.Refill", ex_); }
     }
 
     static void Chance(MethodBase __originalMethod, efk __0, efk __1, bg3 __result)
-    {
+    { try {
         if (!Combat.ModifyHitChance.Any || __result == null) return;
         Run("hit chance", () =>
         {
@@ -247,6 +250,7 @@ static class CombatHooks
             Combat.ModifyHitChance.Run(x => x(h));
             __result.a = Math.Max(0, Math.Min(1, h.Chance));
         });
+    } catch (Exception ex_) { PatchGuard.Failed("Combat.Chance", ex_); }
     }
 
     // cwt.i (ap9, who attacked): its field a, the name, shares its name with a method.
@@ -264,7 +268,7 @@ static class CombatHooks
     static List<DamagePart> Parts(List<csk> list) { return list == null ? new List<DamagePart>() : list.Select(p => new DamagePart { Type = p.DamageType.ToString(), Amount = p.Amount }).ToList(); }
 
     static void Incoming(nw __instance, cwt __0)
-    {
+    { try {
         if (!Combat.ModifyIncomingDamage.Any || __0 == null) return;
         Run("incoming damage", () =>
         {
@@ -273,10 +277,11 @@ static class CombatHooks
             if (d.Cancel) { __0.b = false; return; }
             for (int i = 0; i < __0.f.Count && i < d.Parts.Count; i++) { var p = __0.f[i]; p.Amount = Math.Max(0, d.Parts[i].Amount); __0.f[i] = p; }
         });
+    } catch (Exception ex_) { PatchGuard.Failed("Combat.Incoming", ex_); }
     }
 
     static void Resolved(nw __instance, cwt __0, cru __result)
-    {
+    { try {
         if (!Combat.AttackResolved.Any || __0 == null) return;
         Run("attack resolved", () =>
         {
@@ -285,6 +290,7 @@ static class CombatHooks
             var o = new AttackOutcome { Target = Combat.OfData(__instance.a1()), AttackerName = AttackerName(__0), ByPlayer = ByPlayer(__0), Hit = __0.b && __result != null, Critical = __0.e, Killed = __result != null && __result.c, Parts = parts, HealthLost = parts.Sum(p => p.Amount) };
             Combat.AttackResolved.Run(h => h(o));
         });
+    } catch (Exception ex_) { PatchGuard.Failed("Combat.Resolved", ex_); }
     }
 }
 }

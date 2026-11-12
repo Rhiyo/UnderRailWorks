@@ -348,7 +348,7 @@ namespace UnderRailWorks.Internal
         // character told to walk (MoveTo) walks with the game's own animation and speed; everything else (AI, attacks,
         // triggers, every entity's aspects) waits. The rest is ix.a's own loop.
         static bool Tick(ix __instance, TimeSpan __0, TimeSpan __1)
-        {
+        { try {
             if (!Simulation.Frozen) return true;
             var list = __instance.g8();
             foreach (var item in list.ToList())
@@ -366,7 +366,8 @@ namespace UnderRailWorks.Internal
                 }
             }
             return false;
-        }
+        } catch (Exception ex_) { PatchGuard.Failed("Remote.Tick", ex_); return true; }
+    }
 
         internal static void Install(HarmonyLib.Harmony harmony)
         {
