@@ -22,17 +22,30 @@ namespace UnderRailWorks
         internal static readonly int GameAbilityPoints = G("t"), GameSkillPoints = G("ak") * G("ai"), GameFeats = G("al"), GameSkillPerLevel = G("ai"),
             GameAbilityEvery = G("u"), GameFeatEvery = G("am"), GameAbilityMin = G("y"), GameAbilityMax = G("x"), AbilityLevelCap = G("bk");
 
+        // Each rule remembers the mod that set it: two mods setting one rule is logged (the later wins), and a mod's
+        // rules go back to the game's when it's reloaded or fails to load.
+        static readonly Dictionary<string, KeyValuePair<string, int>> set = new Dictionary<string, KeyValuePair<string, int>>();
+        static int Get(string rule, int game) { KeyValuePair<string, int> v; return set.TryGetValue(rule, out v) ? v.Value : game; }
+        static void Set(string rule, int value)
+        {
+            var mod = ModScope.Current ?? "";
+            KeyValuePair<string, int> had;
+            if (set.TryGetValue(rule, out had) && had.Key != mod && had.Key != "") Log.Write("rules: " + mod + " changes CharacterRules." + rule + " that " + had.Key + " set (" + had.Value + " -> " + value + ")");
+            set[rule] = new KeyValuePair<string, int>(mod, value);
+        }
+        internal static void Forget(string mod) { foreach (var k in set.Where(kv => string.Equals(kv.Value.Key, mod, StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key).ToList()) set.Remove(k); }
+
         // A new character's unspent points (the game: 5 ability points over abilities starting at 5, 120 skill points, 2 feats).
-        public static int AbilityPointsAtCreation { get; set; } = GameAbilityPoints;
-        public static int SkillPointsAtCreation { get; set; } = GameSkillPoints;
-        public static int FeatsAtCreation { get; set; } = GameFeats;
+        public static int AbilityPointsAtCreation { get { return Get("AbilityPointsAtCreation", GameAbilityPoints); } set { Set("AbilityPointsAtCreation", value); } }
+        public static int SkillPointsAtCreation { get { return Get("SkillPointsAtCreation", GameSkillPoints); } set { Set("SkillPointsAtCreation", value); } }
+        public static int FeatsAtCreation { get { return Get("FeatsAtCreation", GameFeats); } set { Set("FeatsAtCreation", value); } }
         // Each level (the game: 40 skill points, an ability point every 4 levels, a feat every 2).
-        public static int SkillPointsPerLevel { get; set; } = GameSkillPerLevel;
-        public static int AbilityPointEveryLevels { get; set; } = GameAbilityEvery;
-        public static int FeatEveryLevels { get; set; } = GameFeatEvery;
+        public static int SkillPointsPerLevel { get { return Get("SkillPointsPerLevel", GameSkillPerLevel); } set { Set("SkillPointsPerLevel", value); } }
+        public static int AbilityPointEveryLevels { get { return Get("AbilityPointEveryLevels", GameAbilityEvery); } set { Set("AbilityPointEveryLevels", value); } }
+        public static int FeatEveryLevels { get { return Get("FeatEveryLevels", GameFeatEvery); } set { Set("FeatEveryLevels", value); } }
         // The range of each ability on the creation screen (the game: 3 to 10).
-        public static int AbilityMinAtCreation { get; set; } = GameAbilityMin;
-        public static int AbilityMaxAtCreation { get; set; } = GameAbilityMax;
+        public static int AbilityMinAtCreation { get { return Get("AbilityMinAtCreation", GameAbilityMin); } set { Set("AbilityMinAtCreation", value); } }
+        public static int AbilityMaxAtCreation { get { return Get("AbilityMaxAtCreation", GameAbilityMax); } set { Set("AbilityMaxAtCreation", value); } }
     }
 }
 

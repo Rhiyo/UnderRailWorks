@@ -222,6 +222,7 @@ namespace UnderRailWorks.Internal
             step("stores", () => StoreHooks.Forget(id));
             step("dialogs", () => { Dialogs.Forget(id); Dialogs.ForgetDefined(id); });
             step("texts", () => Text.Forget(id));
+            step("character rules", () => CharacterRules.Forget(id));
             step("sound remaps", () => Sound.Forget(id));
             step("item edits", () => ItemHooks.Forget(id));
             step("api", () => Mods.Forget(id));
