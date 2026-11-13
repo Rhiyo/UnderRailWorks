@@ -168,8 +168,12 @@ public static class ModOptions
         public List<KeyValuePair<string, ModPage>> Pages = new List<KeyValuePair<string, ModPage>>();
         public List<KeyValuePair<ModInfo, cao>> Switches = new List<KeyValuePair<ModInfo, cao>>();
         public List<ModInfo> WithSettings = new List<ModInfo>();
-        public List<ModInfo> Order; public List<avo> OrderLabels = new List<avo>(); public bool OrderChanged; public int OrderView = -1;
+        // The load order as shown (loaded mods, top = first), and each card's controls, height and title line.
+        public List<ModInfo> Order; public bool OrderChanged;
+        public List<CardParts> Cards = new List<CardParts>();
         public cvh Page;
+    }
+    sealed class CardParts { public ModInfo Mod; public List<euz> Controls; public int Height; public avo Title; public string TitleText;
     }
     static readonly ConditionalWeakTable<t1, Tab> Tabs = new ConditionalWeakTable<t1, Tab>();
 
@@ -222,21 +226,44 @@ public static class ModOptions
         // show after a restart, and that game's saves would then load with a different set of mods than they were played with.
         if (InGame) Text(options, page, "Mods are switched on and off from the main menu's Options; settings can be changed here.", Quiet);
         else if (ModLoader.Mods.Count > 0) Text(options, page, "Switching a mod on or off applies when you restart the game.", Quiet);
+        // One list, as RimWorld's and Mod Organizer's: loaded mods in load order (top loads first; when two change the
+        // same thing, the lower one has the final say), Up / Down to change it (next start); then the others by name.
         tab.Order = ModLoader.Mods.Where(m => m.Loaded).OrderBy(m => m.LoadIndex).ToList();
-        if (tab.Order.Count > 1) { tab.OrderView = next + tab.WithSettings.Count; ButtonRow(options, page, "Load order", tab.OrderView); }
+        if (tab.Order.Count > 1)
+        {
+            Text(options, page, "Loaded mods are listed in load order: when two change the same thing, the lower one has the final say.", Quiet);
+            if (!InGame)
+            {
+                var auto = UnderrailOptions.NewButton(options, "Automatic order", () =>
+                {
+                    ModLoader.SetPlayerOrder(null); tab.OrderChanged = false;
+                    Notify.Log("Mods: automatic load order (from the mods' requirements) at the next start.");
+                });
+                Gap(options, 4);
+                UnderrailOptions.PlaceRow(options, auto);
+            }
+        }
 
-        foreach (var mod in ModLoader.Mods.OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase))
+        if (!InGame && ModLoader.Mods.Count > 0) ProfileRow(options, page, tab);
+
+        var shown = tab.Order.Concat(ModLoader.Mods.Where(m => !m.Loaded).OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)).ToList();
+        foreach (var mod in shown)
         {
             try
             {
+                var before = new HashSet<euz>(page.Controls.Cast<euz>());
+                int top = UnderrailOptions.RowY(options);
                 Gap(options, CardGap / 2);
-                Card(options, page, tab, mod, tab.WithSettings.Contains(mod) ? next + tab.WithSettings.IndexOf(mod) : -1);
+                var title = Card(options, page, tab, mod, tab.WithSettings.Contains(mod) ? next + tab.WithSettings.IndexOf(mod) : -1);
+                if (mod.Loaded)
+                    tab.Cards.Add(new CardParts { Mod = mod, Controls = page.Controls.Cast<euz>().Where(c => !before.Contains(c)).ToList(), Height = UnderrailOptions.RowY(options) - top, Title = title.Key, TitleText = title.Value });
             }
             catch (Exception ex) { Log.Write("mods: " + mod.Id + ": card failed: " + ex); }
         }
+        Number(tab);
     }
 
-    static void Card(t1 options, cvh page, Tab tab, ModInfo mod, int settingsView)
+    static KeyValuePair<avo, string> Card(t1 options, cvh page, Tab tab, ModInfo mod, int settingsView)
     {
         // Line 1: [x] Name  version  by author ................ status
         int y = UnderrailOptions.RowY(options), left = UnderrailOptions.Left(options);
@@ -261,8 +288,21 @@ public static class ModOptions
         state.a(cab.c);     // right-aligned
         state.Text = status;
         Paint(state, colour);
-        UnderrailDropdownScroll.Move(state, UnderrailDropdownScroll.W(page.Size) - left - 40 - 200, y + (lineH - UnderrailDropdownScroll.H(state.Size)) / 2);
+        int stateX = UnderrailDropdownScroll.W(page.Size) - left - 40 - 200;
+        UnderrailDropdownScroll.Move(state, stateX, y + (lineH - UnderrailDropdownScroll.H(state.Size)) / 2);
         UnderrailDropdownScroll.Add(page, state);
+        if (mod.Loaded && !InGame && tab.Order.Count > 1)
+        {
+            // Up / Down, left of the status.
+            int bx = stateX + 200 - UnderrailDropdownScroll.W(state.Size) - 8;
+            var mine = mod;
+            foreach (var b in new[] { UnderrailOptions.NewButton(options, "Down", () => Move(tab, mine, 1), true), UnderrailOptions.NewButton(options, "Up", () => Move(tab, mine, -1), true) })
+            {
+                bx -= UnderrailDropdownScroll.W(b.Size) + 6;
+                UnderrailDropdownScroll.Move(b, bx, y + (lineH - UnderrailDropdownScroll.H(b.Size)) / 2);
+                UnderrailDropdownScroll.Add(page, b);
+            }
+        }
 
         // Then: why it didn't load, the description, what it needs, its settings.
         // A missing requirement shows on the Requires line (in red); other reasons on a line of their own.
@@ -286,6 +326,69 @@ public static class ModOptions
         else if (mod.Enabled && !mod.Loaded) { }
         Gap(options, CardGap / 2);
         UnderrailOptions.SeparatorRow(options);
+        return new KeyValuePair<avo, string>(name, title);
+    }
+
+    // Profiles: saved sets of mods and their order (main menu only, as switching mods).
+    static void ProfileRow(t1 options, cvh page, Tab tab)
+    {
+        var current = ModLoader.CurrentProfile;
+        Text(options, page, "Profile: " + (current ?? "none") + "   (a saved set of mods and their order)", Quiet);
+        int y = UnderrailOptions.RowY(options) + 4, x = UnderrailOptions.Left(options), h = 0;
+        Action<string, Action> button = (text, click) =>
+        {
+            var b = UnderrailOptions.NewButton(options, text, click, true);
+            UnderrailDropdownScroll.Move(b, x, y);
+            UnderrailDropdownScroll.Add(page, b);
+            x += UnderrailDropdownScroll.W(b.Size) + 8; h = Math.Max(h, UnderrailDropdownScroll.H(b.Size));
+        };
+        button("Save as profile...", () => Ui.Ask(null, "Profile name:", current ?? "My mods", name =>
+        {
+            var mods = tab.Switches.Select(sw => new KeyValuePair<string, bool>(sw.Key.Id, sw.Value.Checked));
+            Notify.Log(ModLoader.SaveProfile(name, mods, tab.Order.Select(m => m.Id).ToList()) ? "Mods: profile \"" + ModLoader.ProfileName(name) + "\" saved." : "Mods: couldn't save that profile.");
+        }, "Save", " -_'()"));
+        var names = ModLoader.Profiles().Take(8).ToList();     // the message box holds a few buttons
+        if (names.Count > 0)
+        {
+            button("Use profile...", () => Ui.Choose(null, "Use a profile", "Switches mods on and off and sets their order as the profile has them. Applies when you restart the game.",
+                i =>
+                {
+                    if (i >= names.Count || !ModLoader.UseProfile(names[i])) return;
+                    var p = ModLoader.ReadProfile(names[i]);
+                    if (p != null) foreach (var sw in tab.Switches) { bool on; if (p.Value.Key.TryGetValue(sw.Key.Id, out on)) sw.Value.Checked = on; }
+                    tab.OrderChanged = false;     // the profile's order is written; Accept keeps it
+                    Notify.Log("Mods: profile \"" + names[i] + "\" applies when you restart the game.");
+                }, names.Concat(new[] { "Cancel" }).ToArray()));
+            button("Delete profile...", () => Ui.Choose(null, "Delete a profile", "Delete which profile? (The mods themselves stay.)",
+                i => { if (i < names.Count && ModLoader.DeleteProfile(names[i])) Notify.Log("Mods: profile \"" + names[i] + "\" deleted."); }, names.Concat(new[] { "Cancel" }).ToArray()));
+        }
+        UnderrailOptions.SetRowY(options, y + h + 6);
+    }
+
+    // "3. Name ..." on loaded mods' cards; red when a mod is above one it requires (it will load after it anyway).
+    static void Number(Tab tab)
+    {
+        for (int i = 0; i < tab.Cards.Count; i++)
+        {
+            var c = tab.Cards[i];
+            var late = c.Mod.Requires.Select(d => ModLoader.Find(d.Id)).Where(d => d != null && tab.Order.IndexOf(d) > i).ToList();
+            c.Title.Text = (i + 1) + ". " + c.TitleText + (late.Count > 0 ? "   (loads after " + string.Join(", ", late.Select(d => d.Name).ToArray()) + ": it needs it)" : "");
+            Paint(c.Title, late.Count > 0 ? Bad : Color.White);
+        }
+    }
+
+    static void Move(Tab tab, ModInfo mod, int by)
+    {
+        int i = tab.Cards.FindIndex(c => c.Mod == mod), j = i + by;
+        if (i < 0 || j < 0 || j >= tab.Cards.Count) return;
+        int a = Math.Min(i, j);
+        CardParts upper = tab.Cards[a], lower = tab.Cards[a + 1];
+        TabScroll.Shift(tab.Page, upper.Controls, lower.Height);
+        TabScroll.Shift(tab.Page, lower.Controls, -upper.Height);
+        tab.Cards[a] = lower; tab.Cards[a + 1] = upper;
+        tab.Order = tab.Cards.Select(c => c.Mod).ToList();
+        tab.OrderChanged = true;
+        Number(tab);
     }
 
     static string Capital(string s) { return s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s.Substring(1); }
@@ -340,71 +443,6 @@ public static class ModOptions
             catch (Exception ex) { Log.Write("mods: " + mod.Id + ": settings rows failed: " + ex); }
             Gap(options, 40);
         }
-        if (tab.OrderView >= 0)
-        {
-            views.Add(UnderrailOptions.RowY(options));
-            try { OrderView(options, page, tab); } catch (Exception ex) { Log.Write("mods: load order view failed: " + ex); }
-            Gap(options, 40);
-        }
-    }
-
-    // The load order: one row per loaded mod, Up / Down (from the main menu only, as switching mods on and off).
-    static void OrderView(t1 options, cvh page, Tab tab)
-    {
-        BackRow(options, page, "Load order");
-        Text(options, page, "Mods load top to bottom. When two mods change the same thing, the lower one has the final say.", Quiet);
-        Text(options, page, "A mod always loads after the mods it requires. Changes apply when you restart the game.", Quiet);
-        if (InGame) Text(options, page, "The order is changed from the main menu's Options.", Quiet);
-        else
-        {
-            var reset = UnderrailOptions.NewButton(options, "Mods' own order", () => { ModLoader.SetPlayerOrder(null); tab.OrderChanged = false; Notify.Log("Load order: back to the mods' own at the next start."); });
-            Gap(options, 4);
-            UnderrailOptions.PlaceRow(options, reset);
-        }
-        Gap(options, 8);
-        int left = UnderrailOptions.Left(options), width = UnderrailDropdownScroll.W(page.Size) - 2 * left - 40;
-        for (int i = 0; i < tab.Order.Count; i++)
-        {
-            int y = UnderrailOptions.RowY(options), x = left;
-            int at = i;
-            if (!InGame)
-            {
-                foreach (var b in new[] { UnderrailOptions.NewButton(options, "Up", () => Move(tab, at, -1)), UnderrailOptions.NewButton(options, "Down", () => Move(tab, at, 1)) })
-                {
-                    UnderrailDropdownScroll.Move(b, x, y);
-                    UnderrailDropdownScroll.Add(page, b);
-                    x += UnderrailDropdownScroll.W(b.Size) + 6;
-                }
-            }
-            var label = UnderrailOptions.Label(options, width - (x - left));
-            label.a(cab.a);
-            UnderrailDropdownScroll.Move(label, x + 6, y);
-            UnderrailDropdownScroll.Add(page, label);
-            tab.OrderLabels.Add(label);
-            UnderrailOptions.SetRowY(options, y + Math.Max(UnderrailDropdownScroll.H(label.Size), 30) + 6);
-        }
-        Relabel(tab);
-    }
-
-    static void Relabel(Tab tab)
-    {
-        for (int i = 0; i < tab.OrderLabels.Count && i < tab.Order.Count; i++)
-        {
-            var m = tab.Order[i];
-            var needs = m.Requires.Select(d => ModLoader.Find(d.Id)).Where(d => d != null).ToList();
-            bool early = needs.Any(d => tab.Order.IndexOf(d) > i);
-            tab.OrderLabels[i].Text = (i + 1) + ". " + m.Name + (early ? "   (loads after " + string.Join(", ", needs.Where(d => tab.Order.IndexOf(d) > i).Select(d => d.Name).ToArray()) + ", which it requires)" : "");
-            Paint(tab.OrderLabels[i], early ? Bad : Color.White);
-        }
-    }
-
-    static void Move(Tab tab, int i, int by)
-    {
-        int j = i + by;
-        if (j < 0 || j >= tab.Order.Count) return;
-        var m = tab.Order[i]; tab.Order[i] = tab.Order[j]; tab.Order[j] = m;
-        tab.OrderChanged = true;
-        Relabel(tab);
     }
 
     static bool InGame { get { return Hud.Exists; } }

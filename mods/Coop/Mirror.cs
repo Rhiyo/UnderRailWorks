@@ -416,6 +416,6 @@ public sealed partial class Coop
                 }
                 default: Tell("that can't be done in co-op yet"); break;
             }
-        });
+        }, HookOrder.First);
     }
 }

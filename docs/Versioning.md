@@ -76,7 +76,7 @@ Between releases nothing is locked and no version number changes: development is
 ## A mod's own versions and its save data
 
 A mod's own version (`"version"` in mod.json) is the player-facing one; other mods depend on it with
-`"requires": ["Other@1.2"]`. Its save data outlives it: a save made with version 1 of a mod is loaded by version 2.
+`"requires": ["Other >= 1.2"]`. Its save data outlives it: a save made with version 1 of a mod is loaded by version 2.
 The save records which version of each mod wrote its data (`SaveData.WrittenBy`; null for data from before Works
 recorded it), so a mod can migrate an older layout when a save loads. Data of a mod that isn't installed is kept in
 the save untouched, with the version that wrote it.

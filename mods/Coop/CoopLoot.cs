@@ -21,7 +21,7 @@ public sealed partial class Coop
             if (seat == null) return;
             e.Cancel = true;
             SendLoot(seat, e.Container);
-        });
+        }, HookOrder.First);
     }
 
     void SendLoot(Seat seat, Container box)

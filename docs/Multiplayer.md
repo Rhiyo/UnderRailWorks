@@ -448,12 +448,11 @@ simulate it on their own machine.
   id@version); the host compares with its own (`Mods.Differences`) and refuses with what differs ("only the host has:
   Grudges 1.0.0; other versions: Fair Trade 9.9.9 / 1.0.0"), and tells the host. Like tModLoader's mod sides and
   Minecraft Forge's network check; there's no download of missing mods.
-- **Order.** Co-op has `"sortBefore": ["*"]`: it loads before every mod that doesn't need it, so its handlers run
-  first on every hook (an order a joiner's click turned into, a cancelled event) and other mods see the result.
-  Hooks keep load order for handlers of the same HookOrder, also after a mod is reloaded. Order isn't compared between
-  players: everything that counts (fights, trades, prices, the world) happens on the host, with the host's order; a
-  joiner's world is a mirror where Works refuses changes, so a joiner's own order (Options -> Mods -> Load order) only
-  affects its client-side mods.
+- **Order.** Co-op's handlers that decide for everyone (a joiner's orders, deaths and game over, downed players not
+  targeted, looting and trading) use `HookOrder.First`, so other mods see their result (e.g. an event already
+  cancelled) wherever Co-op is in the load order. Order isn't compared between players: everything that counts
+  (fights, trades, prices, the world) happens on the host, with the host's order; a joiner's world is a mirror where
+  Works refuses changes, so a joiner's own order only affects its client-side mods.
 - **Co-op's saves.** "coop-host" (written to send the world) is deleted once read, "coop-join" once loaded, so
   neither shows in Load Game (`SaveGames.Delete`).
 

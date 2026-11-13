@@ -1107,7 +1107,8 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `List<KeyValuePair<string, ModPage>> Pages = new List<KeyValuePair<string, ModPage>>()`
 - `List<KeyValuePair<ModInfo, cao>> Switches = new List<KeyValuePair<ModInfo, cao>>()`
 - `List<ModInfo> WithSettings = new List<ModInfo>()`
-- `List<ModInfo> Order; public List<avo> OrderLabels = new List<avo>(); public bool OrderChanged; public int OrderView = -1`
+- `List<ModInfo> Order; public bool OrderChanged` — The load order as shown (loaded mods, top = first), and each card's controls, height and title line.
+- `List<CardParts> Cards = new List<CardParts>()`
 - `cvh Page`
 - `static void Register(string mod, Action<ModPage> build, Action changed = null)`
 

@@ -3,7 +3,7 @@
 // - ReplaceHook<T> (and "first answer" hooks, RunUntil): handlers are asked from the last in load order back to the
 //   first until one returns true: that one has taken the step, and the game's own step and the rest are skipped
 //   (e.g. "draw this layer yourself"; one replacement, never two drawings).
-// One rule for players and mod authors: the mod lower in the load order (Options -> Mods -> Load order) has the final
+// One rule for players and mod authors: the mod lower in the load order (Options -> Mods, top to bottom) has the final
 // say. With Hook<T> that's because it runs last (a value it sets stays); with ReplaceHook<T> because it's asked first.
 // HookOrder moves a handler within that: Last = the final say, First = the first to run / the last to be asked.
 // A handler that throws is logged with its mod's name and keeps running; one that fails 10 times is removed (a broken

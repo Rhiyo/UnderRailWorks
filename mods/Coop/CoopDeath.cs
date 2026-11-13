@@ -31,7 +31,7 @@ public sealed partial class Coop
             if (deathRule == 2) { Notify.Log("Co-op: " + d.Who.Name + " died", Bad); return; }
             d.Cancel = true;
             Down(d.Who);
-        });
+        }, HookOrder.First);
         GameEvents.CharacterDying.Add(this, (dead, killer) =>
         {
             // Dead for good: a joined player's character is gone; they choose again.
@@ -47,7 +47,7 @@ public sealed partial class Coop
             CheckGameOver();
         });
         // The game's game over (a death in the player's faction): only when nobody's left playing.
-        GameEvents.GameOver.Add(this, g => { if (listener != null && !ending && AnyoneStanding()) g.Cancel = true; });
+        GameEvents.GameOver.Add(this, g => { if (listener != null && !ending && AnyoneStanding()) g.Cancel = true; }, HookOrder.First);
         GameEvents.CombatEnded.Add(this, () => { if (listener != null && deathRule == 0) foreach (var c in downed.ToList()) Revive(c, null); });
         double outOfFight = 0;
         GameEvents.Update.Add(this, dt =>
@@ -61,7 +61,7 @@ public sealed partial class Coop
         // on everyone else it has detected).
         Ai.IgnoresTarget.Add(this, (npc, who) => listener != null && who != null && downed.Contains(who));
         // ...and any action aimed at a downed player is called off (the NPC's tree tries something else).
-        Ai.Acting.Add(this, a => { var t = a.Target as Character; if (listener != null && t != null && downed.Contains(t)) a.Cancel = true; });
+        Ai.Acting.Add(this, a => { var t = a.Target as Character; if (listener != null && t != null && downed.Contains(t)) a.Cancel = true; }, HookOrder.First);
         // A downed joined character's turn passes; the host's own is theirs to end (the game shows it as incapacitated).
         Combat.TurnStarted.Add(this, c => { if (listener != null && c != null && downed.Contains(c) && !c.IsPlayer) c.EndTurn(); });
     }

@@ -225,14 +225,19 @@ public static class UnderrailOptions
     internal static void ControlRow(t1 options, string label, euz control) { Row.Invoke(options, new object[] { label, control, null, false, true, 0, false }); }
 
     // A button styled like the options window's own (Accept, Cancel), as wide as its text needs.
-    internal static dak NewButton(t1 options, string text, Action click)
+    // compact: only as wide as the text (small buttons in a row, e.g. a mod card's Up / Down), not the style's minimum.
+    internal static dak NewButton(t1 options, string text, Action click, bool compact = false)
     {
         var button = new dak();
         button.Text = text;
         StyleButton.Invoke(options, new object[] { button, wj.a() });
         var resources = dr3.a();
         var font = resources == null || button.Font == null ? null : resources.GetResource<Microsoft.Xna.Framework.Graphics.SpriteFont>(button.Font);
-        if (font != null) button.Size = new esj(Math.Max(UnderrailDropdownScroll.W(button.Size), (int)font.MeasureString(button.Text).X + 40), UnderrailDropdownScroll.H(button.Size));
+        if (font != null)
+        {
+            int need = (int)font.MeasureString(button.Text).X + (compact ? 24 : 40);
+            button.Size = new esj(compact ? need : Math.Max(UnderrailDropdownScroll.W(button.Size), need), UnderrailDropdownScroll.H(button.Size));
+        }
         e4z.j(button);
         button.c(new EventHandler<b25>((sender, e) => click()));
         return button;
@@ -494,6 +499,15 @@ static class TabScroll
             SetView(page, 0);
         }
         catch (Exception ex) { UnderrailOptions.TabFailed("scrolling", ex); }
+    }
+
+    // Moves some of the page's controls by dy (as built; e.g. two mod cards swapping places), then shows the view again.
+    public static void Shift(cvh page, ICollection<euz> controls, int dy)
+    {
+        State s;
+        if (!States.TryGetValue(page, out s)) return;
+        s.Items = s.Items.Select(i => controls.Contains(i.Item1) ? Tuple.Create(i.Item1, i.Item2 + dy, i.Item3) : i).ToList();
+        Show(s);
     }
 
     // Shows one view, from its top.

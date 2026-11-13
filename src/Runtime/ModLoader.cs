@@ -1,14 +1,14 @@
 // UnderRailWorks: loads mods from Mods\<folder>\ in the game folder (64-bit mode only).
 // Each mod may have a mod.json manifest (readable JSON; everything optional):
 //   { "id": "UnderRailFixes", "name": "UnderRailFixes", "version": "2.0.0", "author": "...", "description": "...",
-//     "works": "0.9", "requires": ["OtherMod@1.2"], "optional": ["SomeMod"], "sortAfter": [], "sortBefore": [],
+//     "works": "0.9", "requires": ["OtherMod >= 1.2"], "optional": ["SomeMod"], "sortAfter": [], "sortBefore": [],
 //     "incompatible": ["Rival@2.0"], "homepage": "https://...", "issues": "https://...", "license": "MIT", "game": "1.3.1.2",
 //     "multiplayer": "both" }
 // icon.png in the folder is shown in the Mods tab.
 // works: the Works API version the mod was built for (WorksApi.Version: same major, at least that minor).
 // As tModLoader's build.txt: requires = modReferences (must be present, on and at least that version, and is loaded
-// first), optional = weakReferences (loaded first when present), sortAfter / sortBefore = load order only ("*": before
-// / after every other mod). multiplayer: "both" (default; everyone in a multiplayer game needs it, same version) or
+// first), optional = weakReferences (loaded first when present), sortAfter / sortBefore = load order only (the player
+// can change the rest: Options -> Mods, mods.ini "@order"). multiplayer: "both" (default; everyone in a multiplayer game needs it, same version) or
 // "client" (only this player's screen: a minimap, a HUD layout).
 // The id defaults to the folder name, the version to the DLL's.
 // A mod's code: one public class deriving from WorksMod (WorksMod.cs: Load, then PostLoad once every mod has
@@ -30,11 +30,14 @@ public sealed class ModDependency
     public string Id { get; internal set; }
     public Version Min { get; set; }     // null: any version
     public override string ToString() { return Min == null ? Id : Id + " " + Min + "+"; }
+    // "OtherMod", "OtherMod >= 1.2" (as Factorio's and npm's manifests write a minimum) or "OtherMod@1.2" (the same).
     internal static ModDependency Parse(string text)
     {
-        int at = text.IndexOf('@');
-        var d = new ModDependency { Id = (at < 0 ? text : text.Substring(0, at)).Trim() };
-        if (at >= 0) d.Min = ModInfo.ParseVersion(text.Substring(at + 1));
+        text = text ?? "";
+        int ge = text.IndexOf(">=", StringComparison.Ordinal), at = text.IndexOf('@');
+        int cut = ge >= 0 ? ge : at, skip = ge >= 0 ? 2 : 1;
+        var d = new ModDependency { Id = (cut < 0 ? text : text.Substring(0, cut)).Trim() };
+        if (cut >= 0) d.Min = ModInfo.ParseVersion(text.Substring(cut + skip));
         return d;
     }
 }
@@ -259,8 +262,7 @@ public static class ModLoader
     }
 
     // Load order: requirements, present optional mods and sortAfter before a mod, sortBefore after it; otherwise by
-    // name. "*" in sortBefore: before every mod that doesn't need it first (Co-op: its rules apply before other mods'
-    // handlers run); "*" in sortAfter: after them. A loop leaves its mods out with an error.
+    // name; the player's order (Options -> Mods) before the alphabet. A loop leaves its mods out with an error.
     static List<ModInfo> Order(List<ModInfo> mods)
     {
         Func<string, ModInfo> get = id => mods.FirstOrDefault(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
@@ -272,15 +274,13 @@ public static class ModLoader
             foreach (var id in m.SortBefore)
             { var o = get(id); if (o != null && o != m) before[o].Add(m); }
         }
-        Func<ModInfo, int> tier = m => m.SortBefore.Contains("*") ? 0 : m.SortAfter.Contains("*") ? 2 : 1;
-        // The player's order (Options -> Mods -> Load order, mods.ini "@order") comes before the mods' own "*" and the
-        // alphabet; requirements and named sortAfter/sortBefore still hold. Mods it doesn't name go after those it does.
+        // The player's order (Options -> Mods, mods.ini "@order") comes before the alphabet; requirements and named sortAfter/sortBefore still hold. Mods it doesn't name go after those it does.
         Func<ModInfo, int> rank = m => { int i = PlayerOrder.FindIndex(x => x.Equals(m.Id, StringComparison.OrdinalIgnoreCase)); return i < 0 ? int.MaxValue : i; };
         var order = new List<ModInfo>();
         var left = new List<ModInfo>(mods);
         while (left.Count > 0)
         {
-            var ready = left.Where(m => before[m].All(order.Contains)).OrderBy(rank).ThenBy(tier).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            var ready = left.Where(m => before[m].All(order.Contains)).OrderBy(rank).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
             if (ready == null)
             {
                 foreach (var m in left) m.Error = "load order loop with " + string.Join(", ", before[m].Where(left.Contains).Select(x => x.Name).ToArray());
@@ -337,11 +337,94 @@ public static class ModLoader
             lines.RemoveAll(l => l.TrimStart().StartsWith(OrderKey + "=", StringComparison.OrdinalIgnoreCase) || l.TrimStart().StartsWith("; " + OrderKey, StringComparison.Ordinal));
             if (ids != null && ids.Count > 0)
             {
-                lines.Add("; " + OrderKey + ": the load order set in Options -> Mods -> Load order (first loads first; later has the final say). Delete the line for the mods' own order.");
+                lines.Add("; " + OrderKey + ": the load order set in Options -> Mods (first loads first; later has the final say). Delete the line for the mods' own order.");
                 lines.Add(OrderKey + "=" + string.Join(",", ids.ToArray()));
             }
             File.WriteAllText(ListPath, string.Join("\n", lines) + "\n");
             Log.Write("mods: load order set (next start): " + (ids == null || ids.Count == 0 ? "the mods' own" : string.Join(", ", ids.ToArray())));
+        }
+        catch (Exception ex) { Log.Write("mods: could not write mods.ini: " + ex.Message); }
+    }
+
+    // Mod profiles (as RimWorld's saved mod lists and tModLoader's mod packs): Mods/profiles/<name>.ini, the same lines
+    // as mods.ini (<id>=1/0 and @order). Using one writes them into mods.ini (next start); mods it doesn't name keep
+    // their current state. mods.ini "@profile" names the last one used.
+    static string ProfileFolder { get { return Path.Combine(ModsFolder, "profiles"); } }
+    internal static List<string> Profiles()
+    {
+        try { return Directory.Exists(ProfileFolder) ? Directory.GetFiles(ProfileFolder, "*.ini").Select(Path.GetFileNameWithoutExtension).OrderBy(n => n, StringComparer.OrdinalIgnoreCase).ToList() : new List<string>(); }
+        catch (Exception ex) { Log.Write("mods: profiles: " + ex.Message); return new List<string>(); }
+    }
+    internal static string ProfileName(string name)
+    {
+        var clean = new string((name ?? "").Trim().Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c).ToArray());
+        return clean.Length == 0 ? null : clean;
+    }
+    internal static string CurrentProfile
+    {
+        get
+        {
+            try { var l = File.Exists(ListPath) ? File.ReadAllLines(ListPath).FirstOrDefault(x => x.StartsWith("@profile=", StringComparison.OrdinalIgnoreCase)) : null; return l == null ? null : l.Substring(9).Trim(); }
+            catch { return null; }
+        }
+    }
+    internal static bool SaveProfile(string name, IEnumerable<KeyValuePair<string, bool>> mods, IList<string> order)
+    {
+        name = ProfileName(name);
+        if (name == null) return false;
+        try
+        {
+            Directory.CreateDirectory(ProfileFolder);
+            var lines = new List<string> { "; UnderRailWorks mod profile \"" + name + "\": which mods are on (<id>=1/0) and their load order. Options -> Mods -> Use profile." };
+            lines.AddRange(mods.Select(kv => kv.Key + "=" + (kv.Value ? "1" : "0")));
+            if (order != null && order.Count > 0) lines.Add(OrderKey + "=" + string.Join(",", order.ToArray()));
+            File.WriteAllText(Path.Combine(ProfileFolder, name + ".ini"), string.Join("\n", lines) + "\n");
+            SetLine("@profile", name);
+            Log.Write("mods: profile " + name + " saved");
+            return true;
+        }
+        catch (Exception ex) { Log.Write("mods: profile " + name + ": " + ex.Message); return false; }
+    }
+    // The profile's switches (id -> on) and order, or null.
+    internal static KeyValuePair<Dictionary<string, bool>, List<string>>? ReadProfile(string name)
+    {
+        var file = Path.Combine(ProfileFolder, (ProfileName(name) ?? "") + ".ini");
+        if (!File.Exists(file)) return null;
+        var on = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase); var order = new List<string>();
+        foreach (var raw in File.ReadAllLines(file))
+        {
+            var line = raw.Trim(); int eq = line.IndexOf('=');
+            if (line.Length == 0 || line[0] == ';' || eq < 0) continue;
+            string k = line.Substring(0, eq).Trim(), v = line.Substring(eq + 1).Trim();
+            if (k.Equals(OrderKey, StringComparison.OrdinalIgnoreCase)) order = v.Split(',').Select(x => x.Trim()).Where(x => x.Length > 0).ToList();
+            else if (!k.StartsWith("@")) on[k] = !(v == "0" || v.Equals("off", StringComparison.OrdinalIgnoreCase));
+        }
+        return new KeyValuePair<Dictionary<string, bool>, List<string>>(on, order);
+    }
+    // Into mods.ini for the next start.
+    internal static bool UseProfile(string name)
+    {
+        var p = ReadProfile(name);
+        if (p == null) return false;
+        foreach (var kv in p.Value.Key) if (Find(kv.Key) != null) SetEnabled(kv.Key, kv.Value);
+        SetPlayerOrder(p.Value.Value.Count > 0 ? p.Value.Value : null);
+        SetLine("@profile", ProfileName(name));
+        Log.Write("mods: profile " + name + " used (next start)");
+        return true;
+    }
+    internal static bool DeleteProfile(string name)
+    {
+        try { var f = Path.Combine(ProfileFolder, (ProfileName(name) ?? "") + ".ini"); if (!File.Exists(f)) return false; File.Delete(f); Log.Write("mods: profile " + name + " deleted"); return true; }
+        catch (Exception ex) { Log.Write("mods: profile " + name + ": " + ex.Message); return false; }
+    }
+    static void SetLine(string key, string value)
+    {
+        try
+        {
+            var lines = File.Exists(ListPath) ? File.ReadAllLines(ListPath).ToList() : new List<string>();
+            lines.RemoveAll(l => l.TrimStart().StartsWith(key + "=", StringComparison.OrdinalIgnoreCase));
+            if (value != null) lines.Add(key + "=" + value);
+            File.WriteAllText(ListPath, string.Join("\n", lines) + "\n");
         }
         catch (Exception ex) { Log.Write("mods: could not write mods.ini: " + ex.Message); }
     }

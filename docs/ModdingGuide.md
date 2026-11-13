@@ -59,12 +59,15 @@ In this order:
    (`new HarmonyLib.Harmony("YourMod")`, with `<UseHarmony>true</UseHarmony>` in the project); the Mods tab notes that
    the mod may break with a game update.
 
-Load order and multiplayer, in `mod.json`: `requires` / `optional` load those mods first; `sortAfter` / `sortBefore`
-only order (`"sortBefore": ["*"]`: before every mod that doesn't need you first, as Co-op does so its rules apply
-before other mods' handlers run). `"multiplayer": "client"` for a mod that only changes this player's screen (a
-minimap, a HUD layout): co-op players needn't have it. The default, `"both"`, means every player needs it, same
-version (Co-op refuses a joiner otherwise, naming the differences). Players can change the order in Options -> Mods
--> Load order (saved as `@order=` in `Mods/mods.ini`); it wins over `"*"` and the alphabet, never over requirements.
+Load order and multiplayer, in `mod.json`: `requires` / `optional` load those mods first (`"OtherMod >= 1.2"` for a
+minimum version); `sortAfter` / `sortBefore` only order. Otherwise the order is the player's: the Mods tab lists
+loaded mods in load order with Up / Down (saved as `@order=` in `Mods/mods.ini`; "Automatic order" clears it), never
+against requirements. A handler that must run before other mods' uses `HookOrder.First` (Co-op's do), not load order.
+Players can save the switched-on mods and their order as profiles (Mods tab, main menu: Save as profile / Use
+profile; files in `Mods/profiles/`, the same lines as `mods.ini`), as RimWorld's saved mod lists.
+`"multiplayer": "client"` for a mod that only changes this player's screen (a minimap, a HUD layout): co-op players
+needn't have it. The default, `"both"`, means every player needs it, same version (Co-op refuses a joiner otherwise,
+naming the differences).
 **The final say:** when two mods change the same thing, the one lower in the load order wins: for ordinary hooks it
 runs last, for replace / "first answer" hooks (`ReplaceHook`, the AI's ChooseTarget and ShouldFlee) it's asked first.
 

@@ -33,7 +33,7 @@ public sealed partial class Coop
             talking.Peer.Send("TRADE", key);
             Log.Info(talking.Character.Name + " trades with " + e.Merchant.Name + " (on " + talking.Peer.Name + "'s machine)");
             TalkAs.Close();
-        });
+        }, HookOrder.First);
         GameEvents.Update.Add(this, dt => { if (host != null && inWorld) Simulation.Apply(() => JoinerTick(dt)); });
     }
 

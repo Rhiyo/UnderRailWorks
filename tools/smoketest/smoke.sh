@@ -21,7 +21,7 @@ export TEST_GAME="$WORK/game" RUN=smoke
 timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 gamecopy "$TEST_GAME" || exit 1
 LOG="$TEST_GAME/UnderRailWorks.log"; AUTO="$TEST_GAME/Mods/WorksTest/autorun.txt"
-# The player's load order (Options -> Mods -> Load order): WorksTest first, before Co-op's own "load first".
+# The player's load order (the Mods tab's Up / Down, mods.ini @order): WorksTest and HelloWorks first.
 printf '@order=WorksTest,HelloWorks\n' >> "$TEST_GAME/Mods/mods.ini"
 inp() { timeout 30 "$SKILL/inp.sh" "$@" >/dev/null 2>&1; }
 
@@ -67,7 +67,7 @@ pass=0; fail=0
 check() { if grep -qE "$2" "$LOG"; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: $1 (expected: $2)"; fi; }
 never() { if grep -qE "$2" "$LOG"; then fail=$((fail+1)); echo "FAIL: $1 (found: $(grep -m1 -E "$2" "$LOG" | cut -c1-160))"; else pass=$((pass+1)); fi; }
 check "game members all found"            "mods: [0-9]+ game members checked"
-check "the player's load order first"     "mods: load order: WorksTest, HelloWorks, Coop, "
+check "the player's load order first"     "mods: load order: WorksTest, HelloWorks, AfterActionReport, "
 check "a mod for a newer Works refused"   "NeedsNewer not loaded .*not here: UnderRailWorks.World.FutureFeature"
 check "a failed mod's registrations go"   "HalfBroken: what it registered before failing was removed"
 never "nothing of a failed mod runs"      "must never appear"
