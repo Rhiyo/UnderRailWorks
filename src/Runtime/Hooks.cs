@@ -1,7 +1,11 @@
 // UnderRailWorks: the one event model every area of the API uses (as tModLoader's hooks, adapted):
 // - Hook<T>: every handler runs, in mod load order (requirements first), e.g. "a layer is about to be drawn".
-// - ReplaceHook<T>: handlers run in load order until one returns true: that one has taken the step and the game's own
-//   step and later handlers are skipped (e.g. "draw this layer yourself"; one replacement, never two drawings).
+// - ReplaceHook<T> (and "first answer" hooks, RunUntil): handlers are asked from the last in load order back to the
+//   first until one returns true: that one has taken the step, and the game's own step and the rest are skipped
+//   (e.g. "draw this layer yourself"; one replacement, never two drawings).
+// One rule for players and mod authors: the mod lower in the load order (Options -> Mods -> Load order) has the final
+// say. With Hook<T> that's because it runs last (a value it sets stays); with ReplaceHook<T> because it's asked first.
+// HookOrder moves a handler within that: Last = the final say, First = the first to run / the last to be asked.
 // A handler that throws is logged with its mod's name and keeps running; one that fails 10 times is removed (a broken
 // per-frame handler would otherwise fill the log). The game and the other mods carry on (tModLoader lets such an
 // exception through). With no handlers, the game runs as stock.
@@ -82,7 +86,7 @@ public abstract class HookBase<T> : IModOwned, HookOwner where T : class
     internal bool Each(Func<T, bool> call)
     {
         var list = handlers;     // a snapshot: handlers may be removed while running
-        for (int i = 0; i < list.Length; i++)
+        for (int i = list.Length - 1; i >= 0; i--)     // from the last: the lower mod in the load order has the final say
         {
             long started = Profiler.On ? System.Diagnostics.Stopwatch.GetTimestamp() : 0;
             var was = ModScope.Current; ModScope.Current = OwnerAt(list, i);
@@ -133,7 +137,7 @@ public sealed class Hook<T> : HookBase<T> where T : class
             finally { ModScope.Current = was; Done(i, started); }
         }
     }
-    // Handlers in turn until one returns true (for "first answer wins" hooks).
+    // Handlers until one returns true, from the last in load order (for "the final say wins" hooks).
     internal bool RunUntil(Func<T, bool> call) { return Each(call); }
 }
 

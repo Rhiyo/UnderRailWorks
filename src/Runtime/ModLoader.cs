@@ -119,6 +119,7 @@ public static class ModLoader
             return;
         }
         CheckRequirements(all);
+        PlayerOrder = ReadPlayerOrder();
         var order = Order(all.Where(m => m.Enabled && m.Error == null).ToList());
         All.AddRange(order);
         All.AddRange(all.Except(order).OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase));
@@ -272,11 +273,14 @@ public static class ModLoader
             { var o = get(id); if (o != null && o != m) before[o].Add(m); }
         }
         Func<ModInfo, int> tier = m => m.SortBefore.Contains("*") ? 0 : m.SortAfter.Contains("*") ? 2 : 1;
+        // The player's order (Options -> Mods -> Load order, mods.ini "@order") comes before the mods' own "*" and the
+        // alphabet; requirements and named sortAfter/sortBefore still hold. Mods it doesn't name go after those it does.
+        Func<ModInfo, int> rank = m => { int i = PlayerOrder.FindIndex(x => x.Equals(m.Id, StringComparison.OrdinalIgnoreCase)); return i < 0 ? int.MaxValue : i; };
         var order = new List<ModInfo>();
         var left = new List<ModInfo>(mods);
         while (left.Count > 0)
         {
-            var ready = left.Where(m => before[m].All(order.Contains)).OrderBy(tier).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            var ready = left.Where(m => before[m].All(order.Contains)).OrderBy(rank).ThenBy(tier).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
             if (ready == null)
             {
                 foreach (var m in left) m.Error = "load order loop with " + string.Join(", ", before[m].Where(left.Contains).Select(x => x.Name).ToArray());
@@ -308,6 +312,38 @@ public static class ModLoader
         }
         catch (Exception ex) { Log.Write("mods: mods.ini: " + ex.Message); }
         return off;
+    }
+
+    // mods.ini "@order=A,B,C": the player's load order (empty: the mods' own).
+    internal static List<string> PlayerOrder = new List<string>();
+    const string OrderKey = "@order";
+    static List<string> ReadPlayerOrder()
+    {
+        try
+        {
+            if (!File.Exists(ListPath)) return new List<string>();
+            var line = File.ReadAllLines(ListPath).Select(l => l.Trim()).FirstOrDefault(l => l.StartsWith(OrderKey + "=", StringComparison.OrdinalIgnoreCase));
+            return line == null ? new List<string>() : line.Substring(OrderKey.Length + 1).Split(',').Select(x => x.Trim()).Where(x => x.Length > 0).ToList();
+        }
+        catch (Exception ex) { Log.Write("mods: mods.ini: " + ex.Message); return new List<string>(); }
+    }
+    // From the Mods tab: the player's load order for the next start (null: back to the mods' own).
+    internal static void SetPlayerOrder(IList<string> ids)
+    {
+        try
+        {
+            var lines = File.Exists(ListPath) ? File.ReadAllLines(ListPath).ToList()
+                : new List<string> { "; UnderRailWorks: which mods load. <mod id>=0 switches one off (applies at the next start)." };
+            lines.RemoveAll(l => l.TrimStart().StartsWith(OrderKey + "=", StringComparison.OrdinalIgnoreCase) || l.TrimStart().StartsWith("; " + OrderKey, StringComparison.Ordinal));
+            if (ids != null && ids.Count > 0)
+            {
+                lines.Add("; " + OrderKey + ": the load order set in Options -> Mods -> Load order (first loads first; later has the final say). Delete the line for the mods' own order.");
+                lines.Add(OrderKey + "=" + string.Join(",", ids.ToArray()));
+            }
+            File.WriteAllText(ListPath, string.Join("\n", lines) + "\n");
+            Log.Write("mods: load order set (next start): " + (ids == null || ids.Count == 0 ? "the mods' own" : string.Join(", ", ids.ToArray())));
+        }
+        catch (Exception ex) { Log.Write("mods: could not write mods.ini: " + ex.Message); }
     }
 
     // From the Mods tab: switch a mod on or off for the next start.

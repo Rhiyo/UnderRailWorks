@@ -28,10 +28,10 @@ Values: `Self, Character`
 
 ## Ai  _(class, Ai.cs)_
 
-- `static readonly Hook<Func<TargetChoice, Character>> ChooseTarget = new Hook<Func<TargetChoice, Character>>("Ai.ChooseTarget")` — A handler may return another character to fight (null: keep the game's choice). First answer wins.
+- `static readonly Hook<Func<TargetChoice, Character>> ChooseTarget = new Hook<Func<TargetChoice, Character>>("Ai.ChooseTarget")` — A handler may return another character to fight (null: keep the game's choice). The lowest mod in the load order that answers wins.
 - `static readonly Hook<Action<NpcAction>> Acting = new Hook<Action<NpcAction>>("Ai.Acting")`
 - `static readonly Hook<Action<NpcTurn>> TakingTurn = new Hook<Action<NpcTurn>>("Ai.TakingTurn")`
-- `static readonly Hook<Func<NpcFlight, bool?>> ShouldFlee = new Hook<Func<NpcFlight, bool?>>("Ai.ShouldFlee")` — Whether an NPC flees this step (the game's reasons: fear, civilians in danger, Scrambled Cortex). A handler returns true (flee), false (don't: it fights or acts normally) or null (the game's choice). First answer wins.
+- `static readonly Hook<Func<NpcFlight, bool?>> ShouldFlee = new Hook<Func<NpcFlight, bool?>>("Ai.ShouldFlee")` — Whether an NPC flees this step (the game's reasons: fear, civilians in danger, Scrambled Cortex). A handler returns true (flee), false (don't: it fights or acts normally) or null (the game's choice). The lowest mod in the load order that answers wins.
 - `static readonly Hook<Func<Character, Character, bool>> IgnoresTarget = new Hook<Func<Character, Character, bool>>("Ai.IgnoresTarget")` **(preview)** — Characters an NPC leaves out when it chooses whom to fight (handler(npc, candidate) true: not a candidate). The game's own choice then runs on the rest: detected, hostile, nearest, in sight first. None left: it does what it does with no enemy. Example: a co-op mod leaves out players who are down.
 - `static Character CurrentTarget(Character npc)` **(preview)** — The character an NPC's AI is after now (its memory's current target), or null. Set null: it chooses again.
 - `static void SetCurrentTarget(Character npc, Character target)` **(preview)**
@@ -1107,6 +1107,7 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `List<KeyValuePair<string, ModPage>> Pages = new List<KeyValuePair<string, ModPage>>()`
 - `List<KeyValuePair<ModInfo, cao>> Switches = new List<KeyValuePair<ModInfo, cao>>()`
 - `List<ModInfo> WithSettings = new List<ModInfo>()`
+- `List<ModInfo> Order; public List<avo> OrderLabels = new List<avo>(); public bool OrderChanged; public int OrderView = -1`
 - `cvh Page`
 - `static void Register(string mod, Action<ModPage> build, Action changed = null)`
 
@@ -1953,7 +1954,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static readonly Hook<Action<WorldView, DrawContext>> WorldDone = new Hook<Action<WorldView, DrawContext>>("WorldDone")` — The world pass is done, right before the screen is set as the target again.
 - `static readonly Hook<Action<WorldView>> ShaderPassStarting = new Hook<Action<WorldView>>("ShaderPassStarting")` — Start / end of the pass for layers with their own shader (a7m.b(cp9): outlines). Outline layers are in view.ShaderLayers["Outline"]; outlines built only for mods are already taken out (Outlines.IsHidden).
 - `static readonly Hook<Action<WorldView, DrawContext>> ShaderPassDone = new Hook<Action<WorldView, DrawContext>>("ShaderPassDone")`
-- `static readonly ReplaceHook<OffsetHandler> InterfaceOffset = new ReplaceHook<OffsetHandler>("InterfaceOffset")` — The interface is being drawn into an off-screen picture placed at from (screen pixels): the first handler that returns true sets it, and UiScaleFix maps drawing by it.
+- `static readonly ReplaceHook<OffsetHandler> InterfaceOffset = new ReplaceHook<OffsetHandler>("InterfaceOffset")` — The interface is being drawn into an off-screen picture placed at from (screen pixels): the handler that returns true sets it (asked from the lowest mod in the load order up), and UiScaleFix maps drawing by it.
 - `static void TileExtrasStep(WorldView view, DrawContext context, MapTile tile)`
 
 ## WorldMap  _(class, WorldMap.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release

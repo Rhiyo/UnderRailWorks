@@ -63,7 +63,10 @@ Load order and multiplayer, in `mod.json`: `requires` / `optional` load those mo
 only order (`"sortBefore": ["*"]`: before every mod that doesn't need you first, as Co-op does so its rules apply
 before other mods' handlers run). `"multiplayer": "client"` for a mod that only changes this player's screen (a
 minimap, a HUD layout): co-op players needn't have it. The default, `"both"`, means every player needs it, same
-version (Co-op refuses a joiner otherwise, naming the differences).
+version (Co-op refuses a joiner otherwise, naming the differences). Players can change the order in Options -> Mods
+-> Load order (saved as `@order=` in `Mods/mods.ini`); it wins over `"*"` and the alphabet, never over requirements.
+**The final say:** when two mods change the same thing, the one lower in the load order wins: for ordinary hooks it
+runs last, for replace / "first answer" hooks (`ReplaceHook`, the AI's ChooseTarget and ShouldFlee) it's asked first.
 
 Versions: your `mod.json` says which Works API you built for (`"works": "1.0"`), and Works refuses a mod that uses
 something it doesn't have, by name, instead of crashing later. Parts marked `[Preview]` may still change; the Mods tab

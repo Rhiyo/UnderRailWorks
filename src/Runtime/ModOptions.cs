@@ -168,6 +168,7 @@ public static class ModOptions
         public List<KeyValuePair<string, ModPage>> Pages = new List<KeyValuePair<string, ModPage>>();
         public List<KeyValuePair<ModInfo, cao>> Switches = new List<KeyValuePair<ModInfo, cao>>();
         public List<ModInfo> WithSettings = new List<ModInfo>();
+        public List<ModInfo> Order; public List<avo> OrderLabels = new List<avo>(); public bool OrderChanged; public int OrderView = -1;
         public cvh Page;
     }
     static readonly ConditionalWeakTable<t1, Tab> Tabs = new ConditionalWeakTable<t1, Tab>();
@@ -221,6 +222,8 @@ public static class ModOptions
         // show after a restart, and that game's saves would then load with a different set of mods than they were played with.
         if (InGame) Text(options, page, "Mods are switched on and off from the main menu's Options; settings can be changed here.", Quiet);
         else if (ModLoader.Mods.Count > 0) Text(options, page, "Switching a mod on or off applies when you restart the game.", Quiet);
+        tab.Order = ModLoader.Mods.Where(m => m.Loaded).OrderBy(m => m.LoadIndex).ToList();
+        if (tab.Order.Count > 1) { tab.OrderView = next + tab.WithSettings.Count; ButtonRow(options, page, "Load order", tab.OrderView); }
 
         foreach (var mod in ModLoader.Mods.OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase))
         {
@@ -337,6 +340,71 @@ public static class ModOptions
             catch (Exception ex) { Log.Write("mods: " + mod.Id + ": settings rows failed: " + ex); }
             Gap(options, 40);
         }
+        if (tab.OrderView >= 0)
+        {
+            views.Add(UnderrailOptions.RowY(options));
+            try { OrderView(options, page, tab); } catch (Exception ex) { Log.Write("mods: load order view failed: " + ex); }
+            Gap(options, 40);
+        }
+    }
+
+    // The load order: one row per loaded mod, Up / Down (from the main menu only, as switching mods on and off).
+    static void OrderView(t1 options, cvh page, Tab tab)
+    {
+        BackRow(options, page, "Load order");
+        Text(options, page, "Mods load top to bottom. When two mods change the same thing, the lower one has the final say.", Quiet);
+        Text(options, page, "A mod always loads after the mods it requires. Changes apply when you restart the game.", Quiet);
+        if (InGame) Text(options, page, "The order is changed from the main menu's Options.", Quiet);
+        else
+        {
+            var reset = UnderrailOptions.NewButton(options, "Mods' own order", () => { ModLoader.SetPlayerOrder(null); tab.OrderChanged = false; Notify.Log("Load order: back to the mods' own at the next start."); });
+            Gap(options, 4);
+            UnderrailOptions.PlaceRow(options, reset);
+        }
+        Gap(options, 8);
+        int left = UnderrailOptions.Left(options), width = UnderrailDropdownScroll.W(page.Size) - 2 * left - 40;
+        for (int i = 0; i < tab.Order.Count; i++)
+        {
+            int y = UnderrailOptions.RowY(options), x = left;
+            int at = i;
+            if (!InGame)
+            {
+                foreach (var b in new[] { UnderrailOptions.NewButton(options, "Up", () => Move(tab, at, -1)), UnderrailOptions.NewButton(options, "Down", () => Move(tab, at, 1)) })
+                {
+                    UnderrailDropdownScroll.Move(b, x, y);
+                    UnderrailDropdownScroll.Add(page, b);
+                    x += UnderrailDropdownScroll.W(b.Size) + 6;
+                }
+            }
+            var label = UnderrailOptions.Label(options, width - (x - left));
+            label.a(cab.a);
+            UnderrailDropdownScroll.Move(label, x + 6, y);
+            UnderrailDropdownScroll.Add(page, label);
+            tab.OrderLabels.Add(label);
+            UnderrailOptions.SetRowY(options, y + Math.Max(UnderrailDropdownScroll.H(label.Size), 30) + 6);
+        }
+        Relabel(tab);
+    }
+
+    static void Relabel(Tab tab)
+    {
+        for (int i = 0; i < tab.OrderLabels.Count && i < tab.Order.Count; i++)
+        {
+            var m = tab.Order[i];
+            var needs = m.Requires.Select(d => ModLoader.Find(d.Id)).Where(d => d != null).ToList();
+            bool early = needs.Any(d => tab.Order.IndexOf(d) > i);
+            tab.OrderLabels[i].Text = (i + 1) + ". " + m.Name + (early ? "   (loads after " + string.Join(", ", needs.Where(d => tab.Order.IndexOf(d) > i).Select(d => d.Name).ToArray()) + ", which it requires)" : "");
+            Paint(tab.OrderLabels[i], early ? Bad : Color.White);
+        }
+    }
+
+    static void Move(Tab tab, int i, int by)
+    {
+        int j = i + by;
+        if (j < 0 || j >= tab.Order.Count) return;
+        var m = tab.Order[i]; tab.Order[i] = tab.Order[j]; tab.Order[j] = m;
+        tab.OrderChanged = true;
+        Relabel(tab);
     }
 
     static bool InGame { get { return Hud.Exists; } }
@@ -359,6 +427,7 @@ public static class ModOptions
             bool want = on.Contains(s.Key);
             if (want != s.Key.Enabled) { ModLoader.SetEnabled(s.Key.Id, want); s.Key.Enabled = want; }
         }
+        if (tab.OrderChanged && !InGame) { ModLoader.SetPlayerOrder(tab.Order.Select(m => m.Id).ToList()); tab.OrderChanged = false; }
         foreach (var p in tab.Pages)
         {
             try

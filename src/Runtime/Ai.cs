@@ -45,12 +45,12 @@ namespace UnderRailWorks
 
     public static class Ai
     {
-        // A handler may return another character to fight (null: keep the game's choice). First answer wins.
+        // A handler may return another character to fight (null: keep the game's choice). The lowest mod in the load order that answers wins.
         public static readonly Hook<Func<TargetChoice, Character>> ChooseTarget = new Hook<Func<TargetChoice, Character>>("Ai.ChooseTarget");
         public static readonly Hook<Action<NpcAction>> Acting = new Hook<Action<NpcAction>>("Ai.Acting");
         public static readonly Hook<Action<NpcTurn>> TakingTurn = new Hook<Action<NpcTurn>>("Ai.TakingTurn");
         // Whether an NPC flees this step (the game's reasons: fear, civilians in danger, Scrambled Cortex). A handler
-        // returns true (flee), false (don't: it fights or acts normally) or null (the game's choice). First answer wins.
+        // returns true (flee), false (don't: it fights or acts normally) or null (the game's choice). The lowest mod in the load order that answers wins.
         public static readonly Hook<Func<NpcFlight, bool?>> ShouldFlee = new Hook<Func<NpcFlight, bool?>>("Ai.ShouldFlee");
 
         // Characters an NPC leaves out when it chooses whom to fight (handler(npc, candidate) true: not a candidate).

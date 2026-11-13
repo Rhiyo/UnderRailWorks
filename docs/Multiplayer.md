@@ -451,7 +451,9 @@ simulate it on their own machine.
 - **Order.** Co-op has `"sortBefore": ["*"]`: it loads before every mod that doesn't need it, so its handlers run
   first on every hook (an order a joiner's click turned into, a cancelled event) and other mods see the result.
   Hooks keep load order for handlers of the same HookOrder, also after a mod is reloaded. Order isn't compared between
-  players: the same mods give the same order.
+  players: everything that counts (fights, trades, prices, the world) happens on the host, with the host's order; a
+  joiner's world is a mirror where Works refuses changes, so a joiner's own order (Options -> Mods -> Load order) only
+  affects its client-side mods.
 - **Co-op's saves.** "coop-host" (written to send the world) is deleted once read, "coop-join" once loaded, so
   neither shows in Load Game (`SaveGames.Delete`).
 

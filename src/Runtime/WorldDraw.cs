@@ -1,7 +1,7 @@
 // UnderRailWorks: world-drawing events and outlines (the drawing area of the API).
 // The patched exe calls the methods at the bottom at fixed points of the game's world pass (a7m) and creature outline
-// builder (eg0). Mods add handlers to the events (Hooks.cs: Hook = every handler runs, ReplaceHook = the first
-// handler that takes the step replaces the game's). With no handlers each point does exactly what the stock game does.
+// builder (eg0). Mods add handlers to the events (Hooks.cs: Hook = every handler runs, ReplaceHook = the
+// handler that takes the step replaces the game's; asked from the lowest mod in the load order up). With no handlers each point does exactly what the stock game does.
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -48,8 +48,8 @@ public static class WorldDraw
     // view.ShaderLayers["Outline"]; outlines built only for mods are already taken out (Outlines.IsHidden).
     public static readonly Hook<Action<WorldView>> ShaderPassStarting = new Hook<Action<WorldView>>("ShaderPassStarting");
     public static readonly Hook<Action<WorldView, DrawContext>> ShaderPassDone = new Hook<Action<WorldView, DrawContext>>("ShaderPassDone");
-    // The interface is being drawn into an off-screen picture placed at from (screen pixels): the first handler that
-    // returns true sets it, and UiScaleFix maps drawing by it.
+    // The interface is being drawn into an off-screen picture placed at from (screen pixels): the handler that
+    // returns true sets it (asked from the lowest mod in the load order up), and UiScaleFix maps drawing by it.
     public static readonly ReplaceHook<OffsetHandler> InterfaceOffset = new ReplaceHook<OffsetHandler>("InterfaceOffset");
 
     // The game's own tile-extras step.

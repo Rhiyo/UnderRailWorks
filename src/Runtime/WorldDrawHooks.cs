@@ -34,7 +34,7 @@ public static class WorldDrawHooks
         {
             var l = new Layer(layer); var c = new DrawContext(context); var v = new LayerView(view);
             var list = hook.Snapshot;
-            for (int i = 0; i < list.Length; i++) { long t = hook.Starting(); try { if (list[i](l, c, v)) return; } catch (Exception ex) { hook.Failed(list, i, ex); } finally { hook.Done(i, t); } }
+            for (int i = list.Length - 1; i >= 0; i--) { long t = hook.Starting(); try { if (list[i](l, c, v)) return; } catch (Exception ex) { hook.Failed(list, i, ex); } finally { hook.Done(i, t); } }
         }
         layer.f3(context, view);
     }
@@ -46,7 +46,7 @@ public static class WorldDrawHooks
         {
             var v = new WorldView(view); var c = new DrawContext(context); var mt = new MapTile(tile);
             var list = hook.Snapshot;
-            for (int i = 0; i < list.Length; i++) { long t = hook.Starting(); try { if (list[i](v, c, mt)) return; } catch (Exception ex) { hook.Failed(list, i, ex); } finally { hook.Done(i, t); } }
+            for (int i = list.Length - 1; i >= 0; i--) { long t = hook.Starting(); try { if (list[i](v, c, mt)) return; } catch (Exception ex) { hook.Failed(list, i, ex); } finally { hook.Done(i, t); } }
         }
         WorldDraw.GameTileExtras(view, context, tile);
     }
