@@ -326,11 +326,11 @@ on top of Co-op.
   and opening a window: refused + window on the joiner, then on the host coins given and no window, the coins in the
   joiner's bag.
 - **Level-ups:** spent on the joiner's own character screen; when their sheet comes back with a higher level the host
-  raises GameEvents.LevelledUp as them (Party.LevelledUp). Not seen in game yet.
+  raises GameEvents.LeveledUp as them (Party.LeveledUp). Not seen in game yet.
 - **Still not covered:** mod buttons (Ui.Button) clicked on a joiner's machine that change the world: refused there,
   not forwarded (a button can't be found again on the host the way a key can); and before that a mod's keys
   and buttons on a joiner's machine run against the copy (refused); level-ups happen on the joiner's screen
-  (LevelledUp doesn't fire on the host). World.Player is not changed outside an action: HUD mods, minimaps and windows
+  (LeveledUp doesn't fire on the host). World.Player is not changed outside an action: HUD mods, minimaps and windows
   mean "this screen's player".
 - **Building on Co-op.** Co-op's rules can each be switched off by a mod doing it its own way (CoopApi):
   TravelTogether, EveryoneListens, ConversationsPause, SharesXp; plus IsMirror, PlayerOf, CharacterOf, SendWorld,

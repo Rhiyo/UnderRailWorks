@@ -70,7 +70,7 @@ namespace UnderRailWorks.Internal
             catch (Exception ex) { Log.Write("rules: creation points: " + ex); }
         }
 
-        static void LevelledUp(e3q __instance)
+        static void LeveledUp(e3q __instance)
         {
             try { LevelPoints(__instance); } catch (Exception ex) { Log.Write("rules: level points: " + ex); }
         }
@@ -120,7 +120,7 @@ namespace UnderRailWorks.Internal
         {
             Func<string, HarmonyLib.HarmonyMethod> m = n => new HarmonyLib.HarmonyMethod(typeof(CharacterRuleHooks).GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
             harmony.Patch(typeof(e3q).GetMethod("b", Inst, null, Type.EmptyTypes, null), postfix: m("Created"));
-            harmony.Patch(typeof(e3q).GetMethod("a", Inst, null, Type.EmptyTypes, null), postfix: m("LevelledUp"));
+            harmony.Patch(typeof(e3q).GetMethod("a", Inst, null, Type.EmptyTypes, null), postfix: m("LeveledUp"));
             harmony.Patch(typeof(c3p).GetMethod("a", Inst, null, Type.EmptyTypes, null), postfix: m("CanRaise"));
             harmony.Patch(AbilityTab.GetMethod("a", Inst, null, new[] { typeof(e3q) }, null), postfix: m("RowsBuilt"));
             Log.Write("rules: the game's: abilities " + CharacterRules.GameAbilityPoints + " points, " + CharacterRules.GameAbilityMin + "-" + CharacterRules.GameAbilityMax

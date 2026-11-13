@@ -39,7 +39,7 @@ public sealed class XpGain
     public bool Oddity { get; internal set; }
     // Who gets it (the player, or another character with a player sheet), and why, as the game says it ("studying an
     // oddity: ...", a quest's reason, null for kills).
-    public Character Who { get; internal set; }
+    public Character Character { get; internal set; }
     public string Reason { get; internal set; }
     // For studying an oddity.
     public bool FromOddity { get { return Reason != null && Reason.StartsWith("studying an oddity", StringComparison.OrdinalIgnoreCase); } }
@@ -120,7 +120,7 @@ static class ProgressionHooks
     { try {
         if (!Progression.ModifyExperience.Any) return;
         var sheet = __instance as au2; var body = sheet == null ? null : sheet.b() as c5x;
-        var g = new XpGain { Oddity = __instance.e() == ExperienceSystem.Oddity, Amount = __0, Who = body == null ? null : Character.Of(body), Reason = XpReason };
+        var g = new XpGain { Oddity = __instance.e() == ExperienceSystem.Oddity, Amount = __0, Character = body == null ? null : Character.Of(body), Reason = XpReason };
         Progression.ModifyExperience.Run(h => h(g));
         __0 = Math.Max(0, g.Amount);
     } catch (Exception ex_) { PatchGuard.Failed("Progression.Gain", ex_); }

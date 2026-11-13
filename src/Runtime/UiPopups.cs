@@ -112,7 +112,7 @@ static class UiPopups
 
     internal static void Answer(WorksMod mod, Action run)
     {
-        try { run(); }
+        try { ModScope.As(mod == null ? null : mod.Id, run, run); }
         catch (Exception ex) { if (mod != null) ModErrors.Report(mod.Id, "a popup's answer", ex); else Log.Write("ui: a popup's answer failed: " + ex.Message); }
     }
 
@@ -135,14 +135,28 @@ static class UiPopups
         if (string.IsNullOrEmpty(question)) return;
         fontName = fontName ?? PopupFont();
         var font = Font(fontName);
-        int margin = 10, lineHeight = font == null ? 22 : font.LineSpacing, width = UnderrailDropdownScroll.W(popup.Size);
+        int margin = Ui.S(10), lineHeight = font == null ? 22 : font.LineSpacing, width = UnderrailDropdownScroll.W(popup.Size);
+        // Word-wrapped to the popup's width in its font (a long question on one line ran past the frame).
+        var lines = new List<string>();
+        foreach (var para in question.Replace("\r", "").Split('\n'))
+        {
+            string line = "";
+            foreach (var word in para.Split(' '))
+            {
+                var tryLine = line.Length == 0 ? word : line + " " + word;
+                if (line.Length > 0 && font != null && font.MeasureString(tryLine).X > width - 2 * margin) { lines.Add(line); line = word; }
+                else line = tryLine;
+            }
+            lines.Add(line);
+        }
+        int textHeight = lines.Count * lineHeight;
         var label = new avo();
         if (LabelFont != null) LabelFont.Invoke(label, new object[] { fontName });
         label.a(cab.a);
-        label.Text = question;
-        label.Size = new esj(width - 2 * margin, lineHeight + 4);
-        foreach (euz part in popup.Controls.Cast<euz>().ToList()) UnderrailDropdownScroll.Move(part, part.Location.X, part.Location.Y + lineHeight + margin / 2);
-        popup.Size = new esj(width, UnderrailDropdownScroll.H(popup.Size) + lineHeight + margin / 2);
+        label.Text = string.Join("\r\n", lines.ToArray());     // the game's labels break lines at \r\n (d7w)
+        label.Size = new esj(width - 2 * margin, textHeight + 4);
+        foreach (euz part in popup.Controls.Cast<euz>().ToList()) UnderrailDropdownScroll.Move(part, part.Location.X, part.Location.Y + textHeight + margin / 2);
+        popup.Size = new esj(width, UnderrailDropdownScroll.H(popup.Size) + textHeight + margin / 2);
         popup.aox(label);
         UnderrailDropdownScroll.Move(label, margin, margin);
     }

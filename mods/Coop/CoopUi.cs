@@ -27,7 +27,7 @@ public sealed partial class Coop
 
     void LoadUi()
     {
-        windowKey = Keybinds.Register(this, "window", "Co-op window");
+        windowKey = Keybinds.Add(this, "window", "Co-op window");
         Hud.WhenReady(this, root =>
         {
             var button = Ui.Button("Co-op", Toggle);

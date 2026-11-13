@@ -31,23 +31,7 @@ public static partial class GameEvents
     public static readonly Hook<Action<StatusChange>> StatusApplied = new Hook<Action<StatusChange>>("StatusApplied");
     public static readonly Hook<Action<StatusChange>> StatusRemoved = new Hook<Action<StatusChange>>("StatusRemoved");
     // The player levelled up (the level-up screen closed without Cancel): the new level.
-    public static readonly Hook<Action<int>> LevelledUp = new Hook<Action<int>>("LevelledUp");
-}
-
-// A mod's own data for the current game, kept with the save as plain values (the game's global variables, named
-// "md_<mod>_<key>"): saved and loaded with the game, ignored by the stock game. For structured data, store JSON text.
-public sealed class ModData
-{
-    readonly string prefix;
-    internal ModData(string mod) { prefix = "md_" + mod + "_"; }
-    public bool Available { get { return Variables.Global.Available; } }
-    public string Get(string key, string fallback = null) { return Variables.Global.Get<string>(prefix + key, fallback); }
-    public int GetInt(string key, int fallback = 0) { return Variables.Global.Get(prefix + key, fallback); }
-    public bool GetBool(string key, bool fallback = false) { return Variables.Global.Get(prefix + key, fallback); }
-    public void Set(string key, string value) { Variables.Global.Set(prefix + key, value ?? ""); }
-    public void Set(string key, int value) { Variables.Global.Set(prefix + key, value); }
-    public void Set(string key, bool value) { Variables.Global.Set(prefix + key, value); }
-    public void Remove(string key) { Variables.Global.Remove(prefix + key); }
+    public static readonly Hook<Action<int>> LeveledUp = new Hook<Action<int>>("LeveledUp");
 }
 
 static class ProgressHooks
@@ -104,7 +88,7 @@ static class ProgressHooks
             var p = World.Player;
             if (screen == null || p == null || !p.IsCharacter || __0 != cku.a || screen.h() != a9m.b) return;
             int level = p.Level;
-            if (level != lastLevel && GameEvents.LevelledUp.Any) GameEvents.LevelledUp.Run(h => h(level));
+            if (level != lastLevel && GameEvents.LeveledUp.Any) GameEvents.LeveledUp.Run(h => h(level));
             lastLevel = level;
         }
         catch (Exception ex) { Log.Write("levels: " + ex.Message); }

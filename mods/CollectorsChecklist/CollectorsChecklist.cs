@@ -16,7 +16,7 @@ public sealed class CollectorsChecklist : WorksMod
 
     public override void Load()
     {
-        openKey = Keybinds.Register(this, "open", "Oddity checklist", Keys.Home);
+        openKey = Keybinds.Add(this, "open", "Oddity checklist", Keys.Home);
         GameEvents.Update.Add(this, s => { if (openKey.Pressed) { if (window != null && window.IsOpen) window.Close(); else Open(); } });
     }
 

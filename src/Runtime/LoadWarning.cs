@@ -62,10 +62,12 @@ static class LoadWarning
         {
             foreach (var kv in then) if (!now.ContainsKey(kv.Key)) r.Missing.Add(name(kv.Key) + " " + kv.Value);
             foreach (var kv in now) if (!then.ContainsKey(kv.Key)) r.Added.Add(name(kv.Key));
-            foreach (var kv in then) if (now.ContainsKey(kv.Key) && now[kv.Key] != kv.Value) r.Updated.Add(name(kv.Key) + " " + kv.Value + " -> " + now[kv.Key]);
+            foreach (var kv in then) if (now.ContainsKey(kv.Key) && !SameVersion(now[kv.Key], kv.Value)) r.Updated.Add(name(kv.Key) + " " + kv.Value + " -> " + now[kv.Key]);
         }
         return r.Missing.Count + r.Added.Count + r.Updated.Count == 0 ? null : r;
     }
+    // "1.0" and "1.0.0" are one version.
+    internal static bool SameVersion(string a, string b) { var x = ModInfo.ParseVersion(a); var y = ModInfo.ParseVersion(b); return x != null && y != null ? x == y : a == b; }
     static string[] Split(string s) { int at = s.LastIndexOf('@'); return at < 0 ? new[] { s, "" } : new[] { s.Substring(0, at), s.Substring(at + 1) }; }
 
     internal static string Summary(Report r)

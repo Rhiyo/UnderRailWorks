@@ -2,8 +2,8 @@
 // location); the world is drawn isometrically around it: a map step in X moves (TileWidth, TileHeight) interface units
 // on screen, a step in Y (-TileWidth, TileHeight) (a7m: screen x = (X - Y) * tile half-width * zoom, y = (X + Y) * tile
 // half-height * zoom). Moving the centre moves the view, as the game's right-drag scrolling does.
-//   var c = Camera.Centre;                      // what the screen is looking at (map tiles)
-//   Camera.Centre = new Vector2(30, 12);        // look there
+//   var c = Camera.Center;                      // what the screen is looking at (map tiles)
+//   Camera.Center = new Vector2(30, 12);        // look there
 using System;
 using System.Reflection;
 using Microsoft.Xna.Framework;
@@ -20,7 +20,7 @@ namespace UnderRailWorks
         static dnn View { get { return Hud.Current == null || ViewField == null ? null : ViewField.GetValue(Hud.Current) as dnn; } }
 
         // The map position the view is centred on (tiles), or null (no world view). Setting it moves the view there.
-        public static Vector2? Centre
+        public static Vector2? Center
         {
             get { var v = View; var c = v == null ? null : v.an9(); if (c == null) return null; var p = c.t1(); return new Vector2(p.X, p.Y); }
             set { var v = View; var c = v == null ? null : v.an9(); if (c == null || value == null) return; var p = c.t1(); c.t2(new Vector3(value.Value.X, value.Value.Y, p.Z)); }

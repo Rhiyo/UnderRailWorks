@@ -19,6 +19,11 @@ namespace UnderRailWorks
 public sealed class Container
 {
     internal readonly c7j Game;
+    // Two wrappers of the same game object are equal (Works makes a new one on each call): fine as dictionary keys.
+    public override bool Equals(object obj) { var o = obj as Container; return o != null && ReferenceEquals(o.Game, Game); }
+    public override int GetHashCode() { return Game == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Game); }
+    public static bool operator ==(Container a, Container b) { return ReferenceEquals(a, b) || (!ReferenceEquals(a, null) && a.Equals(b)); }
+    public static bool operator !=(Container a, Container b) { return !(a == b); }
     internal Container(c7j c) { Game = c; }
     internal dbi Items_ { get { return Game.ItemContainer; } }
     // The game's id for its object (kept in saves; World.ByEntityId's kind of id).
@@ -71,6 +76,11 @@ public enum LockKind { Mechanical, Electronic }
 public sealed class Lock
 {
     internal readonly d2b Game;
+    // Two wrappers of the same game object are equal (Works makes a new one on each call): fine as dictionary keys.
+    public override bool Equals(object obj) { var o = obj as Lock; return o != null && ReferenceEquals(o.Game, Game); }
+    public override int GetHashCode() { return Game == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Game); }
+    public static bool operator ==(Lock a, Lock b) { return ReferenceEquals(a, b) || (!ReferenceEquals(a, null) && a.Equals(b)); }
+    public static bool operator !=(Lock a, Lock b) { return !(a == b); }
     internal Lock(d2b l) { Game = l; }
     public bool Locked { get { return Game.n(); } }
     public LockKind Kind { get { return Game.j() == LockType.Mechanical ? LockKind.Mechanical : LockKind.Electronic; } }
@@ -129,7 +139,7 @@ public static class Containers
 {
     internal static bool AddTo(dbi bag, string path, int stacks)
     {
-        if (bag == null) return false;
+        if (bag == null || stacks <= 0) return false;
         var item = ez2.a(path);
         if (item == null) return false;
         item.Stacks = stacks;

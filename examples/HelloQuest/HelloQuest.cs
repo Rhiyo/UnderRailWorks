@@ -13,9 +13,9 @@ public sealed class HelloQuest : WorksMod
 
     public override void Load()
     {
-        talkKey = Keybinds.Register(this, "talk", "Talk to nearest", Keys.End);
-        Quests.Define(this, "helloquest_favour", "South Gate Station", "Someone asked me for a small favour. Ask them about it again.", xp: 50, oddityXp: 1);
-        Dialogs.Define(this, "helloquest/talk", d =>
+        talkKey = Keybinds.Add(this, "talk", "Talk to nearest", Keys.End);
+        Quests.Add(this, "helloquest_favour", "South Gate Station", "Someone asked me for a small favour. Ask them about it again.", xp: 50, oddityXp: 1);
+        Dialogs.Add(this, "helloquest/talk", d =>
         {
             d.Branch("entry")
                 .If(Condition.Quest("helloquest_favour", QuestState.Completed), "done")

@@ -6,7 +6,7 @@
 // per value; a row's label is d1o.c(hotkey), its key d1o.a(hotkey), and Accept saves it with cbx.a(settings) into
 // config.dat. Mod actions get Hotkey values far outside the game's (100000 + n): Works answers label and key for them
 // and saves them in the mod's settings.ini, so config.dat never holds anything of a mod's.
-//   var toggle = Keybinds.Register(this, "toggle", "Show or hide the minimap", Keys.F7);
+//   var toggle = Keybinds.Add(this, "toggle", "Show or hide the minimap", Keys.F7);
 //   if (toggle.Pressed) ...
 using System;
 using System.Collections.Generic;
@@ -28,7 +28,9 @@ public sealed class Keybind
     // The key the player chose (Keys.None: unbound).
     public Keys Key { get; internal set; }
     // True on the update the key went down (not while typing in a text box: the game's own hotkeys don't fire then either).
-    public bool Pressed { get { return Keybinds.Replaying == this || (Key != Keys.None && !Input.Typing && Input.Pressed(Key)); } }
+    // Not while typing, nor while the Options window is open (binding a game key there mustn't run a mod's action).
+    public bool Pressed { get { return Keybinds.Replaying == this || (Key != Keys.None && !Input.Typing && !OptionsOpen && Input.Pressed(Key)); } }
+    static bool OptionsOpen { get { var o = UiHooks.CurrentOptions; return o != null && o.Parent != null; } }
     public string ModId { get { return Mod; } }
     public string KeyId { get { return Id; } }
     public bool Down { get { return Key != Keys.None && !Input.Typing && Input.Down(Key); } }
@@ -77,12 +79,12 @@ public static class Keybinds
     // Registers an action (call from Load). id: unique within the mod; label: what the Controls tab shows after the mod's
     // name ("Minimap: Show/hide"): keep it short, the column is narrow. The player's key is kept in the mod's
     // settings.ini (key.<id>).
-    public static Keybind Register(WorksMod mod, string id, string label) { return Register(mod, id, label, Keys.None); }     // unbound by default
+    public static Keybind Add(WorksMod mod, string id, string label) { return Add(mod, id, label, Keys.None); }     // unbound by default
     // (Not an optional parameter: an enum default value makes the build's retargeting resolve XNA itself.)
-    public static Keybind Register(WorksMod mod, string id, string label, Keys defaultKey)
+    public static Keybind Add(WorksMod mod, string id, string label, Keys defaultKey)
     {
         var existing = all.FirstOrDefault(k => k.Mod == mod.Id && k.Id == id);
-        if (existing != null) return existing;
+        if (existing != null) { existing.Label = label; existing.DefaultKey = defaultKey; return existing; }     // a reloaded mod: same slot, its new texts
         var k2 = new Keybind { Slot = (Hotkey)(First + all.Count), Mod = mod.Id, ModName = mod.Info.Name, Id = id, Label = label, DefaultKey = defaultKey };
         Keys key;
         var saved = mod.Settings.Get(k2.SettingKey);
@@ -102,16 +104,17 @@ public static class Keybinds
     // The game's own keys (its Controls tab: cnk.aq1().e().c(), Hotkey -> key), once they are loaded: a mod's default
     // on one of them starts unbound (G is the game's Crafting, H its..., they'd both fire); a key the player set is only
     // reported. Run from Works' update until the game's table exists.
-    static bool gameChecked;
+    static int gameChecked;     // how many of all were checked (keys added later, by a reload or Abilities.Add, are checked too)
     internal static void CheckGameKeys()
     {
-        if (gameChecked || all.Count == 0) return;
+        if (gameChecked >= all.Count) return;
         var game = ces.a();
         var table = game == null || game.aq1() == null || game.aq1().e() == null ? null : game.aq1().e().c();
         if (table == null || table.Count == 0) return;
-        gameChecked = true;
-        Log.Write("keys: the game's: " + string.Join(", ", table.Where(kv => (int)kv.Key < First && kv.Value != Keys.None).OrderBy(kv => kv.Value.ToString()).Select(kv => kv.Value + "=" + kv.Key)));
-        foreach (var k in all)
+        if (gameChecked == 0) Log.Write("keys: the game's: " + string.Join(", ", table.Where(kv => (int)kv.Key < First && kv.Value != Keys.None).OrderBy(kv => kv.Value.ToString()).Select(kv => kv.Value + "=" + kv.Key)));
+        var fresh = all.Skip(gameChecked).ToList();
+        gameChecked = all.Count;
+        foreach (var k in fresh)
         {
             if (k.Key == Keys.None) continue;
             var hit = table.Where(kv => (int)kv.Key < First && kv.Value == k.Key).Select(kv => kv.Key).FirstOrDefault();

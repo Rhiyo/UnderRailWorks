@@ -29,6 +29,14 @@ namespace UnderRailWorks.Internal
         // The mod being loaded again (registries skip what mustn't happen twice).
         internal static string Reloading;
         internal static readonly List<IModOwned> Hooks = new List<IModOwned>();
+        // Runs a mod's callback (a widget's, a popup's answer, a button) as that mod, found from the delegate's code (or
+        // given): what it adds to the interface is its own and goes when the mod is reloaded.
+        internal static void As(string mod, Delegate code, Action call)
+        {
+            var was = Current;
+            Current = mod ?? (code == null ? null : ModErrors.ModOf(code.Method.DeclaringType)) ?? was;
+            try { call(); } finally { Current = was; }
+        }
 
         static readonly Dictionary<string, List<WeakReference>> owned = new Dictionary<string, List<WeakReference>>(StringComparer.OrdinalIgnoreCase);
         internal static void Own(UiElement element)
@@ -135,7 +143,7 @@ namespace UnderRailWorks.Internal
             since += seconds;
             if (since < 1) return;
             since = 0;
-            foreach (var mod in ModLoader.Mods.Where(m => m.Loaded))
+            foreach (var mod in ModLoader.Mods.Where(Reloadable))
             {
                 DateTime loaded, stamp = ModCode.Stamp(mod), last;
                 if (!ModCode.Stamps.TryGetValue(mod.Id, out loaded) || stamp <= loaded) continue;
@@ -149,7 +157,7 @@ namespace UnderRailWorks.Internal
         internal static int RequestChanged()
         {
             int n = 0;
-            foreach (var mod in ModLoader.Mods.Where(m => m.Loaded))
+            foreach (var mod in ModLoader.Mods.Where(Reloadable))
             {
                 DateTime loaded;
                 if (ModCode.Stamps.TryGetValue(mod.Id, out loaded) && ModCode.Stamp(mod) > loaded) { Request(mod.Id); n++; }
@@ -157,11 +165,16 @@ namespace UnderRailWorks.Internal
             return n;
         }
 
+        // Loaded, or its code failed (Load, PostLoad, a DLL that wouldn't load) at start or at the last reload: a fixed
+        // build is tried. Not a mod kept out by its requirements, its Works version or the player.
+        static bool FailedInCode(ModInfo m) { return !m.Loaded && m.Enabled && m.Instance == null && m.Error != null && ModCode.Stamps.ContainsKey(m.Id) && (m.Error.StartsWith("failed") || m.Error.StartsWith("PostLoad failed") || m.Error.StartsWith("no WorksMod")); }
+        static bool Reloadable(ModInfo m) { return m.Loaded || FailedInCode(m); }
+
         internal static string Reload(string id)
         {
             var mod = ModLoader.Find(id);
             if (mod == null) return "no mod " + id;
-            if (!mod.Loaded) return mod.Id + " isn't loaded" + (mod.Error != null ? " (" + mod.Error + ")" : "");
+            if (!Reloadable(mod)) return mod.Id + " isn't loaded" + (mod.Error != null ? " (" + mod.Error + ")" : "");
             if (!ModCode.CanReload) return "this runtime can't load code again";
             if (!Directory.GetFiles(mod.Folder, "*.dll").Any()) return mod.Id + " has no code";
             int removedUi;
@@ -181,12 +194,13 @@ namespace UnderRailWorks.Internal
                 {
                     ModScope.Current = mod.Id;
                     try { mod.Instance.PostLoad(); }
-                    catch (Exception ex) { mod.Error = "PostLoad failed: " + ex.Message; Log.Write("mods: " + mod.Id + " PostLoad failed: " + ex); }
+                    catch (Exception ex) { mod.Error = "PostLoad failed: " + ex.Message; mod.Loaded = false; Log.Write("mods: " + mod.Id + " PostLoad failed: " + ex); Forget(mod); mod.Instance = null; }     // as at startup: never half-running
                     ModScope.Current = was;
                 }
             }
             finally { ModScope.Reloading = null; ModScope.Current = was; }
             if (!mod.Loaded) return mod.Id + " failed to load again: " + mod.Error;
+            if (mod.LoadIndex < 0) mod.LoadIndex = ModLoader.Mods.Max(m => m.LoadIndex) + 1;     // it had failed: after the others
             CatchUp(mod.Id);
             return "reloaded " + mod.Id + " " + mod.VersionText + (removedUi > 0 ? " (" + removedUi + " interface element(s) of the old code removed)" : "");
         }
@@ -211,6 +225,25 @@ namespace UnderRailWorks.Internal
             foreach (var h in hooks) h.RemoveOwner(id);
             try { new HarmonyLib.Harmony("UnderRailWorks.reloader").UnpatchAll("UnderRailWorks." + id); }
             catch (Exception ex) { Log.Write("reload: " + id + ": unpatching: " + ex.Message); }
+            // Patches the mod made with a Harmony instance of its own (new Harmony("MyMod")): every patch whose method is
+            // in the mod's code, whatever its owner.
+            try
+            {
+                List<System.Reflection.Assembly> mine;
+                if (ModCode.Assemblies.TryGetValue(id, out mine) && mine.Count > 0)
+                {
+                    int n = 0;
+                    foreach (var original in HarmonyLib.Harmony.GetAllPatchedMethods().ToList())
+                    {
+                        var info = HarmonyLib.Harmony.GetPatchInfo(original);
+                        if (info == null) continue;
+                        foreach (var p in info.Prefixes.Concat(info.Postfixes).Concat(info.Transpilers).Concat(info.Finalizers).Where(p => p.PatchMethod != null && mine.Contains(p.PatchMethod.DeclaringType.Assembly)).ToList())
+                        { new HarmonyLib.Harmony(p.owner).Unpatch(original, p.PatchMethod); n++; }
+                    }
+                    if (n > 0) Log.Write("reload: " + id + ": removed " + n + " patches it made with its own Harmony instance");
+                }
+            }
+            catch (Exception ex) { Log.Write("reload: " + id + ": unpatching its own Harmony patches: " + ex.Message); }
             Action<string, Action> step = (what, a) => { try { a(); } catch (Exception ex) { Log.Write("reload: " + id + ": " + what + ": " + ex.Message); } };
             int ui = 0;
             step("windows", () => { foreach (var w in UiWindows.Open.Where(w => w.Mod != null && w.Mod.Id == id).ToList()) w.Close(); });

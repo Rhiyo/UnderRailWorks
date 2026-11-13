@@ -90,7 +90,7 @@ namespace UnderRailWorks
             AbilityTarget target = AbilityTarget.Self, Keys key = Keys.None)
         {
             var a = new ModAbility { Owner = mod, Id = id, Name = name, Description = description, ApCost = apCost, Cooldown = cooldown, Target = target,
-                IconFile = icon, Key = Keybinds.Register(mod, "ability." + id, name, key) };
+                IconFile = icon, Key = Keybinds.Add(mod, "ability." + id, name, key) };
             All.Add(a);
             AbilityBars.Dirty = true;
             return a;

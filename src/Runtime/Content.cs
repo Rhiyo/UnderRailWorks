@@ -8,7 +8,7 @@
 // - Text: qv.b("category/key") (the language's .txt, then data/Knowledge/<category>.k). Works answers first for text
 //   mods add (in memory only: never written anywhere).
 //   Variables.Global.Set("mymod_metStranger", true);  Variables.Global.Get("mymod_metStranger", false)
-//   Quests.Define("mymod_findTheCrate", "South Gate Station", "Find the stranger's crate.", xp: 100);
+//   Quests.Add(this, "mymod_findTheCrate", "South Gate Station", "Find the stranger's crate.", xp: 100);
 //   Quests.Start("mymod_findTheCrate");  Quests.State(...)  Quests.Complete(...)
 //   Text.Set("ui", "mymod_title", "...");  Notify.Log("text");  Notify.OverPlayer("text", Color.Gold)
 using System;
@@ -49,17 +49,19 @@ public sealed partial class Variables
         catch { return fallback; }
     }
 
-    public void Set(string name, bool value) { Put(name, value); }
-    public void Set(string name, int value) { Put(name, value); }
-    public void Set(string name, float value) { Put(name, value); }
-    public void Set(string name, string value) { Put(name, value); }
+    // False when there is nothing to set it on (no game loaded: the main menu).
+    public bool Set(string name, bool value) { return Put(name, value); }
+    public bool Set(string name, int value) { return Put(name, value); }
+    public bool Set(string name, float value) { return Put(name, value); }
+    public bool Set(string name, string value) { return Put(name, value); }
     public void Remove(string name) { var p = source(); if (p != null) p.RemoveProperty(name); }
 
-    void Put(string name, object value)
+    bool Put(string name, object value)
     {
         var p = source();
-        if (p == null) throw new InvalidOperationException("no game is loaded");
+        if (p == null || name == null) return false;
         p[name] = value;
+        return true;
     }
 }
 
@@ -84,7 +86,7 @@ public static class Quests
     // A new quest: id (unique: prefix it with the mod's id), the journal heading it's listed under (the game uses area
     // names: "South Gate Station"), its journal text, and the XP completing it gives (classic and oddity systems).
     // Call it from Load: the game resolves quest names once per save it loads.
-    public static void Define(WorksMod mod, string id, string group, string journalText, int xp = 0, int oddityXp = 0) { Define(mod.Id, id, group, journalText, xp, oddityXp); }
+    public static void Add(WorksMod mod, string id, string group, string journalText, int xp = 0, int oddityXp = 0) { Define(mod.Id, id, group, journalText, xp, oddityXp); }
     static readonly Dictionary<string, string> questOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     internal static void Define(string id, string group, string journalText, int xp = 0, int oddityXp = 0) { Define(ModScope.Current, id, group, journalText, xp, oddityXp); }
     internal static void Define(string owner, string id, string group, string journalText, int xp, int oddityXp)
@@ -213,7 +215,8 @@ public static class Notify
     // Floating text over any character.
     public static void Over(Character who, string text, Color? colour = null, bool big = false)
     {
-        if (who == null) return;
+        // Not without a game screen (the main menu, a zone change) or for one no longer in the world.
+        if (who == null || text == null || bpo.GetService<ps>() == null || who.Area == null) return;
         bmj.a(who.Entity, (c3r)FloatingCtor.Invoke(new object[] { text, colour ?? Default, null, big }));
     }
 }

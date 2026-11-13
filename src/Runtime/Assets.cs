@@ -57,7 +57,7 @@ namespace UnderRailWorks
     {
         // A new icon name for a picture in the mod's folder (drawn scaled into the icon's square): use it wherever the
         // game takes an icon name.
-        public static string Register(WorksMod mod, string id, string file)
+        public static string Add(WorksMod mod, string id, string file)
         {
             var name = "works:" + mod.Id + ":" + id;
             AssetStore.Icon(name, Path.Combine(mod.Info.Folder, file));
@@ -65,7 +65,7 @@ namespace UnderRailWorks
         }
 
         // Items with this code show the picture as their icon (inventory, quick slots, trade, containers, tooltips).
-        public static void SetItemIcon(WorksMod mod, string itemCode, string file) { AssetStore.ItemIcon(itemCode, Register(mod, "item." + itemCode, file)); }
+        public static void SetItemIcon(WorksMod mod, string itemCode, string file) { AssetStore.ItemIcon(itemCode, Add(mod, "item." + itemCode, file)); }
     }
 
     public static partial class MainMenu

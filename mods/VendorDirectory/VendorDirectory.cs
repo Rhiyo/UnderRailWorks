@@ -32,7 +32,7 @@ public sealed class VendorDirectory : WorksMod
     public override void Load()
     {
         config = GetConfig<VendorDirectoryConfig>();
-        listKey = Keybinds.Register(this, "list", "Vendor list", Keys.F6);
+        listKey = Keybinds.Add(this, "list", "Vendor list", Keys.F6);
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; });
         UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.TradeOpened.Add(this, merchant =>

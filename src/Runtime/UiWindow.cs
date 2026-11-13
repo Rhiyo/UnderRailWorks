@@ -65,6 +65,7 @@ public static partial class Ui
         game.Size = new esj(width, Math.Max(minHeight, height - 22 + w.TitleHeight));
         game.a((EventHandler<el5>)((sender, e) => w.Close()));     // its own close button
         Add(hud, w, (hud.Width - UnderrailDropdownScroll.W(game.Size)) / 2, Math.Max(10, hud.Height / 6));
+        { var inside = Ui.KeepInside(w, w.X, w.Y); if (inside.X != w.X || inside.Y != w.Y) Ui.Move(w, inside.X, inside.Y); }     // a tall or wide window: on screen from the start
         var place = mod.Settings.Get("window." + id);
         if (!string.IsNullOrEmpty(place)) Restore(w, place);
         UiWindows.Open.Add(w);
@@ -90,7 +91,7 @@ static class UiWindows
     {
         try
         {
-            if (Open.Count == 0 || __1 == null || Convert.ToInt32(KeyField.GetValue(__1)) != 27) return true;
+            if (Open.Count == 0 || __1 == null || Input.Typing || Convert.ToInt32(KeyField.GetValue(__1)) != 27) return true;
             Open.RemoveAll(w => !w.IsOpen);
             if (Open.Count == 0) return true;
             Open[Open.Count - 1].Close();

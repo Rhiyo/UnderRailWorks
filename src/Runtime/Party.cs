@@ -33,7 +33,7 @@ namespace UnderRailWorks
             get
             {
                 var list = new List<Character>();
-                var p = World.Player;
+                var p = World.RealPlayer;     // not World.Player: while a member acts, that is the member
                 if (p != null) list.Add(p);
                 lock (others) foreach (var c in others.Keys.ToList()) { if (c.Area == null || c.IsDead) continue; if (!list.Contains(c)) list.Add(c); }
                 return list;
@@ -54,8 +54,8 @@ namespace UnderRailWorks
         internal static Character Begin(Character who) { var before = acting; acting = who != null && !who.IsPlayer && Contains(who) ? who : before; return before; }
         internal static void End(Character before) { acting = before; }
 
-        // A multiplayer mod: who reached a level on another machine; GameEvents.LevelledUp runs here with them as the player.
-        [Preview("multiplayer: built for Co-op so far")] public static void LevelledUp(Character who, int level) { if (GameEvents.LevelledUp.Any) As(who, () => GameEvents.LevelledUp.Run(h => h(level))); }
+        // A multiplayer mod: who reached a level on another machine; GameEvents.LeveledUp runs here with them as the player.
+        [Preview("multiplayer: built for Co-op so far")] public static void LeveledUp(Character who, int level) { if (GameEvents.LeveledUp.Any) As(who, () => GameEvents.LeveledUp.Run(h => h(level))); }
 
         public static void Add(WorksMod mod, Character c) { if (c != null) lock (others) others[c] = mod.Id; }
         public static void Remove(Character c) { if (c != null) lock (others) others.Remove(c); }

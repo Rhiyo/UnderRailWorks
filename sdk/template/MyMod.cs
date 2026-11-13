@@ -16,7 +16,7 @@ public sealed class MyMod : WorksMod
     public override void Load()
     {
         config = GetConfig<MyModConfig>();
-        key = Keybinds.Register(this, "hello", "Say hello", Keys.None);     // the player binds it in Options -> Controls
+        key = Keybinds.Add(this, "hello", "Say hello", Keys.None);     // the player binds it in Options -> Controls
         GameEvents.GameLoaded.Add(this, () =>
         {
             int loads = SaveData.Get("loads", 0) + 1;

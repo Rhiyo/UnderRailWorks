@@ -28,7 +28,7 @@ public sealed class SurveyPins : WorksMod
     public override void Load()
     {
         config = GetConfig<SurveyPinsConfig>();
-        pinKey = Keybinds.Register(this, "pin", T("key"), Keys.Insert);
+        pinKey = Keybinds.Add(this, "pin", T("key"), Keys.Insert);
         GameEvents.ZoneLoaded.Add(this, (zone, first) => sinceScan = 99);
         GameEvents.Update.Add(this, Tick);
     }

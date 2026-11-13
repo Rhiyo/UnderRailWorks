@@ -67,7 +67,7 @@ public sealed class Minimap : WorksMod
     {
         config = GetConfig<MinimapConfig>();
         Markers.Changed.Add(this, () => markersDirty = true);
-        toggleKey = Keybinds.Register(this, "toggle", "Show/hide", Keys.F7);
+        toggleKey = Keybinds.Add(this, "toggle", "Show/hide", Keys.F7);
         UiEvents.HudCreated.Add(this, root => { hud = root; Build(); });
         UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.Update.Add(this, seconds =>
@@ -110,7 +110,7 @@ public sealed class Minimap : WorksMod
         if (view == null) return;
         var b = view.Bounds; var m = Input.Mouse;
         var at = picture.ToMap((m.X - b.X) * (float)picture.Width / b.Width, (m.Y - b.Y) * (float)picture.Height / b.Height);
-        if (at != null) Camera.Centre = at;
+        if (at != null) Camera.Center = at;
     }
 
     // The large map: the same picture over more of the area, in a window (drag it by the title, Escape closes it).
@@ -214,7 +214,7 @@ sealed class MapPicture
                     for (int y = ex.Tiles.Top; y < ex.Tiles.Bottom; y++)
                     {
                         int i = x - ox, j = y - oy;
-                        if (i >= 0 && j >= 0 && i < size && j < size && colour[i, j] != null) colour[i, j] = ex.GameColour;
+                        if (i >= 0 && j >= 0 && i < size && j < size && colour[i, j] != null) colour[i, j] = ex.GameColor;
                     }
         // Mods' edge exits (Zones.AddEdgeExit) lead to another map: the game's red for those.
         if (exits)
@@ -251,7 +251,7 @@ sealed class MapPicture
         // Markers: a diamond in the marker's colour; one off the map sits on its edge, in its direction.
         labels.Clear();
         if (markers != null)
-            foreach (var mk in markers.Where(mk => mk.Area == null ? here : mk.Area == area.Name)) labels.Add(new KeyValuePair<Point, string>(Diamond(new Vector3(mk.X, mk.Y, 0), cx, cy, k2, mk.Colour), mk.Label));
+            foreach (var mk in markers.Where(mk => mk.Area == null ? here : mk.Area == area.Name)) labels.Add(new KeyValuePair<Point, string>(Diamond(new Vector3(mk.X, mk.Y, 0), cx, cy, k2, mk.Color), mk.Label));
         lastCx = cx; lastCy = cy; lastK2 = k2;
         if (!here) return;
         Dot(at, cx, cy, k2, player.OutlineColor, 3);     // the player last, on top (gold, as Tab)
@@ -262,7 +262,7 @@ sealed class MapPicture
     // is a rectangle here too: one map step moves Camera.TileWidth units on screen and k2 pixels here.
     void ViewBox(float cx, float cy, float k2)
     {
-        var c = Camera.Centre; var view = Camera.ViewSize; float tw0 = Camera.TileWidth;
+        var c = Camera.Center; var view = Camera.ViewSize; float tw0 = Camera.TileWidth;
         if (c == null || tw0 <= 0 || view.X == 0) return;
         float dx = c.Value.X - cx, dy = c.Value.Y - cy, s = k2 / tw0;
         int mx = (int)Math.Round(tw / 2f + (dx - dy) * k2), my = (int)Math.Round(th / 2f + (dx + dy) * k2 / 2);

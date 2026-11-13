@@ -23,7 +23,7 @@ public sealed class ModSettings
     ModSettings(string mod, string defaults)
     {
         Mod = mod;
-        Path = System.IO.Path.Combine(System.IO.Path.Combine(ModLoader.ModsFolder, mod), "settings.ini");
+        Path = System.IO.Path.Combine(FolderOf(mod), "settings.ini");
         try
         {
             if (!File.Exists(Path) && defaults != null) File.WriteAllText(Path, defaults.Replace("\r\n", "\n"));
@@ -31,6 +31,8 @@ public sealed class ModSettings
         }
         catch (Exception ex) { Log.Write("mods: " + mod + ": settings: " + ex.Message); }
     }
+    // The mod's folder (its id can differ from the folder's name), Mods/<id> for one not found.
+    static string FolderOf(string mod) { var m = ModLoader.Find(mod); return m != null ? m.Folder : System.IO.Path.Combine(ModLoader.ModsFolder, mod); }
 
     // The mod's settings (made on first use).
     internal static ModSettings For(string mod, string defaults = null)

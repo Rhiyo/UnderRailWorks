@@ -8,7 +8,7 @@
 // UnderRailWorks.json and are re-applied when it loads (the player's, and characters on the loaded map by Key).
 // Caveat: eating food removes every food effect in the game, mod statuses included (re-apply in GameEvents.ItemUsed
 // if that matters).
-//   var bleeding = ModStatuses.Define(this, "bleeding", "Bleeding", "Losing 5 health every turn.", "Status.Poison");
+//   var bleeding = StatusEffects.Add(this, "bleeding", "Bleeding", "Losing 5 health every turn.", "Status.Poison");
 //   bleeding.OnTick += (who, stacks) => who.Health -= 5 * stacks;
 //   bleeding.Apply(target, turns: 3);
 using System;
@@ -40,16 +40,6 @@ namespace UnderRailWorks
         public void Remove(Character who) { ModStatusStore.Remove(this, who); }
     }
 
-    public static class ModStatuses
-    {
-        // icon: an icon name the game knows ("Status.Poison", "Status.PsiBoost", "Status.5"..., or one from Icons.Register).
-        public static ModStatus Define(WorksMod mod, string id, string name, string description, string icon, params StatBonus[] bonuses)
-        {
-            var s = new ModStatus { Mod = mod.Id, Id = id, Name = name, Description = description, Icon = icon, Bonuses = bonuses ?? new StatBonus[0] };
-            ModStatusStore.Types[s.Code] = s;
-            return s;
-        }
-    }
 }
 
 namespace UnderRailWorks.Internal
@@ -118,11 +108,22 @@ namespace UnderRailWorks.Internal
         internal static void Record()
         {
             var list = new List<object>();
+            // Statuses of mods that aren't installed stay as they were (Restore skips them).
+            object old;
+            if (SaveFiles.Current.TryGetValue("UnderRailWorks.status", out old) && old is Dictionary<string, object> && ((Dictionary<string, object>)old).ContainsKey("list"))
+                foreach (var e in (((Dictionary<string, object>)old)["list"] as List<object>) ?? new List<object>())
+                {
+                    var d = e as Dictionary<string, object>; object code;
+                    if (d != null && d.TryGetValue("code", out code) && code is string && !Types.ContainsKey((string)code)) list.Add(d);
+                }
             foreach (var kv in Live())
             {
                 var who = Combat.OfData(OwnerField.GetValue(kv.Value) as efk);
                 if (who == null) continue;
-                list.Add(new Dictionary<string, object> { { "code", kv.Key.Code }, { "owner", who.IsPlayer ? "player" : who.Key }, { "ms", kv.Key.TimeLeft }, { "stacks", (double)kv.Key.Stacks } });
+                // The owner by the game's unique id (names repeat: several "Lunatic"), its key as a fallback.
+                var entry = new Dictionary<string, object> { { "code", kv.Key.Code }, { "owner", who.IsPlayer ? "player" : who.Key }, { "ms", kv.Key.TimeLeft }, { "stacks", (double)kv.Key.Stacks } };
+                if (!who.IsPlayer && who.GameData != null) entry["uid"] = who.GameData.Uid.ToString();
+                list.Add(entry);
             }
             if (list.Count > 0) SaveFiles.Current["UnderRailWorks.status"] = new Dictionary<string, object> { { "list", list } };
             else SaveFiles.Current.Remove("UnderRailWorks.status");
@@ -134,12 +135,17 @@ namespace UnderRailWorks.Internal
             if (!SaveFiles.Current.TryGetValue("UnderRailWorks.status", out o) || !(o is Dictionary<string, object>)) return;
             var list = ((Dictionary<string, object>)o)["list"] as List<object>;
             if (list == null) return;
-            foreach (Dictionary<string, object> e in list)
+            foreach (var item in list)
             {
+                var e = item as Dictionary<string, object>;
+                if (e == null || !(e.ContainsKey("code") && e["code"] is string) || !(e.ContainsKey("owner") && e["owner"] is string)) continue;
                 ModStatus s;
-                if (!Types.TryGetValue((string)e["code"], out s)) continue;     // its mod isn't installed: the entry stays in the file
+                if (!Types.TryGetValue((string)e["code"], out s)) continue;     // its mod isn't installed: the entry stays in the file (Record)
                 var owner = (string)e["owner"];
-                var who = owner == "player" ? World.Player : World.Characters.FirstOrDefault(c => c.Key == owner);
+                object uid; e.TryGetValue("uid", out uid);
+                var who = owner == "player" ? World.Player
+                    : (uid is string ? World.Characters.FirstOrDefault(c => c.GameData != null && c.GameData.Uid.ToString() == (string)uid) : null)
+                      ?? World.Characters.FirstOrDefault(c => c.Key == owner);
                 if (who != null) Apply(s, who, Convert.ToDouble(e["ms"]), Convert.ToInt32(e["stacks"]));
             }
         }

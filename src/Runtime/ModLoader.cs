@@ -29,7 +29,7 @@ public sealed class ModDependency
 { internal ModDependency() { }
     public string Id { get; internal set; }
     public Version Min { get; set; }     // null: any version
-    public override string ToString() { return Min == null ? Id : Id + " " + Min + "+"; }
+    public override string ToString() { return Min == null ? Id : Id + " " + ModInfo.Text(Min) + "+"; }
     // "OtherMod", "OtherMod >= 1.2" (as Factorio's and npm's manifests write a minimum) or "OtherMod@1.2" (the same).
     internal static ModDependency Parse(string text)
     {
@@ -79,14 +79,35 @@ public sealed class ModInfo
     public int Failures { get; internal set; }
     public string LastFailure { get; internal set; }
 
+    // "1.2", "1.2.0", "v1.2", "1.2.0-beta" (the suffix is ignored): always major.minor.build.revision, missing parts 0, so
+    // "1.2" and "1.2.0" are equal (System.Version alone says 1.2 < 1.2.0).
     internal static Version ParseVersion(string s)
     {
         Version v;
         s = (s ?? "").Trim();
+        if (s.StartsWith("v", StringComparison.OrdinalIgnoreCase)) s = s.Substring(1);
+        int cut = s.IndexOfAny(new[] { '-', '+', ' ' });
+        if (cut > 0) s = s.Substring(0, cut);
         if (s.Length > 0 && s.IndexOf('.') < 0) s += ".0";
-        return Version.TryParse(s, out v) ? v : null;
+        return Version.TryParse(s, out v) ? Norm(v) : null;
     }
-    public string VersionText { get { System.Version v = Version; return v == null ? "" : v.Revision > 0 ? v.ToString() : v.Build >= 0 ? v.ToString(3) : v.ToString(2); } }
+    internal static Version Norm(Version v) { return v == null ? null : new Version(v.Major, v.Minor, Math.Max(0, v.Build), Math.Max(0, v.Revision)); }
+    // Letters, digits, '.', '_' and '-': ids go into mods.ini lines, @order lists, file names and Harmony ids.
+    internal static bool ValidId(string id) { return !string.IsNullOrEmpty(id) && id.All(c => c < 128 && (char.IsLetterOrDigit(c) || c == '.' || c == '_' || c == '-')); }
+    public string VersionText { get { return Text(Version); } }
+    // 1.2.0 (major.minor.build, the revision only when it isn't 0).
+    internal static string Text(Version v) { v = Norm(v); return v == null ? "" : v.Revision > 0 ? v.ToString() : v.ToString(3); }
+    // The version of the DLL that holds the mod's code: the one named after the folder or id, else the only one, else
+    // the first that isn't a library it ships (Newtonsoft.Json.dll...). Null: no DLL.
+    internal static string MainDll(string folder, string id)
+    {
+        string[] dlls;
+        try { dlls = Directory.GetFiles(folder, "*.dll"); } catch { return null; }
+        if (dlls.Length == 0) return null;
+        return dlls.FirstOrDefault(d => Path.GetFileNameWithoutExtension(d).Equals(id, StringComparison.OrdinalIgnoreCase))
+            ?? dlls.FirstOrDefault(d => Path.GetFileNameWithoutExtension(d).Equals(Path.GetFileName(folder), StringComparison.OrdinalIgnoreCase))
+            ?? (dlls.Length == 1 ? dlls[0] : null);
+    }
 }
 
 public static class ModLoader
@@ -110,6 +131,10 @@ public static class ModLoader
         var off = Disabled(out listed);
         var all = Directory.GetDirectories(ModsFolder).OrderBy(d => d, StringComparer.OrdinalIgnoreCase).Select(Read).ToList();
         foreach (var m in all) m.Enabled = !off.Contains(m.Id);
+        // Two folders with one id (an old copy left beside a new one): only the first loads.
+        foreach (var g in all.GroupBy(m => m.Id, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1))
+            foreach (var m in g.Skip(1)) if (m.Error == null) m.Error = "the same id as the mod in " + Path.GetFileName(g.First().Folder) + " (remove one of the two folders)";
+        foreach (var m in all.Where(m => m.Error == null && !ModInfo.ValidId(m.Id))) m.Error = "its id \"" + m.Id + "\" may only use letters, digits, '.', '_' and '-'";
         // "startsOff" mods (gameplay changes a player should choose) that mods.ini doesn't name yet: off, written down
         // so the Mods tab and the file show it.
         foreach (var m in all.Where(m => m.StartsOff && !listed.Contains(m.Id))) { m.Enabled = false; SetEnabled(m.Id, false); Log.Write("mods: " + m.Id + " starts switched off (switch it on in Options -> Mods)"); }
@@ -178,6 +203,20 @@ public static class ModLoader
             catch (Exception ex) { mod.Error = "PostLoad failed: " + ex.Message; mod.Loaded = false; Log.Write("mods: " + mod.Id + " PostLoad failed: " + ex); Unregister(mod); }
         }
         ModScope.Current = null;
+        // A mod whose requirement failed in PostLoad goes too (and so on down), so nothing runs against a missing mod.
+        for (bool more = true; more; )
+        {
+            more = false;
+            foreach (var mod in order.Where(m => m.Loaded))
+            {
+                var gone = mod.Requires.Select(d => Find(d.Id)).FirstOrDefault(d => d != null && !d.Loaded);
+                if (gone == null) continue;
+                mod.Error = "needs " + gone.Name + " (it failed to load)"; mod.Loaded = false; more = true;
+                Log.Write("mods: " + mod.Id + " unloaded: " + mod.Error);
+                Unregister(mod);
+            }
+        }
+        foreach (var mod in All.Where(m => !m.Loaded)) mod.LoadIndex = -1;
     }
 
     static readonly string[] ManifestKeys = { "id", "name", "version", "author", "description", "works", "requires", "optional", "sortAfter", "sortBefore", "incompatible", "homepage", "issues", "license", "game", "startsOff", "multiplayer" };
@@ -216,8 +255,16 @@ public static class ModLoader
             if (mp != "both" && mp != "client") Log.Write("mods: " + m.Id + "/mod.json: multiplayer \"" + mp + "\" isn't both or client (taken as both)");
             m.ClientOnly = mp == "client";
             m.Game = str("game");     // the game versions it was made for, e.g. "1.3.1.2" (shown, not enforced)
+            if (str("version") != null && m.Version == null) Log.Write("mods: " + m.Id + "/mod.json: version \"" + str("version") + "\" isn't a version (like 1.2.0)");
+            if (str("works") != null && m.Works == null) Log.Write("mods: " + m.Id + "/mod.json: works \"" + str("works") + "\" isn't a version (like 1.0)");
         }
         catch (Exception ex) { m.Error = "mod.json: " + ex.Message; }
+        // No version in mod.json: its DLL's, known before requirements are checked.
+        if (m.Version == null)
+        {
+            var dll = ModInfo.MainDll(folder, m.Id);
+            if (dll != null) try { m.Version = ModInfo.Norm(AssemblyName.GetAssemblyName(dll).Version); } catch { }
+        }
         return m;
     }
 
@@ -230,7 +277,7 @@ public static class ModLoader
         {
             changed = false;
             foreach (var m in all.Where(m => m.Enabled && m.Error == null && m.Works != null))
-                if (m.Works.Major != WorksApi.Version.Major || m.Works > WorksApi.Version
+                if (m.Works.Major != WorksApi.Version.Major || m.Works > ModInfo.Norm(WorksApi.Version)
                     || (WorksApi.Version.Major == 0 && m.Works.Minor != WorksApi.Version.Minor))     // 0.x (preview): each minor may break
                 {
                     m.Error = "built for UnderRailWorks API " + m.Works.ToString(2) + " (this is " + WorksApi.Version.ToString(2) + ")";
@@ -267,13 +314,18 @@ public static class ModLoader
     {
         Func<string, ModInfo> get = id => mods.FirstOrDefault(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
         var before = mods.ToDictionary(m => m, m => new HashSet<ModInfo>());     // mods that must load before m
+        var soft = mods.ToDictionary(m => m, m => new HashSet<ModInfo>());       // of those, the ones only an order asks for
         foreach (var m in mods)
         {
-            foreach (var id in m.Requires.Select(d => d.Id).Concat(m.Optional.Select(d => d.Id)).Concat(m.SortAfter))
-            { var o = get(id); if (o != null && o != m) before[m].Add(o); }
+            foreach (var id in m.Requires.Select(d => d.Id))
+            { var o = get(id); if (o != null && o != m) { before[m].Add(o); soft[m].Remove(o); } }
+            foreach (var id in m.Optional.Select(d => d.Id).Concat(m.SortAfter))
+            { var o = get(id); if (o != null && o != m && before[m].Add(o)) soft[m].Add(o); }
             foreach (var id in m.SortBefore)
-            { var o = get(id); if (o != null && o != m) before[o].Add(m); }
+            { var o = get(id); if (o != null && o != m && before[o].Add(m)) soft[o].Add(m); }
         }
+        // A requirement written after an ordering of the same pair is still a requirement.
+        foreach (var m in mods) foreach (var id in m.Requires.Select(d => d.Id)) { var o = get(id); if (o != null) soft[m].Remove(o); }
         // The player's order (Options -> Mods, mods.ini "@order") comes before the alphabet; requirements and named sortAfter/sortBefore still hold. Mods it doesn't name go after those it does.
         Func<ModInfo, int> rank = m => { int i = PlayerOrder.FindIndex(x => x.Equals(m.Id, StringComparison.OrdinalIgnoreCase)); return i < 0 ? int.MaxValue : i; };
         var order = new List<ModInfo>();
@@ -283,6 +335,23 @@ public static class ModLoader
             var ready = left.Where(m => before[m].All(order.Contains)).OrderBy(rank).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
             if (ready == null)
             {
+                // A loop: first drop the orderings that aren't requirements (sortAfter / sortBefore / optional), as
+                // other loaders do, with a line saying so; only a loop of requirements keeps its mods out.
+                // Only orderings inside a loop: o before m, where m is (directly or not) before o.
+                Func<ModInfo, ModInfo, bool> reaches = (from, to) =>
+                {
+                    var seen = new HashSet<ModInfo>(); var todo = new Stack<ModInfo>(); todo.Push(from);
+                    while (todo.Count > 0) { var x = todo.Pop(); if (!seen.Add(x)) continue; foreach (var y in before[x].Where(left.Contains)) { if (y == to) return true; todo.Push(y); } }
+                    return false;
+                };
+                var inLoop = left.SelectMany(m => soft[m].Where(o => left.Contains(o) && reaches(o, m)).Select(o => new KeyValuePair<ModInfo, ModInfo>(m, o))).ToList();
+                var dropped = inLoop.Select(kv => kv.Value.Id + " before " + kv.Key.Id).ToList();
+                if (dropped.Count > 0)
+                {
+                    foreach (var kv in inLoop) { before[kv.Key].Remove(kv.Value); soft[kv.Key].Remove(kv.Value); }
+                    Log.Write("mods: load order loop: ignored " + string.Join(", ", dropped.ToArray()) + " (sortAfter / sortBefore / optional)");
+                    continue;
+                }
                 foreach (var m in left) m.Error = "load order loop with " + string.Join(", ", before[m].Where(left.Contains).Select(x => x.Name).ToArray());
                 break;
             }
@@ -290,6 +359,12 @@ public static class ModLoader
             order.Add(ready);
             left.Remove(ready);
         }
+        // Where the mods' own rules moved one against the player's order, say so (the Mods tab shows the order as it is).
+        int said = 0;
+        for (int i = 0; i < order.Count; i++)
+            for (int j = i + 1; j < order.Count; j++)
+                if (rank(order[i]) != int.MaxValue && rank(order[j]) != int.MaxValue && rank(order[i]) > rank(order[j]) && said++ < 8)
+                    Log.Write("mods: " + order[i].Id + " loads before " + order[j].Id + " although the player's order has it after (a requirement or sortBefore/sortAfter)");
         return order;
     }
 
@@ -328,6 +403,23 @@ public static class ModLoader
         catch (Exception ex) { Log.Write("mods: mods.ini: " + ex.Message); return new List<string>(); }
     }
     // From the Mods tab: the player's load order for the next start (null: back to the mods' own).
+    // A new order that names only some mods (the loaded ones) keeps the others where the old order had them, each
+    // after the mod it followed: a mod switched off for a while comes back to its place, not to the end.
+    internal static List<string> KeepPlaces(IList<string> ids, IList<string> old)
+    {
+        if (ids == null) return null;
+        var result = ids.ToList();
+        if (old == null) return result;
+        Func<string, int> at = id => result.FindIndex(x => x.Equals(id, StringComparison.OrdinalIgnoreCase));
+        for (int i = 0; i < old.Count; i++)
+        {
+            if (at(old[i]) >= 0) continue;
+            int after = -1;
+            for (int k = i - 1; k >= 0 && after < 0; k--) after = at(old[k]);
+            result.Insert(after + 1, old[i]);
+        }
+        return result;
+    }
     internal static void SetPlayerOrder(IList<string> ids)
     {
         try
@@ -335,12 +427,14 @@ public static class ModLoader
             var lines = File.Exists(ListPath) ? File.ReadAllLines(ListPath).ToList()
                 : new List<string> { "; UnderRailWorks: which mods load. <mod id>=0 switches one off (applies at the next start)." };
             lines.RemoveAll(l => l.TrimStart().StartsWith(OrderKey + "=", StringComparison.OrdinalIgnoreCase) || l.TrimStart().StartsWith("; " + OrderKey, StringComparison.Ordinal));
+            ids = KeepPlaces(ids, PlayerOrder);
             if (ids != null && ids.Count > 0)
             {
                 lines.Add("; " + OrderKey + ": the load order set in Options -> Mods (first loads first; later has the final say). Delete the line for the mods' own order.");
                 lines.Add(OrderKey + "=" + string.Join(",", ids.ToArray()));
             }
             File.WriteAllText(ListPath, string.Join("\n", lines) + "\n");
+            PlayerOrder = ids == null ? new List<string>() : ids.ToList();     // the next change in this session merges against this one
             Log.Write("mods: load order set (next start): " + (ids == null || ids.Count == 0 ? "the mods' own" : string.Join(", ", ids.ToArray())));
         }
         catch (Exception ex) { Log.Write("mods: could not write mods.ini: " + ex.Message); }
@@ -391,7 +485,9 @@ public static class ModLoader
         var file = Path.Combine(ProfileFolder, (ProfileName(name) ?? "") + ".ini");
         if (!File.Exists(file)) return null;
         var on = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase); var order = new List<string>();
-        foreach (var raw in File.ReadAllLines(file))
+        string[] lines;
+        try { lines = File.ReadAllLines(file); } catch (Exception ex) { Log.Write("mods: profile " + file + ": " + ex.Message); return null; }
+        foreach (var raw in lines)
         {
             var line = raw.Trim(); int eq = line.IndexOf('=');
             if (line.Length == 0 || line[0] == ';' || eq < 0) continue;
@@ -436,9 +532,12 @@ public static class ModLoader
         {
             var lines = File.Exists(ListPath) ? File.ReadAllLines(ListPath).ToList()
                 : new List<string> { "; UnderRailWorks: which mods load. <mod id>=0 switches one off (applies at the next start)." };
-            int i = lines.FindIndex(l => l.TrimStart().StartsWith(id + "=", StringComparison.OrdinalIgnoreCase));
+            // Every line for this id (hand-written "Foo = 0", duplicates) becomes the one new line.
+            Func<string, bool> mine = l => { var t = l.Trim(); int eq = t.IndexOf('='); return eq > 0 && t[0] != ';' && t.Substring(0, eq).Trim().Equals(id, StringComparison.OrdinalIgnoreCase); };
+            int i = lines.FindIndex(l => mine(l));
             string line = id + "=" + (on ? "1" : "0");
-            if (i >= 0) lines[i] = line; else lines.Add(line);
+            lines.RemoveAll(l => mine(l));
+            if (i >= 0) lines.Insert(Math.Min(i, lines.Count), line); else lines.Add(line);
             File.WriteAllText(ListPath, string.Join("\n", lines) + "\n");
             Log.Write("mods: " + id + (on ? " switched on" : " switched off") + " (next start)");
         }
@@ -478,7 +577,7 @@ public static class ModLoader
         foreach (string dll in dlls)
         {
             try { loaded.Add(new KeyValuePair<string, Assembly>(dll, ModCode.Load(mod, dll, collectible))); }
-            catch (Exception ex) { mod.Error = "failed: " + ex.Message; Log.Write("mods: " + mod.Id + " failed (" + Path.GetFileName(dll) + "): " + ex); }
+            catch (Exception ex) { mod.Error = "failed: " + ex.Message; Log.Write("mods: " + mod.Id + " failed (" + Path.GetFileName(dll) + "): " + ex); return; }
         }
         var was = ModScope.Current;
         ModScope.Current = mod.Id;
@@ -492,7 +591,8 @@ public static class ModLoader
         {
             try
             {
-                if (mod.Version == null) mod.Version = assembly.GetName().Version;
+                if (mod.Version == null && (dll == ModInfo.MainDll(mod.Folder, mod.Id) || ModInfo.MainDll(mod.Folder, mod.Id) == null)
+                    && assembly.GetExportedTypes().Any(t => typeof(WorksMod).IsAssignableFrom(t))) mod.Version = ModInfo.Norm(assembly.GetName().Version);
                 int entries = 0;
                 foreach (Type type in assembly.GetExportedTypes())
                 {

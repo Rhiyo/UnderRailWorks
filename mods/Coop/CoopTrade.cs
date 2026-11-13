@@ -58,7 +58,7 @@ public sealed partial class Coop
         {
             seat.Record.Sheet = sheet; seat.LastSign = SignOf(old);
             Log.Info(seat.Record.Name + ": sheet from " + seat.Peer.Name + " (in place)");
-            if (old.Level > before) Party.LevelledUp(old, old.Level);
+            if (old.Level > before) Party.LeveledUp(old, old.Level);
             foreach (var s in seats.Values.Where(x => x != seat && x.InWorld && x.Peer != null)) s.Peer.Send("SHEET", "c:" + seat.Record.Name, sheet);
             return;
         }
@@ -79,7 +79,7 @@ public sealed partial class Coop
         seat.LastSign = SignOf(c);
         World.Despawn(old);
         Log.Info(seat.Record.Name + ": sheet from " + seat.Peer.Name);
-        if (c.Level > levelBefore) Party.LevelledUp(c, c.Level);     // levelled up on their machine: mods here hear it
+        if (c.Level > levelBefore) Party.LeveledUp(c, c.Level);     // levelled up on their machine: mods here hear it
         foreach (var s in seats.Values.Where(x => x != seat && x.InWorld && x.Peer != null)) s.Peer.Send("SHEET", "c:" + seat.Record.Name, sheet);
     }
 

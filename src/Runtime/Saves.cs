@@ -227,9 +227,27 @@ static class Saves
 
     // --- Lifecycle -----------------------------------------------------------------------------------------------
 
-    static void SaveStarting(string __0) { try { Run("recording mod statuses", ModStatusStore.Record); Log.Write("saves: saving " + __0); if (GameEvents.Saving.Any) GameEvents.Saving.Run(h => h(__0)); } catch (Exception ex_) { PatchGuard.Failed("Saves.SaveStarting", ex_); }
+    static DateTime saveStarted;
+    // Did the game's save get written? It catches its own errors (disk full, a failing check) and writes SaveError-*.txt,
+    // so a finished arg isn't proof: global.dat must be there and new.
+    static bool SaveWritten(string save)
+    {
+        try
+        {
+            var dir = SaveFiles.Folder(save);
+            var global = dir == null ? null : System.IO.Path.Combine(dir, "global.dat");
+            return global != null && System.IO.File.Exists(global) && System.IO.File.GetLastWriteTimeUtc(global) >= saveStarted;
+        }
+        catch { return true; }     // can't tell: as before
     }
-    static void SaveDone(string __0) { try { Run("writing mod save data", () => SaveFiles.Save(__0)); Run("re-applying placements", World.ReapplyAll); if (GameEvents.Saved.Any) GameEvents.Saved.Run(h => h(__0)); } catch (Exception ex_) { PatchGuard.Failed("Saves.SaveDone", ex_); }
+    static void SaveStarting(string __0) { saveStarted = DateTime.UtcNow.AddSeconds(-2); try { Run("recording mod statuses", ModStatusStore.Record); Log.Write("saves: saving " + __0); if (GameEvents.Saving.Any) GameEvents.Saving.Run(h => h(__0)); } catch (Exception ex_) { PatchGuard.Failed("Saves.SaveStarting", ex_); }
+    }
+    static void SaveDone(string __0) { try {
+        bool written = SaveWritten(__0);
+        if (written) Run("writing mod save data", () => SaveFiles.Save(__0));
+        else Log.Always("saves: " + __0 + " wasn't written by the game (see its SaveError file): no mod data written, no Saved event");
+        Run("re-applying placements", World.ReapplyAll);
+        if (written && GameEvents.Saved.Any) GameEvents.Saved.Run(h => h(__0)); } catch (Exception ex_) { PatchGuard.Failed("Saves.SaveDone", ex_); }
     }
     static void NewGameCreated() { SaveFiles.NewGame(); World.ForgetAll(); Run("imported character data", CharacterFiles.NewGame); if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); if (GameEvents.GameStarted.Any) GameEvents.GameStarted.Run(h => h()); }
 

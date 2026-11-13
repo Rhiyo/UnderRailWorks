@@ -13,15 +13,15 @@ namespace UnderRailWorks
 {
     public class Cancellable { internal Cancellable() { } public bool Cancel { get; set; } }
     public sealed class TradeStart : Cancellable { internal TradeStart() { } public Character Merchant { get; internal set; } }
-    public sealed class ContainerOpen : Cancellable { internal ContainerOpen() { } public Container Container { get; internal set; } public Character Opener { get; internal set; } }
-    public sealed class ItemTake : Cancellable { internal ItemTake() { } public Container Container { get; internal set; } public Item Item { get; internal set; } public Character Taker { get; internal set; } }
+    public sealed class ContainerOpen : Cancellable { internal ContainerOpen() { } public Container Container { get; internal set; } public Character Character { get; internal set; } }
+    public sealed class ItemTake : Cancellable { internal ItemTake() { } public Container Container { get; internal set; } public Item Item { get; internal set; } public Character Character { get; internal set; } }
     public sealed class DialogStart : Cancellable { internal DialogStart() { } public string Name { get; set; } public Character With { get; internal set; } }
     // The player putting an item into a gear or quick slot (Cancel: it stays where it was). The game's own scripted
     // equips (NPC loadouts, Items.ToQuickSlot) aren't asked.
     public sealed class EquipAttempt : Cancellable { internal EquipAttempt() { } public Character Character { get; internal set; } public Item Item { get; internal set; } }
     // The player about to leave the zone (an exit, a door between maps, a script, World.Travel). To: the destination
     // zone's id, Entry: the entry point there.
-    public sealed class ZoneLeave : Cancellable { internal ZoneLeave() { } public string From { get; internal set; } public string To { get; internal set; } public string Entry { get; internal set; } public Character Who { get; internal set; } }
+    public sealed class ZoneLeave : Cancellable { internal ZoneLeave() { } public string From { get; internal set; } public string To { get; internal set; } public string Entry { get; internal set; } public Character Character { get; internal set; } }
     // A character (the player or an NPC's AI) about to switch between its primary and secondary weapon.
     public sealed class WeaponSwitch : Cancellable { internal WeaponSwitch() { } public Character Character { get; internal set; } public bool ToSecondary { get; internal set; } }
     public sealed class CraftAttempt : Cancellable { internal CraftAttempt() { } public string Blueprint { get; internal set; } }
@@ -73,13 +73,13 @@ namespace UnderRailWorks.Internal
             if (!__0.IsPlayer)
             {
                 if (!GameEvents.CharacterLeavingZone.Any) return true;
-                try { var c = new ZoneLeave { From = World.ZoneId, To = __1.b(), Entry = __1.c(), Who = Character.Of(__0) }; GameEvents.CharacterLeavingZone.Run(h => h(c)); return !c.Cancel; }
+                try { var c = new ZoneLeave { From = World.ZoneId, To = __1.b(), Entry = __1.c(), Character = Character.Of(__0) }; GameEvents.CharacterLeavingZone.Run(h => h(c)); return !c.Cancel; }
                 catch (Exception ex) { Log.Write("zone leave: " + ex.Message); return true; }
             }
             if (!GameEvents.ZoneLeaving.Any) { World.PackFollowers(); return true; }
             try
             {
-                var e = new ZoneLeave { From = World.ZoneId, To = __1.b(), Entry = __1.c(), Who = Character.Of(__0) };
+                var e = new ZoneLeave { From = World.ZoneId, To = __1.b(), Entry = __1.c(), Character = Character.Of(__0) };
                 GameEvents.ZoneLeaving.Run(h => h(e));
                 if (!e.Cancel) World.PackFollowers();
                 return !e.Cancel;
@@ -99,8 +99,8 @@ namespace UnderRailWorks.Internal
         static bool Open(c7j __instance, c5x __0)
         { try {
             if (!GameEvents.ContainerOpening.Any) return true;
-            var e = new ContainerOpen { Container = new Container(__instance), Opener = __0 == null ? null : Character.Of(__0) };
-            Party.As(e.Opener, () => GameEvents.ContainerOpening.Run(h => h(e)));
+            var e = new ContainerOpen { Container = new Container(__instance), Character = __0 == null ? null : Character.Of(__0) };
+            Party.As(e.Character, () => GameEvents.ContainerOpening.Run(h => h(e)));
             return !e.Cancel;
         } catch (Exception ex_) { PatchGuard.Failed("Cancellable.Open", ex_); return true; }
     }
@@ -108,8 +108,8 @@ namespace UnderRailWorks.Internal
         static bool Take(c7j __instance, coh __1, object __2, ref bool __result)
         { try {
             if (!GameEvents.ItemTaking.Any || __1 == null) return true;
-            var e = new ItemTake { Container = new Container(__instance), Item = new Item(__1), Taker = __2 is amc ? Character.Of(((amc)__2).a8()) : World.Player };
-            Party.As(e.Taker, () => GameEvents.ItemTaking.Run(h => h(e)));
+            var e = new ItemTake { Container = new Container(__instance), Item = new Item(__1), Character = __2 is amc ? Character.Of(((amc)__2).a8()) : World.Player };
+            Party.As(e.Character, () => GameEvents.ItemTaking.Run(h => h(e)));
             if (!e.Cancel) return true;
             __result = false;
             return false;

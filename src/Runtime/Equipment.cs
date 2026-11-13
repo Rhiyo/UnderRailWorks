@@ -71,7 +71,10 @@ public sealed class Equipment
         var c = Owner;
         if (!c.Bag.z5(item.Game)) return false;     // take it out of the bag first: bn.a doesn't
         int cursor = 0;
-        if (bn.a(c, item.Game, secondary ? AutoEquipMode.Secondary : AutoEquipMode.Primary, ref cursor)) { c.bl(); return true; }
+        bool worn;
+        try { worn = bn.a(c, item.Game, secondary ? AutoEquipMode.Secondary : AutoEquipMode.Primary, ref cursor); }
+        catch { c.Bag.z3(item.Game, false); throw; }     // never lost between bag and slot
+        if (worn) { c.bl(); return true; }
         c.Bag.z3(item.Game, false);     // no slot took it: back into the bag
         return false;
     }

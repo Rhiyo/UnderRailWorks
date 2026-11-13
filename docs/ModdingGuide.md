@@ -24,11 +24,11 @@ startup, so a game update means fixing Works once instead of every mod breaking.
 otherwise hit alone (obfuscated property accessors, members that share names, state the game caches).
 
 **Saves stay loadable by the stock game.** Never put a mod's own types into the game's save. Keep your data in
-`SaveData.Of(this)` (JSON next to the save) or small values in `Data`; things you put in the world (characters,
+`SaveData` (`SaveData.Set("kills", 12)`, JSON next to the save); things you put in the world (characters,
 objects, triggers, exits) are placements, re-created on every load and never saved. A player who removes your mod
 must still be able to load their game. (A save made *inside* a mod's new zone is the one exception: it needs the mod.)
 
-**Never ship game files or decompiled code.** Clone stock items with `Items.Define`, point at stock art and maps by
+**Never ship game files or decompiled code.** Clone stock items with `Items.Add`, point at stock art and maps by
 path; ship only your own work.
 
 **Interface: any resolution, any interface size.** Read [UI.md](../UI.md). In short: ask the player things with the
@@ -50,8 +50,12 @@ In this order:
    every mod gets it and it survives game updates. This is how `Ui.WorldView`, `Camera`, `Stealth.Notice` and many
    others came about.
 3. **Publish it from your mod for other mods** when it's a feature others build on (a camera network, a reputation
-   system): `Mods.Provide(this, api)`; others use `Mods.Api<T>("YourMod")`, `Mods.Call("YourMod", "Method", args)`,
-   or events with `Mods.Event(name)` / `Raise`. Declare it in your documentation; keep it stable.
+   system): `Mods.Provide(this, api)`. Others use it without referencing your DLL: they declare a public interface of
+   their own with the members they use (same names and types) and call `Mods.Api<IYourApi>("YourMod")` (as SMAPI's
+   GetApi): Works makes an object implementing it that forwards to yours, or returns null and logs which member didn't
+   fit. Or `Mods.Call("YourMod", "Method", args)` for one call, or events with `Mods.Event(name)` / `Raise`. Declare
+   your API in your documentation, and only add to it (new members, new overloads): renaming or removing a member
+   breaks the mods that use it. Ask for it in PostLoad or later; after your mod is hot-reloaded others must ask again.
 4. **Last resort: raw game access.** Harmony on the game's types (by reflection, or by referencing the game yourself)
    works, but it breaks when the game updates and you're on your own. If you do it, keep it in one class, check every
    lookup for null and switch the feature off with a log line when one is missing, and never touch saves this way.

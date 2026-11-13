@@ -78,7 +78,7 @@ namespace UnderRailWorks
     }
 
     // A character's trap detection score (the game's: Perception and Traps skill), against each trap's difficulty.
-    public sealed class TrapScore { internal TrapScore() { } public Character Who { get; internal set; } public int Score { get; set; } }
+    public sealed class TrapScore { internal TrapScore() { } public Character Character { get; internal set; } public int Score { get; set; } }
 
     public static class Traps
     {
@@ -212,7 +212,7 @@ namespace UnderRailWorks.Internal
             {
                 var who = Combat.OfData(data);
                 if (who == null) return v;
-                var score = new TrapScore { Who = who, Score = v };
+                var score = new TrapScore { Character = who, Score = v };
                 Traps.ModifyDetection.Run(h => h(score));
                 return Math.Max(0, score.Score);
             }

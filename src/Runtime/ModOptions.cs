@@ -88,7 +88,8 @@ public sealed class ModPage
         var items = texts.Select((t, i) => new FixChoice(t, values[i])).ToList();
         string v = Settings.Get(key);
         if (v == null || !items.Any(i => i.Value.Equals(v, StringComparison.OrdinalIgnoreCase))) v = fallback;
-        var current = items.First(i => i.Value.Equals(v, StringComparison.OrdinalIgnoreCase));
+        if (items.Count == 0) return;
+        var current = items.FirstOrDefault(i => i.Value.Equals(v, StringComparison.OrdinalIgnoreCase)) ?? items[0];     // a default that isn't one of them (an enum field left at 0)
         var combo = UnderrailOptions.Add(Options, label, items, current, current);
         bindings.Add(new Pick { Key = key, Was = current.Value, Combo = combo, Items = items });
     }
@@ -96,7 +97,7 @@ public sealed class ModPage
     public void Slider(string key, string label, int min, int max, int step, int fallback)
     {
         int v = Settings.Int(key, fallback, min, max);
-        var slider = UnderrailOptions.SliderRow(Options, Page, "works." + mod + "." + key, label, v, min, max, step);
+        var slider = UnderrailOptions.SliderRow(Options, Page, "works." + mod + "." + key, label, v, min, max, step, false);
         if (slider != null) bindings.Add(new Slide { Key = key, Was = v.ToString(System.Globalization.CultureInfo.InvariantCulture), Slider = slider });
     }
 
@@ -107,14 +108,15 @@ public sealed class ModPage
         double v = fallback; double parsed;
         var raw = Settings.Get(key);
         if (raw != null && double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out parsed)) v = Math.Max(min, Math.Min(max, parsed));
-        var slider = UnderrailOptions.SliderRow(Options, Page, "works." + mod + "." + key, label, (int)Math.Round(v / step), (int)Math.Round(min / step), (int)Math.Round(max / step), 1);
+        var slider = UnderrailOptions.SliderRow(Options, Page, "works." + mod + "." + key, label, (int)Math.Round(v / step), (int)Math.Round(min / step), (int)Math.Round(max / step), 1,
+            false, i => Math.Round(i * step, 4).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture));
         if (slider != null) bindings.Add(new Slide { Key = key, Was = v.ToString(System.Globalization.CultureInfo.InvariantCulture), Slider = slider, Scale = step });
     }
 
     // A button on its own row; click runs on the options screen (e.g. to put rows back with Set).
     public void Button(string label, string text, Action<ModPage> click)
     {
-        var button = UnderrailOptions.NewButton(Options, text, () => { try { click(this); } catch (Exception ex) { Log.Write("mods: " + mod + ": button: " + ex); } });
+        var button = UnderrailOptions.NewButton(Options, text, () => { try { ModScope.As(mod, click, () => click(this)); } catch (Exception ex) { ModErrors.Report(mod, "a settings button", ex); } });
         UnderrailOptions.ControlRow(Options, label, button);
     }
 
@@ -172,6 +174,8 @@ public static class ModOptions
         public List<ModInfo> Order; public bool OrderChanged;
         public List<CardParts> Cards = new List<CardParts>();
         public cvh Page;
+        public Dictionary<ModInfo, avo> States = new Dictionary<ModInfo, avo>();     // each card's status (Loaded, Off at restart...)
+        public avo ProfileLabel;
     }
     sealed class CardParts { public ModInfo Mod; public List<euz> Controls; public int Height; public avo Title; public string TitleText;
     }
@@ -179,7 +183,7 @@ public static class ModOptions
 
     // From a mod's OnLoad: its settings rows in the Mods tab. changed runs after Accept wrote new values.
     internal static void Forget(string mod) { Pages.Remove(mod); }
-    public static void Register(string mod, Action<ModPage> build, Action changed = null)
+    internal static void Register(string mod, Action<ModPage> build, Action changed = null)
     {
         Pages[mod] = new Entry { Build = build, Changed = changed };
     }
@@ -279,15 +283,10 @@ public static class ModOptions
         Paint(name, Color.White);
         UnderrailDropdownScroll.Move(name, x, y + (lineH - UnderrailDropdownScroll.H(name.Size)) / 2);
         UnderrailDropdownScroll.Add(page, name);
-        string status; Color colour;
-        if (!mod.Enabled) { status = mod.Loaded ? "Off at restart" : "Off"; colour = Quiet; }
-        else if (!mod.Loaded && mod.Error == null) { status = "On at restart"; colour = Good; }
-        else if (mod.Loaded) { status = "Loaded"; colour = Good; }
-        else { status = "Not loaded"; colour = Bad; }
         var state = UnderrailOptions.Label(options, 200);
         state.a(cab.c);     // right-aligned
-        state.Text = status;
-        Paint(state, colour);
+        ShowStatus(state, mod, mod.Enabled);
+        tab.States[mod] = state;
         int stateX = UnderrailDropdownScroll.W(page.Size) - left - 40 - 200;
         UnderrailDropdownScroll.Move(state, stateX, y + (lineH - UnderrailDropdownScroll.H(state.Size)) / 2);
         UnderrailDropdownScroll.Add(page, state);
@@ -329,11 +328,13 @@ public static class ModOptions
         return new KeyValuePair<avo, string>(name, title);
     }
 
+    static string ProfileText(string name) { return "Profile: " + (name ?? "none") + "   (a saved set of mods and their order)"; }
+
     // Profiles: saved sets of mods and their order (main menu only, as switching mods).
     static void ProfileRow(t1 options, cvh page, Tab tab)
     {
         var current = ModLoader.CurrentProfile;
-        Text(options, page, "Profile: " + (current ?? "none") + "   (a saved set of mods and their order)", Quiet);
+        tab.ProfileLabel = Text(options, page, ProfileText(current), Quiet);
         int y = UnderrailOptions.RowY(options) + 4, x = UnderrailOptions.Left(options), h = 0;
         Action<string, Action> button = (text, click) =>
         {
@@ -355,7 +356,24 @@ public static class ModOptions
                 {
                     if (i >= names.Count || !ModLoader.UseProfile(names[i])) return;
                     var p = ModLoader.ReadProfile(names[i]);
-                    if (p != null) foreach (var sw in tab.Switches) { bool on; if (p.Value.Key.TryGetValue(sw.Key.Id, out on)) sw.Value.Checked = on; }
+                    if (p != null)
+                    {
+                        // Show it as it will be: switches, statuses, and the loaded mods' cards in the profile's order.
+                        foreach (var sw in tab.Switches)
+                        {
+                            bool on; if (p.Value.Key.TryGetValue(sw.Key.Id, out on)) sw.Value.Checked = on;
+                            avo st; if (tab.States.TryGetValue(sw.Key, out st)) ShowStatus(st, sw.Key, sw.Value.Checked);
+                        }
+                        var want = p.Value.Value ?? new List<string>();
+                        Func<ModInfo, int> rank = m => { int r = want.FindIndex(id => id.Equals(m.Id, StringComparison.OrdinalIgnoreCase)); return r < 0 ? int.MaxValue : r; };
+                        for (int target = 0; target < tab.Cards.Count; target++)
+                        {
+                            int best = target;
+                            for (int k = target + 1; k < tab.Cards.Count; k++) if (rank(tab.Cards[k].Mod) < rank(tab.Cards[best].Mod)) best = k;
+                            for (int k = best; k > target; k--) Move(tab, tab.Cards[k].Mod, -1);
+                        }
+                    }
+                    if (tab.ProfileLabel != null) tab.ProfileLabel.Text = ProfileText(names[i]);
                     tab.OrderChanged = false;     // the profile's order is written; Accept keeps it
                     Notify.Log("Mods: profile \"" + names[i] + "\" applies when you restart the game.");
                 }, names.Concat(new[] { "Cancel" }).ToArray()));
@@ -363,6 +381,18 @@ public static class ModOptions
                 i => { if (i < names.Count && ModLoader.DeleteProfile(names[i])) Notify.Log("Mods: profile \"" + names[i] + "\" deleted."); }, names.Concat(new[] { "Cancel" }).ToArray()));
         }
         UnderrailOptions.SetRowY(options, y + h + 6);
+    }
+
+    // A card's status for the switch as it is now (on: ticked).
+    static void ShowStatus(avo state, ModInfo mod, bool on)
+    {
+        string status; Color colour;
+        if (!on) { status = mod.Loaded ? "Off at restart" : "Off"; colour = Quiet; }
+        else if (!mod.Loaded && (mod.Error == null || !mod.Enabled)) { status = "On at restart"; colour = Good; }
+        else if (mod.Loaded) { status = "Loaded"; colour = Good; }
+        else { status = "Not loaded"; colour = Bad; }
+        state.Text = status;
+        Paint(state, colour);
     }
 
     // "3. Name ..." on loaded mods' cards; red when a mod is above one it requires (it will load after it anyway).

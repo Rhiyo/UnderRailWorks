@@ -45,7 +45,7 @@ public sealed class Cookbook : WorksMod
     #region Keys: registered keys appear in Options -> Controls, are checked against the game's, and skip typing
     void Keys_()
     {
-        var key = Keybinds.Register(this, "hello", "Say hello", Keys.F11);
+        var key = Keybinds.Add(this, "hello", "Say hello", Keys.F11);
         GameEvents.Update.Add(this, seconds => { if (key.Pressed) Notify.OverPlayer(T("hello")); });
     }
     #endregion
@@ -83,7 +83,7 @@ public sealed class Cookbook : WorksMod
     void ItemsExample()
     {
         Items.EditDefinition(this, "consumables\\medicine\\bandage", d => d.Value *= 2);
-        var path = Items.Define(this, "stim", "consumables\\medicine\\healthhypo", d => { d.Name = "Field Stim"; d.Value = 300; });
+        var path = Items.Add(this, "stim", "consumables\\medicine\\healthhypo", d => { d.Name = "Field Stim"; d.Value = 300; });
         Stores.AddRestock(this, "bigbret", path, 2);
         Loot.Add(this, (dead, box) => dead != null && dead.Name.Contains("Rathound"), path, 0.1, 1);
         Items.ModifyTooltip(this, (item, tip) => { if (item.Uses.Contains("Food")) tip.AddLine("Tasty."); });
@@ -103,7 +103,7 @@ public sealed class Cookbook : WorksMod
     #region Status effects and feats: with the game's own stat bonuses (never in the game's save files)
     void StatusAndFeats()
     {
-        var focus = ModStatuses.Define(this, "focus", "Focused", "+10 Guns.", "Status.PsiBoost", StatBonus.Skill("Guns", 10));
+        var focus = StatusEffects.Add(this, "focus", "Focused", "+10 Guns.", "Status.PsiBoost", StatBonus.Skill("Guns", 10));
         var feat = Feats.Add(this, "steady", "Steady Hands", "+5 Guns, +5 Dodge.", new FeatRequirements { Level = 3 }, null,
             new[] { StatBonus.Skill("Guns", 5), StatBonus.Dodge(5) });
         GameEvents.CombatStarted.Add(this, () => { if (World.Player.HasFeat(feat.Key)) focus.Apply(World.Player, 3); });
@@ -219,7 +219,7 @@ public sealed class Cookbook : WorksMod
     {
         GameEvents.TrapDisarming.Add(this, d => { if (d.Character.IsPlayer) d.Difficulty -= 5; });     // this attempt only
         GameEvents.TrapDisarmed.Add(this, r => { if (r.Outcome == DisarmOutcome.Recovered) Notify.OverPlayer("Got it back"); });
-        Traps.ModifyDetection.Add(this, t => { if (t.Who.IsPlayer) t.Score += 10; });
+        Traps.ModifyDetection.Add(this, t => { if (t.Character.IsPlayer) t.Score += 10; });
     }
     #endregion
 

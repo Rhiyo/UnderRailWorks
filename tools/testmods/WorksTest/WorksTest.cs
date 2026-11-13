@@ -45,6 +45,15 @@ public sealed partial class WorksTest : WorksMod
     public override void PostLoad()
     {
         Log.Info("cross-mod call: " + Mods.Call("WorksTest", "Echo", "hi") + ", typed: " + Mods.Api<TestApi>("WorksTest").Echo("there"));
+        // Mods.Call widens numbers (an int for a double parameter); a hook emptied twice (the runtime's shared empty array).
+        Action<double> probe = s => { };
+        for (int round = 0; round < 2; round++) { GameEvents.Update.Add(this, probe); GameEvents.Update.Remove(probe); }
+        Log.Info("cross-mod call widened: " + Mods.Call("WorksTest", "Half", 5) + ", hook emptied twice: ok");
+        // The same API through interfaces of our own (no reference to the providing mod): one that fits, one that doesn't.
+        var view = Mods.Api<IEchoView>("WorksTest");
+        string heard = null; if (view != null) { view.Heard += x => heard = x; view.Loud = true; }
+        Log.Info("cross-mod view: " + (view == null ? "null" : view.Echo("view") + ", " + view.Twice(21) + ", " + view.Mood(ViewMood.Happy) + ", loud " + view.Loud + ", heard " + heard)
+            + "; wrong view: " + (Mods.Api<IWrongView>("WorksTest") == null ? "null" : "made"));
         // Co-op's API without referencing its DLL: an option on the Host window, and a message both ways.
         Mods.Call("Coop", "AddHostChoice", this, "testchoice", "WorksTest: a test choice", new[] { "One", "Two" }, 1);
         Action<string, string[]> ping = (from, words) => { Log.Info("coop message from " + (from ?? "the host") + ": " + string.Join(" ", words)); if (from != null) Mods.Call("Coop", "SendTo", from, this, "pong", new object[] { "back" }); };
@@ -58,8 +67,8 @@ public sealed partial class WorksTest : WorksMod
             if (Variables.Global.Get<bool>("wt_askbox")) Ui.Confirm(this, "A test", "Search the " + e.Container.Name + "?", () => Log.Info("unaware: " + World.Player.Name + " said yes"), "Yes", "No", () => Log.Info("unaware: " + World.Player.Name + " said no"));
         });
         GameEvents.ExperienceGained.Add(this, xp => Log.Info("unaware: " + World.Player.Name + " gained " + xp + " XP"));
-        Commands.Add(this, "wt.coopfree", "wt.coopfree: Co-op's travel-together rule off (a mod replacing it)", a => { var api = Mods.Api<object>("Coop"); api.GetType().GetProperty("TravelTogether").SetValue(api, false, null); return "travel together: " + api.GetType().GetProperty("TravelTogether").GetValue(api, null); });
-        var gift = Keybinds.Register(this, "gift", "Test gift", Microsoft.Xna.Framework.Input.Keys.U);
+        Commands.Add(this, "wt.coopfree", "wt.coopfree: Co-op's travel-together rule off (a mod replacing it)", a => { var rules = Mods.Api<ICoopRules>("Coop"); rules.TravelTogether = false; return "travel together: " + rules.TravelTogether; });
+        var gift = Keybinds.Add(this, "gift", "Test gift", Microsoft.Xna.Framework.Input.Keys.U);
         GameEvents.Update.Add(this, dt =>
         {
             if (!gift.Pressed) return;
@@ -67,7 +76,7 @@ public sealed partial class WorksTest : WorksMod
             var w = Ui.Window(this, "gift", "Gift", Ui.S(300), Ui.S(120));
             Log.Info("unaware key: " + World.Player.Name + " pressed the gift key: coins " + ok + ", window " + (w != null));
         });
-        GameEvents.LevelledUp.Add(this, level => Log.Info("unaware: " + World.Player.Name + " reached level " + level));
+        GameEvents.LeveledUp.Add(this, level => Log.Info("unaware: " + World.Player.Name + " reached level " + level));
         Commands.Add(this, "wt.load", "wt.load <save>: load that save", a => "load: " + SaveGames.Load(a[0]));
         Commands.Add(this, "wt.save", "wt.save <name>: save the game into that folder now", a => { Log.Info("save " + a[0] + ": can save " + SaveGames.CanSave + ", in combat " + Combat.InCombat); return "saved: " + SaveGames.SaveNow(a[0]); });
         Commands.Add(this, "wt.throw", "wt.throw <name> <x> <y>: that character throws its first throwable at a tile", a => { var c = World.Characters.FirstOrDefault(x => x.Name == a[0]); var g = c.Inventory.Items.FirstOrDefault(i => i.Code.Contains("frag")); if (g != null) Log.Info("to belt: " + c.Equipment.ToQuickSlot(g)); g = c.Equipment.QuickSlots.FirstOrDefault(i => i != null && i.Code.Contains("frag")) ?? g; var ok = g != null && c.UseAbility(g.AbilityId, g.Id, new Microsoft.Xna.Framework.Point(int.Parse(a[1]), int.Parse(a[2]))); Log.Info("throw " + (g == null ? "none" : g.ToString()) + ": " + ok); return "throw " + ok; });
@@ -88,16 +97,16 @@ public sealed partial class WorksTest : WorksMod
     public override void Load()
     {
         DrawProbe();
-        GameEvents.StatusApplying.Add(this, c => { Log.Info("status applying " + c.Code + " on " + (c.Character == null ? "?" : c.Character.Name)); if (c.Code == "Hidden" && Data.GetBool("noHide")) c.Cancel = true; });
+        GameEvents.StatusApplying.Add(this, c => { Log.Info("status applying " + c.Code + " on " + (c.Character == null ? "?" : c.Character.Name)); if (c.Code == "Hidden" && SaveData.Get("noHide", false)) c.Cancel = true; });
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
         GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));
-        GameEvents.LevelledUp.Add(this, l => Log.Info("levelled up to " + l));
+        GameEvents.LeveledUp.Add(this, l => Log.Info("levelled up to " + l));
         Items.EditDefinition(this, "consumables\\medicine\\bandage", d => { d.Name = "Field Bandage"; d.Value = 99; });
-        stimPath = Items.Define(this, "stim", "consumables\\medicine\\bandage", d => { d.Name = "Works Stim"; d.Description = "A test item defined by a mod."; d.Value = 1234; d.Weight = 0.1; });
+        stimPath = Items.Add(this, "stim", "consumables\\medicine\\bandage", d => { d.Name = "Works Stim"; d.Description = "A test item defined by a mod."; d.Value = 1234; d.Weight = 0.1; });
         Stores.AddRestock(this, "bigbret", stimPath, 3);
         Stores.AddOnce(this, "bigbret", "armor\\jkktacticalvest", 1);
         Loot.Add(this, (who, box) => who != null && who.Name.Contains("Rathound"), "components\\scraps\\fabricscraps", 1.0, 7);
-        glow = ModStatuses.Define(this, "glow", "Works Glow", "A test status from a mod: +1 to a counter each turn.", "Status.PsiBoost", StatBonus.Dodge(15), StatBonus.Ability("Agility", 1));
+        glow = StatusEffects.Add(this, "glow", "Works Glow", "A test status from a mod: +1 to a counter each turn.", "Status.PsiBoost", StatBonus.Dodge(15), StatBonus.Ability("Agility", 1));
         // A neutral NPC lays a bear trap next to the player (someone else's trap: the player can spot and disarm it).
         Commands.Add(this, "wt.npctrap", "wt.npctrap: a neutral NPC lays a bear trap near the player", args =>
         {
@@ -282,8 +291,8 @@ public sealed partial class WorksTest : WorksMod
         });
         Commands.Add(this, "wt.cam", "wt.cam [x y]: log the camera (and move it to x y)", args =>
         {
-            if (args.Length >= 2) Camera.Centre = new Microsoft.Xna.Framework.Vector2(float.Parse(args[0]), float.Parse(args[1]));
-            Log.Info("camera " + Camera.Centre + " zoom " + Camera.Zoom + " tile " + Camera.TileWidth + "x" + Camera.TileHeight + " view " + Camera.ViewSize + "; player " + World.Player.Position + " screen " + World.Player.ScreenBounds);
+            if (args.Length >= 2) Camera.Center = new Microsoft.Xna.Framework.Vector2(float.Parse(args[0]), float.Parse(args[1]));
+            Log.Info("camera " + Camera.Center + " zoom " + Camera.Zoom + " tile " + Camera.TileWidth + "x" + Camera.TileHeight + " view " + Camera.ViewSize + "; player " + World.Player.Position + " screen " + World.Player.ScreenBounds);
             return "cam";
         });
         Commands.Add(this, "wt.pip", "wt.pip: a window with a live world view 6 tiles from the player", args =>
@@ -294,7 +303,7 @@ public sealed partial class WorksTest : WorksMod
             var view = Ui.WorldView(420, 260, new Microsoft.Xna.Framework.Vector2(p.X + 6, p.Y + 6));
             if (view == null) return "no view";
             Ui.Add(w, view, 10, w.Top + 2);
-            return "pip at " + view.Centre;
+            return "pip at " + view.Center;
         });
         Commands.Add(this, "wt.areas", "wt.areas: the zone's areas: size, tiles discovered / with anything", args =>
         {
@@ -573,8 +582,8 @@ public sealed partial class WorksTest : WorksMod
         GameEvents.GameLoaded.Add(this, () => Log.Info("save data counter after load: " + SaveData.Get("counter", 0) + ", list " + string.Join("|", ((System.Collections.IEnumerable)(SaveData.Get("list") ?? new object[0])).Cast<object>())));
         GameEvents.Update.Add(this, s => { if (failNow) { failNow = false; throw new InvalidOperationException("test failure"); } });
         GameEvents.GameTimeAdvanced.Add(this, d => { gameTime += d; });
-        GameEvents.ItemUsing.Add(this, u => { Log.Info("using " + u.Item + " (" + u.Action + ") by " + (u.User == null ? "?" : u.User.Name) + (blockUse ? ": blocked" : "")); if (blockUse) u.Cancel = true; });
-        GameEvents.ItemUsed.Add(this, u => Log.Info("used " + u.Item.Name + " by " + (u.User == null ? "?" : u.User.Name) + " on " + (u.Target ?? "nothing")));
+        GameEvents.ItemUsing.Add(this, u => { Log.Info("using " + u.Item + " (" + u.Action + ") by " + (u.Character == null ? "?" : u.Character.Name) + (blockUse ? ": blocked" : "")); if (blockUse) u.Cancel = true; });
+        GameEvents.ItemUsed.Add(this, u => Log.Info("used " + u.Item.Name + " by " + (u.Character == null ? "?" : u.Character.Name) + " on " + (u.Target ?? "nothing")));
         GameEvents.ItemCrafted.Add(this, c => Log.Info("crafted " + c.Blueprint + ": " + string.Join(", ", c.Items.Select(i => i.ToString()))));
         GameEvents.ItemStolen.Add(this, t => Log.Info("stole " + t.Item + " from " + (t.Victim == null ? "?" : t.Victim.Name)));
         GameEvents.CaughtStealing.Add(this, t => Log.Info("caught stealing from " + (t.Victim == null ? "?" : t.Victim.Name)));
@@ -653,7 +662,7 @@ public sealed partial class WorksTest : WorksMod
             if (Input.Pressed(Keys.G) && Input.Down(Keys.LeftControl)) Log.Info("clock: world " + GameClock.WorldTime + ", turn " + GameClock.TurnTime + " (" + GameClock.Turns.ToString("0.0") + " turns), paused " + GameClock.Paused + ", ticks summed " + gameTime);
             if (Input.Pressed(Keys.U) && Input.Down(Keys.LeftControl)) { blockUse = !blockUse; Log.Info("block item use: " + blockUse); }
             if (Input.Pressed(Keys.O)) Log.Info("content index: " + ContentIndex.Write());
-            if (Input.Pressed(Keys.Y)) { Data.Set("count", Data.GetInt("count") + 1); Log.Info("mod data count = " + Data.GetInt("count")); }
+            if (Input.Pressed(Keys.Y)) { SaveData.Set("count", SaveData.Get("count", 0) + 1); Log.Info("mod data count = " + SaveData.Get("count", 0)); }
             if (Input.Pressed(Keys.J) && Input.Down(Keys.LeftControl) && Input.Down(Keys.LeftShift)) { var npc = World.Placed("prospector_npc"); Log.Info("prospector " + (npc == null ? "not placed" : "at " + npc.Position + ", talk: " + Dialogs.Start(npc, "prospector/talk"))); }
             if (Input.Pressed(Keys.U) && !Input.Down(Keys.LeftControl)) Log.Info("trade with the test merchant: " + Trade.Open(World.Placed("workstest_merchant")));
             if (Input.Pressed(Keys.U)) { p.GiveExperience(5000, "test"); Log.Info("XP now " + p.Experience + ", level " + p.Level + ", skill points " + p.SkillPoints + ", ability points " + p.AbilityPoints); }
@@ -697,7 +706,7 @@ public sealed partial class WorksTest : WorksMod
         GameEvents.Saved.Add(this, folder => Log.Info("saved " + folder));
         GameEvents.GameLoaded.Add(this, () => Log.Info("game loaded"));
         int trapScans = 0;
-        Traps.ModifyDetection.Add(this, t => { if (t.Who.IsPlayer && trapScans++ < 2) Log.Info("trap detection score " + t.Score + " -> " + (t.Score + 100)); if (t.Who.IsPlayer) t.Score += 100; });
+        Traps.ModifyDetection.Add(this, t => { if (t.Character.IsPlayer && trapScans++ < 2) Log.Info("trap detection score " + t.Score + " -> " + (t.Score + 100)); if (t.Character.IsPlayer) t.Score += 100; });
         GameEvents.TrapDisarming.Add(this, d => { if (Variables.Global.Get("wt_easy", false)) d.Difficulty = 0; Log.Info("disarming: skill " + d.Skill + " vs " + d.Difficulty + (d.OwnTrap ? " (own)" : "")); });
         GameEvents.TrapDisarmed.Add(this, r => Log.Info("disarmed: " + r.Outcome));
         GameEvents.Reloading.Add(this, r => { if (!r.Character.IsPlayer && Variables.Global.Get("wt_noreload", false)) { r.Cancel = true; Log.Info("reload cancelled for " + r.Character.Name); } });
@@ -718,7 +727,25 @@ public sealed partial class WorksTest : WorksMod
 
 public sealed class TestApi
 {
-    public string Echo(string text) { return "echo " + text; }
+    public enum Moods { Sad, Happy }
+    public string Echo(string text) { var h = Heard; if (h != null) h(text); return (Loud ? "ECHO " : "echo ") + text; }
+    public int Twice(int n) { return n * 2; }
+    public double Half(double n) { return n / 2; }
+    public Moods Mood(Moods m) { return m == Moods.Happy ? Moods.Sad : Moods.Happy; }
+    public bool Loud { get; set; }
+    public event System.Action<string> Heard;
 }
+// How another mod would see TestApi without referencing it.
+public enum ViewMood { Sad, Happy }
+public interface IEchoView
+{
+    string Echo(string text);
+    int Twice(int n);
+    ViewMood Mood(ViewMood m);
+    bool Loud { get; set; }
+    event System.Action<string> Heard;
+}
+public interface ICoopRules { bool TravelTogether { get; set; } }
+public interface IWrongView { string Echo(string text, int times); }
 
 static class TestExtensions { public static T Also<T>(this T value, System.Action a) { a(); return value; } }

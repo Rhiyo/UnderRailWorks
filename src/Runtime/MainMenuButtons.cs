@@ -19,7 +19,8 @@ namespace UnderRailWorks
 
         public static void AddButton(WorksMod mod, string text, Action onClick)
         {
-            lock (entries) entries.Add(new Entry { Mod = mod.Id, Text = text, Click = onClick });
+            // Once per mod and text (a mod adding it from MainMenuCreated would otherwise get one more each visit).
+            lock (entries) { entries.RemoveAll(e => e.Mod == mod.Id && e.Text == text); entries.Add(new Entry { Mod = mod.Id, Text = text, Click = onClick }); }
         }
 
         internal static void Forget(string mod) { lock (entries) entries.RemoveAll(e => e.Mod == mod); }
@@ -44,6 +45,10 @@ namespace UnderRailWorks
                 if (panel == null) return;
                 int exitY = UnderrailDropdownScroll.Y(UnderrailDropdownScroll.LocationOf(exit));
                 int step = exitY - UnderrailDropdownScroll.Y(UnderrailDropdownScroll.LocationOf(before));
+                // The panel grows upwards: never past the top of the screen (many mods at 1280x720): closer rows instead,
+                // but never closer than a button's height.
+                int room = UnderrailDropdownScroll.Y(UnderrailDropdownScroll.LocationOf(panel));
+                if (list.Count * step > room) step = Math.Max(UnderrailDropdownScroll.H(exit.Size) + 1, room / Math.Max(1, list.Count));
                 int y = exitY;
                 foreach (var e in list)
                 {
@@ -56,7 +61,7 @@ namespace UnderRailWorks
                     b.Size = exit.Size;
                     e4z.j(b);
                     var click = e.Click; var mod = e.Mod;
-                    b.c(new EventHandler<b25>((s, a) => { try { click(); } catch (Exception ex) { Log.Write("mods: " + mod + ": main menu button failed: " + ex); } }));
+                    b.c(new EventHandler<b25>((s, a) => { try { ModScope.As(mod, click, click); } catch (Exception ex) { ModErrors.Report(mod, "a main menu button", ex); } }));
                     panel.aox(b);
                     UnderrailDropdownScroll.Move(b, 0, y);
                     y += step;
@@ -65,7 +70,7 @@ namespace UnderRailWorks
                 UnderrailDropdownScroll.Move(exit, 0, y);
                 var at = UnderrailDropdownScroll.LocationOf(panel);
                 panel.Size = new esj(UnderrailDropdownScroll.W(panel.Size), UnderrailDropdownScroll.H(panel.Size) + grow);
-                UnderrailDropdownScroll.Move(panel, UnderrailDropdownScroll.X(at), UnderrailDropdownScroll.Y(at) - grow);
+                UnderrailDropdownScroll.Move(panel, UnderrailDropdownScroll.X(at), Math.Max(0, UnderrailDropdownScroll.Y(at) - grow));
             }
             catch (Exception ex) { Log.Write("main menu: mods' buttons: " + ex); }
         }

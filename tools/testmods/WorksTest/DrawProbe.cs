@@ -121,7 +121,7 @@ public sealed partial class WorksTest
                 var shader = LayerShader.Find("Outline");
                 if (shader.IsNull) throw new InvalidOperationException("no Outline shader");
                 if (!LayerShader.Find("no such shader").IsNull) throw new InvalidOperationException("a shader that doesn't exist was found");
-                if (Interface.Scale <= 0) throw new InvalidOperationException("scale " + Interface.Scale);
+                if (Interface.PixelsPerUnit <= 0) throw new InvalidOperationException("scale " + Interface.PixelsPerUnit);
                 if (Interface.CapturingSaveScreenshot(context.Device)) Log.Info("drawprobe: capturing a save screenshot this frame");
             }
             catch (Exception ex) { ProbeError("world done", ex); }
@@ -130,7 +130,7 @@ public sealed partial class WorksTest
             Log.Info("drawprobe: frames " + probeDone + "/" + probeFrames + ", layers " + probeLayers + " (drawable " + probeDrawable + ", flat " + probeFlat + "), entities " + probeEntities.Count
                 + ", characters " + probeCharacters + ", outlined sets " + probeOutlined + ", replaced " + probeReplaced + ", tiles " + probeTiles + " (own " + probeTilesOwn + ")"
                 + ", shader passes " + probePasses + ", outlines " + probeOutlines + " (hidden " + probeHidden + "), shader layers " + probeShaderLayers + ", zoom " + probeZoom
-                + ", scale " + Interface.Scale + ", kinds " + string.Join("/", probeKinds.OrderBy(k => k).ToArray()) + ", ids " + string.Join("/", probeIds.OrderBy(k => k).ToArray())
+                + ", scale " + Interface.PixelsPerUnit + ", kinds " + string.Join("/", probeKinds.OrderBy(k => k).ToArray()) + ", ids " + string.Join("/", probeIds.OrderBy(k => k).ToArray())
                 + ", errors " + probeErrors + (probeFirstError == null ? "" : " (first: " + probeFirstError + ")"));
         });
     }

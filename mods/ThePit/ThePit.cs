@@ -39,10 +39,18 @@ public sealed class ThePit : WorksMod
 
     public override void Load()
     {
-        config = GetConfig<ThePitConfig>();
-        Dialogs.Define(this, "pit/master", d =>
+        // Saves from before SaveData was the one store kept the best run in a global variable: moved over once.
+        GameEvents.GameLoaded.Add(this, () =>
         {
-            int best = Data.GetInt("best");
+            const string old = "md_ThePit_best";
+            int was = Variables.Global.Get(old, 0);
+            if (was > 0 && !SaveData.Has("best")) SaveData.Set("best", was);
+            Variables.Global.Remove(old);
+        });
+        config = GetConfig<ThePitConfig>();
+        Dialogs.Add(this, "pit/master", d =>
+        {
+            int best = SaveData.Get("best", 0);
             d.Line("start", "The Pit. You pay, I let the beasts out, you try not to die. Every wave you clear pays better than the last."
                     + (best > 0 ? " Your best so far: wave " + best + "." : ""))
                 .Option("I'm in. (" + config.Fee + " charons)", "go", Condition.Code(() => wave == 0 && World.Player != null && World.Player.Inventory.Money >= config.Fee), Outcome.Code(StartRun))
@@ -71,7 +79,7 @@ public sealed class ThePit : WorksMod
             if (alive.Count > 0) { Notify.OverPlayer(alive.Count + " left"); return; }
             int pay = config.Reward * wave;
             if (pay > 0 && World.Player != null) World.Player.Inventory.AddMoney(pay);
-            if (wave > Data.GetInt("best")) Data.Set("best", wave);
+            if (wave > SaveData.Get("best", 0)) SaveData.Set("best", wave);
             Notify.Log("The Pit: wave " + wave + " cleared" + (pay > 0 ? ", " + pay + " charons" : "") + ". The next comes in " + config.Breather + " seconds.");
             Notify.OverPlayer("Wave " + wave + " cleared!");
             countdown = config.Breather;
@@ -104,7 +112,7 @@ public sealed class ThePit : WorksMod
         foreach (var c in alive.Where(c => !c.IsDead).ToList()) World.Despawn(c);
         if (message != null) Notify.Log("The Pit: " + message);
         int reached = Math.Max(0, wave - 1);
-        if (reached > Data.GetInt("best")) Data.Set("best", reached);
+        if (reached > SaveData.Get("best", 0)) SaveData.Set("best", reached);
         Reset();
     }
 

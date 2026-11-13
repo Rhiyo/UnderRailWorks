@@ -43,7 +43,7 @@ public sealed class Inventory
     // (for the player: lootable, and the "item received" line). False if the path is unknown.
     public bool Add(string path, int stacks = 1, bool notify = true)
     {
-        if (Simulation.Refuses("Inventory.Add")) return false;
+        if (stacks <= 0 || Simulation.Refuses("Inventory.Add")) return false;     // no empty or negative stacks into a save
         var item = ez2.a(path);
         if (item == null) return false;
         item.Stacks = stacks;
@@ -57,7 +57,7 @@ public sealed class Inventory
     // many were taken.
     public int Take(string code, int stacks = 1, bool notify = true)
     {
-        if (Simulation.Refuses("Inventory.Take")) return 0;
+        if (stacks <= 0 || Simulation.Refuses("Inventory.Take")) return 0;
         var taken = Owner.a(code, stacks, true);
         if (taken == null) return 0;
         if (IsPlayer && notify) a7v.a(new aub(taken));
@@ -66,8 +66,9 @@ public sealed class Inventory
 
     // Charons (Stygian coins).
     public int Money { get { return Count(ItemCodes.Charons); } }
-    public void AddMoney(int amount, bool notify = true) { Add("currency\\StygianCoin", amount, notify); }
-    public bool TakeMoney(int amount, bool notify = true) { if (Money < amount) return false; Take(ItemCodes.Charons, amount, notify); return true; }
+    public bool AddMoney(int amount, bool notify = true) { return Add("currency\\StygianCoin", amount, notify); }
+    // False (nothing taken) for an amount not above 0, or more than the character has.
+    public bool TakeMoney(int amount, bool notify = true) { if (amount <= 0 || Money < amount) return false; return Take(ItemCodes.Charons, amount, notify) == amount; }
 }
 
 public static class ItemCodes { public const string Charons = "currency.sc"; }
@@ -94,10 +95,15 @@ public static partial class Items
 public sealed partial class Item
 {
     internal readonly coh Game;
+    // Two wrappers of the same game object are equal (Works makes a new one on each call): fine as dictionary keys.
+    public override bool Equals(object obj) { var o = obj as Item; return o != null && ReferenceEquals(o.Game, Game); }
+    public override int GetHashCode() { return Game == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Game); }
+    public static bool operator ==(Item a, Item b) { return ReferenceEquals(a, b) || (!ReferenceEquals(a, null) && a.Equals(b)); }
+    public static bool operator !=(Item a, Item b) { return !(a == b); }
     internal Item(coh item) { Game = item; }
     public string Code { get { return Game.Definition == null ? "" : Game.Definition.a5(); } }
     public string Name { get { return Game.Definition == null ? "" : Game.Definition.az(); } }
-    public int Stacks { get { return Game.Stacks; } set { Game.Stacks = value; } }
+    public int Stacks { get { return Game.Stacks; } set { Game.Stacks = Math.Max(1, value); } }     // at least 1: take an item away with Inventory.Take / Remove
     // Base value of one item and of the stack (the game's ItemValue; merchants multiply it by their markup).
     public int Value { get { return Game.SingleItemValue; } }
     public int StackValue { get { return Game.ItemValue; } }
@@ -144,9 +150,9 @@ public static partial class World
         {
             var list = new List<Character>();
             var zone = Areas.CurrentZone();
-            if (zone == null) return list;
+            if (zone == null || zone.Areas == null) return list;
             foreach (var area in zone.Areas)
-                foreach (var e in area.Entities)
+                if (area != null && area.Entities != null) foreach (var e in area.Entities)
                     if (e is c5x && ((c5x)e).GetAspect<amc>() != null) { var c = Character.Of(e); if (!c.IsDead) list.Add(c); }
             return list;
         }
@@ -204,9 +210,9 @@ public static partial class World
         {
             var list = new List<Container>();
             var zone = Areas.CurrentZone();
-            if (zone == null) return list;
+            if (zone == null || zone.Areas == null) return list;
             foreach (var area in zone.Areas)
-                foreach (var e in area.Entities)
+                if (area != null && area.Entities != null) foreach (var e in area.Entities)
                 {
                     var c = e is c5x ? ((c5x)e).GetAspect<bim>() as c7j : null;
                     if (c != null) list.Add(new Container(c));
@@ -490,7 +496,7 @@ public static partial class World
     }
 
     // A game is loading or starting: the placed entities belong to the game state being replaced.
-    internal static void ForgetAll() { placed.Clear(); travelling.Clear(); lock (placements) placements.RemoveAll(p => p.Temporary); Party.ForgetMembers(); }
+    internal static void ForgetAll() { placed.Clear(); travelling.Clear(); followers.Clear(); lock (placements) placements.RemoveAll(p => p.Temporary); Party.ForgetMembers(); World.ForgetDrawn(); }
 
     internal static void Forget(c1a zone)
     {

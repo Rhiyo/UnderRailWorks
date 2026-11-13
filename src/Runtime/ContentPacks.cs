@@ -233,7 +233,7 @@ static class ContentPacks
     {
         var mod = Mod(info);
         var icon = Opt(i, "icon");
-        var path = Items.Define(mod, Req(i, "id"), Req(i, "base"), d => { Edit(d, i); if (i.ContainsKey("stats")) Edit(d, (Dictionary<string, object>)i["stats"]); });
+        var path = Items.Add(mod, Req(i, "id"), Req(i, "base"), d => { Edit(d, i); if (i.ContainsKey("stats")) Edit(d, (Dictionary<string, object>)i["stats"]); });
         if (icon != null) Icons.SetItemIcon(mod, "works." + info.Id + "." + Req(i, "id"), icon);
         Log.Write("content: " + info.Id + " item " + path);
     }
@@ -326,7 +326,7 @@ static class ContentPacks
                 GameEvents.QuestChanged.Add(mod, (quest, state) => { if (match(f("quest"), quest) && match(f("state"), state.ToString())) fire(); }); break;
             case "levelup":
                 int min = Int(t, "level");
-                GameEvents.LevelledUp.Add(mod, level => { if (level >= min) fire(); }); break;
+                GameEvents.LeveledUp.Add(mod, level => { if (level >= min) fire(); }); break;
             case "itemadded":
                 GameEvents.ItemAdded.Add(mod, item => { if (match(f("item"), item.Code)) fire(); }); break;
             case "equipped":

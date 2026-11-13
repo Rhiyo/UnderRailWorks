@@ -29,8 +29,8 @@ public sealed class Hunger : WorksMod
     public override void Load()
     {
         config = GetConfig<HungerConfig>();
-        hungry = ModStatuses.Define(this, "hungry", T("hungry.name"), T("hungry.desc"), "Status.Poison", StatBonus.Ability("Strength", -1), StatBonus.Dodge(-5));
-        starving = ModStatuses.Define(this, "starving", T("starving.name"), T("starving.desc"), "Status.Poison",
+        hungry = StatusEffects.Add(this, "hungry", T("hungry.name"), T("hungry.desc"), "Status.Poison", StatBonus.Ability("Strength", -1), StatBonus.Dodge(-5));
+        starving = StatusEffects.Add(this, "starving", T("starving.name"), T("starving.desc"), "Status.Poison",
             StatBonus.Ability("Strength", -2), StatBonus.Ability("Agility", -1), StatBonus.Dodge(-15));
         GameEvents.GameStarted.Add(this, () => { satiety = SaveData.Get<double>("satiety", 100); loaded = true; Apply(false); });     // a new game has no saved value: 100
         GameEvents.Saving.Add(this, name => SaveData.Set("satiety", Math.Round(satiety, 2)));
@@ -42,7 +42,7 @@ public sealed class Hunger : WorksMod
         });
         GameEvents.ItemUsed.Add(this, u =>
         {
-            if (u.User == null || !u.User.IsPlayer || u.Item == null || !u.Item.Uses.Contains("Food")) return;
+            if (u.Character == null || !u.Character.IsPlayer || u.Item == null || !u.Item.Uses.Contains("Food")) return;
             satiety = Math.Min(100, satiety + config.Meal);
             Notify.OverPlayer(T("ate", (int)satiety), new Color(120, 200, 120));
             Apply(true);

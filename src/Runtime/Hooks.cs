@@ -28,6 +28,15 @@ public abstract class HookBase<T> : IModOwned, HookOwner where T : class
     string[] owners = new string[0];
     int[] orders = new int[0];
     readonly Dictionary<T, int> failures = new Dictionary<T, int>();
+    // Each handlers array's owners: a run keeps its snapshot even when a handler adds or removes one meanwhile, and
+    // still knows whose each handler is (its interface, its errors).
+    readonly System.Runtime.CompilerServices.ConditionalWeakTable<T[], string[]> ownersOf = new System.Runtime.CompilerServices.ConditionalWeakTable<T[], string[]>();
+    void Set(T[] h, string[] o, int[] r)
+    {
+        // An empty array may be the runtime's shared one (Array.Empty): it has no owners to look up anyway.
+        if (h.Length > 0) { ownersOf.Remove(h); ownersOf.Add(h, o); }
+        owners = o; orders = r; handlers = h;
+    }
     const int MaxFailures = 10;
     internal HookBase(string name) { this.name = name; lock (ModScope.Hooks) ModScope.Hooks.Add(this); }
 
@@ -36,8 +45,9 @@ public abstract class HookBase<T> : IModOwned, HookOwner where T : class
     {
         var keep = Enumerable.Range(0, handlers.Length).Where(i => owners[i] != mod).ToList();
         if (keep.Count == handlers.Length) return;
+        foreach (var i in Enumerable.Range(0, handlers.Length).Where(i => owners[i] == mod)) failures.Remove(handlers[i]);     // nothing keeps the old code alive
         var h = keep.Select(i => handlers[i]).ToArray(); var o = keep.Select(i => owners[i]).ToArray(); var r = keep.Select(i => orders[i]).ToArray();
-        handlers = h; owners = o; orders = r;
+        Set(h, o, r);
     }
     // One mod's handlers only (a reloaded mod catching up: GameStarted, ZoneLoaded...).
     internal void RunFor(string mod, Action<T> call)
@@ -46,11 +56,13 @@ public abstract class HookBase<T> : IModOwned, HookOwner where T : class
         for (int i = 0; i < list.Length && i < o.Length; i++)
         {
             if (o[i] != mod) continue;
+            var was = ModScope.Current; ModScope.Current = mod;     // what it adds is its own (removed at its next reload)
             try { call(list[i]); } catch (Exception ex) { Failed(list, i, ex); }
+            finally { ModScope.Current = was; }
         }
     }
     // While a handler runs: its mod (what it adds to the interface is its own, removed if the mod is reloaded).
-    internal string OwnerAt(T[] list, int i) { var o = owners; return ReferenceEquals(list, handlers) && i < o.Length ? o[i] : null; }
+    internal string OwnerAt(T[] list, int i) { string[] o; return list != null && ownersOf.TryGetValue(list, out o) && i < o.Length ? o[i] : null; }
 
     public bool Any { get { return handlers.Length > 0; } }
 
@@ -68,7 +80,7 @@ public abstract class HookBase<T> : IModOwned, HookOwner where T : class
         var h = new List<T>(handlers); h.Insert(at, handler);
         var o = new List<string>(owners); o.Insert(at, mod);
         var r = new List<int>(orders); r.Insert(at, (int)order);
-        handlers = h.ToArray(); owners = o.ToArray(); orders = r.ToArray();
+        Set(h.ToArray(), o.ToArray(), r.ToArray());
     }
 
     static int Rank(string mod) { var m = mod == null ? null : ModLoader.Find(mod); return m == null ? -1 : m.LoadIndex; }
@@ -79,7 +91,7 @@ public abstract class HookBase<T> : IModOwned, HookOwner where T : class
         if (i < 0) return;
         var h = new List<T>(handlers); var o = new List<string>(owners); var r = new List<int>(orders);
         h.RemoveAt(i); o.RemoveAt(i); r.RemoveAt(i);
-        handlers = h.ToArray(); owners = o.ToArray(); orders = r.ToArray();
+        Set(h.ToArray(), o.ToArray(), r.ToArray());
     }
 
     // Each handler in turn until call returns true; a throwing handler is removed.
@@ -110,8 +122,7 @@ public abstract class HookBase<T> : IModOwned, HookOwner where T : class
 
     internal void Failed(T[] list, int i, Exception ex)
     {
-        var o = owners;
-        string mod = i < o.Length && ReferenceEquals(list, handlers) ? o[i] : OwnerOf(list[i]);
+        string mod = OwnerAt(list, i) ?? OwnerOf(list[i]);
         ModErrors.Report(mod, name, ex);
         if (OnFailure != null) { Log.Write("mods: " + mod + ": its " + name + " handler failed: " + ex); OnFailure(mod); return; }
         int n; failures.TryGetValue(list[i], out n); failures[list[i]] = ++n;

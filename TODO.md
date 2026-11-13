@@ -14,17 +14,23 @@ Func hooks turned into argument objects, the obvious duplicates made internal. S
   remote Character members...), ability ids, the AI's target. (The drawing surface was made stable on Nov 13 for
   Occluded Characters, with tools/smoketest/drawing.sh.) Promote (drop [Preview]) only what has a second user or a
   shape we're sure of.
-- [ ] **Two save-data stores**: `WorksMod.Data` (ModData: the save's own global variables) and `SaveData` (JSON beside
-  the save; also CharacterData). Keep both, or mark one [Obsolete] (Data: 4 mods use it).
-- [ ] **Overlapping names**: `GameEvents.Dying` (cancellable, preview) / `CharacterDying` / `CharacterDied`;
-  `Hud.WhenReady` / `UiEvents.HudCreated`; `Ui.Scale` / `Interface.Scale`; `World.Despawn` / `Character.RemoveFromWorld`.
-- [ ] **Naming consistency** (cheap now, costly after 1.0): Add / Register / Define for registering; Colour vs Color
-  and Centre vs Center (pick one, keep the other as [Obsolete] aliases); "Ability" for both base stats and usable
-  abilities; actor property names (Who / Character / Npc / User / Taker / Opener).
+- [x] **Two save-data stores**: `WorksMod.Data` removed (Nov 14); `SaveData` (and CharacterData) is the one store.
+- [x] **Overlapping names** (Nov 14): `Interface.Scale` -> `Interface.PixelsPerUnit` (Ui.Scale is the game's size
+  tier, a different number). Kept on purpose: `Hud.WhenReady` (runs now if the HUD exists, then on every
+  HudCreated: not the same as HudCreated), `World.Despawn` (stable) beside the preview `Character.RemoveFromWorld`,
+  `GameEvents.Dying` (preview, cancellable) beside `CharacterDying` / `CharacterDied` (to merge when Dying leaves preview).
+- [x] **Naming consistency** (Nov 14, before any release, so renamed outright): registering is `Add` everywhere
+  (Keybinds.Add, Icons.Add, Items.Add / Items.Added, Dialogs.Add / Dialogs.Exists, Quests.Add, StatusEffects.Add,
+  which replaces ModStatuses.Define); US spelling as .NET (Color, Center, LeveledUp: Camera.Center,
+  UiWorldView.Center, Exit.GameColor, MapMarker.Color, World.AreaExitColor / ZoneExitColor); the acting character in
+  event arguments is `Character` (ContainerOpen, ItemTake, ItemUse, ZoneLeave, XpGain, TrapScore; was Opener / Taker
+  / User / Who). Not changed: the AI's arguments keep `Npc` (they are all about the NPC), DialogStart.With (the
+  other party), "Ability" for base stats and `Abilities` for usable ones (the game's own words for both).
+  `ModOptions.Register` is internal (GetConfig replaced it).
 - [ ] **Positional GameEvents** (ZoneLoaded(string, bool), ContainerOpened(...), CharacterDying(...)...): kept; new
   information comes as a new event or an args overload, never a changed delegate.
-- [ ] `WorksMod.Load/PostLoad/Unload` are public (another mod could call them if handed the object): protected would
-  need `public override` -> `protected override` in every mod.
+- [x] `WorksMod.Load/PostLoad/Unload` stay public (Nov 14): as tModLoader's Mod.Load and SMAPI's Entry; protected
+  would change every mod for little (a mod handed another's object could already do worse).
 - [ ] Reference assemblies per API version for the SDK (a mod built against 1.0 can't use 1.1 members by accident);
   ModCheck already refuses such a mod at load, by name.
 
@@ -141,7 +147,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 - [x] Per-save mod data (WorksMod.Data, plain values in the save).
 - [x] Status effect events (applying with a veto, applied, removed). Custom status effects still to do.
 - [x] Level-up event; XP curve, XP gains and points per level (Progression).
-- [x] New item definitions (clone a stock item, override name/stats; the save holds the stock base). (done: Items.Define, see UnderRailWorks.md.)
+- [x] New item definitions (clone a stock item, override name/stats; the save holds the stock base). (done: Items.Add, see UnderRailWorks.md.)
 - [x] New feats / abilities; level-up and progression hooks (XP curve, points per level): mod feats, mod abilities, CustomStats, CharacterRules, Stats.Modify.
 - [x] Cancellable hooks with a set order (HookOrder; trade, containers, taking, dialogs, crafting, equipping, leaving a zone, weapon switching, disarming).
 - [x] Equipment (slots, equip/unequip, events). A veto still to do.

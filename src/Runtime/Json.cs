@@ -60,9 +60,9 @@ public static class Json
             }
         }
         if (c == '"') return Str(s, ref i);
-        if (s.Substring(i).StartsWith("true")) { i += 4; return true; }
-        if (s.Substring(i).StartsWith("false")) { i += 5; return false; }
-        if (s.Substring(i).StartsWith("null")) { i += 4; return null; }
+        if (string.CompareOrdinal(s, i, "true", 0, 4) == 0) { i += 4; return true; }
+        if (string.CompareOrdinal(s, i, "false", 0, 5) == 0) { i += 5; return false; }
+        if (string.CompareOrdinal(s, i, "null", 0, 4) == 0) { i += 4; return null; }
         int start = i;
         while (i < s.Length && "+-0123456789.eE".IndexOf(s[i]) >= 0) i++;
         if (start == i) throw new FormatException("unexpected '" + c + "' at " + i);
@@ -115,7 +115,11 @@ public static class Json
         else if (v is string) Quote(sb, (string)v);
         else if (v is bool) sb.Append((bool)v ? "true" : "false");
         else if (v is double || v is float || v is int || v is long || v is decimal || v is short || v is byte || v is uint || v is ulong)
-            sb.Append(Convert.ToDouble(v).ToString("R", CultureInfo.InvariantCulture));
+        {
+            double d = Convert.ToDouble(v, CultureInfo.InvariantCulture);
+            // JSON has no NaN or infinity: written as null, so the file always reads back.
+            sb.Append(double.IsNaN(d) || double.IsInfinity(d) ? "null" : d.ToString("R", CultureInfo.InvariantCulture));
+        }
         else if (v is System.Collections.IDictionary)
         {
             var d = (System.Collections.IDictionary)v; bool first = true;

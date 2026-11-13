@@ -4,7 +4,7 @@
 // to one lets you pet it, name it, feed it, or take it along (it follows you between areas until you send it home;
 // a pet about to be badly hurt bolts for home instead). The pets are kept in the mod's save data and put in the house as placements each
 // time the player enters (never in the game's save: the save stays loadable without the mod). Built from Works' API
-// only (PlayerHouse, Dialogs.Patch, Dialogs.Define, World.Place, Ui.Ask, SaveData).
+// only (PlayerHouse, Dialogs.Patch, Dialogs.Add, World.Place, Ui.Ask, SaveData).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -132,7 +132,7 @@ public sealed class HousePets : WorksMod
             World.Place(placement);
             var placed = World.Placed(placement.Id);
             if (placed != null) active[placed] = number;
-            Dialogs.Define(this, DialogOf(number), b => Talk(b, number));
+            Dialogs.Add(this, DialogOf(number), b => Talk(b, number));
         }
     }
 

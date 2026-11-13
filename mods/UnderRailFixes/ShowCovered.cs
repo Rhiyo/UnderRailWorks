@@ -310,7 +310,7 @@ static class ShowCovered
             GameBatch game = context.Batch;
             LayerShader shader = LayerShader.Find("Outline");
             var effect = shader.IsNull ? null : shader.Effect(context, view);
-            int cell = Math.Max(1, (int)Math.Round(view.Zoom * Interface.Scale));
+            int cell = Math.Max(1, (int)Math.Round(view.Zoom * Interface.PixelsPerUnit));
             foreach (var item in work)
             {
                 var chosen = EffectFor(item.Key.Owner);

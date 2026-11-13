@@ -22,10 +22,6 @@ public abstract partial class WorksMod
     public ModLog Log { get; internal set; }
     // A Harmony instance named after the mod, for patching the game where Works has no hook yet.
     internal Harmony Harmony { get; set; }
-    // This mod's plain values for the current game, inside the game's own save (its global variables). For anything
-    // else (lists, dictionaries, more than a few values) use SaveData.Of(mod), kept next to the save.
-    public ModData Data { get { return data ?? (data = new ModData(Id)); } }
-    ModData data;
     // The mod's settings.ini as raw keys (defaults: SettingsDefaults, written on first start). GetConfig is the typed
     // way, with the mod's page in Options -> Mods.
     public ModSettings Settings { get { return ModSettings.For(Id, SettingsDefaults); } }

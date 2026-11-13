@@ -16,7 +16,7 @@ public sealed class WorkbenchPlanner : WorksMod
 
     public override void Load()
     {
-        openKey = Keybinds.Register(this, "open", T("key"), Keys.D);
+        openKey = Keybinds.Add(this, "open", T("key"), Keys.D);
         GameEvents.Update.Add(this, s => { if (openKey.Pressed) { if (window != null && window.IsOpen) window.Close(); else Open(); } });
     }
 

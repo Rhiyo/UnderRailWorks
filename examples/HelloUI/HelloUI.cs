@@ -25,7 +25,7 @@ public sealed class HelloUI : WorksMod
     public override void Load()
     {
         config = GetConfig<HelloUIConfig>();
-        toggleKey = Keybinds.Register(this, "toggle", "Show/hide", Keys.Home);     // rebindable in Options -> Controls
+        toggleKey = Keybinds.Add(this, "toggle", "Show/hide", Keys.Home);     // rebindable in Options -> Controls
         // The in-game screen is built anew after each load or relayout: add the panel each time.
         UiEvents.HudCreated.Add(this, root =>
         {

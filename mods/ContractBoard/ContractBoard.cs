@@ -40,9 +40,9 @@ public sealed class ContractBoard : WorksMod
     public override void Load()
     {
         me = this;
-        for (int i = 1; i <= Pool; i++) Quests.Define(this, QuestId(i), "Contracts", "A contract from the gate.", xp: 40, oddityXp: 1);
+        for (int i = 1; i <= Pool; i++) Quests.Add(this, QuestId(i), "Contracts", "A contract from the gate.", xp: 40, oddityXp: 1);
 
-        Dialogs.Define(this, "contracts/board", d =>
+        Dialogs.Add(this, "contracts/board", d =>
         {
             var line = d.Line("start", "Got work, if you can handle it. Pays in charons.");
             foreach (var job in ActiveJobs())

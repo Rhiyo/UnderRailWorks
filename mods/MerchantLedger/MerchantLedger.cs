@@ -26,7 +26,7 @@ public sealed class MerchantLedger : WorksMod
 
     public override void Load()
     {
-        openKey = Keybinds.Register(this, "open", "Ledger", Keys.L);
+        openKey = Keybinds.Add(this, "open", "Ledger", Keys.L);
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; });
         UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.TradeOpened.Add(this, merchant =>

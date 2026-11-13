@@ -28,7 +28,7 @@ public sealed class Scanner : WorksMod
     public override void Load()
     {
         config = GetConfig<ScannerConfig>();
-        holdKey = Keybinds.Register(this, "hold", "Scanner (hold)", Keys.LeftAlt);
+        holdKey = Keybinds.Add(this, "hold", "Scanner (hold)", Keys.LeftAlt);
         readout = HudText.Add(this, "Scanner", HudAnchor.TopRight, 10, 80);
         readout.MinWidth = 220;
         readout.Background = new Color(6, 10, 12) * 0.88f;

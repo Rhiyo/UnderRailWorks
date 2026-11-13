@@ -34,7 +34,7 @@ public struct Exit
     public Rectangle Tiles { get; set; }      // the transition's tiles (map units)
     public bool ToOtherZone { get; set; }     // to another map (zone), else another area of this one
     // The colour the game draws its tiles in (a23): blue to another area, red to another map.
-    public Color GameColour { get { return ToOtherZone ? World.ZoneExitColour : World.AreaExitColour; } }
+    public Color GameColor { get { return ToOtherZone ? World.ZoneExitColor : World.AreaExitColor; } }
 }
 
 public sealed partial class Character
@@ -73,10 +73,14 @@ public sealed partial class Character
     public bool IsCharacter { get { return Data != null; } }
     // It can be talked to (has the dialog aspect the game's Talk uses).
     public bool CanTalk { get { var c = Entity as c5x; return c != null && c.GetAspect<j7>() != null && IsCharacter && !IsDead; } }
-    public string Id { get { return Need.Id; } }
+    // The game's template id (null for a placed object, empty for a character spawned from a blueprint).
+    public string Id { get { var d = Data; return d == null ? null : d.Id; } }
     // A stable key for remembering this character: its id, or its name when it has none (characters spawned from a
     // blueprint have no template id).
-    public string Key { get { var id = Need.Id; return string.IsNullOrEmpty(id) ? Name : id; } }
+    public string Key { get { var d = Data; var id = d == null ? null : d.Id; return string.IsNullOrEmpty(id) ? Name : id; } }
+    // Still in the world: false once it was removed, or after a load or a new game (a wrapper held from before points
+    // at the old world: look the character up again).
+    public bool IsInWorld { get { try { return Area != null; } catch { return false; } } }
     public string Name { get { var d = Data; return d == null ? Entities.Name(Entity) : d.LocalizedName ?? d.Name; } set { Need.Name = value; ((c5x)Entity).q(value); } }     // the data's name and the entity's (the hover label)
     public int Level { get { return Need.Level; } }
     public string Faction { get { return Need.FactionId; } set { Need.FactionId = value; } }
@@ -86,7 +90,8 @@ public sealed partial class Character
     // the whole zone is turn-based and every character with an AI is in the turn order (crp.ahx registers each one
     // when it becomes active), flag or not.
     public bool IsInCombat { get { return Need.IsInCombat; } }
-    public void Kill() { Need.a((cwt)null, (cru)null, false); }
+    // Nothing for one already dead (the game would run its death a second time: loot, scripts, mods' death events).
+    public void Kill() { if (!IsDead) Need.a((cwt)null, (cru)null, false); }
 
     // Its AI can see where other stands now: the game's own field of view (walls and all), as enemies notice the player
     // (bm6.a(tile): in a fight the tiles the fight worked out it sees, else its vision's visible points). False for one
@@ -114,7 +119,8 @@ public sealed partial class Character
         return ai != null && target != null && ai.e(target);
     }
 
-    public float Health { get { return Need.Defense.q().zo(); } set { Need.Defense.q().zp(value); } }
+    // Setting it on a dead character does nothing (it would get hit points and stay dead).
+    public float Health { get { return Need.Defense.q().zo(); } set { if (!IsDead) Need.Defense.q().zp(value); } }
     public float MaxHealth { get { return Need.Defense.q().zm(); } }
     // Damage threshold (flat, subtracted first) and resistance (percent) per damage type, as combat uses them
     // (efk.Defense.af()[type]: du2.a() threshold, du2.c() resistance fraction). Keys: Mechanical, Heat, Cold,
@@ -292,6 +298,14 @@ public static partial class World
         {
             var acting = Party.Acting;
             if (acting != null) return acting;     // a party member's action: mods see that character as the player
+            return RealPlayer;
+        }
+    }
+    // This machine's player character, also while a party member acts (Party.As).
+    internal static Character RealPlayer
+    {
+        get
+        {
             var game = bpo.GetService<cnk>();
             var data = game == null ? null : game.aqu();
             var player = data == null || data.v() == null ? null : data.v().b();
@@ -301,12 +315,12 @@ public static partial class World
 
     // The characters the game drew in the last frame, the player excepted: the ones in sight (stealthed or out of sight
     // characters aren't drawn). Updated at the end of each world pass.
-    public static IList<Character> Visible { get { tracking = true; return visible; } }
+    public static IList<Character> Visible { get { tracking = true; return View == null ? new Character[0] : visible; } }
 
     // The game's fog of war is on: undiscovered parts are hidden under the shroud.
     public static bool FogOfWar { get { var v = View; return v != null && WorldViews.Shroud(v); } }
 
-    public static readonly Color AreaExitColour = new Color(0, 0, 150), ZoneExitColour = new Color(150, 0, 0);
+    public static readonly Color AreaExitColor = new Color(0, 0, 150), ZoneExitColor = new Color(150, 0, 0);
 
     // --- Fed by the drawing hooks (WorldDrawHooks) ----------------------------------------------------------------
     // The world view: the in-game screen's map (ps.akw(), the game's own way to it; null on the main menu).
@@ -341,6 +355,8 @@ public static partial class World
     static Dictionary<b0b, Rectangle> boundsNow = new Dictionary<b0b, Rectangle>(), boundsLast = new Dictionary<b0b, Rectangle>();
     // Where a character was drawn in the last frame (interface units, as Ui elements; null: not drawn, e.g. out of
     // sight). The first call starts the tracking, so it answers from the next frame on.
+    // A new game, a load, the main menu: nothing of the last world's drawing is kept.
+    internal static void ForgetDrawn() { visible = new Character[0]; boundsNow.Clear(); boundsLast.Clear(); lock (drawing) drawing.Clear(); }
     internal static Rectangle? ScreenBoundsOf(b0b e) { tracking = true; Rectangle r; return e != null && boundsLast.TryGetValue(e, out r) ? r : (Rectangle?)null; }
 }
 }

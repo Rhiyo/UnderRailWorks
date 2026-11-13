@@ -250,9 +250,10 @@ public static class UnderrailOptions
     static readonly MethodInfo StyleButton = typeof(t1).GetMethod("a", BindingFlags.Static | BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(dak), typeof(wj) }, null);
 
     // The game's slider row (as its Unobscuration alpha option): a percentage, min-max, moving by step.
-    internal static oz SliderRow(t1 options, cvh page, string key, string label, int value, int min, int max, int step)
+    // percent: the value shown with "%" (Works' own rows); text: how a value is shown instead (a mod's decimal setting).
+    internal static oz SliderRow(t1 options, cvh page, string key, string label, int value, int min, int max, int step, bool percent = true, Func<int, string> text = null)
     {
-        Slider.Invoke(options, new object[] { key, label, value / 100f, min, max, step, Math.Max(step, 25), true, null, null, false });
+        Slider.Invoke(options, new object[] { key, label, value / 100f, min, max, step, Math.Max(step, 25), percent, null, text, false });
         var slider = ((System.Collections.IDictionary)Sliders.GetValue(options))[key] as oz;
         AlignSlider(page, slider);
         // Dragging snaps to whole steps (a 25-400 range moved by single points is too fiddly).

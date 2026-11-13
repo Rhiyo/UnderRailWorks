@@ -19,7 +19,7 @@ namespace UnderRailWorks
         public int X { get; internal set; }
         public int Y { get; internal set; }
         public string Label { get; internal set; }
-        public Color Colour { get; internal set; }
+        public Color Color { get; internal set; }
     }
 
     public static class Markers
@@ -74,7 +74,7 @@ namespace UnderRailWorks
             {
                 var rgb = (Field(o, "colour") ?? "110,190,255").Split(',').Select(int.Parse).ToArray();
                 return new MapMarker { Mod = mod, Id = Field(o, "id"), Zone = Field(o, "zone"), Area = Field(o, "area"), X = Convert.ToInt32(o["x"]), Y = Convert.ToInt32(o["y"]),
-                    Label = Field(o, "label"), Colour = new Color(rgb[0], rgb[1], rgb[2]) };
+                    Label = Field(o, "label"), Color = new Color(rgb[0], rgb[1], rgb[2]) };
             }
             catch { return null; }
         }

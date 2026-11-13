@@ -23,15 +23,15 @@ public sealed partial class Coop
         });
         Progression.ModifyExperience.Add(this, g =>
         {
-            if (listener == null || sharing || !sharesXp || g.Who == null || g.Amount <= 0 || !Party.Contains(g.Who)) return;
+            if (listener == null || sharing || !sharesXp || g.Character == null || g.Amount <= 0 || !Party.Contains(g.Character)) return;
             var members = Party.Members;
             if (members.Count < 2) return;
-            var earner = g.Who;
+            var earner = g.Character;
             // Kill XP (no reason) the game gives the host's player right after a joined character's kill: the killer's.
-            if (g.Who.IsPlayer && g.Reason == null && lastKiller != null && clock - killTime < 1.5 && lastKiller.Area != null) earner = lastKiller;
+            if (g.Character.IsPlayer && g.Reason == null && lastKiller != null && clock - killTime < 1.5 && lastKiller.Area != null) earner = lastKiller;
             int full = g.Amount, share = (int)Math.Round(full * xpShare / 100.0);
-            if (earner != g.Who) { g.Amount = share; Give(earner, full); }
-            foreach (var c in members.Where(c => c != earner && c != g.Who)) Give(c, share);
+            if (earner != g.Character) { g.Amount = share; Give(earner, full); }
+            foreach (var c in members.Where(c => c != earner && c != g.Character)) Give(c, share);
             Log.Info("XP " + full + (g.Reason != null ? " (" + g.Reason + ")" : "") + " earned by " + earner.Name + ", " + share + " to each other player (" + xpShare + "%)");
         });
     }

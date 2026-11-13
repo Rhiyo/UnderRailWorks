@@ -5,13 +5,13 @@
 //   save only the path; crafted items carry their own copy (saved whole).
 // - So editing a library definition reaches every such item and is never saved (Items.EditDefinition); a crafted copy
 //   or an item made unique (Item.MakeUnique) keeps its own definition, saved as stock types.
-// - New items (Items.Define): a definition cloned from a stock one, answered by ez2.b for the path works\<mod>\<id>. A
+// - New items (Items.Add): a definition cloned from a stock one, answered by ez2.b for the path works\<mod>\<id>. A
 //   save holds that path only; without the mod the stock game still loads it (the item shows as "Unknown" with no
 //   stats), and keeps the path, so reinstalling the mod brings the item back.
 // - Tooltips: cq4.a(item, viewer, ...) builds every item tooltip (inventory, trade, loot, crafting preview) as lines of
 //   coloured sections (ecs / dl6); Items.ModifyTooltip adds lines.
 //   Items.EditDefinition("weapons\\pistols\\...", d => { d.CritChance += 0.05; d.Name = "Lucky Pistol"; });
-//   var path = Items.Define(this, "stimpack", "consumables\\medicine\\healthhypo", d => { d.Name = "Stim"; d.Value = 300; });
+//   var path = Items.Add(this, "stimpack", "consumables\\medicine\\healthhypo", d => { d.Name = "Stim"; d.Value = 300; });
 //   Items.ModifyTooltip(this, (item, tip) => tip.AddLine("Sells for " + item.Value, Color.Gold));
 using System;
 using System.Collections.Generic;
@@ -34,11 +34,16 @@ namespace UnderRailWorks
     public sealed class ItemDefinition
     {
         internal readonly bk3 Game;
+        // Two wrappers of the same game object are equal (Works makes a new one on each call): fine as dictionary keys.
+        public override bool Equals(object obj) { var o = obj as ItemDefinition; return o != null && ReferenceEquals(o.Game, Game); }
+        public override int GetHashCode() { return Game == null ? 0 : System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(Game); }
+        public static bool operator ==(ItemDefinition a, ItemDefinition b) { return ReferenceEquals(a, b) || (!ReferenceEquals(a, null) && a.Equals(b)); }
+        public static bool operator !=(ItemDefinition a, ItemDefinition b) { return !(a == b); }
         internal ItemDefinition(bk3 d) { Game = d; }
         public string Code { get { return Game.a5(); } set { Game.k(value); } }
         public string Name { get { return Game.az(); } set { Game.g(value); } }
         public string Description { get { return Game.a0(); } set { Game.i(value); } }
-        // The icon's name ("Atlas.cell" or an Icons.Register name).
+        // The icon's name ("Atlas.cell" or an Icons.Add name).
         public string Icon { get { return Game.a3(); } set { Game.f(value); } }
         public double? Value { get { return Game.bf(); } set { Game.b(value); } }
         public double Weight { get { return Game.a4(); } set { Game.h(value); } }
@@ -121,7 +126,7 @@ namespace UnderRailWorks
 
         // A new kind of item: a copy of basePath's definition, edited, with the code "works.<mod>.<id>". Returns its
         // path ("works\<mod>\<id>") for Inventory.Add, stores, loot and content packs. See the file's header on saves.
-        public static string Define(WorksMod mod, string id, string basePath, Action<ItemDefinition> edit) { return ItemHooks.Define(mod.Id, id, basePath, edit); }
+        public static string Add(WorksMod mod, string id, string basePath, Action<ItemDefinition> edit) { return ItemHooks.Define(mod.Id, id, basePath, edit); }
 
         // Lines added to item tooltips (every window that shows them).
         public static void ModifyTooltip(WorksMod mod, Action<Item, Tooltip> edit) { ItemHooks.Tooltips.Add(mod, edit); }
@@ -137,7 +142,7 @@ namespace UnderRailWorks
         }
 
         // Every new item's path the mods defined.
-        public static IList<string> Defined { get { return ItemHooks.Defined.Keys.ToList(); } }
+        public static IList<string> Added { get { return ItemHooks.Defined.Keys.ToList(); } }
     }
 
     public enum ItemKind { Other, Weapon, Armor, Shield, Component, Ammo, Currency, Throwable, Consumable }

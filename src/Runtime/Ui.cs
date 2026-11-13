@@ -370,7 +370,7 @@ public sealed class UiTextBox : UiElement
     public void Focus() { Input.FocusBox(this); }
     internal static void Poll()
     {
-        Live.RemoveAll(b => b.Control.Parent == null && b.last == null);
+        Live.RemoveAll(b => b.Control.Parent == null);     // taken off (or never put on) a screen: not polled, nothing kept alive
         foreach (var b in Live.ToList())
         {
             var now = b.Text;
@@ -668,6 +668,7 @@ static class UiHooks
     static void MainMenu(object __instance)
     { try {
         if (UnderRailWorks.Hud.Exists) { UnderRailWorks.Hud.Gone(); if (UiEvents.HudDestroyed.Any) UiEvents.HudDestroyed.Run(h => h()); }     // back to the main menu: no HUD
+        UiWindows.HudGone();     // a main menu built anew (after Options): windows on the old one are gone with it
         UnderRailWorks.MainMenu.Built((a8k)__instance);
         WorksHealth.Tell();
         var root = UiElement.Of((euz)__instance);

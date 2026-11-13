@@ -19,9 +19,16 @@ namespace UnderRailWorks
         static readonly Dictionary<string, Command> all = new Dictionary<string, Command>(StringComparer.OrdinalIgnoreCase);
 
         // A console command: run gets the words after the name (quotes keep spaces) and returns a line to print (or
-        // null). Name it after the mod to avoid clashes ("mymod.heal"); the game's own commands win otherwise.
+        // null). Name it after the mod ("mymod.heal"): mods' commands are tried before the game's, so a plain name could
+        // hide one of the game's; a name another mod already uses replaces it (logged).
         public static void Add(WorksMod mod, string name, string help, Func<string[], string> run) { Add(mod.Id, name, help, run); }
-        internal static void Add(string mod, string name, string help, Func<string[], string> run) { all[name] = new Command { Mod = mod, Name = name, Help = help, Run = run }; }
+        internal static void Add(string mod, string name, string help, Func<string[], string> run)
+        {
+            Command had;
+            if (all.TryGetValue(name, out had) && !string.Equals(had.Mod, mod, StringComparison.OrdinalIgnoreCase))
+                Log.Write("commands: " + mod + " replaces " + had.Mod + "'s command " + name);
+            all[name] = new Command { Mod = mod, Name = name, Help = help, Run = run };
+        }
         internal static void Forget(string mod) { foreach (var k in all.Where(kv => kv.Value.Mod == mod).Select(kv => kv.Key).ToList()) all.Remove(k); }
 
         // Opens the game's console (as its ` key does; in game only).
@@ -71,12 +78,15 @@ namespace UnderRailWorks
             Add("UnderRailWorks", "works.give", "works.give <item path> [count]: into the player's bag", a =>
             {
                 if (a.Length == 0) return "[error]works.give <item path> [count]";
-                int n = a.Length > 1 ? int.Parse(a[1]) : 1;
+                if (World.Player == null) return "[error]no game";
+                int n = 1;
+                if (a.Length > 1 && (!int.TryParse(a[1], out n) || n <= 0)) return "[error]count: a number above 0";
                 return World.Player.Inventory.Add(a[0], n) ? "gave " + n + " " + (Items.Name(a[0]) ?? a[0]) : "[error]no item " + a[0];
             });
             Add("UnderRailWorks", "works.spawn", "works.spawn <blueprint> [hostile]: next to the player (gone when you leave)", a =>
             {
                 if (a.Length == 0) return "[error]works.spawn <blueprint> [hostile]";
+                if (World.Player == null) return "[error]no game";
                 var p = World.Player.Position;
                 var t = World.FreeTilesNear((int)p.X, (int)p.Y, 4).Skip(2).FirstOrDefault();
                 var c = World.Spawn(a[0], t.X, t.Y, a.Length > 1 && a[1].StartsWith("h", StringComparison.OrdinalIgnoreCase));

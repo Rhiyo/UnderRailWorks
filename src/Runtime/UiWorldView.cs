@@ -5,7 +5,7 @@
 //   var w = Ui.Window(this, "cam", "Front door", 420, 300);
 //   var view = Ui.WorldView(400, 260, new Vector2(30, 12));
 //   Ui.Add(w, view, 10, w.Top + 4);
-//   view.Centre = World.Player.Position2D;     // look somewhere else
+//   view.Center = World.Player.Position2D;     // look somewhere else
 // Each view draws the area again every frame: keep them small and few.
 using System;
 using Microsoft.Xna.Framework;
@@ -55,7 +55,7 @@ namespace UnderRailWorks
         mv View { get { return view; } }
 
         // The map position it is centred on (tiles). Setting it looks there.
-        public Vector2 Centre
+        public Vector2 Center
         {
             get { var p = View.an9().t1(); return new Vector2(p.X, p.Y); }
             set { View.an9().t2(new Vector3(value.X, value.Y, 0f)); }

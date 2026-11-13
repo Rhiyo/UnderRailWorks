@@ -16,8 +16,8 @@ public sealed partial class Coop
     {
         GameEvents.ContainerOpening.Add(this, e =>
         {
-            if (listener == null || e.Opener == null || e.Opener.IsPlayer) return;
-            var seat = seats.Values.FirstOrDefault(s => s.Character == e.Opener);
+            if (listener == null || e.Character == null || e.Character.IsPlayer) return;
+            var seat = seats.Values.FirstOrDefault(s => s.Character == e.Character);
             if (seat == null) return;
             e.Cancel = true;
             SendLoot(seat, e.Container);

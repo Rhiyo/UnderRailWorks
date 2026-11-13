@@ -3,7 +3,7 @@
 // each time it is opened, and the game runs it in its own dialog window. What the game does, measured from its code:
 // UnderRailWorks.md, "Dialogs". Dialog models are never written to saves, so Works' conditions and actions (plain C#)
 // are safe; anything they change (variables, quests, items) goes through the stock systems.
-//   Dialogs.Define("mymod/stranger", d =>
+//   Dialogs.Add(this, "mymod/stranger", d =>
 //   {
 //       d.Line("start", "Got a minute?")
 //        .Option("Who are you?", "who")
@@ -146,13 +146,13 @@ public static partial class Dialogs
 
     // A conversation, by name (prefix it with the mod's id). The builder runs each time it is opened, so it may read
     // game state (but conditions are the cleaner way).
-    public static void Define(WorksMod mod, string name, Action<DialogBuilder> build) { Define(mod.Id, name, build); }
+    public static void Add(WorksMod mod, string name, Action<DialogBuilder> build) { Define(mod.Id, name, build); }
     internal static void Define(string name, Action<DialogBuilder> build) { Define(ModScope.Current, name, build); }
     static readonly Dictionary<string, string> definedBy = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
     internal static void Define(string owner, string name, Action<DialogBuilder> build) { defined[name] = build; definedBy[name] = owner ?? ""; }
     internal static void ForgetDefined(string mod) { foreach (var k in definedBy.Where(kv => string.Equals(kv.Value, mod, StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key).ToList()) { defined.Remove(k); definedBy.Remove(k); } }
 
-    public static bool IsDefined(string name) { return name != null && defined.ContainsKey(name); }
+    public static bool Exists(string name) { return name != null && defined.ContainsKey(name); }
 
     // Talking to this character opens the named conversation (Works' or the game's). Kept in memory only: the
     // character's own dialog stays as saved.

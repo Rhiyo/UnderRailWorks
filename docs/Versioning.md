@@ -8,6 +8,12 @@ UnderRailWorks has three version numbers. Mods should only ever need to think ab
 | **API version** | `WorksApi.Major` / `Minor` (src/Runtime/WorksMod.cs), `WorksApi.Version` at run time | what mods can use. A mod's `mod.json` says which it was built for: `"works": "1.2"` |
 | Game version | `WorksApi.GameVersion` (running), `WorksApi.MadeForGameVersion` | the UnderRail build Works was made and checked for |
 
+Why one API version and not one per area (drawing, UI, combat...): Works is one DLL in one download, so only one
+combination of areas ever exists, and the areas share types (a drawing handler gets a Character, Co-op uses the
+hooks and SaveData). SMAPI, tModLoader, BepInEx and Forge do the same. Areas still mature at their own pace through
+`[Preview]`: a preview area may change in any release and becomes stable by dropping the attribute, in a minor
+release. Mods that offer APIs to other mods version those themselves (their own `"version"`, `"OtherMod >= 1.2"`).
+
 ## What is the API
 
 Everything public in the `UnderRailWorks` namespace, and nothing else:
@@ -96,7 +102,7 @@ Mods built only on the API need nothing: the same mod DLL keeps working on the u
 
 ## Testing aids
 
-- `tools/smoketest/smoke.sh`: one scripted session with the build and the test mods, 38 checks over the loader's
+- `tools/smoketest/smoke.sh`: one scripted session with the build and the test mods, 42 checks over the loader's
   rules and the API areas mods use most (release.sh runs it). `tools/smoketest/coop.sh`: a host and a joiner on this
   machine (a test port, never Co-op's own): join, mirrored walking, a fight, a downed player left alone.
   `tools/smoketest/coop-midfight.sh`: joining mid-fight, and loading that mid-fight save without the joiner. `tools/savecheck/check-saves.sh --play`: saves stay

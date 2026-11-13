@@ -33,7 +33,7 @@ namespace UnderRailWorks
 
     public sealed class ItemUse : Cancellable
     { internal ItemUse() { }
-        public Character User { get; internal set; }
+        public Character Character { get; internal set; }
         public Item Item { get; internal set; }
         // The capability's name ("Use", "Throw", ...).
         public string Action { get; internal set; }
@@ -203,7 +203,7 @@ namespace UnderRailWorks.Internal
             var cap = proxy.p();
             return new ItemUse
             {
-                User = Of(user), Item = new Item(item), Action = cap == null ? null : cap.Name,
+                Character = Of(user), Item = new Item(item), Action = cap == null ? null : cap.Name,
                 Target = target is coh ? (object)new Item((coh)target) : Of(target),
             };
         }

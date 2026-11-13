@@ -39,7 +39,7 @@ public sealed class QuestTracker : WorksMod
     public override void Load()
     {
         config = GetConfig<QuestTrackerConfig>();
-        toggleKey = Keybinds.Register(this, "toggle", "Show/hide", Keys.F8);
+        toggleKey = Keybinds.Add(this, "toggle", "Show/hide", Keys.F8);
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; shown = ""; Dirty = true; });
         UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.QuestChanged.Add(this, (id, state) =>

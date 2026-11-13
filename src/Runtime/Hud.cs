@@ -602,6 +602,15 @@ public sealed class StatusEffect
 
 public static class StatusEffects
 {
+    // A status effect of the mod's own (ModStatus: its stat bonuses, ticks, removal). icon: an icon name the game knows
+    // ("Status.Poison", "Status.PsiBoost", "Status.5"..., or one from Icons.Add).
+    public static ModStatus Add(WorksMod mod, string id, string name, string description, string icon, params StatBonus[] bonuses)
+    {
+        var s = new ModStatus { Mod = mod.Id, Id = id, Name = name, Description = description, Icon = icon, Bonuses = bonuses ?? new StatBonus[0] };
+        UnderRailWorks.Internal.ModStatusStore.Types[s.Code] = s;
+        return s;
+    }
+
     static Dictionary<string, ConstructorInfo> registry;
 
     // Every status effect code Works can create (built on first use, from the game's effect types).

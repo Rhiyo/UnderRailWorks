@@ -120,7 +120,7 @@ namespace UnderRailWorks
         }
 
         // Text shown next to the mouse while it rests on element (half a second).
-        public static void Tooltip(UiElement element, string text) { Widgets.Tooltips[element] = text; }
+        public static void Tooltip(UiElement element, string text) { Widgets.SetTooltip(element, text); }
 
         // A scrolling list of text rows: the mouse wheel scrolls, a click selects.
         // rowHeight 0: a line of text and a little room (Ui.LineHeight + 4).
@@ -207,7 +207,19 @@ namespace UnderRailWorks.Internal
 {
     static class Widgets
     {
-        internal static readonly Dictionary<UiElement, string> Tooltips = new Dictionary<UiElement, string>();
+        // Tooltips by element, held weakly: an element off screen for now (built ahead, a scrolled-away row) keeps its
+        // tooltip; one nothing refers to any more goes with it.
+        sealed class Tip { public string Text; }
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<UiElement, Tip> Tips = new System.Runtime.CompilerServices.ConditionalWeakTable<UiElement, Tip>();
+        static readonly List<WeakReference> TipElements = new List<WeakReference>();
+        internal static void SetTooltip(UiElement e, string text)
+        {
+            if (e == null) return;
+            Tip t;
+            if (Tips.TryGetValue(e, out t)) { t.Text = text; return; }
+            Tips.Add(e, new Tip { Text = text });
+            TipElements.Add(new WeakReference(e));
+        }
         internal static readonly List<WeakReference> Lists = new List<WeakReference>(), Sliders = new List<WeakReference>(), Choices = new List<WeakReference>();
         internal static readonly List<KeyValuePair<WeakReference, Action>> Buttons = new List<KeyValuePair<WeakReference, Action>>();
         static UiElement tipFor, tipPanel;
@@ -220,7 +232,7 @@ namespace UnderRailWorks.Internal
         {
             if (handler == null) return;
             foreach (Action<T> h in handler.GetInvocationList())
-                try { h(value); } catch (Exception ex) { var mod = ModErrors.ModOf(h.Method.DeclaringType); if (mod != null) ModErrors.Report(mod, "a widget's handler", ex); else Log.Write("ui: widget handler: " + ex.Message); }
+                try { ModScope.As(null, h, () => h(value)); } catch (Exception ex) { var mod = ModErrors.ModOf(h.Method.DeclaringType); if (mod != null) ModErrors.Report(mod, "a widget's handler", ex); else Log.Write("ui: widget handler: " + ex.Message); }
         }
 
         internal static void Tick(double seconds)
@@ -228,7 +240,7 @@ namespace UnderRailWorks.Internal
             var m = Input.Mouse;
             foreach (var w in Lists.ToList()) { var l = w.Target as UiList; if (l == null) { Lists.Remove(w); continue; } if (!Ui.IsHot(l.Element)) continue; var b = l.Element.Bounds;
                 if (Input.Wheel != 0) l.First = Math.Max(0, l.First - Input.Wheel * 3);
-                if (Input.MousePressed(MouseButton.Left)) { int i = l.First + (m.Y - b.Y - 2) / l.RowHeight; if (i >= 0 && i < l.Items.Count) l.Select(i); } }
+                if (Input.MousePressed(MouseButton.Left)) { int row = (m.Y - b.Y - 2) / l.RowHeight, i = l.First + row; if (row >= 0 && row < Math.Max(1, (b.Height - 4) / l.RowHeight) && i < l.Items.Count) l.Select(i); } }     // only rows that are drawn
             foreach (var w in Sliders.ToList()) { var s = w.Target as UiSlider; if (s == null) { Sliders.Remove(w); continue; } if (!Live(s.Element)) { s.Dragging = false; continue; } var b = s.Element.Bounds;
                 if (Input.MousePressed(MouseButton.Left) && Ui.IsHot(s.Element)) s.Dragging = true;
                 if (s.Dragging) { s.Set(s.Min + (s.Max - s.Min) * Math.Max(0, Math.Min(1, (m.X - b.X - 5) / (double)Math.Max(1, b.Width - 10)))); if (!Input.MouseDown(MouseButton.Left)) s.Dragging = false; } }
@@ -239,7 +251,7 @@ namespace UnderRailWorks.Internal
                 {
                     var b = kv.Key.Target as UiElement;
                     if (b == null) { Buttons.Remove(kv); continue; }
-                    if (Ui.IsHot(b)) { try { kv.Value(); } catch (Exception ex) { var mod = ModErrors.ModOf(kv.Value.Method.DeclaringType); if (mod != null) ModErrors.Report(mod, "a button", ex); else Log.Write("ui: button: " + ex.Message); } }
+                    if (Ui.IsHot(b)) { try { ModScope.As(null, kv.Value, kv.Value); } catch (Exception ex) { var mod = ModErrors.ModOf(kv.Value.Method.DeclaringType); if (mod != null) ModErrors.Report(mod, "a button", ex); else Log.Write("ui: button: " + ex.Message); } }
                 }
             Tooltip(seconds, m);
         }
@@ -248,14 +260,16 @@ namespace UnderRailWorks.Internal
         {
             UiElement over = null;
             // Elements no longer under a live screen are dropped (closed windows, old HUDs): nothing keeps them alive.
-            foreach (var kv in Tooltips.ToList()) { if (!Attached(kv.Key)) { Tooltips.Remove(kv.Key); continue; } if (Ui.IsHot(kv.Key)) over = kv.Key; }
+            TipElements.RemoveAll(r => !r.IsAlive);
+            foreach (var r in TipElements.ToList()) { var e = r.Target as UiElement; if (e == null || !Attached(e)) continue; Tip t; if (Tips.TryGetValue(e, out t) && t.Text != null && Ui.IsHot(e)) over = e; }
             if (over != tipFor) { tipFor = over; hovered = 0; Hide(); }
             if (over == null) return;
             hovered += seconds;
             if (hovered < 0.5 || tipPanel != null) return;
             var root = UnderRailWorks.Hud.Root ?? (UiHooks.CurrentOptions == null ? null : UiElement.Of(UiHooks.CurrentOptions));
             if (root == null) return;
-            var lines = Ui.Wrap(Tooltips[over], Ui.S(320));
+            Tip tip; if (!Tips.TryGetValue(over, out tip) || tip.Text == null) return;
+            var lines = Ui.Wrap(tip.Text, Ui.S(320));
             int lh = Ui.LineHeight, w = Math.Min(Ui.S(340), lines.Max(l => Ui.TextWidth(l)) + 16), h = 8 + lines.Count * lh;
             tipPanel = Ui.Custom(w, h, c => { c.Fill(c.Bounds, new Color(8, 8, 8, 235)); c.Frame(c.Bounds, Look.Orange); for (int i = 0; i < lines.Count; i++) c.Text(lines[i], c.Bounds.X + 8, c.Bounds.Y + 4 + i * lh, Look.Text); });
             int x = Math.Min(root.Width - w - 4, m.X + 16), y = Math.Min(root.Height - h - 4, m.Y + 20);

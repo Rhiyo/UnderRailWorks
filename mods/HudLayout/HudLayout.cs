@@ -49,7 +49,7 @@ public sealed class HudLayout : WorksMod
     public override void Load()
     {
         config = GetConfig<HudLayoutConfig>();
-        arrangeKey = Keybinds.Register(this, "arrange", "Arrange");     // unbound by default (Options -> Controls)
+        arrangeKey = Keybinds.Add(this, "arrange", "Arrange");     // unbound by default (Options -> Controls)
         UiEvents.HudCreated.Add(this, root =>
         {
             hud = root; overlay = null; help = null; dragging = null; partDrag = null; barDrag = null; layoutButton = null; originals.Clear();

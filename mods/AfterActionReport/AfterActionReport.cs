@@ -32,7 +32,7 @@ public sealed class AfterActionReport : WorksMod
     public override void Load()
     {
         config = GetConfig<AfterActionReportConfig>();
-        showKey = Keybinds.Register(this, "show", "Last report", Keys.F11);
+        showKey = Keybinds.Add(this, "show", "Last report", Keys.F11);
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; });
         UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.CombatStarted.Add(this, () => current = new Fight());

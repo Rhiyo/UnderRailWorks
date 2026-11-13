@@ -65,7 +65,7 @@ public abstract class ModConfig
         {
             string v = settings.Get(f.Name);
             if (v == null) continue;
-            object parsed = Parse(f.FieldType, v);
+            object parsed = Parse(f, v);
             if (parsed != null) f.SetValue(this, parsed);
         }
         Changes++;
@@ -98,6 +98,18 @@ public abstract class ModConfig
         return Convert.ToString(v, CultureInfo.InvariantCulture);
     }
 
+    // A value as the field holds it, kept inside its [Range] (a hand-edited settings.ini can say anything).
+    static object Parse(FieldInfo f, string v)
+    {
+        var o = Parse(f.FieldType, v);
+        var r = f.GetCustomAttribute<RangeAttribute>();
+        if (o == null || r == null) return o;
+        if (o is int) return (int)Math.Max(Math.Ceiling(r.Min), Math.Min(Math.Floor(r.Max), (int)o));
+        if (o is float) return Math.Max(r.Min, Math.Min(r.Max, (float)o));
+        if (o is double) return Math.Max((double)r.Min, Math.Min((double)r.Max, (double)o));
+        return o;
+    }
+
     static object Parse(Type t, string v)
     {
         v = v.Trim();
@@ -105,9 +117,15 @@ public abstract class ModConfig
         {
             if (t == typeof(bool)) { var l = v.ToLowerInvariant(); return l == "1" || l == "true" || l == "on" ? true : l == "0" || l == "false" || l == "off" ? (object)false : null; }
             if (t.IsEnum) { var n = Enum.GetNames(t).FirstOrDefault(x => x.Equals(v, StringComparison.OrdinalIgnoreCase)); return n == null ? null : Enum.Parse(t, n); }
-            if (t == typeof(int)) return int.Parse(v.TrimEnd('%', ' '), CultureInfo.InvariantCulture);
-            if (t == typeof(float)) return float.Parse(v, CultureInfo.InvariantCulture);
-            if (t == typeof(double)) return double.Parse(v, CultureInfo.InvariantCulture);
+            if (t == typeof(int)) { int i; return int.TryParse(v.TrimEnd('%', ' '), NumberStyles.Integer, CultureInfo.InvariantCulture, out i) ? (object)i : null; }
+            if (t == typeof(float) || t == typeof(double))
+            {
+                // "1.5"; also "1,5" as written where a comma is the decimal mark (never a thousands separator here).
+                if (v.IndexOf('.') < 0 && v.Count(ch => ch == ',') == 1) v = v.Replace(',', '.');
+                double d;
+                if (!double.TryParse(v.TrimEnd('%', ' '), NumberStyles.Float, CultureInfo.InvariantCulture, out d) || double.IsNaN(d) || double.IsInfinity(d)) return null;
+                return t == typeof(float) ? (object)(float)d : d;
+            }
             if (t == typeof(string)) return v;
         }
         catch { }
@@ -166,13 +184,13 @@ public abstract class ModConfig
         foreach (var f in Fields())
         {
             string v = settings.Get(f.Name);
-            object parsed = v == null ? null : Parse(f.FieldType, v);
+            object parsed = v == null ? null : Parse(f, v);
             if (parsed != null) f.SetValue(this, parsed);
         }
         Changes++;
-        try { OnChanged(); } catch (Exception ex) { Log.Write("mods: " + Mod.Id + ": OnChanged failed: " + ex); }
+        try { ModScope.As(Mod.Id, null, OnChanged); } catch (Exception ex) { ModErrors.Report(Mod.Id, "OnChanged", ex); }
         var c = Changed;
-        if (c != null) try { c(); } catch (Exception ex) { ModErrors.Report(Mod.Id, "settings changed", ex); }
+        if (c != null) try { ModScope.As(Mod.Id, null, c); } catch (Exception ex) { ModErrors.Report(Mod.Id, "settings changed", ex); }
 
     }
 

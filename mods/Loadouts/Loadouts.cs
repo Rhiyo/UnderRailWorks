@@ -21,8 +21,19 @@ public sealed class Loadouts : WorksMod
 
     public override void Load()
     {
-        openKey = Keybinds.Register(this, "open", "Loadouts", Keys.K);     // the game doesn't use K
-        for (int i = 1; i <= Sets; i++) wearKeys[i] = Keybinds.Register(this, "wear" + i, "Wear loadout " + i);
+        // Saves from before SaveData was the one store kept the sets in global variables: moved over once.
+        GameEvents.GameLoaded.Add(this, () =>
+        {
+            for (int i = 1; i <= Sets; i++)
+                foreach (var key in new[] { "set" + i, "name" + i })
+                {
+                    var was = Variables.Global.Get<string>("md_Loadouts_" + key, null);
+                    if (!string.IsNullOrEmpty(was) && !SaveData.Has(key)) SaveData.Set(key, was);
+                    Variables.Global.Remove("md_Loadouts_" + key);
+                }
+        });
+        openKey = Keybinds.Add(this, "open", "Loadouts", Keys.K);     // the game doesn't use K
+        for (int i = 1; i <= Sets; i++) wearKeys[i] = Keybinds.Add(this, "wear" + i, "Wear loadout " + i);
         UiEvents.HudCreated.Add(this, root => { hud = root; panel = null; rows = null; });
         UiEvents.HudDestroyed.Add(this, () => hud = null);     // back to the main menu
         GameEvents.Update.Add(this, seconds =>
@@ -37,7 +48,7 @@ public sealed class Loadouts : WorksMod
     Dictionary<EquipSlot, string> Get(int set)
     {
         var result = new Dictionary<EquipSlot, string>();
-        foreach (var part in (Data.Get("set" + set) ?? "").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+        foreach (var part in (SaveData.Get<string>("set" + set) ?? "").Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
         {
             var kv = part.Split('='); EquipSlot slot;
             if (kv.Length == 2 && Enum.TryParse(kv[0], out slot)) result[slot] = kv[1];
@@ -50,9 +61,9 @@ public sealed class Loadouts : WorksMod
         var p = World.Player;
         if (p == null || !p.IsCharacter) return;
         var all = p.Equipment.All;
-        Data.Set("set" + set, string.Join(";", all.Select(kv => kv.Key + "=" + kv.Value.Code)));
-        Data.Set("name" + set, string.Join(", ", all.Values.Select(i => i.Name)));
-        Notify.Log("Loadout " + set + " saved: " + (all.Count == 0 ? "nothing worn" : Data.Get("name" + set)) + ".");
+        SaveData.Set("set" + set, string.Join(";", all.Select(kv => kv.Key + "=" + kv.Value.Code)));
+        SaveData.Set("name" + set, string.Join(", ", all.Values.Select(i => i.Name)));
+        Notify.Log("Loadout " + set + " saved: " + (all.Count == 0 ? "nothing worn" : SaveData.Get<string>("name" + set)) + ".");
         Refresh();
     }
 
@@ -98,7 +109,7 @@ public sealed class Loadouts : WorksMod
         for (int i = 1; i <= Sets; i++)
         {
             int set = i;
-            var desc = Data.Get("name" + set);
+            var desc = SaveData.Get<string>("name" + set);
             rows.Add(set + ".  " + (string.IsNullOrEmpty(desc) ? "(empty)" : desc), null, UiRows.Button("Save", () => Save(set)), UiRows.Button("Wear", () => Wear(set)));
         }
         Ui.Resize(panel, panel.Width, rows.Bottom + 8);     // rows are as tall as the game's buttons at this interface size

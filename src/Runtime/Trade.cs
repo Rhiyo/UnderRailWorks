@@ -34,7 +34,7 @@ namespace UnderRailWorks
         [Preview("multiplayer: built for Co-op so far")] public bool SetStock(IEnumerable<Item> items)
         {
             var bag = StockBag;
-            if (bag == null) return false;
+            if (bag == null || items == null) return false;
             foreach (var i in bag.z2().ToList()) bag.z5(i);
             foreach (var i in items) bag.z3(i.Game, true);
             return true;

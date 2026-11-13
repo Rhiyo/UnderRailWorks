@@ -12,7 +12,7 @@ Use the game's own windows where one fits: they are right at every resolution an
 | a number in a range (how many) | `Ui.AskNumber` | the split-stack popup |
 | yes or no | `Ui.Confirm` | the message box |
 | one of a few answers | `Ui.Choose` | the message box |
-| a choice in a conversation | `Dialogs.Define` / `Dialogs.Patch` | the dialog window |
+| a choice in a conversation | `Dialogs.Add` / `Dialogs.Patch` | the dialog window |
 | a short message over a character | `Notify.Over` / `Notify.OverPlayer` | floating text |
 | a panel that stays open (a list, a ledger) | `Ui.Window` + `UiRows`, `Ui.List`... | (Works' own; fixed title bar: check other sizes) |
 | a line of text on the HUD | `HudText` | (Works' own) |
@@ -117,10 +117,12 @@ Values: `None, Hostile, Unfriendly, Neutral, Friendly, Ally`
 
 What a merchant charges: Markup is the multiplier so far (the game's: about 1.15-3.5, lower with Mercantile).
 
+- `float Markup { get; set; }`
+- `Character Merchant { get; }`
 
 ## Camera  _(class, Camera.cs)_
 
-- `static Vector2? Centre` — The map position the view is centred on (tiles), or null (no world view). Setting it moves the view there.
+- `static Vector2? Center` — The map position the view is centred on (tiles), or null (no world view). Setting it moves the view there.
 - `static float Zoom` — The zoom (1 = 100%).
 - `static float TileWidth` — Interface units on screen for half a tile, across and down, at the current zoom (0 without a world view).
 - `static float TileHeight`
@@ -129,6 +131,7 @@ What a merchant charges: Markup is the multiplier so far (the game's: about 1.15
 
 ## Cancellable  _(class, Cancellable.cs)_
 
+- `bool Cancel { get; set; }`
 
 ## Character  _(class, Catalogue.cs)_
 
@@ -173,19 +176,20 @@ What a merchant charges: Markup is the multiplier so far (the game's: about 1.15
 - `Color OutlineColor` — The colour holding Tab outlines it in (gold for the player, sandy brown if passive, else by attitude).
 - `bool IsCharacter` — A character (has character data), not a placed object such as a turret's base or a prop.
 - `bool CanTalk` — It can be talked to (has the dialog aspect the game's Talk uses).
-- `string Id`
+- `string Id` — The game's template id (null for a placed object, empty for a character spawned from a blueprint).
 - `string Key` — A stable key for remembering this character: its id, or its name when it has none (characters spawned from a blueprint have no template id).
+- `bool IsInWorld` — Still in the world: false once it was removed, or after a load or a new game (a wrapper held from before points at the old world: look the character up again).
 - `string Name`
 - `int Level`
 - `string Faction`
 - `bool Passive`
 - `bool IsDead`
 - `bool IsInCombat` — Its own "in combat" flag (efk.IsInCombat: a timer set by hostility, running down per turn). Note: in a fight the whole zone is turn-based and every character with an AI is in the turn order (crp.ahx registers each one when it becomes active), flag or not.
-- `void Kill()`
+- `void Kill()` — Nothing for one already dead (the game would run its death a second time: loot, scripts, mods' death events).
 - `bool CanSee(Character other)` — Its AI can see where other stands now: the game's own field of view (walls and all), as enemies notice the player (bm6.a(tile): in a fight the tiles the fight worked out it sees, else its vision's visible points). False for one without an AI, or in another area.
 - `float SightRange` — How far it sees (tiles): its sheet's SightRange, what its AI's vision uses.
 - `bool HasNoticed(Character other)` — Its AI has detected other (the game's own awareness: unaware -> suspicious -> detected; bm6.e). What makes characters join a fight. False for one without an AI.
-- `float Health`
+- `float Health` — Setting it on a dead character does nothing (it would get hit points and stay dead).
 - `float MaxHealth`
 - `IDictionary<string, Resistance> Resistances` — Damage threshold (flat, subtracted first) and resistance (percent) per damage type, as combat uses them (efk.Defense.af()[type]: du2.a() threshold, du2.c() resistance fraction). Keys: Mechanical, Heat, Cold, Electricity, Acid, Energy, Bio (the names Combat's damage parts use).
 - `int Detection` — How well it notices sneaking characters (compared with their Stealth).
@@ -261,7 +265,7 @@ What a merchant charges: Markup is the multiplier so far (the game's: about 1.15
 
 ## Commands  _(class, Commands.cs)_
 
-- `static void Add(WorksMod mod, string name, string help, Func<string[], string> run)` — A console command: run gets the words after the name (quotes keep spaces) and returns a line to print (or null). Name it after the mod to avoid clashes ("mymod.heal"); the game's own commands win otherwise.
+- `static void Add(WorksMod mod, string name, string help, Func<string[], string> run)` — A console command: run gets the words after the name (quotes keep spaces) and returns a line to print (or null). Name it after the mod ("mymod.heal"): mods' commands are tried before the game's, so a plain name could hide one of the game's; a name another mod already uses replaces it (logged).
 - `static void OpenConsole()` — Opens the game's console (as its ` key does; in game only).
 - `static void CloseConsole()`
 - `static void Print(string text)` — Prints a line in the console.
@@ -282,6 +286,10 @@ A condition on game state, for options, branches and lines.
 
 ## Container  _(class, Containers.cs)_
 
+- `override bool Equals(object obj)` — Two wrappers of the same game object are equal (Works makes a new one on each call): fine as dictionary keys.
+- `override int GetHashCode()`
+- `static bool operator ==(Container a, Container b)`
+- `static bool operator !=(Container a, Container b)`
 - `string EntityId` — The game's id for its object (kept in saves; World.ByEntityId's kind of id).
 - `MapObject Entity`
 - `bool Searched` — Opened before (the game's Inspected flag).
@@ -299,6 +307,8 @@ A condition on game state, for options, branches and lines.
 
 ## ContainerOpen  _(class, Cancellable.cs)_
 
+- `Character Character { get; }`
+- `Container Container { get; }`
 
 ## Containers  _(class, Containers.cs)_
 
@@ -316,6 +326,7 @@ The game's content, listed for modders: item paths with their codes and names, c
 
 ## CraftAttempt  _(class, Cancellable.cs)_
 
+- `string Blueprint { get; }`
 
 ## Crafted  _(class, Activities.cs)_
 
@@ -415,9 +426,6 @@ The defense values the character sheet's Defense tab shows (what StatBonus.Dodge
 - `DialogLine Option(string text, string goTo, Condition when, params Outcome[] then)`
 - `DialogLine OptionGreyed(string text, string goTo, Condition enabledWhen, params Outcome[] then)` — The same, but shown greyed out (not hidden) while the condition fails, as the game shows failed checks.
 - `DialogLine Next(string goTo)` — No options: the game shows Continue and goes on to this line (Dialog.End: closes).
-- `string Text, GoTo`
-- `Condition When, EnabledWhen`
-- `Outcome[] Effects`
 
 ## DialogPatch  _(class, DialogPatches.cs)_
 
@@ -432,17 +440,15 @@ The defense values the character sheet's Defense tab shows (what StatBonus.Dodge
 - `static string WriteDescription(string dialog)` — Writes the outline into the game folder; returns the file's path.
 - `static void Patch(WorksMod mod, string dialog, Action<DialogPatch> patch)` — Adds to a stock dialog each time it opens. Several mods may patch the same dialog (in load order).
 - `static IList<string> StockLines(string dialog)` — The NPC lines of a stock dialog (English text), for finding where to patch. Loads it from disk.
-- `static void Define(WorksMod mod, string name, Action<DialogBuilder> build)` — A conversation, by name (prefix it with the mod's id). The builder runs each time it is opened, so it may read game state (but conditions are the cleaner way).
-- `static bool IsDefined(string name)`
+- `static void Add(WorksMod mod, string name, Action<DialogBuilder> build)` — A conversation, by name (prefix it with the mod's id). The builder runs each time it is opened, so it may read game state (but conditions are the cleaner way).
+- `static bool Exists(string name)`
 - `static void Override(Character npc, string name)` — Talking to this character opens the named conversation (Works' or the game's). Kept in memory only: the character's own dialog stays as saved.
 - `static bool Start(Character npc, string name)` — Opens a conversation between the player and npc now (false if the game refuses: combat, hostile, one is open).
-- `WorksCondition(Condition condition)`
-- `override bool cw(bq8 context, bq8 temp)`
-- `WorksAction(Outcome effect)`
-- `override int d5(bq8 context, bq8 temp)`
 
 ## DialogStart  _(class, Cancellable.cs)_
 
+- `string Name { get; set; }`
+- `Character With { get; }`
 
 ## DisarmOutcome  _(enum, Traps.cs)_
 
@@ -477,6 +483,8 @@ The game's draw context (cp9) for the frame.
 
 The player putting an item into a gear or quick slot (Cancel: it stays where it was). The game's own scripted equips (NPC loadouts, Items.ToQuickSlot) aren't asked.
 
+- `Character Character { get; }`
+- `Item Item { get; }`
 
 ## EquipChange  _(class, Equipment.cs)_
 
@@ -501,7 +509,7 @@ Values: `Helmet, Armor, Belt, Boots, Shield, PrimaryWeapon, SecondaryWeapon`
 
 - `Rectangle Tiles`
 - `bool ToOtherZone`
-- `Color GameColour` — The colour the game draws its tiles in (a23): blue to another area, red to another map.
+- `Color GameColor` — The colour the game draws its tiles in (a23): blue to another area, red to another map.
 
 ## Exits  _(class, Party.cs)_
 
@@ -569,7 +577,7 @@ One of the game's sprite batches (ob).
 - `static readonly Hook<Action<StatusChange>> StatusApplying = new Hook<Action<StatusChange>>("StatusApplying")` — A status effect is about to be applied (set Cancel to refuse it), was applied, or was removed (also on expiry).
 - `static readonly Hook<Action<StatusChange>> StatusApplied = new Hook<Action<StatusChange>>("StatusApplied")`
 - `static readonly Hook<Action<StatusChange>> StatusRemoved = new Hook<Action<StatusChange>>("StatusRemoved")`
-- `static readonly Hook<Action<int>> LevelledUp = new Hook<Action<int>>("LevelledUp")` — The player levelled up (the level-up screen closed without Cancel): the new level.
+- `static readonly Hook<Action<int>> LeveledUp = new Hook<Action<int>>("LeveledUp")` — The player levelled up (the level-up screen closed without Cancel): the new level.
 - `static readonly Hook<Action<Reload>> Reloading = new Hook<Action<Reload>>("Reloading")` — A character about to reload (Cancel: it doesn't; the action ends without AP spent on loading).
 - `static readonly Hook<Action<Reload>> Reloaded = new Hook<Action<Reload>>("Reloaded")` — A reload went through (ammo loaded).
 - `static readonly Hook<Action<PlayerOrder>> PlayerOrdering = new Hook<Action<PlayerOrder>>("PlayerOrdering")` **(preview)**
@@ -694,7 +702,7 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 
 ## Icons  _(class, Assets.cs)_
 
-- `static string Register(WorksMod mod, string id, string file)` — A new icon name for a picture in the mod's folder (drawn scaled into the icon's square): use it wherever the game takes an icon name.
+- `static string Add(WorksMod mod, string id, string file)` — A new icon name for a picture in the mod's folder (drawn scaled into the icon's square): use it wherever the game takes an icon name.
 - `static void SetItemIcon(WorksMod mod, string itemCode, string file)` — Items with this code show the picture as their icon (inventory, quick slots, trade, containers, tooltips).
 
 ## IncomingDamage  _(class, Combat.cs)_
@@ -726,7 +734,7 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 
 ## Interface  _(class, Interface.cs)_
 
-- `static float Scale` — Screen pixels per interface unit (Works' interface scale; 1 without it).
+- `static float PixelsPerUnit` — Screen pixels per interface unit (Works' interface scale; 1 without it). Not Ui.Scale: that is the game's size tier (Small 1, Large 1.5, Huge 1.75), which the layout already includes.
 - `static Rectangle ToPixels(Rectangle r)` — An area in interface units (where UI elements and the world's layers are laid out) in screen pixels.
 - `static bool CapturingSaveScreenshot(Microsoft.Xna.Framework.Graphics.GraphicsDevice g)` — The game is drawing a save's screenshot right now (into a picture, not the screen).
 
@@ -739,14 +747,18 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 - `bool Add(string path, int stacks = 1, bool notify = true)` — Adds stacks of an item, by path ("currency\\StygianCoin", "armor\\gasMask"), as the game's GiveItemsJob does (for the player: lootable, and the "item received" line). False if the path is unknown.
 - `int Take(string code, int stacks = 1, bool notify = true)` — Takes stacks of an item by code (bag first, then gear, as the game's RemoveItemFromPlayerAction). Returns how many were taken.
 - `int Money` — Charons (Stygian coins).
-- `void AddMoney(int amount, bool notify = true)`
-- `bool TakeMoney(int amount, bool notify = true)`
+- `bool AddMoney(int amount, bool notify = true)`
+- `bool TakeMoney(int amount, bool notify = true)` — False (nothing taken) for an amount not above 0, or more than the character has.
 
 ## IPlayerScreens  _(interface, PlayerScreens.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
 
 
 ## Item  _(class, Characters.cs)_
 
+- `override bool Equals(object obj)` — Two wrappers of the same game object are equal (Works makes a new one on each call): fine as dictionary keys.
+- `override int GetHashCode()`
+- `static bool operator ==(Item a, Item b)`
+- `static bool operator !=(Item a, Item b)`
 - `string Code`
 - `string Name`
 - `int Stacks`
@@ -769,15 +781,20 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 
 ## ItemCodes  _(class, Characters.cs)_
 
+- `static string Charons = currency.sc`
 
 ## ItemDefinition  _(class, ItemDefinitions.cs)_
 
 An item's definition: what every item of its kind shares (a library definition), or one item's own copy.
 
+- `override bool Equals(object obj)` — Two wrappers of the same game object are equal (Works makes a new one on each call): fine as dictionary keys.
+- `override int GetHashCode()`
+- `static bool operator ==(ItemDefinition a, ItemDefinition b)`
+- `static bool operator !=(ItemDefinition a, ItemDefinition b)`
 - `string Code`
 - `string Name`
 - `string Description`
-- `string Icon` — The icon's name ("Atlas.cell" or an Icons.Register name).
+- `string Icon` — The icon's name ("Atlas.cell" or an Icons.Add name).
 - `double? Value`
 - `double Weight`
 - `int MaxStack`
@@ -809,18 +826,21 @@ Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medic
 - `static string Name(string path)`
 - `static ItemDefinition Definition(string path)` — The shared definition of the items made from path (loaded if needed). Edits here reach every such item and last until the game closes; use EditDefinition to apply them every start.
 - `static void EditDefinition(WorksMod mod, string path, Action<ItemDefinition> edit)` — Edits path's shared definition whenever the game loads it (and now, if it has). Never saved.
-- `static string Define(WorksMod mod, string id, string basePath, Action<ItemDefinition> edit)` — A new kind of item: a copy of basePath's definition, edited, with the code "works.<mod>.<id>". Returns its path ("works\<mod>\<id>") for Inventory.Add, stores, loot and content packs. See the file's header on saves.
+- `static string Add(WorksMod mod, string id, string basePath, Action<ItemDefinition> edit)` — A new kind of item: a copy of basePath's definition, edited, with the code "works.<mod>.<id>". Returns its path ("works\<mod>\<id>") for Inventory.Add, stores, loot and content packs. See the file's header on saves.
 - `static void ModifyTooltip(WorksMod mod, Action<Item, Tooltip> edit)` — Lines added to item tooltips (every window that shows them).
 - `static IList<string> All(ItemKind? kind = null)` — Every item path in the game's data (and the mods' defined ones), optionally of one kind.
-- `static IList<string> Defined` — Every new item's path the mods defined.
+- `static IList<string> Added` — Every new item's path the mods defined.
 - `static Item Hovered` — The item under the mouse in any of the game's windows (an item cell: the game's `ta` controls), or null.
 
 ## ItemTake  _(class, Cancellable.cs)_
 
+- `Character Character { get; }`
+- `Container Container { get; }`
+- `Item Item { get; }`
 
 ## ItemUse  _(class, Activities.cs)_
 
-- `Character User`
+- `Character Character`
 - `Item Item`
 - `string Action` — The capability's name ("Use", "Throw", ...).
 - `object Target` — What it is used on: a Character, an Item, or null (a tile, itself).
@@ -830,7 +850,7 @@ Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medic
 - `string Label`
 - `Keys DefaultKey`
 - `Keys Key` — The key the player chose (Keys.None: unbound).
-- `bool Pressed` — True on the update the key went down (not while typing in a text box: the game's own hotkeys don't fire then either).
+- `bool Pressed` — True on the update the key went down (not while typing in a text box: the game's own hotkeys don't fire then either). Not while typing, nor while the Options window is open (binding a game key there mustn't run a mod's action).
 - `string ModId`
 - `string KeyId`
 - `bool Down`
@@ -839,8 +859,8 @@ Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medic
 
 - `static event Action<Keybind> NeedsTheRealGame` **(preview)** — On a copy of another game (Simulation.IsMirror): a mod key the player pressed whose handler then tried to change the world (Works refused it here). For a multiplayer mod to do it in the real game (Replay there). Keys that only change this screen (a window, a minimap) aren't reported.
 - `static bool Replay(string modId, string keyId, Character who)` **(preview)** — Runs the mod's Update handlers once (0 s passed) with that keybind pressed and who as the player (World.Player): a key another player pressed on their machine, done here (the real game).
-- `static Keybind Register(WorksMod mod, string id, string label)` — Registers an action (call from Load). id: unique within the mod; label: what the Controls tab shows after the mod's name ("Minimap: Show/hide"): keep it short, the column is narrow. The player's key is kept in the mod's settings.ini (key.<id>).
-- `static Keybind Register(WorksMod mod, string id, string label, Keys defaultKey)` — (Not an optional parameter: an enum default value makes the build's retargeting resolve XNA itself.)
+- `static Keybind Add(WorksMod mod, string id, string label)` — Registers an action (call from Load). id: unique within the mod; label: what the Controls tab shows after the mod's name ("Minimap: Show/hide"): keep it short, the column is narrow. The player's key is kept in the mod's settings.ini (key.<id>).
+- `static Keybind Add(WorksMod mod, string id, string label, Keys defaultKey)` — (Not an optional parameter: an enum default value makes the build's retargeting resolve XNA itself.)
 - `static IList<Keybind> Of(string modId)` — A mod's keys (for its settings page).
 - `static string Name(Keys key)` — A key's name as the game writes it.
 
@@ -911,6 +931,10 @@ The view a layer is drawn for (bkx), passed through to DrawAsGame.
 
 ## Lock  _(class, Containers.cs)_
 
+- `override bool Equals(object obj)` — Two wrappers of the same game object are equal (Works makes a new one on each call): fine as dictionary keys.
+- `override int GetHashCode()`
+- `static bool operator ==(Lock a, Lock b)`
+- `static bool operator !=(Lock a, Lock b)`
 - `bool Locked`
 - `LockKind Kind`
 - `int Difficulty` — The skill it needs (lockpicking or hacking).
@@ -970,7 +994,7 @@ Loot just rolled for a container or a character (once per entity per game). Add 
 - `int X`
 - `int Y`
 - `string Label`
-- `Color Colour`
+- `Color Color`
 
 ## MapObject  _(struct, DrawApi.cs)_
 
@@ -1029,19 +1053,6 @@ A map tile (ak1), as the world pass hands it to the tile-extras step.
 - `virtual void OnChanged()` — After Accept wrote new values.
 - `void Reload()` — Reads settings.ini again (after Accept wrote it, or after the mod changed values with Settings.Set).
 
-## ModData  _(class, Progress.cs)_
-
-A mod's own data for the current game, kept with the save as plain values (the game's global variables, named "md_<mod>_<key>"): saved and loaded with the game, ignored by the stock game. For structured data, store JSON text.
-
-- `bool Available`
-- `string Get(string key, string fallback = null)`
-- `int GetInt(string key, int fallback = 0)`
-- `bool GetBool(string key, bool fallback = false)`
-- `void Set(string key, string value)`
-- `void Set(string key, int value)`
-- `void Set(string key, bool value)`
-- `void Remove(string key)`
-
 ## ModDependency  _(class, ModLoader.cs)_
 
 - `string Id`
@@ -1058,6 +1069,7 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `FeatRequirements Requires`
 - `StatBonus[] Bonuses`
 - `event Action<Character> OnGain, OnLose`
+- `Action<Character> OnGain`
 
 ## ModInfo  _(class, ModLoader.cs)_
 
@@ -1110,24 +1122,12 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `List<ModInfo> Order; public bool OrderChanged` — The load order as shown (loaded mods, top = first), and each card's controls, height and title line.
 - `List<CardParts> Cards = new List<CardParts>()`
 - `cvh Page`
-- `static void Register(string mod, Action<ModPage> build, Action changed = null)`
+- `Dictionary<ModInfo, avo> States = new Dictionary<ModInfo, avo>();     // each card's status (Loaded, Off at restart...)`
+- `avo ProfileLabel`
 
 ## ModPage  _(class, ModOptions.cs)_
 
-- `string Key`
-- `abstract string Value`
-- `string Was`
-- `abstract void Show(string value)`
-- `cao Box`
-- `override string Value`
-- `override void Show(string v)`
-- `aw9 Combo; public List<FixChoice> Items`
-- `override string Value`
-- `override void Show(string v)`
 - `oz Slider`
-- `double Scale = 1;     // a decimal setting: the game's slider holds value / Scale as whole numbers`
-- `override string Value`
-- `override void Show(string v)`
 - `void Heading(string text)` — A heading inside the mod's group.
 - `void Subsection(string text)` — An indented subsection: its heading and the rows after it, up to the next heading or subsection.
 - `void Toggle(string key, string label, bool fallback)`
@@ -1153,12 +1153,12 @@ A mod's own data for the current game, kept with the save as plain values (the g
 ## Mods  _(class, Framework.cs)_
 
 - `static void Provide(WorksMod mod, object api)` — Publishes this mod's API object (call in Load). Others get it by the mod's id.
-- `static T Api<T>(string modId) where T : class` — Another mod's API as an interface or class both mods compile against (a small shared DLL, or the providing mod's own DLL as a reference). Null if the mod isn't loaded or provides none (call from PostLoad or later).
+- `static T Api<T>(string modId) where T : class` — Another mod's API. T is best a public interface in your own mod listing the members you use (same names and types as the other mod's API object): Works makes an object implementing it that forwards to the API, so neither mod references the other's DLL (as SMAPI's GetApi). T may also be the API's own type, when you reference its DLL. Null if the mod isn't loaded, provides none, or the interface doesn't fit (logged once, naming the member). Call from PostLoad or later; after the other mod reloads, ask again.
 - `static object Call(string modId, string method, params object[] args)` — Calls a public method of another mod's API by name, without referencing its DLL (tModLoader's Mod.Call). Returns its result, or null if the mod, its API or the method is missing.
 - `static Hook<Action<object>> Event(string name)` — A named event any mod can raise and handle (e.g. "Bounties.Completed"), with one object of data.
 - `static void Raise(string name, object data = null)`
 - `static string[] Running(bool shared = false)` — The mods running now, as "id@version" in load order, for comparing with another game (a save's list, another player's): shared = only those every player of a multiplayer game needs (mod.json "multiplayer": "both").
-- `static string[] Differences(IEnumerable<string> theirs, IEnumerable<string> mine, string theirName = "they have", string myName = "you have")` — How the mods "theirs" (Running's form) differ from "mine", as lines for a player: missing here, only here, other versions. Empty: the same mods and versions (order isn't compared: it comes from the mods themselves).
+- `static string[] Differences(IEnumerable<string> theirs, IEnumerable<string> mine, string theirName = "they have", string myName = "you have")` — How the mods "theirs" (Running's form) differ from "mine", as lines for a player: missing here, only here, other versions. Empty: the same mods and versions (order isn't compared: in co-op the host's game is the one that runs).
 
 ## ModSettings  _(class, ModSettings.cs)_
 
@@ -1169,6 +1169,7 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `bool Bool(string key, bool fallback)`
 - `int Int(string key, int fallback, int min, int max)`
 - `void Set(string key, string value)` — Changes the value now and in the file.
+- `string Mod`
 
 ## ModSkill  _(class, CustomStats.cs)_
 
@@ -1187,10 +1188,6 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `void Apply(Character who, int turns)` — Puts it on a character for turns (5 s each outside combat); applying again refreshes it.
 - `bool Has(Character who)`
 - `void Remove(Character who)`
-
-## ModStatuses  _(class, ModStatus.cs)_
-
-- `static ModStatus Define(WorksMod mod, string id, string name, string description, string icon, params StatBonus[] bonuses)` — icon: an icon name the game knows ("Status.Poison", "Status.PsiBoost", "Status.5"..., or one from Icons.Register).
 
 ## MouseButton  _(enum, Ui.cs)_
 
@@ -1270,7 +1267,6 @@ Something a line or option does when reached.
 
 Creature outlines (eg0 builds them while Tab or the reverse-highlight key is held, or a creature is hovered, or in combat with Always). A mod can ask for outlines for every creature Tab would outline, all the time and during zone transitions too (Request); those extra outlines are hidden: Works takes them out of the game's shader pass, and mods draw them as they like (e.g. only where the creature is covered). The game's own outlines stay as they are.
 
-- `void RemoveOwner(string mod)`
 - `static bool GameOff` — The game's Character Outlines option is "Never" (no outlines at all, as with Tab).
 - `static void Request(WorksMod mod, Func<bool> wanted)` — wanted: checked each frame (e.g. "my effect is on").
 - `static void PickThrough(WorksMod mod, Func<bool> wanted)` — Hidden outlines still pick their creature, as Tab's outlines do: the game checks outline layers before the world's and keeps their creature even when a wall comes next (a7m's hit test), so a character behind scenery can be hovered and clicked without Tab. Ask with Request too (no outline, nothing to pick). wanted: checked each frame.
@@ -1293,7 +1289,7 @@ A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
 - `static IList<Character> Members` — The player and the characters added (living, in this zone).
 - `static Character Acting` — The party member whose action is running (Party.As): World.Player is that character meanwhile, so mods written for one player do for whoever acted what they'd do for the player. Null: the player's own.
 - `static void As(Character who, Action a)` — Runs a with who as the acting player (World.Player), back after (nests).
-- `static void LevelledUp(Character who, int level)` **(preview)** — A multiplayer mod: who reached a level on another machine; GameEvents.LevelledUp runs here with them as the player.
+- `static void LeveledUp(Character who, int level)` **(preview)** — A multiplayer mod: who reached a level on another machine; GameEvents.LeveledUp runs here with them as the player.
 - `static void Add(WorksMod mod, Character c)`
 - `static void Remove(Character c)`
 - `static bool Contains(Character c)`
@@ -1398,7 +1394,7 @@ Values: `Ask, AskNumber, Choose`
 
 ## Quests  _(class, Content.cs)_
 
-- `static void Define(WorksMod mod, string id, string group, string journalText, int xp = 0, int oddityXp = 0)` — A new quest: id (unique: prefix it with the mod's id), the journal heading it's listed under (the game uses area names: "South Gate Station"), its journal text, and the XP completing it gives (classic and oddity systems). Call it from Load: the game resolves quest names once per save it loads.
+- `static void Add(WorksMod mod, string id, string group, string journalText, int xp = 0, int oddityXp = 0)` — A new quest: id (unique: prefix it with the mod's id), the journal heading it's listed under (the game uses area names: "South Gate Station"), its journal text, and the XP completing it gives (classic and oddity systems). Call it from Load: the game resolves quest names once per save it loads.
 - `static bool Start(string id, bool announce = true)` — As the game's dialogs and scripts do: announce = the chat line ("New journal entry: ...") and, on completion, the XP. Each returns whether the quest changed state.
 - `static bool Complete(string id, bool announce = true)`
 - `static bool Fail(string id, bool announce = true)`
@@ -1445,6 +1441,8 @@ The first handler that returns true replaces the game's step.
 
 ## Resistance  _(struct, World.cs)_
 
+- `int Percent { get; set; }`
+- `int Threshold { get; set; }`
 
 ## SaveData  _(class, Framework.cs)_
 
@@ -1471,6 +1469,7 @@ The first handler that returns true replaces the game's step.
 
 What the player gets for selling: Factor is the multiplier so far (the difficulty's sold item value).
 
+- `float Factor { get; set; }`
 
 ## Shot  _(class, ShotBreakdown.cs)_
 
@@ -1550,6 +1549,7 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 
 ## StatusEffects  _(class, Hud.cs)_
 
+- `static ModStatus Add(WorksMod mod, string id, string name, string description, string icon, params StatBonus[] bonuses)` — A status effect of the mod's own (ModStatus: its stat bonuses, ticks, removal). icon: an icon name the game knows ("Status.Poison", "Status.PsiBoost", "Status.5"..., or one from Icons.Add).
 - `static IList<string> Codes` — Every status effect code Works can create (built on first use, from the game's effect types).
 - `static bool Exists(string code)`
 - `static ApplyResult Apply(Character c, string code, double turns = 0, bool refresh = false)` — Applies a fresh instance of an effect (by code) as the game's own effect application does (br5.a). turns: its duration (0: the effect's own). Only stock effect types: they are saved with the character.
@@ -1635,6 +1635,7 @@ What a tile holds, as a map would show it.
 
 ## TradeStart  _(class, Cancellable.cs)_
 
+- `Character Merchant { get; }`
 
 ## Translations  _(class, Framework.cs)_
 
@@ -1677,6 +1678,8 @@ A disarm attempt about to be decided: change Difficulty for this attempt only (t
 
 A character's trap detection score (the game's: Perception and Traps skill), against each trap's difficulty.
 
+- `int Score { get; set; }`
+- `Character Character { get; }`
 
 ## TrapSpotted  _(class, Traps.cs)_
 
@@ -1753,11 +1756,6 @@ What a custom element draws with, during its draw: everything in interface units
 - `void Fill(Rectangle area, Color colour)`
 - `void Text(string text, int x, int y, Color colour)` — Text in the interface's default font, its top left at (x, y).
 - `void Frame(Rectangle r, Color colour)` — A one-unit frame around an area.
-- `override bool iz(Microsoft.Xna.Framework.Input.MouseState A_0)`
-- `override void iv(e6d time, cp9 context)`
-- `Microsoft.Xna.Framework.Color Background = new Microsoft.Xna.Framework.Color(12, 12, 12, 225)`
-- `Microsoft.Xna.Framework.Color Border = new Microsoft.Xna.Framework.Color(181, 92, 0)`
-- `override void iv(e6d time, cp9 context)`
 
 ## UiChoice  _(class, UiWidgets.cs)_
 
@@ -1850,7 +1848,7 @@ Rows of text with buttons at their right end, in an area of a panel or window (a
 
 ## UiWorldView  _(class, UiWorldView.cs)_
 
-- `Vector2 Centre` — The map position it is centred on (tiles). Setting it looks there.
+- `Vector2 Center` — The map position it is centred on (tiles). Setting it looks there.
 
 ## Variables  _(class, Content.cs)_
 
@@ -1861,10 +1859,10 @@ A set of named game variables. Values are bool, int, float or string only: the s
 - `bool Available` — There is a game loaded to read and write.
 - `bool Has(string name)`
 - `T Get<T>(string name, T fallback = default(T))`
-- `void Set(string name, bool value)`
-- `void Set(string name, int value)`
-- `void Set(string name, float value)`
-- `void Set(string name, string value)`
+- `bool Set(string name, bool value)` — False when there is nothing to set it on (no game loaded: the main menu).
+- `bool Set(string name, int value)`
+- `bool Set(string name, float value)`
+- `bool Set(string name, string value)`
 - `void Remove(string name)`
 - `Dictionary<string, object> Snapshot()` **(preview)** — Every variable with a plain value (bool, int, float, string), by name.
 - `void SetValue(string name, object value)` **(preview)** — Sets a plain value (bool, int, float, string) as Snapshot gives it.
@@ -1873,6 +1871,8 @@ A set of named game variables. Values are bool, int, float or string only: the s
 
 A character (the player or an NPC's AI) about to switch between its primary and secondary weapon.
 
+- `bool ToSecondary { get; }`
+- `Character Character { get; }`
 
 ## Window  _(enum, Hud.cs)_
 
@@ -1902,12 +1902,12 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `ModInfo Info`
 - `string Id`
 - `ModLog Log` — Lines in UnderRailWorks.log, marked with the mod's id (with Log=1 in UnderRailWorks.ini; errors always).
-- `ModData Data` — This mod's plain values for the current game, inside the game's own save (its global variables). For anything else (lists, dictionaries, more than a few values) use SaveData.Of(mod), kept next to the save.
 - `ModSettings Settings` — The mod's settings.ini as raw keys (defaults: SettingsDefaults, written on first start). GetConfig is the typed way, with the mod's page in Options -> Mods.
 - `T GetConfig<T>() where T : ModConfig` — The mod's ModConfig class (ModConfig.cs), loaded from settings.ini on first use.
 - `virtual void Load()`
 - `virtual void PostLoad()`
 - `virtual void Unload()`
+- `string SettingsDefaults { get; }`
 
 ## WorksSettings  _(class, Interface.cs)_
 
@@ -1944,11 +1944,11 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static Character Player` — The player's character, as the game finds it (cnk.aqu(): the player's data au2, its entity).
 - `static IList<Character> Visible` — The characters the game drew in the last frame, the player excepted: the ones in sight (stealthed or out of sight characters aren't drawn). Updated at the end of each world pass.
 - `static bool FogOfWar` — The game's fog of war is on: undiscovered parts are hidden under the shroud.
-- `static readonly Color AreaExitColour = new Color(0, 0, 150), ZoneExitColour = new Color(150, 0, 0)`
+- `static readonly Color AreaExitColor = new Color(0, 0, 150), ZoneExitColor = new Color(150, 0, 0)`
+- `static Color ZoneExitColor`
 
 ## WorldDraw  _(class, WorldDraw.cs)_
 
-- `delegate bool OffsetHandler(out Vector2 from)`
 - `static readonly Hook<Action<WorldView, DrawContext, Layer, bool>> LayerStarting = new Hook<Action<WorldView, DrawContext, Layer, bool>>("LayerStarting")` — Start of a7m.a(cp9, a2f, bool shaderPass, bkx): each layer the world pass draws, in drawing order (back to front).
 - `static readonly ReplaceHook<Func<Layer, DrawContext, LayerView, bool>> DrawLayer = new ReplaceHook<Func<Layer, DrawContext, LayerView, bool>>("DrawLayer")` — The layer is drawn (a2f.f3): return true to draw it yourself instead.
 - `static readonly ReplaceHook<Func<WorldView, DrawContext, MapTile, bool>> DrawTileExtras = new ReplaceHook<Func<WorldView, DrawContext, MapTile, bool>>("DrawTileExtras")` — A tile's extras after its floor (a7m.b(cp9, ak1): tile grid, transition tiles...): return true to draw them yourself (TileExtrasStep draws them the game's way).
@@ -1982,7 +1982,7 @@ The world view (a7m): the map's drawing for one frame.
 ## XpGain  _(class, Progression.cs)_
 
 - `bool Oddity` — The game uses the Oddity experience system (XP from studying oddities and quests, none for kills).
-- `Character Who` — Who gets it (the player, or another character with a player sheet), and why, as the game says it ("studying an oddity: ...", a quest's reason, null for kills).
+- `Character Character` — Who gets it (the player, or another character with a player sheet), and why, as the game says it ("studying an oddity: ...", a quest's reason, null for kills).
 - `string Reason`
 - `bool FromOddity` — For studying an oddity.
 - `int Amount` — What the player is about to get (Classic: before the game's intelligence bonus).
@@ -1997,6 +1997,10 @@ The world view (a7m): the map's drawing for one frame.
 
 The player about to leave the zone (an exit, a door between maps, a script, World.Travel). To: the destination zone's id, Entry: the entry point there.
 
+- `string Entry { get; }`
+- `string From { get; }`
+- `string To { get; }`
+- `Character Character { get; }`
 
 ## Zones  _(class, ZoneState.cs)_
 

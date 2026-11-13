@@ -111,8 +111,8 @@ public sealed class MyMod : WorksMod
 A character, a conversation and a quest (the whole of `examples/TheStranger`, built without the game):
 
 ```csharp
-Quests.Define(this, "stranger_debt", "South Gate Station", "A stranger says I owe him 10 charons.", xp: 75);
-Dialogs.Define(this, "stranger/talk", d =>
+Quests.Add(this, "stranger_debt", "South Gate Station", "A stranger says I owe him 10 charons.", xp: 75);
+Dialogs.Add(this, "stranger/talk", d =>
 {
     d.Line("start", "You owe me 10 charons.")
         .Option("Here.", "paid", Condition.Code(() => World.Player.Inventory.Money >= 10),

@@ -213,7 +213,7 @@ through two example mods. Mods see only Works' types; the game's are inside.
   `character.Variables`; primitives only.
 - **Quests**: the game defines quests in code (`b4m`: `ao5.a(group, name, xp, oddityXp, text)`), has no stages (a
   multi-step quest is several quests), runs them through its quest controller (`ek2`: start, complete with XP, fail).
-  `Quests.Define/Start/Complete/Fail/Advance/State/All/Active...`; the journal shows mod quests under their group.
+  `Quests.Add/Start/Complete/Fail/Advance/State/All/Active...`; the journal shows mod quests under their group.
 - **Text**: `Text.Get("category/key")`, `Text.Set(mod, ...)` (a hook at the start of `qv.b`: Works' text first, in every
   language, in memory only). **Notify**: `Notify.Log` (the chat line), `Notify.OverPlayer` (floating text).
 - **Dialogs** (`Dialogs.cs`): a builder (lines, options with `Condition`s and `Outcome`s, greyed options, branches,
@@ -264,7 +264,7 @@ Researched from the game's code (specs with file:line evidence), built in `Comba
   box on the HUD kept it) no key reached the game. Tested: typing "kkk" doesn't fire the minimap's K; after a click
   away K and I work. (Test trap: a click on the world at some spots leaves the game without keys in the headless
   runner; click the bottom HUD edge with focus first.)
-- **Key bindings go through the game's Controls tab** (Nov 2026; every mod key): `Keybinds.Register(mod, id, label,
+- **Key bindings go through the game's Controls tab** (Nov 2026; every mod key): `Keybinds.Add(mod, id, label,
   defaultKey)` -> `Keybind` (Key, Pressed, Down). The Controls list (ar4) holds Hotkey values and builds a row (cbx)
   per value; mod actions get Hotkey values from 100000 up, appended before the rows are built (prefix on ar4.a(size));
   Works answers their label (d1o.c, "Minimap: Show/hide") and key (d1o.a), and saves them on Accept in the mod's
@@ -338,10 +338,10 @@ equipment, loot, stealth, AI, crafting, dialog patches, a content registry): see
 - `GameEvents.StatusApplying` (set `Cancel` to refuse the effect), `StatusApplied`, `StatusRemoved` (removed, expired
   or replaced): `br5.a(els, ...)` and `br5.c(els)`, which every removal goes through. Tested: Agility Boost applied,
   expired 15 s later (3 turns out of combat).
-- `GameEvents.LevelledUp(level)`: the character screen in level-up mode (`iw`, `a9m.b`) closed with Accept
+- `GameEvents.LeveledUp(level)`: the character screen in level-up mode (`iw`, `a9m.b`) closed with Accept
   (`amm.a(cku.a)`, the base class's close-with-result; Harmony must patch it there, not on iw). Tested.
-- `WorksMod.Data`: the mod's own values for the current game, saved with it as plain global variables
-  (`md_<mod>_<key>`), so the stock game loads the save. Tested: quicksave at 2, quickload restores 2.
+- (`WorksMod.Data`, plain values in the save's global variables `md_<mod>_<key>`, was removed before the first release
+  (Nov 2026): one store for a mod's save data, `SaveData`. Unreleased builds' `md_` variables stay in old saves, unread.)
 - `ContentIndex.Write()`: `UnderRailWorks-content.txt` with every item path = code (name), blueprint, store, dialog
   and status effect code (about 4,000 lines), for writing content packs and mods.
 - Hook groups now install separately: one that fails (moved by a game update) leaves the others working (a failing
@@ -498,7 +498,7 @@ away. Rule: verify a hit-test change with a sweep over a target that doesn't mov
   version call `FixStartup.Run` by that name and get its "patch again" message instead of a crash.
 - Public data on API types are properties, not fields (a field can't become a property later without breaking
   every mod built against it). Mods' own `ModConfig` settings stay fields (they are the mod's, read by attribute).
-- `Interface.Scale` / `ToPixels` / `CapturingSaveScreenshot` and `WorksSettings.Get` replace the internals the
+- `Interface.PixelsPerUnit` / `ToPixels` / `CapturingSaveScreenshot` and `WorksSettings.Get` replace the internals the
   UnderRailFixes mod used.
 - `WorksApi.Version` is 0.9: while 0.x a mod must declare the same minor ("works": "0.9").
 
@@ -507,7 +507,6 @@ all are the game's own global variables with plain values, which the stock game 
 
 | Variable | Written by | Value |
 |---|---|---|
-| `md_<modId>_<key>` | `WorksMod.Data` | string / int / bool |
 | `works_quest_<questId>` | `Quests` (a mod quest's state; the quest itself is taken out of the save) | string "active\|completed\|failed,read,index" |
 | `cp_<modId>_<triggerId>` | content packs' `"once"` triggers | bool |
 | any name a mod passes to `Variables.Global` / `Zone` / a character | mods | string / int / bool / float |
@@ -530,7 +529,7 @@ sheet must keep its layout.
 - **Texture packs without code**: `Mods/<mod>/textures/<game asset path>.png`, e.g.
   `textures/Portraits/Male/ag1_l.png`, `textures/Locale/Creatures/pl_ds/id.png`.
 - Icons: names like `armors.12` are cells of atlases (`Icons\armors`, 33x33, ten a row) resolved by `ejh.b(name)`;
-  most of the game asks it with the item definition's icon name `bk3.a3()`. `Icons.Register(mod, id, file)` gives a
+  most of the game asks it with the item definition's icon name `bk3.a3()`. `Icons.Add(mod, id, file)` gives a
   `works:<mod>:<id>` name `ejh.b` answers; `Icons.SetItemIcon(mod, itemCode, file)` makes `a3()` return it for that
   code. The quick-slot proxy saves the name it copies (`av.i`, `CP:I`, in `ejh.a(av, ...)`): a postfix puts the
   game's own name back, so saves never hold a mod's icon name (**not yet tested with an item in a quick slot**).
@@ -579,11 +578,23 @@ From `~/UnderRailWorks-research/specs/clock-items-crafting.md` (not committed):
 
 - `SaveData.Of(mod)` / `WorksMod.SaveData`: structured per-game data (strings, bools, numbers, lists, dictionaries)
   in `Saves/<save>/UnderRailWorks.json` (folder: `d5x.d(name)`), written after each save, read when one loads,
-  cleared on a new game; sections of mods not installed are kept. The stock game never reads it. `WorksMod.Data`
-  (plain variables inside the save) stays for small values. Tested: written, restored by a quickload.
+  cleared on a new game; sections of mods not installed are kept. The stock game never reads it. Tested: written,
+  restored by a quickload. Since Nov 2026 (review before the first release): written through a temporary file and
+  `File.Replace` (a crash mid-write leaves the old file); one that can't be read is renamed `UnderRailWorks.json.bad`
+  and the player told, instead of the next save replacing it with nothing; `Set` refuses NaN/infinity and types JSON
+  can't hold, at the call (once one NaN made the file unreadable for every mod); a save the game failed to write
+  (it catches its own errors and writes SaveError-*.txt; `global.dat` missing or older than the save) gets no
+  UnderRailWorks.json and no `GameEvents.Saved`. Mod statuses of mods not installed are kept, and statuses are tied
+  to the character's unique id (names repeat), with its key as a fallback for older saves.
 - `WorksMod.T(key, args)` / `Translations`: `Mods/<mod>/i18n/<language>.json`; the language is the game's
   (`aji.a.a`, the Localization folder name; null: "english"), falling back to english.json, then the key.
 - `Mods.Provide(mod, api)`, `Mods.Api<T>(id)`, `Mods.Call(id, method, args)`, `Mods.Event(name)` / `Raise`.
+  `Api<T>` with an interface of the asking mod's own (Nov 2026, as SMAPI's GetApi): ApiProxy.cs emits a class that
+  implements it and forwards each member to the API object (methods by name and parameter types, properties and events
+  through their accessors, enums converted by number), through compiled expression delegates (so the API's type
+  may be internal). One collectible dynamic assembly per proxy (the interface may come from a hot-reloaded,
+  collectible mod). A member with no match: null and one log line naming it. `Mods.Call` picks the overload whose
+  parameters take the arguments, and logs instead of throwing.
 - `HookOrder` (First, Early, Normal, Late, Last) on every hook's `Add`.
 - A failing handler is always logged (whatever Log= says), counted on the mod's card in the Mods tab, and the player
   is told once per mod per session in the game's log.
@@ -598,7 +609,7 @@ share a cached definition per path and save only the path; crafted items (and `c
   Damage ranges, ActionPoints, CritChance, CritDamage, MinStrength; armour: Resistances / SetResistance,
   ArmorPenalty). `Items.EditDefinition(mod, path, edit)`: applied to the cached definition and whenever `ez2.b(path,
   bool)` loads it; never saved.
-- `Items.Define(mod, id, basePath, edit)` -> `works\<mod>\<id>`, code `works.<mod>.<id>`: a prefix on `ez2.b` answers
+- `Items.Add(mod, id, basePath, edit)` -> `works\<mod>\<id>`, code `works.<mod>.<id>`: a prefix on `ez2.b` answers
   that path with the base definition's clone (`tw()`), edited. Saves hold the path; the stock game loads such a save
   (checked with tools/savecheck --only: global.dat, chunk0.dat, info.dat OK) and shows the item as "Unknown".
 - `Item.Definition`, `Item.MakeUnique()` (`coh.c()`: its own definition, saved whole as stock types).
@@ -639,7 +650,7 @@ args => reply)` is answered in a prefix on `bdg.c(string)` before the game's tab
 
 ## Mod status effects (Nov 2026)
 
-`ModStatuses.Define(mod, id, name, description, icon)` -> `ModStatus` (`Apply(who, turns)`, `Has`, `Remove`,
+`StatusEffects.Add(mod, id, name, description, icon)` -> `ModStatus` (`Apply(who, turns)`, `Has`, `Remove`,
 `OnTick(who, stacks)`; code `mod:<mod>:<id>`). A food buff (`c9i`, whose name, icon and description are data) with its
 code field rewritten. Ticks: postfix `els.o()` (an owner's combat turn) and `els.e(double)` (true = a tick, every 5 s
 outside combat). **Never in a save file:** Works takes every `mod:` effect out of the player's and the loaded
@@ -735,7 +746,7 @@ registered once). Tested: a texture pack portrait changed on disk from red to gr
 `StatBonus.Ability / Skill / Evasion / Dodge / Fortitude / Resolve / Initiative / Detection / Health / CarryCapacity /
 Psi / PsiRegeneration`: the game's own flat modifier objects (`ax6`, `dpw`, `a6z`, `bel`, `ddl`, `ciw`, `b5x`, `ds1`,
 `dxd`, `bgl`, `d72`, `emn`; matched by their StaticEffects description keys). `Feats.Add(..., bonuses:)` returns them
-from the feat's `cy(efk)` (collected by `efk.bl()` while held, never saved); `ModStatuses.Define(..., bonuses)` puts
+from the feat's `cy(efk)` (collected by `efk.bl()` while held, never saved); `StatusEffects.Add(..., bonuses)` puts
 them into the status carrier (stripped from saves with the status). Tested: Strength +2 from a feat and Agility +1
 from a status shown green on the character sheet; a save with both passes the stock loader.
 
@@ -797,7 +808,7 @@ An independent review of the day's code found, all fixed:
 - **Mod keys against the game's**: once the game's key table exists (`cnk.aq1().e().c()`), a mod default on a game key
   starts unbound (logged; a key the player set is kept and reported) and the game's whole table is logged once. It
   caught G (Crafting), B (Recharge Shield), Y (quick slot 6), F9 (Quick Load) in my own mods. Mods should use
-  `Keybinds.Register`; keys read with `Input.Pressed` can't be checked.
+  `Keybinds.Add`; keys read with `Input.Pressed` can't be checked.
 - Beastmaster (mods/Beastmaster): Call Companion (J) summons an allied rathound for N turns, follows, HUD part with its
   health and time left; one at a time; the cooldown is in the save data. Tested: called, HUD part, quicksave with it
   present -> stock loader OK, quickload: companion not in the save, cooldown kept.
@@ -1017,10 +1028,10 @@ Built to find what the framework lacks (each gap went into Works, never into the
 | FairTrade | merchants' buy markup and sell price as settings (proven on the barter screen: 750 -> 375 at 50%) | Prices hooks |
 | NeuralReallocation | a placed neurotechnician resets skills or abilities for charons; the points are the game's own unspent points, placed on its level-up screen (tested: 120 refunded + 40 for level 2 = 160 on the screen) | Character skills/abilities/points, dynamic dialog, Inventory |
 | MovableWindows | the game's titled windows dragged by their title bar, clicked to the front; a moved window stays open when another opens on its side (dka.c/d close a side's windows); right-click a title to put it back | Windows.OpenWindows, OpenWindow.StaysOpen, Ui.ToFront, Input mouse |
-| Loadouts | three gear sets per game, saved with the save; Wear swaps from the bag, not in combat | Equipment, WorksMod.Data, Keybinds (unbound by default), UiPanel.Clear |
+| Loadouts | three gear sets per game, saved with the save; Wear swaps from the bag, not in combat | Equipment, SaveData, Keybinds (unbound by default), UiPanel.Clear |
 | Pacing | XP per level, XP earned, extra skill / feat / ability points per level | Progression (ModifyXpNeeded, ModifyExperience, ModifyLevelPoints) |
 | WatchfulEyes | opening a container that isn't yours names who would see a theft; optional: no lock picking in view of a guard | ContainerOpened, Container.Owned / IsOwner / Witnesses, Locks.ModifyAttempt (Force) |
-| ThePit | an arena: pay the pit master, waves of creatures that fight only the player, pay per wave, best run per save, a HUD part | World.Spawn (SpawnSide.PlayerOnly), FreeTilesNear, Despawn, CharacterDied, anchored Hud.AddPart, WorksMod.Data |
+| ThePit | an arena: pay the pit master, waves of creatures that fight only the player, pay per wave, best run per save, a HUD part | World.Spawn (SpawnSide.PlayerOnly), FreeTilesNear, Despawn, CharacterDied, anchored Hud.AddPart, SaveData |
 | Scanner | point at a creature: level, health, attitude, threshold/resistance per damage type, detection vs your stealth (always / in combat / while a key is held) | World.Hovered, Character.Resistances / Detection, anchored Hud.AddPart |
 | FieldMedic | after a fight, if hurt, uses a bandage (above 40 % health) or a health hypo from the bag, with a sound from its folder | CombatEnded, Items.Use, Assets.Sound |
 | MerchantLedger | every merchant's stock and prices recorded on trade (plain variables), L opens a search over all of them | TradeOpened, Stock/Markup, Ui.TextBox, Keybinds, Character.Key |
@@ -1142,7 +1153,7 @@ null and fills/outlines would fail whenever the world's clip doesn't start at 0,
 game finds it: `cnk.aqu().v().b()`), `World.Visible` (the characters the game drew last frame: in sight, not
 stealthed; tracked only once a mod asks), `World.FogOfWar` (the world view's shroud, through `ps.akw()`, so it holds
 before the first frame), `Character` (Position, Area, Attitude, OutlineColor as Tab, Name, IsPlayer), `Area` (Width,
-Height, `KindAt(x, y)` = Nothing / Floor / Wall / Prop / Door with the shroud applied, `Exits` with `GameColour`).
+Height, `KindAt(x, y)` = Nothing / Floor / Wall / Prop / Door with the shroud applied, `Exits` with `GameColor`).
 UI handles: `UiElement`, `UiPanel`, `UiTickBox`, and `Ui.Custom(w, h, canvas => ...)` for elements a mod draws itself
 (`UiCanvas`: Bounds, Device, DrawTexture, Fill, Frame), so mods never subclass the game's controls.
 
@@ -1512,7 +1523,7 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   same picture (shroud, exits, merchants, characters, markers with hover labels), by default the whole area centred
   (an isometric W x H area spans W + H tiles across), or a fixed span around the player (setting). Tested in South
   Gate Station North.
-- `Camera` (Camera.cs): `Centre` (the map position the world view is centred on, tiles: the camera `a3u` position
+- `Camera` (Camera.cs): `Center` (the map position the world view is centred on, tiles: the camera `a3u` position
   `t1()/t2()`; setting it moves the view as right-drag scrolling does), `Zoom` (`dnn.y`), `TileWidth/Height` (half a
   tile on screen at this zoom: the world view's `a7m.as` x zoom), `ViewSize`. Measured: centre (16.5, 1.5) with the
   player at (16, 1), tile 64x32 at zoom 1.33.
@@ -1527,7 +1538,7 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
 
 ## Ui.WorldView: a live view of the world in a mod's window (Nov 2026)
 
-`Ui.WorldView(width, height, centre)` -> `UiWorldView` (`Centre` get/set): a second `mv` on the player's area, set up
+`Ui.WorldView(width, height, centre)` -> `UiWorldView` (`Center` get/set): a second `mv` on the player's area, set up
 as the game's own remote-view popup does (`aqu`: its own camera bw7 bounded to the area, input options off, the
 player's sight `dnn.c`, cursor mode `edg.b`, no zoom wheel). Three traps found by measuring:
 - **Placement:** `Ui.Add` moved the element before attaching it, so the view worked out its screen origin with no
@@ -1707,7 +1718,7 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
   skips mod placements on zone load; `Simulation.Apply(...)` is the copy's own way through.
 - **Zones as data:** `Zones.Export(zoneId)` / `Import(bytes)` / `ZoneOf` (the three stored blobs, lmaps\<zone>_L1.uzl,
   .uzdm, .ap, from bmg's ccc; the current zone stored first with d6f.arr(false)), `Variables.Snapshot()` /
-  `SetValue`, `GameEvents.CharacterLeavingZone` (a non-player taking an exit; `ZoneLeave.Who`),
+  `SetValue`, `GameEvents.CharacterLeavingZone` (a non-player taking an exit; `ZoneLeave.Character`),
   `Character.RemoveFromWorld()`.
 - **World map:** `WorldMap.Mark(mod, key, zoneId, colour)` / `Unmark`: an outline on that zone's map node (a postfix
   on eg0.a(e5q, d69)); the map's ids are in their own case ("CC-RES"), and its MapOutline shader is always orange,
@@ -1729,7 +1740,7 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
   `Party.As(player, () => Ui.Confirm(...))`.
 - **Keys for the real game:** `Keybinds.NeedsTheRealGame` (on a copy: a mod key whose handler was refused a world
   change), `Keybinds.Replay(mod, key, who)` (that mod's Update handlers once with the key pressed, who as the player),
-  `IPlayerScreens.IsRemote` (Ui.Window isn't opened here for a remote acting player), `Party.LevelledUp(who, level)`.
+  `IPlayerScreens.IsRemote` (Ui.Window isn't opened here for a remote acting player), `Party.LeveledUp(who, level)`.
 - **Abilities for any character:** `Character.UseAbility(abilityId, itemId, target)` (as the AI: ecf.a(capability,
   eru(the character), item), cp.b for aimed ones, cp.a for toggles; target a Character, a Point or null for itself),
   `Character.SwapWeapons()`, `Character.Reload()` (d3k.a), `Item.AbilityId`, `Item.Id`; `PlayerOrder.AbilityId` /
@@ -1745,3 +1756,41 @@ All game-side; the networking stays in the Co-op mod (docs/Multiplayer.md). Each
 - `Character.ReplaceSheet(path)`: a player-style character (not the player) takes the sheet from a .char in place.
 - `Ai.CurrentTarget(npc)` / `Ai.SetCurrentTarget(npc, target)`: the character an NPC's AI is after (null: it chooses again).
 - `Ai.IgnoresTarget` (npc, candidate) -> true: left out when the NPC chooses whom to fight (the game's own choice runs on the rest).
+
+## Release review (Nov 14 2026): what was found and fixed before freezing the API
+
+Five read-only reviews (loader, save data, names, world/items, interface), each finding checked in the code first.
+- **Loader:** versions are compared as major.minor.build.revision with missing parts 0 (`"0.9"` and `"0.9.0"` were
+  unequal, so a mod with `"works": "0.9.0"` was refused); `v1.2` and `1.2.0-beta` read as 1.2 / 1.2.0; a mod without
+  `"version"` gets its DLL's before requirements are checked (the DLL named after it, or the only one, not a library
+  it ships); duplicate ids (an old copy beside a new one) and ids outside `[A-Za-z0-9._-]` are refused; a DLL that
+  fails to load stops the mod; a PostLoad failure takes its dependents out (at start and on reload: never
+  half-running); `mods.ini` lines are matched on the trimmed id (hand-written `Foo = 0`, duplicates); `settings.ini`
+  goes in the mod's folder, not `Mods/<id>`; a loop in sortAfter / sortBefore / optional drops those orderings with
+  a log line instead of refusing both mods (only a loop of requirements does); where requirements move a mod against
+  the player's order, the log says so; the player's order keeps switched-off mods in their places.
+- **Hooks:** a run keeps its handlers' owners even when a handler adds or removes one meanwhile (copy-on-write arrays
+  each with their owners: `ownersOf`), so what they add stays theirs and errors name them; the reload catch-up runs
+  as the mod; failure counts of a removed mod's handlers are dropped (they kept the old code alive).
+- **Hot reload:** patches a mod made with its own Harmony instance are removed too (every patch whose method is in
+  the mod's assemblies); a fixed build of a mod whose code failed is tried (it used to need a restart).
+- **Cross-mod:** `Mods.Api<T>` with the asking mod's own interface (ApiProxy, see the section on mod APIs);
+  `Mods.Call` matches parameter types and never throws.
+- **Save data:** see "Save data files" (atomic write, `.bad`, NaN refused, failed saves, statuses). `WorksMod.Data`
+  removed: `SaveData` is the one store.
+- **World and items:** wrappers of the same game object are equal (Item, Container, Lock, ItemDefinition: new
+  objects on every call, used as dictionary keys by mods); `Character.IsInWorld`; no empty or negative stacks
+  (`Inventory.Add/Take`, `AddMoney`, `TakeMoney` now false for amounts not above 0, `Item.Stacks` at least 1);
+  `Kill` and `Health` do nothing to the dead (the game ran deaths twice); `Party.Members` has the real player while
+  a member acts (`World.RealPlayer`); `World.Visible` / screen bounds and followers are forgotten on a load;
+  `Notify.Over` and `Equip` can't throw into a mod / lose an item; `Variables.Set` returns false at the main menu
+  instead of throwing; `Character.Id` / `Key` work for placed objects; console commands log a clash.
+- **Interface:** callbacks Works runs for a mod (widgets, popup answers, settings buttons, main-menu buttons,
+  OnChanged) run as that mod (`ModScope.As`), so what they add goes on reload; settings.ini numbers accept "1,5",
+  refuse NaN, and are kept inside `[Range]`; mods' sliders show their value, not "N%"; an enum default that isn't a
+  member no longer kills the settings page; windows of a rebuilt main menu are closed; text boxes no longer polled
+  once off screen; main-menu buttons once per mod and text, the panel kept on screen; new windows start inside the
+  screen; mods' keys don't fire in Options or Escape while typing; keys added later are checked against the game's;
+  tooltips survive their element being off screen for a while; popup questions wrap.
+- **Names** (TODO.md, "Before releasing the API as 1.0"): `Add` for registering, US spelling, `Character` for the
+  acting character, `Interface.PixelsPerUnit`.

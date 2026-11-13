@@ -15,11 +15,11 @@ namespace UnderRailWorks
 {
     [Preview("multiplayer: built for Co-op so far")] public static class WorldMap
     {
-        internal sealed class MarkInfo { public string Mod, Key, Zone; public Color Colour; }
+        internal sealed class MarkInfo { public string Mod, Key, Zone; public Color Color; }
         internal static readonly List<MarkInfo> Marks = new List<MarkInfo>();
         public static void Mark(WorksMod mod, string key, string zoneId, Color colour)
         {
-            lock (Marks) { Marks.RemoveAll(m => m.Mod == mod.Id && m.Key == key); if (!string.IsNullOrEmpty(zoneId)) Marks.Add(new MarkInfo { Mod = mod.Id, Key = key, Zone = zoneId, Colour = colour }); }
+            lock (Marks) { Marks.RemoveAll(m => m.Mod == mod.Id && m.Key == key); if (!string.IsNullOrEmpty(zoneId)) Marks.Add(new MarkInfo { Mod = mod.Id, Key = key, Zone = zoneId, Color = colour }); }
         }
         public static void Unmark(WorksMod mod, string key) { lock (Marks) Marks.RemoveAll(m => m.Mod == mod.Id && m.Key == key); }
         internal static void Forget(string mod) { lock (Marks) Marks.RemoveAll(m => m.Mod == mod); }
@@ -48,7 +48,7 @@ namespace UnderRailWorks.Internal
                     if (!places.b().Concat(places.f()).Any(z => string.Equals(z, m.Zone, StringComparison.OrdinalIgnoreCase))) continue;     // the map's ids are in their own case ("CC-RES")
                     var outline = layer.f5();
                     outline.u = "Outline";     // the creature outline shader: it takes OutlineColor (MapOutline is always the game's orange)
-                    outline.v = new Dictionary<string, object> { { "OutlineColor", m.Colour } };
+                    outline.v = new Dictionary<string, object> { { "OutlineColor", m.Color } };
                     __0.a(outline);
                     if (logged.Add(m.Zone)) Log.Write("world map: marked " + m.Zone + " (" + m.Key + ")");
                 }

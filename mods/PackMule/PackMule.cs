@@ -19,7 +19,7 @@ public sealed class PackMule : WorksMod
 
     public override void Load()
     {
-        markKey = Keybinds.Register(this, "mark", T("key"), Keys.Delete);
+        markKey = Keybinds.Add(this, "mark", T("key"), Keys.Delete);
         Items.ModifyTooltip(this, (item, tip) => { if (IsJunk(item.Code)) tip.AddLine(T("tooltip"), new Microsoft.Xna.Framework.Color(200, 160, 90)); });
         GameEvents.Update.Add(this, seconds => Tick());
     }
