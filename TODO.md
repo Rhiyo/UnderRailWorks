@@ -11,8 +11,9 @@ Func hooks turned into argument objects, the obvious duplicates made internal. S
 - [ ] **When to call it 1.0.** Raise `WorksApi.Major`/`Minor` to 1.0 (WorksMod.cs) and every shipped mod's
   `"works"` to "1.0" (one sed), and release; from then on the build refuses breaking changes.
 - [ ] **What stays Preview at 1.0**: co-op's plumbing (Simulation, PlayerScreens, TalkAs, PlayerOrder, CharacterControl,
-  remote Character members...) and the drawing surface (Layer, WorldDraw, Outlines...). Promote (drop [Preview]) only
-  what has a second user or a shape we're sure of.
+  remote Character members...), ability ids, the AI's target. (The drawing surface was made stable on Nov 13 for
+  Occluded Characters, with tools/smoketest/drawing.sh.) Promote (drop [Preview]) only what has a second user or a
+  shape we're sure of.
 - [ ] **Two save-data stores**: `WorksMod.Data` (ModData: the save's own global variables) and `SaveData` (JSON beside
   the save; also CharacterData). Keep both, or mark one [Obsolete] (Data: 4 mods use it).
 - [ ] **Overlapping names**: `GameEvents.Dying` (cancellable, preview) / `CharacterDying` / `CharacterDied`;
