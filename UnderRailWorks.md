@@ -161,8 +161,11 @@ and the same for players):
       a crash can't leave half a file. Floats are written round-trip exact. Large data (e.g. a custom map) is never put in JSON: it
       gets its own file in the game's format next to it, and the JSON names that file.
 - [ ] **Unloaded mod data kept**: data belonging to a mod that isn't loaded is read and written back unchanged.
-- [ ] **Load Game screen**: a warning icon on saves whose mods differ (missing or new mods). Hover: a short line;
-      click: the full list in the game's dialog (`bnr`). A second icon for mod save errors. No prompt when loading.
+- [x] **Load Game screen** (LoadWarning.cs, Nov 2026): each save records the mods that were running
+      (UnderRailWorks.json "running", in load order). Selecting a save shows "Mods: 2 missing, 1 added, 1 updated
+      since this save" under the game's details (orange; red when a missing mod left data in the save). Load asks
+      first (the game's message box) only when a missing mod left data: its data is kept either way. Order isn't
+      compared. Saves from before the list only show missing mods that left data. Not done: an icon in the list itself.
 - [ ] **Backup before saving**: copy the folder first. It must go outside `Saves` (e.g. `Saves Backup/<name>/`), or
       the game would list it as a save. The game's own `(previous)` copies only cover some saves.
 - [ ] **Vanilla access stays (a Rule):** a save made with Works loads in the stock game; mod items show as "?". If

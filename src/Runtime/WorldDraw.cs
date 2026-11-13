@@ -12,9 +12,28 @@ using UnderRailWorks.Internal;
 namespace UnderRailWorks
 {
 
-[Preview("drawing: built for UnderRailFixes so far")] public static class WorldDraw
+public static class WorldDraw
 {
     public delegate bool OffsetHandler(out Vector2 from);
+
+    // A drawing handler that throws may have left a batch open or another render target set: that mod's drawing
+    // handlers (all of them, and its outline requests) are removed for the rest of the session at its first error, so
+    // the game's own drawing goes on as stock. The game itself keeps running; the Mods tab shows the error.
+    static WorldDraw()
+    {
+        foreach (var h in new HookOwner[] { LayerStarting, DrawLayer, DrawTileExtras, WorldDone, ShaderPassStarting, ShaderPassDone, InterfaceOffset })
+            h.SetOnFailure(StopDrawing);
+    }
+    static readonly HashSet<string> stopped = new HashSet<string>();
+    internal static void StopDrawing(string mod)
+    {
+        if (mod == null) return;
+        lock (stopped) if (!stopped.Add(mod)) return;
+        foreach (var h in new IModOwned[] { LayerStarting, DrawLayer, DrawTileExtras, WorldDone, ShaderPassStarting, ShaderPassDone, InterfaceOffset }) h.RemoveOwner(mod);
+        Outlines.Forget(mod);
+        Log.Always("mods: " + mod + ": an error while drawing; its drawing is off until the game restarts");
+        lock (stopped) stopped.Remove(mod);     // a reloaded copy may add handlers again
+    }
 
     // Start of a7m.a(cp9, a2f, bool shaderPass, bkx): each layer the world pass draws, in drawing order (back to front).
     public static readonly Hook<Action<WorldView, DrawContext, Layer, bool>> LayerStarting = new Hook<Action<WorldView, DrawContext, Layer, bool>>("LayerStarting");
@@ -51,14 +70,36 @@ namespace UnderRailWorks
 // combat with Always). A mod can ask for outlines for every creature Tab would outline, all the time and during zone
 // transitions too (Request); those extra outlines are hidden: Works takes them out of the game's shader pass, and
 // mods draw them as they like (e.g. only where the creature is covered). The game's own outlines stay as they are.
-[Preview("drawing: built for UnderRailFixes so far")] public static class Outlines
+public static class Outlines
 {
-    static readonly List<Func<bool>> Requests = new List<Func<bool>>();
-    static bool Requested()
+    // Each mod's "I want outlines" / "pick through" questions; a mod's are forgotten when it is reloaded. One that throws
+    // is reported to its mod and counts as no.
+    sealed class Asks : IModOwned
     {
-        foreach (var r in Requests) { try { if (r()) return true; } catch { } }
-        return false;
+        readonly List<KeyValuePair<string, Func<bool>>> list = new List<KeyValuePair<string, Func<bool>>>();
+        KeyValuePair<string, Func<bool>>[] snapshot = new KeyValuePair<string, Func<bool>>[0];
+        readonly string what;
+        internal Asks(string what) { this.what = what; lock (ModScope.Hooks) ModScope.Hooks.Add(this); }
+        internal void Add(WorksMod mod, Func<bool> wanted)
+        {
+            if (mod == null || wanted == null) throw new ArgumentNullException(mod == null ? "mod" : "wanted");
+            lock (list) { list.Add(new KeyValuePair<string, Func<bool>>(mod.Id, wanted)); snapshot = list.ToArray(); }
+        }
+        public void RemoveOwner(string mod) { lock (list) { list.RemoveAll(kv => kv.Key == mod); snapshot = list.ToArray(); } }
+        internal bool Any()
+        {
+            var s = snapshot;
+            for (int i = 0; i < s.Length; i++)
+            {
+                try { if (s[i].Value()) return true; }
+                catch (Exception ex) { ModErrors.Report(s[i].Key, what, ex); RemoveOwner(s[i].Key); }
+            }
+            return false;
+        }
     }
+    static readonly Asks Requests = new Asks("Outlines.Request"), PickRequests = new Asks("Outlines.PickThrough");
+    static bool Requested() { return Requests.Any(); }
+    internal static void Forget(string mod) { Requests.RemoveOwner(mod); PickRequests.RemoveOwner(mod); }
 
     // The game's Character Outlines option is "Never" (no outlines at all, as with Tab).
     public static bool GameOff
@@ -67,14 +108,13 @@ namespace UnderRailWorks
     }
 
     // wanted: checked each frame (e.g. "my effect is on").
-    public static void Request(string mod, Func<bool> wanted) { Requests.Add(wanted); }
+    public static void Request(WorksMod mod, Func<bool> wanted) { Requests.Add(mod, wanted); }
 
     // Hidden outlines still pick their creature, as Tab's outlines do: the game checks outline layers before the world's
     // and keeps their creature even when a wall comes next (a7m's hit test), so a character behind scenery can be
     // hovered and clicked without Tab. Ask with Request too (no outline, nothing to pick). wanted: checked each frame.
-    public static void PickThrough(string mod, Func<bool> wanted) { PickRequests.Add(wanted); }
-    static readonly List<Func<bool>> PickRequests = new List<Func<bool>>();
-    static bool PickWanted() { foreach (var r in PickRequests) { try { if (r()) return true; } catch { } } return false; }
+    public static void PickThrough(WorksMod mod, Func<bool> wanted) { PickRequests.Add(mod, wanted); }
+    static bool PickWanted() { return PickRequests.Any(); }
     // a7m.y: the layers the hit test checks, in drawing order (List<cy5>; cy5(layer, from the shader pass)).
     static readonly System.Reflection.FieldInfo HitList = typeof(a7m).GetField("y", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.DeclaredOnly);
 

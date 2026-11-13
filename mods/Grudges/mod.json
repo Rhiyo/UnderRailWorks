@@ -1,2 +1,2 @@
-{ "id": "Grudges", "name": "Grudges", "version": "1.0.1", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "Grudges", "name": "Grudges", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
   "description": "Enemies who survive a fight with you hurt (they fled, or you did) hold a grudge: some time later, in another area, one may track you down. Settings: how often, how many are remembered." }

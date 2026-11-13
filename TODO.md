@@ -78,8 +78,8 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
   examples/HelloUI.
 - [~] UI toolkit, next (done: key bindings, tooltips, text input, lists, sliders, choices, images, windows; still: draggable panels as a widget): mod keys in the game's key-binding screen, draggable panels, tooltips, text input, more
   attachment points (inventory, dialog, character screen), readable wrappers for dropdowns and sliders outside Options.
-- [x] Mods' save data: works.json per save, per-mod JSON, data of a missing mod kept, a warning icon on the Load Game
-  screen, a backup before saving.
+- [x] Mods' save data: works.json per save, per-mod JSON, data of a missing mod kept, the Load Game screen's warning
+  (mods changed since the save; asks before loading when a missing mod left data), a backup before saving.
 - [x] Reload mods without restarting (ModReload.cs: works.reload <mod>, HotReload=1 watches DLLs; collectible
   AssemblyLoadContext from memory). Tested in game: Minimap reloaded (old interface removed, one map), WorksTest
   v1 -> v2 by copying the DLL in while running (no doubled Update handlers), HelloWorks' Harmony patches stay 2 after

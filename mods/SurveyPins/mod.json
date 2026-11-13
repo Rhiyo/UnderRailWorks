@@ -1,2 +1,2 @@
-{ "id": "SurveyPins", "name": "Survey Pins", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "SurveyPins", "name": "Survey Pins", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9", "multiplayer": "client",
   "description": "Pin notes to the map: point at a spot and press Insert, type a note; it shows on the Minimap (rest the mouse on the pin to read it). Insert on a pin removes it. Locked containers you've found get a pin with their lock's difficulty, until you open them." }

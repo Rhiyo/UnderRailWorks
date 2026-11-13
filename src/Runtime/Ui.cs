@@ -613,6 +613,7 @@ static class UiHooks
         // Each group on its own: one that fails (a game update moved its method) leaves the others working.
         Group("content", () => ContentHooks.Install(harmony));
         Group("saves", () => Saves.Install(harmony));
+        Group("load game warning", () => LoadWarning.Install(harmony));
         Group("HUD", () => HudHooks.Install(harmony));
         Group("combat", () => CombatHooks.Install(harmony));
         Group("keybinds", () => Keybinds.Install(harmony));

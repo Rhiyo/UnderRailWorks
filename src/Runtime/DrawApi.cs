@@ -14,7 +14,7 @@ namespace UnderRailWorks
 {
 
 // The world view (a7m): the map's drawing for one frame.
-[Preview("drawing: built for UnderRailFixes so far")] public struct WorldView : IEquatable<WorldView>
+public struct WorldView : IEquatable<WorldView>
 {
     internal readonly a7m Game;
     internal WorldView(a7m view) { Game = view; }
@@ -47,7 +47,7 @@ namespace UnderRailWorks
 }
 
 // The game's draw context (cp9) for the frame.
-[Preview("drawing: built for UnderRailFixes so far")] public struct DrawContext : IEquatable<DrawContext>
+public struct DrawContext : IEquatable<DrawContext>
 {
     internal readonly cp9 Game;
     internal DrawContext(cp9 context) { Game = context; }
@@ -67,7 +67,7 @@ namespace UnderRailWorks
 }
 
 // One of the game's sprite batches (ob).
-[Preview("drawing: built for UnderRailFixes so far")] public struct GameBatch
+public struct GameBatch
 {
     internal readonly ob Game;
     internal GameBatch(ob batch) { Game = batch; }
@@ -80,7 +80,7 @@ namespace UnderRailWorks
 }
 
 // A layer shader of the game (cmk), e.g. "Outline".
-[Preview("drawing: built for UnderRailFixes so far")] public struct LayerShader
+public struct LayerShader
 {
     internal readonly cmk Game;
     internal LayerShader(cmk shader) { Game = shader; }
@@ -92,7 +92,7 @@ namespace UnderRailWorks
 }
 
 // One sprite layer of the world pass (a2f): a creature's body, a wall piece, a floor tile, a shadow...
-[Preview("drawing: built for UnderRailFixes so far")] public struct Layer : IEquatable<Layer>
+public struct Layer : IEquatable<Layer>
 {
     internal readonly a2f Game;
     internal Layer(a2f layer) { Game = layer; }
@@ -136,7 +136,7 @@ namespace UnderRailWorks
 }
 
 // An entity's layers for one frame (bym: new every frame).
-[Preview("drawing: built for UnderRailFixes so far")] public struct LayerSet : IEquatable<LayerSet>
+public struct LayerSet : IEquatable<LayerSet>
 {
     internal readonly bym Game;
     internal LayerSet(bym set) { Game = set; }
@@ -153,7 +153,7 @@ namespace UnderRailWorks
 }
 
 // Something on the map (b0b): a wall piece, a prop, a creature, a floor tile.
-[Preview("drawing: built for UnderRailFixes so far")] public struct MapObject : IEquatable<MapObject>
+public struct MapObject : IEquatable<MapObject>
 {
     internal readonly b0b Game;
     internal MapObject(b0b e) { Game = e; }
@@ -171,8 +171,8 @@ namespace UnderRailWorks
 }
 
 // A map tile (ak1), as the world pass hands it to the tile-extras step.
-[Preview("drawing: built for UnderRailFixes so far")] public struct MapTile { internal readonly ak1 Game; internal MapTile(ak1 tile) { Game = tile; } }
+public struct MapTile { internal readonly ak1 Game; internal MapTile(ak1 tile) { Game = tile; } }
 
 // The view a layer is drawn for (bkx), passed through to DrawAsGame.
-[Preview("drawing: built for UnderRailFixes so far")] public struct LayerView { internal readonly bkx Game; internal LayerView(bkx view) { Game = view; } }
+public struct LayerView { internal readonly bkx Game; internal LayerView(bkx view) { Game = view; } }
 }

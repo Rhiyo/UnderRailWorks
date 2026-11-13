@@ -8,7 +8,7 @@ using UnderRailWorks;
 
 [assembly: System.Reflection.AssemblyVersion("1.0.0")]
 
-public sealed class WorksTest : WorksMod
+public sealed partial class WorksTest : WorksMod
 {
     Character clone;
     double menuPoll;
@@ -87,6 +87,7 @@ public sealed class WorksTest : WorksMod
     string lastHover;
     public override void Load()
     {
+        DrawProbe();
         GameEvents.StatusApplying.Add(this, c => { Log.Info("status applying " + c.Code + " on " + (c.Character == null ? "?" : c.Character.Name)); if (c.Code == "Hidden" && Data.GetBool("noHide")) c.Cancel = true; });
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
         GameEvents.StatusRemoved.Add(this, c => Log.Info("status removed " + c.Code));

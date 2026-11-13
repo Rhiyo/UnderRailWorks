@@ -165,6 +165,14 @@ public sealed partial class Coop
                 items.Add("Others join with one of these addresses:"); colours.Add(Grey);
                 foreach (var a in Addresses()) { items.Add("   " + a + (listener.Port == DefaultPort ? "" : ":" + listener.Port)); colours.Add(Mine_); }
                 items.Add("(over the internet: your router's address, with port " + listener.Port + " forwarded)"); colours.Add(Grey);
+                {
+                    // What joiners need: the same mods, same versions, except those that only change one player's screen.
+                    var need = Mods.Running(true); var all = Mods.Running();
+                    items.Add(""); colours.Add(Grey);
+                    items.Add("Others need these " + need.Length + " mods, same versions (" + (all.Length - need.Length) + " others only change your screen):"); colours.Add(Grey);
+                    var names = need.Select(x => { int at = x.LastIndexOf('@'); var m = ModLoader.Find(x.Substring(0, at)); return (m == null ? x.Substring(0, at) : m.Name) + " " + x.Substring(at + 1); }).ToList();
+                    for (int i = 0; i < names.Count; i += 3) { items.Add("   " + string.Join(", ", names.Skip(i).Take(3).ToArray())); colours.Add(Normal); }
+                }
                 break;
             case "connecting":
                 Ui.SetText(statusLabel, "Connecting...");

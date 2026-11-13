@@ -56,6 +56,8 @@ tools/savecheck/check-saves.sh --play
 tools/smoketest/smoke.sh
 tools/smoketest/coop.sh
 tools/smoketest/coop-midfight.sh
+tools/smoketest/drawing.sh
+SIZE="3840 2160" UISCALE=200 tools/smoketest/drawing.sh
 
 # 5. Package.
 ORIG="$GAME/underrail.exe"; [ -f "$GAME/underrail.exe.backup" ] && ORIG="$GAME/underrail.exe.backup"

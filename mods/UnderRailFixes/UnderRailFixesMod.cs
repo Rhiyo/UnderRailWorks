@@ -30,9 +30,9 @@ public sealed class UnderRailFixesMod : WorksMod
         }
         // Outlines for every creature Tab would outline, while the effect is on (Works hides the extra ones; we draw them
         // on the covered part only).
-        Outlines.Request(Name, () => ShowCovered.On || CoveredSettings.Config.SelectBehindScenery);
+        Outlines.Request(this, () => ShowCovered.On || CoveredSettings.Config.SelectBehindScenery);
         // Characters behind scenery can be hovered and clicked as if Tab were held.
-        Outlines.PickThrough(Name, () => CoveredSettings.Config.SelectBehindScenery);
+        Outlines.PickThrough(this, () => CoveredSettings.Config.SelectBehindScenery);
         WorldDraw.LayerStarting.Add(this, ShowCovered.Drawn);
         WorldDraw.DrawLayer.Add(this, ShowCovered.DrawLayer);
         WorldDraw.DrawTileExtras.Add(this, ShowCovered.TileExtras);

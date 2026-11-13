@@ -158,6 +158,32 @@ namespace UnderRailWorks
             return h;
         }
         public static void Raise(string name, object data = null) { var h = Event(name); if (h.Any) h.Run(x => x(data)); }
+
+        // The mods running now, as "id@version" in load order, for comparing with another game (a save's list, another
+        // player's): shared = only those every player of a multiplayer game needs (mod.json "multiplayer": "both").
+        public static string[] Running(bool shared = false)
+        {
+            return ModLoader.Mods.Where(m => m.Loaded && (!shared || !m.ClientOnly)).OrderBy(m => m.LoadIndex).Select(m => m.Id + "@" + m.VersionText).ToArray();
+        }
+
+        // How the mods "theirs" (Running's form) differ from "mine", as lines for a player: missing here, only here, other
+        // versions. Empty: the same mods and versions (order isn't compared: it comes from the mods themselves).
+        public static string[] Differences(IEnumerable<string> theirs, IEnumerable<string> mine, string theirName = "they have", string myName = "you have")
+        {
+            Func<IEnumerable<string>, Dictionary<string, string>> parse = l => (l ?? new string[0]).Where(x => !string.IsNullOrEmpty(x))
+                .Select(x => { int at = x.LastIndexOf('@'); return at < 0 ? new[] { x, "" } : new[] { x.Substring(0, at), x.Substring(at + 1) }; })
+                .GroupBy(p => p[0], StringComparer.OrdinalIgnoreCase).ToDictionary(g => g.Key, g => g.First()[1], StringComparer.OrdinalIgnoreCase);
+            var a = parse(theirs); var b = parse(mine);
+            Func<string, string> name = id => { var m = ModLoader.Find(id); return m == null ? id : m.Name; };
+            var lines = new List<string>();
+            var missing = a.Keys.Where(k => !b.ContainsKey(k)).OrderBy(k => k).ToList();
+            var extra = b.Keys.Where(k => !a.ContainsKey(k)).OrderBy(k => k).ToList();
+            var other = a.Keys.Where(k => b.ContainsKey(k) && a[k] != b[k]).OrderBy(k => k).ToList();
+            if (missing.Count > 0) lines.Add("only " + theirName + ": " + string.Join(", ", missing.Select(k => name(k) + " " + a[k]).ToArray()));
+            if (extra.Count > 0) lines.Add("only " + myName + ": " + string.Join(", ", extra.Select(k => name(k) + " " + b[k]).ToArray()));
+            if (other.Count > 0) lines.Add("other versions: " + string.Join(", ", other.Select(k => name(k) + " " + a[k] + " / " + b[k]).ToArray()));
+            return lines.ToArray();
+        }
     }
 
     public abstract partial class WorksMod
@@ -206,7 +232,35 @@ namespace UnderRailWorks.Internal
             catch (Exception ex) { Log.Write("saves: " + file + ": " + ex.Message); }
         }
 
-        internal static void Save(string save)
+        // What a save on disk says about its mods: the mods running when it was saved (null: saved before Works kept that
+    // list, or not with Works), and the mods that left data in it (section key -> version).
+    internal sealed class SaveMods { internal List<string> Running; internal Dictionary<string, string> WithData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); }
+    internal static SaveMods Read(string save)
+    {
+        var r = new SaveMods();
+        var dir = Folder(save);
+        var file = dir == null ? null : Path.Combine(dir, FileName);
+        if (file == null || !File.Exists(file)) return r;
+        try
+        {
+            var d = Json.Parse(File.ReadAllText(file)) as Dictionary<string, object>;
+            if (d == null) return r;
+            object v;
+            if (d.TryGetValue("running", out v) && v is List<object>) r.Running = ((List<object>)v).Where(x => x != null).Select(x => x.ToString()).ToList();
+            var versions = d.TryGetValue("versions", out v) ? v as Dictionary<string, object> : null;
+            if (d.TryGetValue("mods", out v) && v is Dictionary<string, object>)
+                foreach (var key in ((Dictionary<string, object>)v).Keys)
+                {
+                    var id = key.StartsWith(CharacterFiles.Prefix, StringComparison.Ordinal) ? key.Substring(CharacterFiles.Prefix.Length) : key;
+                    object ver = null; if (versions != null) versions.TryGetValue(key, out ver);
+                    r.WithData[id] = ver == null ? "" : Convert.ToString(ver, CultureInfo.InvariantCulture);
+                }
+        }
+        catch (Exception ex) { Log.Write("saves: " + file + ": " + ex.Message); }
+        return r;
+    }
+
+    internal static void Save(string save)
         {
             var dir = Folder(save);
             if (dir == null || !Directory.Exists(dir)) return;
@@ -215,7 +269,7 @@ namespace UnderRailWorks.Internal
             {
                 var empty = Current.Where(kv => kv.Value is Dictionary<string, object> && ((Dictionary<string, object>)kv.Value).Count == 0).Select(kv => kv.Key).ToList();
                 foreach (var k in empty) Current.Remove(k);
-                if (Current.Count == 0) { if (File.Exists(file)) File.Delete(file); return; }
+                // Written with or without mod data: the mods that were running, for the Load Game warning (LoadWarning).
                 // Who wrote each section: installed mods their version now; a missing mod's data keeps the version it had.
                 foreach (var key in Current.Keys)
                 {
@@ -224,7 +278,8 @@ namespace UnderRailWorks.Internal
                     if (m != null && m.Loaded && m.Version != null) Versions[key] = m.VersionText;
                 }
                 var versions = Versions.Where(kv => Current.ContainsKey(kv.Key)).ToDictionary(kv => kv.Key, kv => (object)kv.Value);
-                var root = new Dictionary<string, object> { { "format", 1.0 }, { "works", FixVersion.Value }, { "mods", Current }, { "versions", versions } };
+                var running = Mods.Running().Cast<object>().ToList();
+                var root = new Dictionary<string, object> { { "format", 1.0 }, { "works", FixVersion.Value }, { "mods", Current }, { "versions", versions }, { "running", running } };
                 File.WriteAllText(file, Json.Write(root));
             }
             catch (Exception ex) { Log.Write("saves: " + file + ": " + ex.Message); }

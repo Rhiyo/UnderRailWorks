@@ -2,11 +2,14 @@
 // Each mod may have a mod.json manifest (readable JSON; everything optional):
 //   { "id": "UnderRailFixes", "name": "UnderRailFixes", "version": "2.0.0", "author": "...", "description": "...",
 //     "works": "0.9", "requires": ["OtherMod@1.2"], "optional": ["SomeMod"], "sortAfter": [], "sortBefore": [],
-//     "incompatible": ["Rival@2.0"], "homepage": "https://...", "issues": "https://...", "license": "MIT", "game": "1.3.1.2" }
+//     "incompatible": ["Rival@2.0"], "homepage": "https://...", "issues": "https://...", "license": "MIT", "game": "1.3.1.2",
+//     "multiplayer": "both" }
 // icon.png in the folder is shown in the Mods tab.
 // works: the Works API version the mod was built for (WorksApi.Version: same major, at least that minor).
 // As tModLoader's build.txt: requires = modReferences (must be present, on and at least that version, and is loaded
-// first), optional = weakReferences (loaded first when present), sortAfter / sortBefore = load order only.
+// first), optional = weakReferences (loaded first when present), sortAfter / sortBefore = load order only ("*": before
+// / after every other mod). multiplayer: "both" (default; everyone in a multiplayer game needs it, same version) or
+// "client" (only this player's screen: a minimap, a HUD layout).
 // The id defaults to the folder name, the version to the DLL's.
 // A mod's code: one public class deriving from WorksMod (WorksMod.cs: Load, then PostLoad once every mod has
 // loaded), or, minimal, any public class with a static OnLoad(Harmony) or OnLoad(Harmony, Action<string> log).
@@ -62,6 +65,11 @@ public sealed class ModInfo
     public string Issues { get; internal set; }
     public string License { get; internal set; }
     public string Game { get; internal set; }
+    // mod.json "multiplayer": "client": only changes this player's own screen (a minimap, the HUD's layout), so players
+    // in one multiplayer game needn't all have it. "both" (the default): everyone in the game needs it, same version.
+    public bool ClientOnly { get; internal set; }
+    // Where it is in the load order (0 first); -1 not loaded.
+    public int LoadIndex { get; internal set; } = -1;
     // The mod's icon (icon.png in its folder), or null.
     public string Icon { get { var f = Path.Combine(Folder, "icon.png"); return File.Exists(f) ? f : null; } }
     // Handlers of this mod that failed while the game ran (HookBase), for the Mods tab.
@@ -168,7 +176,7 @@ public static class ModLoader
         ModScope.Current = null;
     }
 
-    static readonly string[] ManifestKeys = { "id", "name", "version", "author", "description", "works", "requires", "optional", "sortAfter", "sortBefore", "incompatible", "homepage", "issues", "license", "game", "startsOff" };
+    static readonly string[] ManifestKeys = { "id", "name", "version", "author", "description", "works", "requires", "optional", "sortAfter", "sortBefore", "incompatible", "homepage", "issues", "license", "game", "startsOff", "multiplayer" };
 
     static ModInfo Read(string folder)
     {
@@ -200,6 +208,9 @@ public static class ModLoader
             m.StartsOff = str("startsOff") != null && str("startsOff").Equals("true", StringComparison.OrdinalIgnoreCase);
             m.Issues = str("issues");
             m.License = str("license");
+            var mp = (str("multiplayer") ?? "both").Trim().ToLowerInvariant();
+            if (mp != "both" && mp != "client") Log.Write("mods: " + m.Id + "/mod.json: multiplayer \"" + mp + "\" isn't both or client (taken as both)");
+            m.ClientOnly = mp == "client";
             m.Game = str("game");     // the game versions it was made for, e.g. "1.3.1.2" (shown, not enforced)
         }
         catch (Exception ex) { m.Error = "mod.json: " + ex.Message; }
@@ -247,7 +258,8 @@ public static class ModLoader
     }
 
     // Load order: requirements, present optional mods and sortAfter before a mod, sortBefore after it; otherwise by
-    // name. A loop leaves its mods out with an error.
+    // name. "*" in sortBefore: before every mod that doesn't need it first (Co-op: its rules apply before other mods'
+    // handlers run); "*" in sortAfter: after them. A loop leaves its mods out with an error.
     static List<ModInfo> Order(List<ModInfo> mods)
     {
         Func<string, ModInfo> get = id => mods.FirstOrDefault(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
@@ -259,16 +271,18 @@ public static class ModLoader
             foreach (var id in m.SortBefore)
             { var o = get(id); if (o != null && o != m) before[o].Add(m); }
         }
+        Func<ModInfo, int> tier = m => m.SortBefore.Contains("*") ? 0 : m.SortAfter.Contains("*") ? 2 : 1;
         var order = new List<ModInfo>();
         var left = new List<ModInfo>(mods);
         while (left.Count > 0)
         {
-            var ready = left.Where(m => before[m].All(order.Contains)).OrderBy(m => m.Id, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
+            var ready = left.Where(m => before[m].All(order.Contains)).OrderBy(tier).ThenBy(m => m.Id, StringComparer.OrdinalIgnoreCase).FirstOrDefault();
             if (ready == null)
             {
                 foreach (var m in left) m.Error = "load order loop with " + string.Join(", ", before[m].Where(left.Contains).Select(x => x.Name).ToArray());
                 break;
             }
+            ready.LoadIndex = order.Count;
             order.Add(ready);
             left.Remove(ready);
         }

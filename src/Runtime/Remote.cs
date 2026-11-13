@@ -252,6 +252,15 @@ namespace UnderRailWorks
             g.arg(name);
             return System.IO.File.Exists(System.IO.Path.Combine(Folder(name), "global.dat"));
         }
+        // Deletes that save as the Load Game window's Delete does (cnk.arn). False: no such save, or it couldn't be deleted.
+        public static bool Delete(string name)
+        {
+            var g = Game;
+            if (g == null || string.IsNullOrEmpty(name) || !System.IO.Directory.Exists(Folder(name))) return false;
+            try { g.arn(name); }
+            catch (Exception ex) { Log.Write("saves: deleting " + name + ": " + ex.Message); }
+            return !System.IO.Directory.Exists(Folder(name));
+        }
         // The save's folder on disk (it may not exist).
         public static string Folder(string name) { return d5x.d(name); }
         // Loads that save (from the main menu or in game). False: there's no such save, or this game can't load it

@@ -102,5 +102,7 @@ check "save data survives a load"         "savedata probe=v1.0.0 writtenBy=1.0.0
 check "nothing failed to start"           "parts that didn't start: none"
 never "no patch failed"                   "UnderRailWorks: patch .* failed"
 never "no hook group failed"              "hooks failed \(mods using them"
+# Test runs never connect to Steam (run-underrail's common.sh; WITH_STEAM=1 only to test Steam itself).
+[ "${WITH_STEAM:-0}" = 1 ] || { if grep -q "helper: InitSteam -> 1" "$LOG"; then fail=$((fail+1)); echo "FAIL: connected to Steam"; else pass=$((pass+1)); fi; }
 echo "smoke test: $pass passed, $fail failed (log: $LOG)"
 [ "$fail" -eq 0 ]

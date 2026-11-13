@@ -1,5 +1,5 @@
 // Co-op, step 3: the joiner is in the host's world. When a joiner's character enters (and whenever the host changes
-// zone), the host saves the game ("coop-host" in its saves) and sends the save; the joiner's game loads it ("coop-join")
+// zone), the host saves the game ("coop-host" in its saves, deleted once read) and sends the save; the joiner's game loads it ("coop-join", deleted once loaded)
 // and freezes it (Works' Simulation.Frozen: nothing there moves or acts by itself). From then on the host sends where
 // every character is, which way it faces, its health and whether it's dead (10 times a second, only what changed), and
 // the joiner's game puts them there. The joiner's clicks don't move anything locally: a walk or an attack goes to the
@@ -54,6 +54,8 @@ public sealed partial class Coop
         }
         var folder = SaveGames.Folder(HostSave);
         var files = Directory.GetFiles(folder, "*", SearchOption.AllDirectories).Select(f => new KeyValuePair<string, byte[]>(f.Substring(folder.Length).TrimStart('\\', '/').Replace('\\', '/'), File.ReadAllBytes(f))).ToList();
+        // Only for sending: gone from the host's saves (Load Game) once read.
+        if (!SaveGames.Delete(HostSave)) Log.Warn("couldn't delete " + HostSave + " after reading it");
         Log.Info("sending the world to " + seat.Peer.Name + ": " + files.Count + " files, " + files.Sum(f => f.Value.Length) / 1024 + " KB");
         var peer = seat.Peer;
         // Sent from another thread (it can be megabytes); lines from the game's thread go in between, whole.
@@ -348,6 +350,7 @@ public sealed partial class Coop
         Simulation.IsMirror = true;     // other mods here don't change this copy (Works refuses; Co-op's changes go through Apply)
         foreach (var w in early) Place(w);
         early.Clear();
+        if (!SaveGames.Delete(JoinSave)) Log.Warn("couldn't delete " + JoinSave + " after loading it");     // loaded: not one of this player's saves
         host.Send("LOADED");
         Tell("you're in " + (hostName ?? "the host") + "'s world: click to walk, click an enemy to attack");
         Build();

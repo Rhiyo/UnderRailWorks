@@ -59,6 +59,12 @@ In this order:
    (`new HarmonyLib.Harmony("YourMod")`, with `<UseHarmony>true</UseHarmony>` in the project); the Mods tab notes that
    the mod may break with a game update.
 
+Load order and multiplayer, in `mod.json`: `requires` / `optional` load those mods first; `sortAfter` / `sortBefore`
+only order (`"sortBefore": ["*"]`: before every mod that doesn't need you first, as Co-op does so its rules apply
+before other mods' handlers run). `"multiplayer": "client"` for a mod that only changes this player's screen (a
+minimap, a HUD layout): co-op players needn't have it. The default, `"both"`, means every player needs it, same
+version (Co-op refuses a joiner otherwise, naming the differences).
+
 Versions: your `mod.json` says which Works API you built for (`"works": "1.0"`), and Works refuses a mod that uses
 something it doesn't have, by name, instead of crashing later. Parts marked `[Preview]` may still change; the Mods tab
 notes mods that use them. Details: [Versioning](Versioning.md).

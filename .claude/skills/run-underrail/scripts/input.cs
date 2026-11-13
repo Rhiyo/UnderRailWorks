@@ -26,8 +26,11 @@ class Input {
     // The game's top-level window (SDL's title is the game's name).
     static IntPtr GameWindow() { IntPtr w = FindWindow(null, "Underrail"); return w != IntPtr.Zero ? w : FindWindow(null, "UnderRail"); }
     static byte Vk(string s) { return (byte)(s.StartsWith("0x") ? Convert.ToInt32(s, 16) : int.Parse(s)); }
-    static void Down(byte vk) { keybd_event(vk, (byte)MapVirtualKey(vk, 0), 0, IntPtr.Zero); }
-    static void Up(byte vk) { keybd_event(vk, (byte)MapVirtualKey(vk, 0), KeyUp, IntPtr.Zero); }
+    // Navigation keys (Insert, Delete, Home, End, Page Up/Down, arrows), right Ctrl/Alt and numpad Divide are "extended":
+    // without the flag Wine reports their number-pad twins (Delete arrived as the keypad's "." key).
+    static uint Ext(byte vk) { return (vk >= 0x21 && vk <= 0x28) || vk == 0x2D || vk == 0x2E || vk == 0xA3 || vk == 0xA5 || vk == 0x6F ? 1u : 0u; }
+    static void Down(byte vk) { keybd_event(vk, (byte)MapVirtualKey(vk, 0), Ext(vk), IntPtr.Zero); }
+    static void Up(byte vk) { keybd_event(vk, (byte)MapVirtualKey(vk, 0), KeyUp | Ext(vk), IntPtr.Zero); }
     static void Press(byte vk) { Down(vk); Thread.Sleep(60); Up(vk); Thread.Sleep(60); }
     // Proton swallows stdout: also written to C:\\input.log in the run's prefix (pfx/drive_c/input.log).
     static void Log(string s) { Console.WriteLine(s); try { System.IO.File.AppendAllText("C:\\input.log", s + "\n"); } catch { } }
@@ -40,6 +43,9 @@ class Input {
                     SetCursorPos(int.Parse(a[++i]), int.Parse(a[++i])); Thread.Sleep(150);     // the game sees the hover first
                     mouse_event(right ? RightDown : LeftDown, 0, 0, 0, IntPtr.Zero); Thread.Sleep(80);
                     mouse_event(right ? RightUp : LeftUp, 0, 0, 0, IntPtr.Zero); Thread.Sleep(150); break; }
+                case "dblclick": SetCursorPos(int.Parse(a[++i]), int.Parse(a[++i])); Thread.Sleep(150);     // within the game's double-click time
+                    mouse_event(LeftDown, 0, 0, 0, IntPtr.Zero); Thread.Sleep(40); mouse_event(LeftUp, 0, 0, 0, IntPtr.Zero); Thread.Sleep(60);
+                    mouse_event(LeftDown, 0, 0, 0, IntPtr.Zero); Thread.Sleep(40); mouse_event(LeftUp, 0, 0, 0, IntPtr.Zero); Thread.Sleep(150); break;
                 case "ldown": SetCursorPos(int.Parse(a[++i]), int.Parse(a[++i])); Thread.Sleep(150); mouse_event(LeftDown, 0, 0, 0, IntPtr.Zero); Thread.Sleep(100); break;     // a drag: ldown, move..., lup
                 case "lup": SetCursorPos(int.Parse(a[++i]), int.Parse(a[++i])); Thread.Sleep(150); mouse_event(LeftUp, 0, 0, 0, IntPtr.Zero); Thread.Sleep(150); break;
                 case "wheel": mouse_event(Wheel, 0, 0, 120 * int.Parse(a[++i]), IntPtr.Zero); Thread.Sleep(100); break;

@@ -1,2 +1,2 @@
-{ "id": "VendorDirectory", "name": "Vendor Directory", "version": "1.1.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "VendorDirectory", "name": "Vendor Directory", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
   "description": "F6: every merchant in the zone, nearest first, with a Trade button (optionally from anywhere in the zone)." }

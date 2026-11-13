@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # inp.sh COMMANDS...   input to the running test game, in game pixels (= screenshot pixels)
-#   move X Y | click X Y | rclick X Y | wheel N (+ up, - down) | key VK | down VK | up VK | hold VK MS
+#   move X Y | click X Y | dblclick X Y | rclick X Y | ldown X Y | lup X Y | wheel N (+ up, - down) | key VK | down VK | up VK | hold VK MS
 #   type TEXT | sleep MS          VK: hex (0x1B) or decimal; see SKILL.md for common codes
 # One Wine process per call (~1-2 s), so batch several commands into one call.
 set -euo pipefail

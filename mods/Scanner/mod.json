@@ -1,2 +1,2 @@
-{ "id": "Scanner", "name": "Scanner", "version": "1.1.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "Scanner", "name": "Scanner", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9", "multiplayer": "client",
   "description": "Point at a creature: level, health, attitude, damage threshold and resistance per type, detection against your stealth." }

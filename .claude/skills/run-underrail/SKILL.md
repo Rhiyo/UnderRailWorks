@@ -10,6 +10,9 @@ the skill isn't tracked by git, so a git worktree doesn't have it). Paths below 
 (Steam in `~/.local/share/Steam`, test files in `~`, cache in `~/.cache/underrail-test`); override them there or
 in the environment (`STEAM`, `STEAM_GAME`, `TEST_GAME`, `BASE_PFX`, `CACHE`, `PROTON`) on another machine.
 Needs: Steam with the game and a Proton (the one the game's prefix last ran with is found automatically),
+Runs are **not connected to Steam** by default (an empty client folder for Proton, no app id, GE's protonfixes off):
+Steam doesn't show the user as playing and the game runs as its no-Steam build does. Set `WITH_STEAM=1` only to test
+Steam integration (achievements, the Steam helper).
 gamescope (headless backend), PipeWire/`pactl`, `mcs` (Mono), ImageMagick `magick`, Python 3 with numpy.
 It runs a **test copy** of the game in a **fresh, throwaway Proton prefix** (never the player's real saves, config.dat
 or their running game) in **headless gamescope**:

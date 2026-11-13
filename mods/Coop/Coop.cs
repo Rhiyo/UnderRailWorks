@@ -25,7 +25,7 @@ public sealed partial class Coop : WorksMod
     // What host and joiner compare when connecting: the release version and the message protocol. The protocol goes up
     // whenever the messages change, also between releases (dev builds with different protocols can't play together;
     // the release version itself only changes at a GitHub release).
-    const int Protocol = 12;
+    const int Protocol = 13;
     string Handshake { get { return Info.VersionText + "/" + Protocol; } }
 
     const int DefaultPort = 27650;
@@ -137,6 +137,17 @@ public sealed partial class Coop : WorksMod
             case "HELLO":
                 p.Name = w.Length > 2 && w[2].Trim().Length > 0 ? w[2].Trim() : "Player " + p.Id;
                 if (w.Length < 2 || w[1] != Handshake) { p.Send("BYE", "the host has Co-op " + Handshake + ", you have " + (w.Length > 1 ? w[1] : "?") + " (both need the same)"); p.Close(); return; }
+                {
+                    // Everyone needs the same mods (those whose mod.json doesn't say "multiplayer": "client"), same versions.
+                    var theirs = w.Length > 3 ? w[3].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries) : new string[0];
+                    var diff = Mods.Differences(theirs, Mods.Running(true), "you have", "the host has");
+                    if (diff.Length > 0)
+                    {
+                        Log.Info(p.Name + " refused: different mods: " + string.Join("; ", diff));
+                        Notify.Log("Co-op: " + p.Name + " can't join: their mods differ (" + string.Join("; ", diff) + ")", Say);
+                        p.Send("BYE", "your mods differ from the host's: " + string.Join("; ", diff) + ". Mods marked \"client\" may differ."); p.Close(); return;
+                    }
+                }
                 seats[p] = new Seat { Peer = p };
                 Log.Info(p.Name + " connected from " + p.Address);
                 Changed(false);
@@ -284,7 +295,7 @@ public sealed partial class Coop : WorksMod
         }
         catch (Exception ex) { host = null; return "can't reach " + args[0] + ": " + ex.Message; }
         playing = false; state = null; choices.Clear();
-        host.Send("HELLO", Handshake, name);
+        host.Send("HELLO", Handshake, name, string.Join(",", Mods.Running(true)));
         Log.Info("connected to " + args[0] + " as " + name);
         return "connected to " + args[0] + ", waiting for the character list";
     }

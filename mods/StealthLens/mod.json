@@ -1,2 +1,2 @@
-{ "id": "StealthLens", "name": "Stealth Lens", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "StealthLens", "name": "Stealth Lens", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9", "multiplayer": "client",
   "description": "While you sneak, each enemy in view shows how close you can get before it starts noticing you, by the game's own detection rule (your Stealth, its Detection, light, distance and which way it faces)." }

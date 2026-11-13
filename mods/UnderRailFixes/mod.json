@@ -3,6 +3,6 @@
   "name": "UnderRailFixes",
   "version": "2.0.0",
   "author": "Rhiyo",
-  "works": "0.9",
+  "works": "0.9", "multiplayer": "client",
   "description": "Occluded characters: shows characters hidden behind scenery (keyhole, fills, outline)."
 }

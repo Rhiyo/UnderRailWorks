@@ -23,7 +23,7 @@ public sealed class Container
     internal dbi Items_ { get { return Game.ItemContainer; } }
     // The game's id for its object (kept in saves; World.ByEntityId's kind of id).
     public string EntityId { get { return Game.a8().qe().ToString(); } }
-    [Preview("drawing types")] public MapObject Entity { get { return new MapObject(Game.a8()); } }
+    public MapObject Entity { get { return new MapObject(Game.a8()); } }
     // Opened before (the game's Inspected flag).
     public bool Searched { get { return Game.Inspected; } }
     public IList<Item> Items { get { return Items_ == null ? new List<Item>() : Items_.z2().Select(i => new Item(i)).ToList(); } }
@@ -79,7 +79,7 @@ public sealed class Lock
     // False: only a key opens it.
     public bool Pickable { get { return Game.e(); } }
     public string KeyCode { get { return Game.g(); } }
-    [Preview("drawing types")] public MapObject Entity { get { return new MapObject(Game.a8()); } }
+    public MapObject Entity { get { return new MapObject(Game.a8()); } }
     // Picking or hacking it provokes its owners (its protection mode, d2b.o(), isn't none and someone owns the door
     // or container: c3g); Witnesses: who would turn hostile now.
     public bool Guarded { get { return Game.o() != d1c.a && Game.a8().GetAspect<c3g>() != null; } }

@@ -283,7 +283,7 @@ A condition on game state, for options, branches and lines.
 ## Container  _(class, Containers.cs)_
 
 - `string EntityId` — The game's id for its object (kept in saves; World.ByEntityId's kind of id).
-- `MapObject Entity` **(preview)**
+- `MapObject Entity`
 - `bool Searched` — Opened before (the game's Inspected flag).
 - `IList<Item> Items`
 - `bool Add(string path, int stacks = 1)` — Adds a stock item by path (it is saved with the container: stock items only).
@@ -458,7 +458,7 @@ A door in the player's area. IsOpen set: opens or closes it at once (passability
 - `void Toggle()`
 - `bool IsLocked`
 
-## DrawContext  _(struct, DrawApi.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## DrawContext  _(struct, DrawApi.cs)_
 
 The game's draw context (cp9) for the frame.
 
@@ -525,7 +525,7 @@ Zone exits (the tiles World.ExitTiles lists) switched off and on. An exit that's
 - `static bool SetDescription(WorksMod mod, string key, string text)` — Its description (the level-up screen and the character sheet).
 - `static bool Give(Character who, string key)` — Gives a feat (a mod's or the game's, by key) to a character, as the game does (no feat point is spent).
 
-## GameBatch  _(struct, DrawApi.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## GameBatch  _(struct, DrawApi.cs)_
 
 One of the game's sprite batches (ob).
 
@@ -724,7 +724,7 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 - `int TargetStealth`
 - `bool Instant` — The game's verdict: the stealth is hopeless against this observer. Change it.
 
-## Interface  _(class, Interface.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## Interface  _(class, Interface.cs)_
 
 - `static float Scale` — Screen pixels per interface unit (Works' interface scale; 1 without it).
 - `static Rectangle ToPixels(Rectangle r)` — An area in interface units (where UI elements and the world's layers are laid out) in screen pixels.
@@ -844,7 +844,7 @@ Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medic
 - `static IList<Keybind> Of(string modId)` — A mod's keys (for its settings page).
 - `static string Name(Keys key)` — A key's name as the game writes it.
 
-## Layer  _(struct, DrawApi.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## Layer  _(struct, DrawApi.cs)_
 
 One sprite layer of the world pass (a2f): a creature's body, a wall piece, a floor tile, a shadow...
 
@@ -874,7 +874,7 @@ One sprite layer of the world pass (a2f): a creature's body, a wall piece, a flo
 - `static bool operator ==(Layer a, Layer b)`
 - `static bool operator !=(Layer a, Layer b)`
 
-## LayerSet  _(struct, DrawApi.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## LayerSet  _(struct, DrawApi.cs)_
 
 An entity's layers for one frame (bym: new every frame).
 
@@ -888,7 +888,7 @@ An entity's layers for one frame (bym: new every frame).
 - `static bool operator ==(LayerSet a, LayerSet b)`
 - `static bool operator !=(LayerSet a, LayerSet b)`
 
-## LayerShader  _(struct, DrawApi.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## LayerShader  _(struct, DrawApi.cs)_
 
 A layer shader of the game (cmk), e.g. "Outline".
 
@@ -897,7 +897,7 @@ A layer shader of the game (cmk), e.g. "Outline".
 - `Effect Effect(DrawContext context, WorldView view)` — Its effect and its parameters for one layer, as the shader pass uses them.
 - `void SetParameters(Effect effect, Layer layer, WorldView view)`
 
-## LayerView  _(struct, DrawApi.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## LayerView  _(struct, DrawApi.cs)_
 
 The view a layer is drawn for (bkx), passed through to DrawAsGame.
 
@@ -916,7 +916,7 @@ The view a layer is drawn for (bkx), passed through to DrawAsGame.
 - `int Difficulty` — The skill it needs (lockpicking or hacking).
 - `bool Pickable` — False: only a key opens it.
 - `string KeyCode`
-- `MapObject Entity` **(preview)**
+- `MapObject Entity`
 - `bool Guarded` — Picking or hacking it provokes its owners (its protection mode, d2b.o(), isn't none and someone owns the door or container: c3g); Witnesses: who would turn hostile now.
 - `IList<Character> Witnesses(Character thief)`
 - `bool TryPick(Character who)` — A pick (mechanical) or hack (electronic) attempt by a character with its own skill and no tool, through the game's check (Locks.ModifyAttempt applies). True if it opened. The game's XP and messages for picking with a tool are not given; guards who see it may turn hostile, as with a real pick.
@@ -972,7 +972,7 @@ Loot just rolled for a container or a character (once per entity per game). Add 
 - `string Label`
 - `Color Colour`
 
-## MapObject  _(struct, DrawApi.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## MapObject  _(struct, DrawApi.cs)_
 
 Something on the map (b0b): a wall piece, a prop, a creature, a floor tile.
 
@@ -987,7 +987,7 @@ Something on the map (b0b): a wall piece, a prop, a creature, a floor tile.
 - `static bool operator ==(MapObject a, MapObject b)`
 - `static bool operator !=(MapObject a, MapObject b)`
 
-## MapTile  _(struct, DrawApi.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## MapTile  _(struct, DrawApi.cs)_
 
 A map tile (ak1), as the world pass hands it to the tile-extras step.
 
@@ -1082,6 +1082,8 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `string Issues`
 - `string License`
 - `string Game`
+- `bool ClientOnly` — mod.json "multiplayer": "client": only changes this player's own screen (a minimap, the HUD's layout), so players in one multiplayer game needn't all have it. "both" (the default): everyone in the game needs it, same version.
+- `int LoadIndex` — Where it is in the load order (0 first); -1 not loaded.
 - `string Icon` — The mod's icon (icon.png in its folder), or null.
 - `int Failures` — Handlers of this mod that failed while the game ran (HookBase), for the Mods tab.
 - `string LastFailure`
@@ -1153,6 +1155,8 @@ A mod's own data for the current game, kept with the save as plain values (the g
 - `static object Call(string modId, string method, params object[] args)` — Calls a public method of another mod's API by name, without referencing its DLL (tModLoader's Mod.Call). Returns its result, or null if the mod, its API or the method is missing.
 - `static Hook<Action<object>> Event(string name)` — A named event any mod can raise and handle (e.g. "Bounties.Completed"), with one object of data.
 - `static void Raise(string name, object data = null)`
+- `static string[] Running(bool shared = false)` — The mods running now, as "id@version" in load order, for comparing with another game (a save's list, another player's): shared = only those every player of a multiplayer game needs (mod.json "multiplayer": "both").
+- `static string[] Differences(IEnumerable<string> theirs, IEnumerable<string> mine, string theirName = "they have", string myName = "you have")` — How the mods "theirs" (Running's form) differ from "mine", as lines for a player: missing here, only here, other versions. Empty: the same mods and versions (order isn't compared: it comes from the mods themselves).
 
 ## ModSettings  _(class, ModSettings.cs)_
 
@@ -1260,13 +1264,14 @@ Something a line or option does when reached.
 - `static Outcome FailQuest(string id)`
 - `static Outcome Log(string text)`
 
-## Outlines  _(class, WorldDraw.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## Outlines  _(class, WorldDraw.cs)_
 
 Creature outlines (eg0 builds them while Tab or the reverse-highlight key is held, or a creature is hovered, or in combat with Always). A mod can ask for outlines for every creature Tab would outline, all the time and during zone transitions too (Request); those extra outlines are hidden: Works takes them out of the game's shader pass, and mods draw them as they like (e.g. only where the creature is covered). The game's own outlines stay as they are.
 
+- `void RemoveOwner(string mod)`
 - `static bool GameOff` — The game's Character Outlines option is "Never" (no outlines at all, as with Tab).
-- `static void Request(string mod, Func<bool> wanted)` — wanted: checked each frame (e.g. "my effect is on").
-- `static void PickThrough(string mod, Func<bool> wanted)` — Hidden outlines still pick their creature, as Tab's outlines do: the game checks outline layers before the world's and keeps their creature even when a wall comes next (a7m's hit test), so a character behind scenery can be hovered and clicked without Tab. Ask with Request too (no outline, nothing to pick). wanted: checked each frame.
+- `static void Request(WorksMod mod, Func<bool> wanted)` — wanted: checked each frame (e.g. "my effect is on").
+- `static void PickThrough(WorksMod mod, Func<bool> wanted)` — Hidden outlines still pick their creature, as Tab's outlines do: the game checks outline layers before the world's and keeps their creature even when a wall comes next (a7m's hit test), so a character behind scenery can be hovered and clicked without Tab. Ask with Request too (no outline, nothing to pick). wanted: checked each frame.
 - `static bool IsHidden(Layer outline)` — Built only because a mod asked: the game doesn't draw it.
 - `static bool Has(LayerSet layers)` — The layer set (bym, new every frame) got an outline this frame: Tab would outline this creature.
 - `static IList<KeyValuePair<Layer, bool>> All(WorldView view)` — This frame's outlines in the game's pass order, with whether each is hidden (taken out of the pass); valid from ShaderPassStarting to ShaderPassDone.
@@ -1456,6 +1461,7 @@ The first handler that returns true replaces the game's step.
 
 - `static bool CanSave` — The game would let the player save now (not in combat, not stopped by a script).
 - `static bool SaveNow(string name)` — Writes the current game into the save folder name now (replacing it). False: not in a game, or no save came out.
+- `static bool Delete(string name)` — Deletes that save as the Load Game window's Delete does (cnk.arn). False: no such save, or it couldn't be deleted.
 - `static string Folder(string name)` — The save's folder on disk (it may not exist).
 - `static bool Load(string name)` — Loads that save (from the main menu or in game). False: there's no such save, or this game can't load it (another major version, or DLC it doesn't have). The load happens over the next frames.
 
@@ -1938,7 +1944,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static bool FogOfWar` — The game's fog of war is on: undiscovered parts are hidden under the shroud.
 - `static readonly Color AreaExitColour = new Color(0, 0, 150), ZoneExitColour = new Color(150, 0, 0)`
 
-## WorldDraw  _(class, WorldDraw.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## WorldDraw  _(class, WorldDraw.cs)_
 
 - `delegate bool OffsetHandler(out Vector2 from)`
 - `static readonly Hook<Action<WorldView, DrawContext, Layer, bool>> LayerStarting = new Hook<Action<WorldView, DrawContext, Layer, bool>>("LayerStarting")` — Start of a7m.a(cp9, a2f, bool shaderPass, bkx): each layer the world pass draws, in drawing order (back to front).
@@ -1955,7 +1961,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static void Mark(WorksMod mod, string key, string zoneId, Color colour)`
 - `static void Unmark(WorksMod mod, string key)`
 
-## WorldView  _(struct, DrawApi.cs)_  **Preview** (drawing: built for UnderRailFixes so far): may change in any Works release
+## WorldView  _(struct, DrawApi.cs)_
 
 The world view (a7m): the map's drawing for one frame.
 

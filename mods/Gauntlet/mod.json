@@ -1,2 +1,2 @@
-{ "id": "Gauntlet", "name": "Gauntlet", "version": "1.1.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "Gauntlet", "name": "Gauntlet", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
   "description": "Challenges chosen per game, like the game's own difficulty: on the new-game screen's Mods tab pick Off, Tough, Brutal or Custom (set in Options -> Mods -> Gauntlet): harder hits, weaker attacks, fewer action points, dearer merchants, less experience. Kept with that game." }

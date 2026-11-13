@@ -16,7 +16,18 @@ if [ -z "${PROTON:-}" ]; then
     name="$(cat "$REAL_PFX/version" 2>/dev/null || true)"
     PROTON="$(ls -d "$STEAM"/compatibilitytools.d/"$name"*/proton 2>/dev/null | head -1)"
 fi
-export STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM" STEAM_COMPAT_DATA_PATH="$TEST_PFX" SteamAppId=250520 SteamGameId=250520 WINEDEBUG=-all
+# Not through Steam unless asked (WITH_STEAM=1, for testing Steam integration): Proton finds the Steam client through
+# STEAM_COMPAT_CLIENT_INSTALL_PATH and the app id in SteamAppId; with an empty folder and no app id the game's Steam
+# helper can't reach Steam (it runs as the GOG/no-Steam game does), and Steam never shows the test run as you playing.
+if [ "${WITH_STEAM:-0}" = 1 ]; then
+    export STEAM_COMPAT_CLIENT_INSTALL_PATH="$STEAM" SteamAppId=250520 SteamGameId=250520
+else
+    mkdir -p "$HOME/.cache/underrail-test/no-steam"
+    export STEAM_COMPAT_CLIENT_INSTALL_PATH="$HOME/.cache/underrail-test/no-steam"
+    unset SteamAppId SteamGameId SteamOverlayGameId SteamClientLaunch STEAM_COMPAT_APP_ID
+    export PROTONFIXES_DISABLE=1     # GE-Proton's fixes look the game up by app id (UnderRail needs none)
+fi
+export STEAM_COMPAT_DATA_PATH="$TEST_PFX" WINEDEBUG="${WINEDEBUG:--all}"     # WINEDEBUG=+keyboard,... launch.sh: Wine debug output into game.log
 # Wine processes (wineserver included) running in this run's prefix: only ours, whatever exe they run.
 prefix_pids() {
     local p

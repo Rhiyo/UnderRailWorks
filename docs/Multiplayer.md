@@ -440,6 +440,21 @@ simulate it on their own machine.
   should); scripts that run on zone entry for "the player" running on the joiner's machine; merchants (stored with
   their zone, so they move with it).
 
+## Same mods for everyone; Co-op first (Nov 2026)
+
+- **Which mods must match.** A mod.json says `"multiplayer": "client"` when it only changes this player's own screen
+  (Minimap, HUD Layout, Movable Windows, Quest Tracker, Scanner, Status Board, Occluded Characters...); the default
+  `"both"` means every player needs it at the same version. HELLO carries the joiner's "both" mods (`Mods.Running(true)`,
+  id@version); the host compares with its own (`Mods.Differences`) and refuses with what differs ("only the host has:
+  Grudges 1.0.0; other versions: Fair Trade 9.9.9 / 1.0.0"), and tells the host. Like tModLoader's mod sides and
+  Minecraft Forge's network check; there's no download of missing mods.
+- **Order.** Co-op has `"sortBefore": ["*"]`: it loads before every mod that doesn't need it, so its handlers run
+  first on every hook (an order a joiner's click turned into, a cancelled event) and other mods see the result.
+  Hooks keep load order for handlers of the same HookOrder, also after a mod is reloaded. Order isn't compared between
+  players: the same mods give the same order.
+- **Co-op's saves.** "coop-host" (written to send the world) is deleted once read, "coop-join" once loaded, so
+  neither shows in Load Game (`SaveGames.Delete`).
+
 ## Making other mods work in co-op
 
 What the player asked: Co-op should replace Works' calls so other mods work in multiplayer as long as Co-op loads

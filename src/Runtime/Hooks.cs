@@ -16,8 +16,9 @@ namespace UnderRailWorks
 // Where a handler runs among a hook's handlers (tModLoader runs by load order only; BepInEx/Harmony have priorities).
 public enum HookOrder { First = 0, Early = 1, Normal = 2, Late = 3, Last = 4 }
 
-public abstract class HookBase<T> : IModOwned where T : class
+public abstract class HookBase<T> : IModOwned, HookOwner where T : class
 {
+    void HookOwner.SetOnFailure(Action<string> onFailure) { OnFailure = onFailure; }
     readonly string name;
     internal T[] handlers = new T[0];
     string[] owners = new string[0];
@@ -56,13 +57,17 @@ public abstract class HookBase<T> : IModOwned where T : class
     internal void Add(string mod, T handler) { Add(mod, handler, HookOrder.Normal); }
     internal void Add(string mod, T handler, HookOrder order)
     {
-        int at = 0;
-        while (at < orders.Length && orders[at] <= (int)order) at++;     // after every handler of the same or an earlier order
+        // After every handler of an earlier order, and of the same order from a mod earlier in the load order (so a
+        // reloaded mod's handlers go back to where they were, not to the end).
+        int at = 0, rank = Rank(mod);
+        while (at < orders.Length && (orders[at] < (int)order || (orders[at] == (int)order && Rank(owners[at]) <= rank))) at++;
         var h = new List<T>(handlers); h.Insert(at, handler);
         var o = new List<string>(owners); o.Insert(at, mod);
         var r = new List<int>(orders); r.Insert(at, (int)order);
         handlers = h.ToArray(); owners = o.ToArray(); orders = r.ToArray();
     }
+
+    static int Rank(string mod) { var m = mod == null ? null : ModLoader.Find(mod); return m == null ? -1 : m.LoadIndex; }
 
     public void Remove(T handler)
     {
@@ -95,11 +100,16 @@ public abstract class HookBase<T> : IModOwned where T : class
     internal void Done(int i, long started) { if (started != 0) Profiled(i, started); }
     void Profiled(int i, long started) { var o = owners; Profiler.Add(i < o.Length ? o[i] : "?", name, System.Diagnostics.Stopwatch.GetTimestamp() - started); }
 
+    // Set for hooks where a failed handler can't be left running (drawing: the game's drawing state may be half
+    // changed): called with the mod's id instead of counting to MaxFailures.
+    internal Action<string> OnFailure;
+
     internal void Failed(T[] list, int i, Exception ex)
     {
         var o = owners;
         string mod = i < o.Length && ReferenceEquals(list, handlers) ? o[i] : OwnerOf(list[i]);
         ModErrors.Report(mod, name, ex);
+        if (OnFailure != null) { Log.Write("mods: " + mod + ": its " + name + " handler failed: " + ex); OnFailure(mod); return; }
         int n; failures.TryGetValue(list[i], out n); failures[list[i]] = ++n;
         if (n >= MaxFailures) { Remove(list[i]); failures.Remove(list[i]); Log.Write("mods: " + mod + ": its " + name + " handler failed " + n + " times and was removed: " + ex.Message); }
         else if (n <= 3) Log.Write("mods: " + mod + ": its " + name + " handler failed (" + n + "): " + ex);
@@ -137,6 +147,8 @@ public sealed class ReplaceHook<T> : HookBase<T> where T : class
 
 namespace UnderRailWorks.Internal
 {
+    interface HookOwner { void SetOnFailure(Action<string> onFailure); }
+
     // works.perf: time spent in each mod's handlers per hook, while switched on.
     static class Profiler
     {

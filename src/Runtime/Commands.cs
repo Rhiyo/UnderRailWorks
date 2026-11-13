@@ -88,6 +88,8 @@ namespace UnderRailWorks
                 if (a.Length > 1) { int i; bool b; if (int.TryParse(a[1], out i)) Variables.Global.Set(a[0], i); else if (bool.TryParse(a[1], out b)) Variables.Global.Set(a[0], b); else Variables.Global.Set(a[0], a[1]); }
                 return a[0] + " = " + (Variables.Global.Get<object>(a[0], null) ?? "(unset)");
             });
+            Add("UnderRailWorks", "works.config", "works.config <mod> [setting] [value]: a mod's settings, one setting, or set it (as Accept in Options -> Mods)", a =>
+                a.Length == 0 ? "works.config <mod> [setting] [value]" : ModConfig.Console(a[0], a.Length > 1 ? a[1] : null, a.Length > 2 ? string.Join(" ", a.Skip(2).ToArray()) : null));
             Add("UnderRailWorks", "works.mods", "works.mods: the mods and their state", a => string.Join("\n", ModLoader.Mods.Select(m => m.Name + " " + m.VersionText + ": " + (m.Loaded ? "loaded" : m.Enabled ? "not loaded (" + m.Error + ")" : "off") + (m.Failures > 0 ? ", " + m.Failures + " errors" : ""))));
             Add("UnderRailWorks", "works.health", "works.health: versions, parts that didn't start, patch errors, mods with problems (for bug reports)", a =>
             {

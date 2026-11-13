@@ -192,6 +192,22 @@ public abstract class ModConfig
     static readonly Dictionary<Type, ModConfig> Loaded = new Dictionary<Type, ModConfig>();
     internal static IEnumerable<ModConfig> All { get { return Loaded.Values.ToList(); } }
 
+    // works.config: a loaded mod's setting by name, read or set (written to its settings.ini, then Reload as Accept does).
+    internal static string Console(string modId, string key, string value)
+    {
+        var c = Loaded.Values.FirstOrDefault(x => x.Mod != null && x.Mod.Id.Equals(modId, StringComparison.OrdinalIgnoreCase));
+        if (c == null) return modId + " has no settings class loaded";
+        var f = c.Fields().FirstOrDefault(x => x.Name.Equals(key ?? "", StringComparison.OrdinalIgnoreCase));
+        if (f == null) return c.Mod.Id + ": " + string.Join(", ", c.Fields().Select(x => x.Name + "=" + Format(x.GetValue(c))).ToArray());
+        if (value != null)
+        {
+            if (Parse(f.FieldType, value) == null) return c.Mod.Id + "." + f.Name + ": \"" + value + "\" isn't a " + f.FieldType.Name;
+            c.settings.Set(f.Name, value);
+            c.Reload();
+        }
+        return c.Mod.Id + "." + f.Name + " = " + Format(f.GetValue(c));
+    }
+
     internal static T Get<T>(ModInfo mod) where T : ModConfig
     {
         ModConfig c;

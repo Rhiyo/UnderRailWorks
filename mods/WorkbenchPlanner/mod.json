@@ -1,2 +1,2 @@
-{ "id": "WorkbenchPlanner", "name": "Workbench Planner", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+{ "id": "WorkbenchPlanner", "name": "Workbench Planner", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9", "multiplayer": "client",
   "description": "Press D for every recipe you know and whether you can make it now from what you carry: ready ones first, the rest with the parts or skills they still need." }
