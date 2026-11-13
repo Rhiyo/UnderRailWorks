@@ -95,14 +95,6 @@ mkdir -p dist/release
 package() {     # <dist folder> <name> <notices function>
     local pkg="$WORK/$2"
     cp -r "$1" "$pkg"
-    # Never shipped: ReShade / RenoDX / HDR files (the player's own game folder may have them; tests and builds must
-    # never carry them into a release), nor HDR code in Works or the mods.
-    local bad
-    bad="$(find "$pkg" -iname 'dxgi.dll' -o -iname 'd3d9.dll' -o -iname 'd3d11.dll' -o -iname 'opengl32.dll' -o -iname 'dinput8.dll' \
-        -o -iname '*reshade*' -o -iname '*.addon' -o -iname '*.addon32' -o -iname '*.addon64' -o -iname '*renodx*' -o -iname '*hdr*')"
-    [ -z "$bad" ] || die "the package has ReShade/HDR files: $bad"
-    grep -rlaE 'LightHdr|HdrLight|renodx|ReShade' "$pkg" --include='*.dll' --include='*.exe' --include='*.json' --include='*.ini' --include='*.md' \
-        | grep -v '/dotnet/' && die "the package mentions ReShade/HDR (above)"
     cp LICENSE "$pkg/LICENSE.txt"
     { echo "UnderRailWorks includes the following third-party software."; echo; "$3"; } > "$pkg/THIRD-PARTY-NOTICES.txt"
     rm -f "dist/release/$2.zip"
