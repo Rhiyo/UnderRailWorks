@@ -154,6 +154,9 @@ namespace UnderRailWorks
 
         // Publishes this mod's API object (call in Load). Others get it by the mod's id.
         public static void Provide(WorksMod mod, object api) { apis[mod.Id] = api; }
+        // A mod's code was loaded again (hot reload, HotReload=1 / works.reload): its id. A mod that keeps another's API
+        // asks Mods.Api again here (the old object belongs to the old code).
+        public static readonly Hook<Action<string>> Reloaded = new Hook<Action<string>>("Mods.Reloaded");
         internal static void Forget(string mod) { apis.Remove(mod); }
 
         // Another mod's API. T is best a public interface in your own mod listing the members you use (same names and

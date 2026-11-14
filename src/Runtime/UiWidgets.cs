@@ -93,6 +93,7 @@ namespace UnderRailWorks
         public double Value { get; set; }
         public event Action<double> Changed;
         internal bool Dragging;
+        internal Rectangle Track;     // where the handle moves, as last drawn (the value's text is right of it)
         internal void Set(double v)
         {
             v = Math.Max(Min, Math.Min(Max, Step > 0 ? Math.Round((v - Min) / Step) * Step + Min : v));
@@ -157,16 +158,22 @@ namespace UnderRailWorks
         public static UiSlider Slider(int width, double min, double max, double value)
         {
             var s = new UiSlider { Min = min, Max = max, Value = value };
-            s.Element = Custom(width, 22, c =>
+            // Sized for the interface (a line of text high at least); the value is written inside, right of the track.
+            s.Element = Custom(width, Math.Max(Ui.S(22), Ui.LineHeight + 4), c =>
             {
                 var b = c.Bounds;
-                c.Fill(new Rectangle(b.X, b.Center.Y - 2, b.Width, 4), Look.Hot);
+                string fmt = s.Step >= 1 ? "0" : "0.##";
+                var t = s.Value.ToString(fmt, System.Globalization.CultureInfo.InvariantCulture);
+                int textW = Math.Max(Ui.TextWidth(s.Max.ToString(fmt, System.Globalization.CultureInfo.InvariantCulture)), Ui.TextWidth(s.Min.ToString(fmt, System.Globalization.CultureInfo.InvariantCulture)));
+                int hw = Math.Max(6, Ui.S(10)), th = Math.Max(2, Ui.S(4));
+                var track = new Rectangle(b.X, b.Y, Math.Max(hw + 2, b.Width - textW - Ui.S(8)), b.Height);
+                s.Track = track;
+                c.Fill(new Rectangle(track.X, track.Center.Y - th / 2, track.Width, th), Look.Hot);
                 double f = s.Max > s.Min ? (s.Value - s.Min) / (s.Max - s.Min) : 0;
-                int x = b.X + (int)Math.Round(f * (b.Width - 10));
-                c.Fill(new Rectangle(b.X, b.Center.Y - 2, x - b.X + 5, 4), Look.Orange);
-                c.Fill(new Rectangle(x, b.Y + 2, 10, b.Height - 4), Ui.IsHot(s.Element) || s.Dragging ? Look.Light : Look.Orange);
-                var t = s.Value.ToString(s.Step >= 1 ? "0" : "0.##");
-                c.Text(t, b.Right - Ui.TextWidth(t) - 2, b.Y - Ui.LineHeight, Look.Text);
+                int x = track.X + (int)Math.Round(f * (track.Width - hw));
+                c.Fill(new Rectangle(track.X, track.Center.Y - th / 2, x - track.X + hw / 2, th), Look.Orange);
+                c.Fill(new Rectangle(x, b.Y + 2, hw, b.Height - 4), Ui.IsHot(s.Element) || s.Dragging ? Look.Light : Look.Orange);
+                c.Text(t, b.Right - Ui.TextWidth(t), b.Y + (b.Height - Ui.LineHeight) / 2, Look.Text);
             });
             Widgets.Sliders.Add(new WeakReference(s));
             return s;
@@ -243,7 +250,8 @@ namespace UnderRailWorks.Internal
                 if (Input.MousePressed(MouseButton.Left)) { int row = (m.Y - b.Y - 2) / l.RowHeight, i = l.First + row; if (row >= 0 && row < Math.Max(1, (b.Height - 4) / l.RowHeight) && i < l.Items.Count) l.Select(i); } }     // only rows that are drawn
             foreach (var w in Sliders.ToList()) { var s = w.Target as UiSlider; if (s == null) { Sliders.Remove(w); continue; } if (!Live(s.Element)) { s.Dragging = false; continue; } var b = s.Element.Bounds;
                 if (Input.MousePressed(MouseButton.Left) && Ui.IsHot(s.Element)) s.Dragging = true;
-                if (s.Dragging) { s.Set(s.Min + (s.Max - s.Min) * Math.Max(0, Math.Min(1, (m.X - b.X - 5) / (double)Math.Max(1, b.Width - 10)))); if (!Input.MouseDown(MouseButton.Left)) s.Dragging = false; } }
+                if (s.Dragging) { var tr = s.Track.Width > 0 ? s.Track : b; int hw = Math.Max(6, Ui.S(10));
+                    s.Set(s.Min + (s.Max - s.Min) * Math.Max(0, Math.Min(1, (m.X - tr.X - hw / 2) / (double)Math.Max(1, tr.Width - hw)))); if (!Input.MouseDown(MouseButton.Left)) s.Dragging = false; } }
             foreach (var w in Choices.ToList()) { var c = w.Target as UiChoice; if (c == null) { Choices.Remove(w); continue; } if (!Ui.IsHot(c.Element)) continue;
                 if (Input.MousePressed(MouseButton.Left)) c.Next(1); else if (Input.MousePressed(MouseButton.Right)) c.Next(-1); }
             if (Input.MousePressed(MouseButton.Left))

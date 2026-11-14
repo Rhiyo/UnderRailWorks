@@ -290,6 +290,7 @@ public static class ModOptions
         int stateX = UnderrailDropdownScroll.W(page.Size) - left - 40 - 200;
         UnderrailDropdownScroll.Move(state, stateX, y + (lineH - UnderrailDropdownScroll.H(state.Size)) / 2);
         UnderrailDropdownScroll.Add(page, state);
+        int titleRight = stateX - 8;
         if (mod.Loaded && !InGame && tab.Order.Count > 1)
         {
             // Up / Down, left of the status.
@@ -301,16 +302,22 @@ public static class ModOptions
                 UnderrailDropdownScroll.Move(b, bx, y + (lineH - UnderrailDropdownScroll.H(b.Size)) / 2);
                 UnderrailDropdownScroll.Add(page, b);
             }
+            titleRight = bx - 8;
         }
+        // The title ends before the buttons and the status (a long one is cut, never drawn under them).
+        name.Size = new esj(Math.Max(Ui.S(80), titleRight - x), UnderrailDropdownScroll.H(name.Size));
 
         // Then: why it didn't load, the description, what it needs, its settings.
         // A missing requirement shows on the Requires line (in red); other reasons on a line of their own.
         bool unmet = mod.Requires.Any(d => Describe(d, true) != null);
-        if (mod.Enabled && mod.Error != null && !(unmet && mod.Error.StartsWith("needs "))) Text(options, page, "   " + Capital(mod.Error), Bad);
-        if (mod.Loaded && mod.Warning != null) Text(options, page, "   Note: " + Capital(mod.Warning), Quiet);
-        if (mod.Failures > 0) Text(options, page, "   Errors this session: " + mod.Failures + " (last: " + mod.LastFailure + "); see UnderRailWorks.log", Bad);
+        // Every line wrapped to the page (a long error or requirement list ran past its edge).
+        int wrapWidth = UnderrailDropdownScroll.W(page.Size) - 2 * UnderrailOptions.Left(options) - 80;
+        Action<string, Color?> lines = (text, colour) => { foreach (var part in Ui.Wrap(text, wrapWidth)) Text(options, page, "   " + part, colour); };
+        if (mod.Enabled && mod.Error != null && !(unmet && mod.Error.StartsWith("needs "))) lines(Capital(mod.Error), Bad);
+        if (mod.Loaded && mod.Warning != null) lines("Note: " + Capital(mod.Warning), Quiet);
+        if (mod.Failures > 0) lines("Errors this session: " + mod.Failures + " (last: " + mod.LastFailure + "); see UnderRailWorks.log", Bad);
         var links = new[] { mod.Homepage, mod.License == null ? null : "Licence: " + mod.License, mod.Game == null ? null : "Made for UnderRail " + mod.Game }.Where(l => l != null).ToList();
-        if (links.Count > 0) Text(options, page, "   " + string.Join("   ", links), Quiet);
+        if (links.Count > 0) lines(string.Join("   ", links), Quiet);
         if (!string.IsNullOrEmpty(mod.Description))
         {
             // Wrapped to the page (a long description was cut at the page's edge).
@@ -319,8 +326,8 @@ public static class ModOptions
                 foreach (var part in Ui.Wrap(line.Trim(), width)) Text(options, page, "   " + part);
         }
         if (mod.Requires.Count > 0)
-            Text(options, page, "   Requires: " + string.Join(", ", mod.Requires.Select(d => Describe(d, false)).ToArray()), unmet && mod.Enabled ? Bad : Quiet);
-        if (mod.Optional.Count > 0) Text(options, page, "   Works with: " + string.Join(", ", mod.Optional.Select(d => Describe(d, false)).ToArray()), Quiet);
+            lines("Requires: " + string.Join(", ", mod.Requires.Select(d => Describe(d, false)).ToArray()), unmet && mod.Enabled ? Bad : Quiet);
+        if (mod.Optional.Count > 0) lines("Works with: " + string.Join(", ", mod.Optional.Select(d => Describe(d, false)).ToArray()), Quiet);
         if (settingsView > 0) ButtonRow(options, page, mod.Name + " settings", settingsView);
         else if (mod.Enabled && !mod.Loaded) { }
         Gap(options, CardGap / 2);

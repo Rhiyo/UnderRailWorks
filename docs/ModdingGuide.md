@@ -55,7 +55,7 @@ In this order:
    GetApi): Works makes an object implementing it that forwards to yours, or returns null and logs which member didn't
    fit. Or `Mods.Call("YourMod", "Method", args)` for one call, or events with `Mods.Event(name)` / `Raise`. Declare
    your API in your documentation, and only add to it (new members, new overloads): renaming or removing a member
-   breaks the mods that use it. Ask for it in PostLoad or later; after your mod is hot-reloaded others must ask again.
+   breaks the mods that use it. Ask for it in PostLoad or later; after the providing mod is hot-reloaded, ask again (`Mods.Reloaded` says which mod).
 4. **Last resort: raw game access.** Harmony on the game's types (by reflection, or by referencing the game yourself)
    works, but it breaks when the game updates and you're on your own. If you do it, keep it in one class, check every
    lookup for null and switch the feature off with a log line when one is missing, and never touch saves this way.

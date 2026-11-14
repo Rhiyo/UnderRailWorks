@@ -202,6 +202,8 @@ namespace UnderRailWorks.Internal
             if (!mod.Loaded) return mod.Id + " failed to load again: " + mod.Error;
             if (mod.LoadIndex < 0) mod.LoadIndex = ModLoader.Mods.Max(m => m.LoadIndex) + 1;     // it had failed: after the others
             CatchUp(mod.Id);
+            var reloaded = mod.Id;
+            if (Mods.Reloaded.Any) Mods.Reloaded.Run(h => h(reloaded));
             return "reloaded " + mod.Id + " " + mod.VersionText + (removedUi > 0 ? " (" + removedUi + " interface element(s) of the old code removed)" : "");
         }
 

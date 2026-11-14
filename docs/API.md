@@ -1153,6 +1153,7 @@ A map tile (ak1), as the world pass hands it to the tile-extras step.
 ## Mods  _(class, Framework.cs)_
 
 - `static void Provide(WorksMod mod, object api)` — Publishes this mod's API object (call in Load). Others get it by the mod's id.
+- `static readonly Hook<Action<string>> Reloaded = new Hook<Action<string>>("Mods.Reloaded")` — A mod's code was loaded again (hot reload, HotReload=1 / works.reload): its id. A mod that keeps another's API asks Mods.Api again here (the old object belongs to the old code).
 - `static T Api<T>(string modId) where T : class` — Another mod's API. T is best a public interface in your own mod listing the members you use (same names and types as the other mod's API object): Works makes an object implementing it that forwards to the API, so neither mod references the other's DLL (as SMAPI's GetApi). T may also be the API's own type, when you reference its DLL. Null if the mod isn't loaded, provides none, or the interface doesn't fit (logged once, naming the member). Call from PostLoad or later; after the other mod reloads, ask again.
 - `static object Call(string modId, string method, params object[] args)` — Calls a public method of another mod's API by name, without referencing its DLL (tModLoader's Mod.Call). Returns its result, or null if the mod, its API or the method is missing.
 - `static Hook<Action<object>> Event(string name)` — A named event any mod can raise and handle (e.g. "Bounties.Completed"), with one object of data.
