@@ -23,7 +23,11 @@ or their running game) in **headless gamescope**:
 - **No window**: it never takes focus from the user's desktop. Input goes to gamescope's own X server and
   screenshots come from gamescope itself, so the user keeps working while you drive the game. (Inside gamescope the
   game must still be the active window: see "Focus matters".)
-- **Silent**: no sound reaches PipeWire at all (SDL's dummy audio driver, set in common.sh; `WITH_SOUND=1` to hear it).
+- **Silent**: scripts/mute.sh (started by launch.sh) mutes this run's own audio streams the moment they appear; the
+  game needs an audio device, so it can't be switched off in Wine or SDL (it stops with "Could not find a suitable
+  audio device"). Its streams are named "UnderRail test run" (common.sh, PULSE_PROP_OVERRIDE): the desktop
+  remembers mute per application name, so test runs start muted and the player's own UnderRail is never muted.
+  Never mute or change a stream named "Underrail" (the real game). `WITH_SOUND=1` to hear a run.
   Never create sinks for tests: a new sink made the desktop switch the player's output to it, and test sound was
   heard over their own games (Nov 14 2026). Don't mute or change the user's own devices.
 - **One run per session, and you only touch your own**: several Claude sessions may be testing at the same time

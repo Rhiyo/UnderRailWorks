@@ -6,6 +6,7 @@
 . "$(dirname "$0")/common.sh"
 [ -d "$RUN_DIR" ] || { echo "no run $RUN (nothing to stop)"; exit 0; }
 pgid=$(cat "$RUN_DIR/pgid" 2>/dev/null || true)
+m=$(cat "$RUN_DIR/muter" 2>/dev/null || true); [ -n "$m" ] && kill "$m" 2>/dev/null     # after the game below would do too; first is fine: the game is stopping
 pid=$(game_pid) && kill "$pid"
 for i in $(seq 15); do game_pid >/dev/null || break; timeout 1 tail -f /dev/null; done
 pid=$(game_pid) && kill -9 "$pid"

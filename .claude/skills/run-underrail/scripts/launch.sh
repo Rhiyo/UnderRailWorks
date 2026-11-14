@@ -11,7 +11,7 @@
 # Only when a test needs them, copy the player's own over (copies: theirs are never written):
 #   --config      config.dat (their video/game settings)
 #   --saves       every save            --save NAME   one save folder (repeatable), e.g. --save quicksave
-# Sound: none (common.sh: SDL's dummy audio driver; WITH_SOUND=1 plays it on the normal output). No sink is made.
+# Sound: muted. mute.sh mutes this run's own streams as they appear (WITH_SOUND=1: heard). No sink or device is made.
 # Returns when the game's process exists; the game keeps running in the background (log: $RUN_DIR/game.log).
 set -euo pipefail
 . "$(dirname "$0")/common.sh"
@@ -49,6 +49,7 @@ backend=(--backend headless); [ "${VISIBLE:-0}" = 1 ] && backend=(-W "$W" -H "$H
 # Its own process group (setsid): stop.sh ends exactly this gamescope, its reaper and Proton, nothing else.
 setsid nohup gamescope "${backend[@]}" -w "$W" -h "$H" -- python3 "$PROTON" waitforexitandrun "$TEST_GAME/underrail.exe" >"$RUN_DIR/game.log" 2>&1 &
 echo $! > "$RUN_DIR/pgid"
+if [ "${WITH_SOUND:-0}" != 1 ]; then setsid nohup "$(dirname "$0")/mute.sh" "$TEST_PFX/pfx" >/dev/null 2>&1 & echo $! > "$RUN_DIR/muter"; fi
 for i in $(seq 90); do
     # This gamescope's control socket (gamescope-0, -1... when several run), for shot.sh.
     [ -s "$RUN_DIR/display" ] || sed -n "s/.*Running compositor on wayland display '\([^']*\)'.*/\1/p" "$RUN_DIR/game.log" | tail -1 > "$RUN_DIR/display"
