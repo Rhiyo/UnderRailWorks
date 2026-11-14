@@ -190,6 +190,8 @@ namespace UnderRailWorks.Internal
                 mod.Instance = null; mod.Loaded = false; mod.Error = null;
                 ModScope.Reloading = mod.Id;
                 ModLoader.LoadCode(mod, true);
+                // Its content pack again (Forget took its dialogs, texts, triggers, stores, loot, recipes with the code).
+                if (mod.Loaded) { ModScope.Current = mod.Id; try { ContentPacks.Load(mod); } catch (Exception ex) { Log.Write("content: " + mod.Id + ": " + ex.Message); } ModScope.Current = was; }
                 if (mod.Loaded && mod.Instance != null)
                 {
                     ModScope.Current = mod.Id;

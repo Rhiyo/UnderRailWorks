@@ -28,9 +28,9 @@ namespace UnderRailWorks
         public static string Current { get { return AudioHooks.Playing; } }
 
         // The song id plays the mod's .ogg instead (every place the game plays it).
-        public static void Replace(WorksMod mod, string id, string oggFile) { AudioHooks.Songs[id.ToLowerInvariant()] = new KeyValuePair<string, bool>(Path.Combine(mod.Info.Folder, oggFile), false); AudioHooks.Reapply(); }
+        public static void Replace(WorksMod mod, string id, string oggFile) { AudioHooks.Songs[id.ToLowerInvariant()] = new KeyValuePair<string, bool>(ModFiles.Resolve(mod, oggFile, "song " + id), false); AudioHooks.Reapply(); }
         // A new song id (to play with Override, Play, or an area's "Music" property set by a mod).
-        public static void Add(WorksMod mod, string id, string oggFile) { AudioHooks.Songs[id.ToLowerInvariant()] = new KeyValuePair<string, bool>(Path.Combine(mod.Info.Folder, oggFile), true); AudioHooks.Reapply(); }
+        public static void Add(WorksMod mod, string id, string oggFile) { AudioHooks.Songs[id.ToLowerInvariant()] = new KeyValuePair<string, bool>(ModFiles.Resolve(mod, oggFile, "song " + id), true); AudioHooks.Reapply(); }
 
         // Asked every frame: a song id to play instead of the game's choice, or null for the game's. The first mod (in
         // hook order) with an answer wins.
@@ -42,7 +42,7 @@ namespace UnderRailWorks
         // Every sound id the game has (e.g. "Interface.ButtonClick").
         public static IList<string> Ids { get { var b = AudioHooks.Bank; return b == null ? new List<string>() : AudioHooks.SoundTable(b).Keys.OrderBy(k => k).ToList(); } }
         // The sound id plays the mod's WAV (16-bit PCM) instead.
-        public static void Replace(WorksMod mod, string id, string wavFile) { AudioHooks.Sounds[id] = Path.Combine(mod.Info.Folder, wavFile); AudioHooks.Reapply(); }
+        public static void Replace(WorksMod mod, string id, string wavFile) { AudioHooks.Sounds[id] = ModFiles.Resolve(mod, wavFile, "sound " + id); AudioHooks.Reapply(); }
         // A new sound id the game's id-based paths (and Play) can use.
         public static void Add(WorksMod mod, string id, string wavFile) { Replace(mod, id, wavFile); }
         // Plays a sound by id at volume 0..1 (as an interface sound).

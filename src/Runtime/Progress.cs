@@ -67,7 +67,8 @@ static class ProgressHooks
 
     static void Applied(br5 __instance, els __0, ea4 __result)
     {
-        if (!GameEvents.StatusApplied.Any || __0 == null || __result == ea4.d) return;
+        // Only when it was applied (ea4.a new, ea4.c replaced): not refused (d), nor kept out by a stronger one already on (b).
+        if (!GameEvents.StatusApplied.Any || __0 == null || (__result != ea4.a && __result != ea4.c)) return;
         try { var c = Change(__instance, __0); GameEvents.StatusApplied.Run(h => h(c)); } catch (Exception ex) { Log.Write("effects: " + ex.Message); }
     }
 

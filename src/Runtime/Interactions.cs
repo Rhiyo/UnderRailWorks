@@ -125,7 +125,10 @@ namespace UnderRailWorks.Internal
                 var p = World.PlacementOf(__instance.a8());
                 if (p == null || p.OnUse == null) return true;
                 var who = __0 == null ? null : Character.Of(__0);
-                p.OnUse(who);
+                // The mod's use replaces the object's own, also when it fails (half of it done, then the stock use too
+                // would be worse).
+                try { p.OnUse(who); }
+                catch (Exception ex) { ModErrors.Report(ModErrors.ModOf(p.OnUse.Method.DeclaringType) ?? "?", "a placed object's use", ex); }
                 __result = true;
                 return false;
             }

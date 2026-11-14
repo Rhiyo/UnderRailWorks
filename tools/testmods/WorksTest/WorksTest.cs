@@ -378,6 +378,17 @@ public sealed partial class WorksTest : WorksMod
             Log.Info("turn start: paused " + GameClock.Paused + ", in TB combat " + GameClock.InTurnBasedCombat);
             int before = Combat.ActionPoints(c); var why = zap.Use(c); Log.Info("ability in combat: AP " + before + " -> " + Combat.ActionPoints(c) + (why == null ? "" : " (" + why + ")") + "; again: " + zap.Use(c)); });
         zap.Used += (user, target) => { var before = target.Health; var dealt = Combat.Damage(target, 10, "Electricity", user); Log.Info("ability: zap " + target.Name + " for " + dealt + ", health " + before + " -> " + target.Health); };
+        Commands.Add(this, "wt.recurse", "wt.recurse: a damage handler that deals damage itself (Works must stop the loop)", a =>
+        {
+            var target = World.Characters.FirstOrDefault(c => !c.IsPlayer && !c.IsDead);
+            if (target == null) return "no target";
+            int calls = 0;
+            Action<IncomingDamage> h = d => { calls++; Combat.Damage(target, 1, "Mechanical", null, false); };
+            Combat.ModifyIncomingDamage.Add(this, h);
+            try { Combat.Damage(target, 1, "Mechanical", null, false); } finally { Combat.ModifyIncomingDamage.Remove(h); }
+            Log.Info("recursion: handler ran " + calls + " times, game alive");
+            return "ok";
+        });
         Commands.Add(this, "wt.slay", "wt.slay: 500 damage to the nearest live rathound", args =>
         {
             var r = World.Characters.Where(c => c.Name.Contains("Rathound") && !c.IsDead).FirstOrDefault();

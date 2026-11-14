@@ -106,9 +106,13 @@ public static class Quests
 
     // As the game's dialogs and scripts do: announce = the chat line ("New journal entry: ...") and, on completion,
     // the XP. Each returns whether the quest changed state.
-    public static bool Start(string id, bool announce = true) { var c = Controller; return c != null && c.atb(id, announce); }
+    public static bool Start(string id, bool announce = true) { var c = Controller; id = Canonical(id); return c != null && id != null && c.atb(id, announce); }
+    // The id as the quest was defined: the game finds definitions ignoring case but journal entries by exact name
+    // ("findcrate" for "findCrate" started a second entry and couldn't complete the first).
+    static string Canonical(string id) { if (id == null) return null; try { var d = ao5.a(id); return d == null || string.IsNullOrEmpty(d.Name) ? id : d.Name; } catch { return id; } }
     public static bool Complete(string id, bool announce = true)
     {
+        id = Canonical(id);
         var c = Controller;
         if (c == null || State(id) != QuestState.Active) return false;
         c.atc(id, announce);     // always returns false in the game
@@ -116,6 +120,7 @@ public static class Quests
     }
     public static bool Fail(string id, bool announce = true)
     {
+        id = Canonical(id);
         var c = Controller;
         if (c == null || State(id) != QuestState.Active) return false;
         c.atd(id, announce);

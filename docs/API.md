@@ -321,7 +321,7 @@ The game's content, listed for modders: item paths with their codes and names, c
 
 ## ContentPack  _(class, ContentPacks.cs)_
 
-- `static void AddCondition(WorksMod mod, string key, Func<PackArgs, Func<bool>> make)` — A condition packs can use as { "key": ... }: make reads the arguments once (at load) and returns the check.
+- `static void AddCondition(WorksMod mod, string key, Func<PackArgs, Func<bool>> make)` — A condition packs can use as { "key": ... }: make reads the arguments once (at load) and returns the check. Not a built-in key (Works' own come first, so it would never be reached); another mod's key: replaced, logged.
 - `static void AddEffect(WorksMod mod, string key, Func<PackArgs, Action> make)` — An effect packs can use in "do" lists: make reads the arguments and returns what to do.
 
 ## CraftAttempt  _(class, Cancellable.cs)_
@@ -371,7 +371,7 @@ The game's content, listed for modders: item paths with their codes and names, c
 ## DamagePart  _(class, Combat.cs)_
 
 - `string Type`
-- `int Amount`
+- `int Amount` — In ModifyIncomingDamage: set it (0 takes the part away). Parts added to the list, or removed from it, change nothing but that: a removed part counts as 0.
 - `override string ToString()`
 
 ## DamageRange  _(struct, ItemDefinitions.cs)_
@@ -1065,7 +1065,7 @@ A map tile (ak1), as the world pass hands it to the tile-extras step.
 - `string Id`
 - `string Name`
 - `string Description`
-- `string Key` — The key the game (and a save) knows it by, for Character.HasFeat.
+- `string Key` — The key the game (and a save) knows it by, for Character.HasFeat. Letters, digits and '_' only: it is also a type name ('.' in a mod id made the game see only the part after it).
 - `FeatRequirements Requires`
 - `StatBonus[] Bonuses`
 - `event Action<Character> OnGain, OnLose`

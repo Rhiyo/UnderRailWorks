@@ -1792,5 +1792,15 @@ Five read-only reviews (loader, save data, names, world/items, interface), each 
   once off screen; main-menu buttons once per mod and text, the panel kept on screen; new windows start inside the
   screen; mods' keys don't fire in Options or Escape while typing; keys added later are checked against the game's;
   tooltips survive their element being off screen for a while; popup questions wrap.
+- **Game rules** (a sixth review): damage dealt from inside a damage handler stops after 3 levels (it recursed into
+  a stack overflow, which nothing catches); corpses skip the damage hooks; `Combat.Damage` returns 0 when the damage
+  is absorbed (it threw) or the target is dead; removing a part from `IncomingDamage.Parts` sets that part to 0 (it
+  shifted amounts onto other types; `DamagePart.Type` is read-only); `Combat.Round` restarts only for a fight that
+  wasn't going (crp.ahn runs on every hostile attack) and on a load; `TurnEnding` only when the game ends the turn;
+  turn points written back only when a handler changed them (fractions kept); a cancelled death keeps the health it
+  had (1 if none) and clears the attack's kill flag; `StatusApplied` only for applied effects (not one kept out by
+  a stronger one); feat keys are letters, digits and '_' (a '.' in the mod id lost the feat); an ability's AP never
+  goes below 0; a failing `OnUse` is reported and doesn't run the stock use too; `TrapDisarmed` says Recovered only
+  when the trap had an item; `GameOverAttempt.Who` names the death that ended the game.
 - **Names** (TODO.md, "Before releasing the API as 1.0"): `Add` for registering, US spelling, `Character` for the
   acting character, `Interface.PixelsPerUnit`.

@@ -53,6 +53,7 @@ wt.spawnat 33 22 creatures\rathoundalpha
 wait 3
 wt.slay
 wait 3
+wt.recurse
 works.health
 STEPS
 timeout 100 "$SKILL/launch.sh" --save "$SAVE" 2560 720 >/dev/null 2>&1
@@ -77,6 +78,7 @@ check "translations"                      "translation: Hello, player!"
 check "cross-mod calls"                   "cross-mod call: echo hi"
 check "cross-mod API through an interface" "cross-mod view: ECHO view, 42, Sad, loud True, heard view; wrong view: null"
 check "an interface that doesn't fit"     "doesn't fit IWrongView"
+check "damage from a damage handler stops" "recursion: handler ran [1-3] times, game alive"
 check "Mods.Call widens numbers"          "cross-mod call widened: 2.5, hook emptied twice: ok"
 check "hook order (first)"                "order: first"
 check "hook order (last)"                 "order: last"

@@ -60,7 +60,7 @@ namespace UnderRailWorks
         public static string Add(WorksMod mod, string id, string file)
         {
             var name = "works:" + mod.Id + ":" + id;
-            AssetStore.Icon(name, Path.Combine(mod.Info.Folder, file));
+            AssetStore.Icon(name, ModFiles.Resolve(mod, file, "icon " + id));
             return name;
         }
 
@@ -353,5 +353,23 @@ namespace UnderRailWorks.Internal
         }
 
         static void BeforeBackground() { try { Apply(); } catch (Exception ex) { Log.Write("assets: " + ex.Message); } }
+    }
+}
+
+namespace UnderRailWorks.Internal
+{
+    // A file a mod names (an icon, a song, a sound): inside its own folder ("../" or an absolute path is refused: a
+    // mod's content can't reach other files), and said at once when it isn't there (not only when it is first used).
+    static class ModFiles
+    {
+        internal static string Resolve(WorksMod mod, string file, string what)
+        {
+            if (string.IsNullOrEmpty(file)) throw new ArgumentException(what + ": no file named");
+            var root = System.IO.Path.GetFullPath(mod.Info.Folder).TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar;
+            var full = System.IO.Path.GetFullPath(System.IO.Path.Combine(mod.Info.Folder, file));
+            if (!full.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException(what + ": " + file + " is outside the mod's folder");
+            if (!System.IO.File.Exists(full)) Log.Write("mods: " + mod.Id + ": " + what + ": no file " + file);
+            return full;
+        }
     }
 }

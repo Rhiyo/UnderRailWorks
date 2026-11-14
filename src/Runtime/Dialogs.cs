@@ -107,7 +107,7 @@ public sealed class DialogBranch
 
 public sealed class DialogBuilder
 { internal DialogBuilder() { }
-    internal readonly Dictionary<string, object> Nodes = new Dictionary<string, object>();
+    internal readonly Dictionary<string, object> Nodes = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);     // as JSON keys: case doesn't matter
     internal string StartId;
     internal bool CanCancel = true;
 
@@ -149,7 +149,13 @@ public static partial class Dialogs
     public static void Add(WorksMod mod, string name, Action<DialogBuilder> build) { Define(mod.Id, name, build); }
     internal static void Define(string name, Action<DialogBuilder> build) { Define(ModScope.Current, name, build); }
     static readonly Dictionary<string, string> definedBy = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-    internal static void Define(string owner, string name, Action<DialogBuilder> build) { defined[name] = build; definedBy[name] = owner ?? ""; }
+    internal static void Define(string owner, string name, Action<DialogBuilder> build)
+    {
+        string had;
+        if (definedBy.TryGetValue(name, out had) && !string.Equals(had, owner ?? "", StringComparison.OrdinalIgnoreCase))
+            Log.Write("dialogs: " + (owner ?? "?") + " replaces " + (had.Length == 0 ? "another" : had + "'s") + " conversation " + name + " (prefix names with the mod's id)");
+        defined[name] = build; definedBy[name] = owner ?? "";
+    }
     internal static void ForgetDefined(string mod) { foreach (var k in definedBy.Where(kv => string.Equals(kv.Value, mod, StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key).ToList()) { defined.Remove(k); definedBy.Remove(k); } }
 
     public static bool Exists(string name) { return name != null && defined.ContainsKey(name); }

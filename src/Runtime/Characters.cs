@@ -224,10 +224,16 @@ public static partial class World
     // The current zone's id, for Placement.Zone (null outside a game).
     public static string ZoneId { get { var game = bpo.GetService<cnk>(); return game == null || game.aqu() == null || game.aqu().c() == null ? null : game.aqu().c().b(); } }
 
+    static readonly Dictionary<string, string> placementOwners = new Dictionary<string, string>();
     public static void Place(Placement p)
     {
         if (Simulation.Refuses("World.Place")) return;
         if (p == null || p.Id == null || p.Zone == null || p.Blueprint == null) throw new ArgumentException("a placement needs Id, Zone and Blueprint");
+        var owner = ModScope.Current ?? "";
+        string had;
+        if (placementOwners.TryGetValue(p.Id, out had) && !string.Equals(had, owner, StringComparison.OrdinalIgnoreCase))
+            Log.Write("world: " + (owner.Length == 0 ? "?" : owner) + " replaces " + (had.Length == 0 ? "another" : had + "'s") + " placement " + p.Id + " (prefix ids with the mod's id)");
+        placementOwners[p.Id] = owner;
         lock (placements) { placements.RemoveAll(x => x.Id == p.Id); placements.Add(p); }
         if (string.Equals(ZoneId, p.Zone, StringComparison.OrdinalIgnoreCase)) SpawnPlacements(Areas.CurrentZone(), p.Zone);
     }

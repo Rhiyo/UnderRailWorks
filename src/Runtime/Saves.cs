@@ -84,7 +84,7 @@ static class Saves
         harmony.Patch(Game("d6f").GetMethod("arp", any), postfix: m("ZoneLoadedHook"));
         harmony.Patch(Game("d6f").GetMethod("a", any, null, new[] { typeof(bfc) }, null), postfix: m("FirstVisitHook"));
         // Quests: ek2.atb / atc / atd (start, complete, fail).
-        foreach (var n in new[] { "atb", "atc", "atd" }) harmony.Patch(typeof(ek2).GetMethod(n, any), postfix: m("QuestHook"));
+        foreach (var n in new[] { "atb", "atc", "atd" }) harmony.Patch(typeof(ek2).GetMethod(n, any), prefix: m("QuestBefore"), postfix: m("QuestHook"));
         // Dialog window: zq.n1(e89) opens, zq.n2 closes.
         harmony.Patch(typeof(zq).GetMethod("n1", any), postfix: m("DialogOpened"));
         harmony.Patch(typeof(zq).GetMethod("n2", any), postfix: m("DialogClosed"));
@@ -259,6 +259,7 @@ static class Saves
         loading = false;
         if (__exception != null) return __exception;
         Run("restoring mod quests", RestoreQuests);
+        Combat.Round = 1;     // the last game's count isn't this one's (a save made mid-fight starts counting again)
         statusPending = true;
         Run("level", () => { var p = World.Player; ProgressHooks.Known(p == null || !p.IsCharacter ? 0 : p.Level); });
         zonePending = true;
@@ -268,7 +269,9 @@ static class Saves
         return null;
     }
 
-    static void QuestHook(string __0) { try { if (GameEvents.QuestChanged.Any) { var s = Quests.State(__0); GameEvents.QuestChanged.Run(h => h(__0, s)); } } catch (Exception ex_) { PatchGuard.Failed("Saves.QuestHook", ex_); }
+    static void QuestBefore(string __0, out QuestState __state) { __state = QuestState.NotStarted; try { if (GameEvents.QuestChanged.Any) __state = Quests.State(__0); } catch { } }
+    // Only when the quest's state changed (starting an active quest again, completing one that isn't active: nothing).
+    static void QuestHook(string __0, QuestState __state) { try { if (GameEvents.QuestChanged.Any) { var s = Quests.State(__0); if (s != __state) GameEvents.QuestChanged.Run(h => h(__0, s)); } } catch (Exception ex_) { PatchGuard.Failed("Saves.QuestHook", ex_); }
     }
 
     static string openDialog;

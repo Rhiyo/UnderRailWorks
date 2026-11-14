@@ -42,17 +42,22 @@ namespace UnderRailWorks.Internal
     {
         internal static readonly MethodInfo End = typeof(dka).GetMethod("y", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, Type.EmptyTypes, null);
 
-        static bool Dies(efk __instance)
+        [ThreadStatic] static Character lastDied;     // for GameOverAttempt.Who: the death that ends the game comes just before
+        static bool Dies(efk __instance, cru __1)
         {
-            if (!GameEvents.Dying.Any || __instance.Dead) return true;
+            if (!GameEvents.Dying.Any || __instance.Dead) { if (GameEvents.GameOver.Any && !__instance.Dead) lastDied = System.Linq.Enumerable.FirstOrDefault(World.Characters, c => c.GameData == __instance); return true; }
             try
             {
                 var who = System.Linq.Enumerable.FirstOrDefault(World.Characters, c => c.GameData == __instance);
                 if (who == null) return true;
                 var d = new DeathAttempt { Who = who };
                 GameEvents.Dying.Run(h => h(d));
-                if (!d.Cancel) return true;
-                __instance.Defense.q().zp(1);
+                if (!d.Cancel) { lastDied = who; return true; }
+                // Kept alive: at 1 health if it had none left (a scripted death at full health keeps it), and the
+                // attack's outcome no longer says it killed (the game's callers and AttackResolved read that).
+                var health = __instance.Defense.q();
+                if (health.zo() <= 0) health.zp(1);
+                if (__1 != null) __1.c = false;
                 return false;
             }
             catch (Exception ex) { Log.Write("death: " + ex.Message); return true; }
@@ -63,7 +68,7 @@ namespace UnderRailWorks.Internal
             if (!GameEvents.GameOver.Any) return true;
             try
             {
-                var g = new GameOverAttempt { Who = null };
+                var g = new GameOverAttempt { Who = lastDied };
                 GameEvents.GameOver.Run(h => h(g));
                 return !g.Cancel;
             }

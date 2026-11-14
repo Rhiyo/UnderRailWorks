@@ -151,7 +151,10 @@ namespace UnderRailWorks.Internal
                 Set(__state.Trap, __state.Difficulty);
                 if (__exception == null && GameEvents.TrapDisarmed.Any)
                 {
-                    var outcome = e.OwnTrap || e.Skill >= e.Difficulty + 20 ? DisarmOutcome.Recovered : e.Skill >= e.Difficulty ? DisarmOutcome.Disarmed
+                    // As the game (ds): recovered only when the trap has an item to give back.
+                    var item = __state.Trap == null ? null : __state.Trap.e();
+                    bool recoverable = item != null && item.TrapItem != null;
+                    var outcome = recoverable && (e.OwnTrap || e.Skill >= e.Difficulty + 20) ? DisarmOutcome.Recovered : e.OwnTrap || e.Skill >= e.Difficulty ? DisarmOutcome.Disarmed
                         : e.Skill <= e.Difficulty - 15 ? DisarmOutcome.CriticalFailure : DisarmOutcome.Failed;
                     var r = new TrapDisarmResult { Character = e.Character, Position = e.Position, Skill = e.Skill, Difficulty = e.Difficulty, Outcome = outcome };
                     GameEvents.TrapDisarmed.Run(h => h(r));

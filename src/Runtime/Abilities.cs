@@ -74,7 +74,7 @@ namespace UnderRailWorks
             }
             try { var u = Used; if (u != null) u(p, Target == AbilityTarget.Character ? target : p); }
             catch (Exception ex) { ModErrors.Report(Mod, "ability " + Id, ex); return Name + " failed"; }
-            if (turnBased && ApCost > 0) Combat.SetActionPoints(p, Combat.ActionPoints(p) - ApCost);
+            if (turnBased && ApCost > 0) Combat.SetActionPoints(p, Math.Max(0, Combat.ActionPoints(p) - ApCost));     // the handler may have spent some itself
             if (Cooldown > 0) SaveData.Of(Owner).Set("works_ability_" + Id, GameClock.Turns);
             return null;
         }

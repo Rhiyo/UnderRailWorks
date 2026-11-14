@@ -24,8 +24,11 @@ namespace UnderRailWorks
 
 public sealed class DamagePart
 { internal DamagePart() { }
-    public string Type { get; set; }      // the game's damage type name: Mechanical, Heat, Cold, Electricity, Acid, Bio, Energy, Psionic...
+    public string Type { get; internal set; }      // the game's damage type name: Mechanical, Heat, Cold, Electricity, Acid, Bio, Energy, Psionic...
+    // In ModifyIncomingDamage: set it (0 takes the part away). Parts added to the list, or removed from it, change nothing
+    // but that: a removed part counts as 0.
     public int Amount { get; set; }
+    internal int Index = -1;
     public override string ToString() { return Amount + " " + Type; }
 }
 
@@ -162,13 +165,13 @@ public static partial class Combat
     public static int Damage(Character target, int amount, string type = "Mechanical", Character source = null, bool resistances = true)
     {
         var data = target == null ? null : target.GameData;
-        if (data == null || amount <= 0) return 0;
+        if (data == null || amount <= 0 || data.Dead) return 0;
         DamageType dt;
         if (!Enum.TryParse(type ?? "Mechanical", true, out dt)) throw new ArgumentException("unknown damage type " + type);
         var src = source == null ? null : source.GameData;
         var hit = new cwt { b = true, q = resistances, f = new List<csk> { new csk(dt, amount) }, i = src == null ? null : new ap9(src) };
         var result = data.Defense.a(hit);
-        return result == null ? 0 : result.a.Sum(p => p.Amount);
+        return result == null || result.a == null ? 0 : result.a.Sum(p => p.Amount);     // null: absorbed (a shield) or immune
     }
 
     internal static void Float(Character over, string text, Color? colour = null, bool big = false) { Notify.Over(over, text, colour, big); }
@@ -209,21 +212,27 @@ static class CombatHooks
         harmony.Patch(typeof(crp).GetMethod("f", any, null, Type.EmptyTypes, null), postfix: m("TurnStart"));
         harmony.Patch(typeof(crp).GetMethod("ahq", any), prefix: m("TurnEnd"));
         harmony.Patch(typeof(crp).GetMethod("c", any, null, Type.EmptyTypes, null), postfix: m("RoundEnd"));
-        harmony.Patch(typeof(crp).GetMethod("ahn", any), postfix: m("CombatStart"));
+        harmony.Patch(typeof(crp).GetMethod("ahn", any), prefix: m("CombatStarting"), postfix: m("CombatStart"));
         harmony.Patch(typeof(d4n).GetMethod("a", any, null, Type.EmptyTypes, null), postfix: m("Refill"));
         // The three hit-chance builders (melee, ranged, thrown), told apart by their parameters.
         var builders = typeof(euf).GetMethods(any).Where(x => x.Name == "a" && x.ReturnType == typeof(bg3)).ToList();
         foreach (var b in builders) harmony.Patch(b, postfix: m("Chance"));
-        harmony.Patch(typeof(nw).GetMethod("a", any, null, new[] { typeof(cwt) }, null), prefix: m("Incoming"), postfix: m("Resolved"));
+        harmony.Patch(typeof(nw).GetMethod("a", any, null, new[] { typeof(cwt) }, null), prefix: m("Incoming"), postfix: m("Resolved"), finalizer: m("DamageDone"));
         Log.Write("combat: hooks in place (" + builders.Count + " hit chance builders)");
     }
 
     static void Run(string what, Action a) { try { a(); } catch (Exception ex) { Log.Write("combat: " + what + ": " + ex.Message); } }
 
-    static void CombatStart() { Combat.Round = 1; }
+    // crp.ahn also runs for every hostile attack in a fight already going (it adds the attacker): only a fight that
+    // wasn't going starts the round count.
+    static void CombatStarting(crp __instance, out bool __state) { __state = false; try { __state = __instance.ahg(); } catch { } }
+    static void CombatStart(bool __state) { if (!__state) Combat.Round = 1; }
     static void TurnStart(crp __instance) { try { Run("turn start", () => { if (Combat.TurnStarted.Any) { var c = Combat.Current; if (c != null) Combat.TurnStarted.Run(h => h(c)); } }); } catch (Exception ex_) { PatchGuard.Failed("Combat.TurnStart", ex_); }
     }
-    static void TurnEnd(d4n __0, bool __1) { try { if (__1 && Combat.Fighter(__0) != null && Combat.TurnEnding.Any) Run("turn end", () => { var c = Character.Of(Combat.Fighter(__0).a8()); Combat.TurnEnding.Run(h => h(c)); }); } catch (Exception ex_) { PatchGuard.Failed("Combat.TurnEnd", ex_); }
+    static readonly FieldInfo Ending = typeof(crp).GetField("i", BindingFlags.Instance | BindingFlags.NonPublic) ?? typeof(crp).GetField("m_i", BindingFlags.Instance | BindingFlags.NonPublic);
+    // Only when the game will end the turn (ahq returns at once for a fighter who isn't current, or while a turn is ending).
+    static void TurnEnd(crp __instance, d4n __0, bool __1, bool __5) { try { if (__0 == null || (__5 && __0 != __instance.ahe()) || (Ending != null && (bool)Ending.GetValue(__instance))) return;
+        if (__1 && Combat.Fighter(__0) != null && Combat.TurnEnding.Any) Run("turn end", () => { var c = Character.Of(Combat.Fighter(__0).a8()); Combat.TurnEnding.Run(h => h(c)); }); } catch (Exception ex_) { PatchGuard.Failed("Combat.TurnEnd", ex_); }
     }
     static void RoundEnd() { Run("round end", () => { var r = Combat.Round++; if (Combat.RoundEnded.Any) Combat.RoundEnded.Run(h => h(r)); }); }
 
@@ -232,9 +241,12 @@ static class CombatHooks
         if (!Combat.ModifyTurnPoints.Any || Combat.Fighter(__instance) == null) return;
         Run("turn points", () =>
         {
-            var p = new TurnPoints { Character = Character.Of(Combat.Fighter(__instance).a8()), ActionPoints = (int)Combat.Ap(__instance), MovementPoints = (int)Combat.Mp(__instance) };
+            int ap = (int)Combat.Ap(__instance), mp = (int)Combat.Mp(__instance);
+            var p = new TurnPoints { Character = Character.Of(Combat.Fighter(__instance).a8()), ActionPoints = ap, MovementPoints = mp };
             Combat.ModifyTurnPoints.Run(h => h(p));
-            Combat.SetAp(__instance, Math.Max(0, p.ActionPoints)); Combat.SetMp(__instance, Math.Max(0, p.MovementPoints));
+            // Only what a handler changed (the game's points can have fractions: carried over, spent on moving).
+            if (p.ActionPoints != ap) Combat.SetAp(__instance, Math.Max(0, p.ActionPoints));
+            if (p.MovementPoints != mp) Combat.SetMp(__instance, Math.Max(0, p.MovementPoints));
         });
     } catch (Exception ex_) { PatchGuard.Failed("Combat.Refill", ex_); }
     }
@@ -265,24 +277,41 @@ static class CombatHooks
         return a.i != null && p != null && (Guid)AttackerUidField.GetValue(a.i) == p.Uid;
     }
 
-    static List<DamagePart> Parts(List<csk> list) { return list == null ? new List<DamagePart>() : list.Select(p => new DamagePart { Type = p.DamageType.ToString(), Amount = p.Amount }).ToList(); }
+    static List<DamagePart> Parts(List<csk> list) { return list == null ? new List<DamagePart>() : list.Select((p, i) => new DamagePart { Type = p.DamageType.ToString(), Amount = p.Amount, Index = i }).ToList(); }
 
-    static void Incoming(nw __instance, cwt __0)
-    { try {
-        if (!Combat.ModifyIncomingDamage.Any || __0 == null) return;
+    // Damage dealt from inside a damage handler ("5 more fire damage on every hit") comes back here: past a few levels
+    // the handlers don't run again (an endless loop would end in a stack overflow, which nothing can catch).
+    [ThreadStatic] static int depth;
+    const int MaxDepth = 3;
+    static Exception DamageDone(bool __state, Exception __exception) { if (__state) depth--; return __exception; }
+
+    static void Incoming(nw __instance, cwt __0, out bool __state)
+    { __state = false; try {
+        depth++; __state = true;
+        if (!Combat.ModifyIncomingDamage.Any || __0 == null || depth > MaxDepth) return;
+        var target = __instance.a1();
+        if (target == null || target.Dead) return;     // a corpse: the game does nothing, nor do the handlers
         Run("incoming damage", () =>
         {
             var d = new IncomingDamage { Target = Combat.OfData(__instance.a1()), AttackerName = AttackerName(__0), ByPlayer = ByPlayer(__0), Hit = __0.b, Critical = __0.e, Parts = Parts(__0.f) };
             Combat.ModifyIncomingDamage.Run(h => h(d));
             if (d.Cancel) { __0.b = false; return; }
-            for (int i = 0; i < __0.f.Count && i < d.Parts.Count; i++) { var p = __0.f[i]; p.Amount = Math.Max(0, d.Parts[i].Amount); __0.f[i] = p; }
+            // Each of the game's parts takes the amount of the part made from it; one a handler removed counts as 0. Parts a
+            // handler added, and changed types, aren't taken (the game's list is fixed by then).
+            for (int i = 0; i < __0.f.Count; i++)
+            {
+                var mine = d.Parts.FirstOrDefault(x => x != null && x.Index == i);
+                var p = __0.f[i]; p.Amount = mine == null ? 0 : Math.Max(0, mine.Amount); __0.f[i] = p;
+            }
         });
     } catch (Exception ex_) { PatchGuard.Failed("Combat.Incoming", ex_); }
     }
 
     static void Resolved(nw __instance, cwt __0, cru __result)
     { try {
-        if (!Combat.AttackResolved.Any || __0 == null) return;
+        if (!Combat.AttackResolved.Any || __0 == null || depth > MaxDepth) return;
+        var target = __instance.a1();
+        if (target == null || (target.Dead && (__result == null || !__result.c))) return;     // an attack on a corpse (not the one that killed it)
         Run("attack resolved", () =>
         {
             // A miss comes back with an outcome whose damage list is null (or none at all).

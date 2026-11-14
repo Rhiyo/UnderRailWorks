@@ -34,7 +34,8 @@ namespace UnderRailWorks
         public string Name { get; internal set; }
         public string Description { get; internal set; }
         // The key the game (and a save) knows it by, for Character.HasFeat.
-        public string Key { get { return ("mod_" + Mod + "_" + Id).ToLowerInvariant(); } }
+        // Letters, digits and '_' only: it is also a type name ('.' in a mod id made the game see only the part after it).
+        public string Key { get { return new string(("mod_" + Mod + "_" + Id).ToLowerInvariant().Select(ch => ch < 128 && char.IsLetterOrDigit(ch) ? ch : '_').ToArray()); } }
         public FeatRequirements Requires { get; internal set; }
         public StatBonus[] Bonuses { get; internal set; }
         public event Action<Character> OnGain, OnLose;

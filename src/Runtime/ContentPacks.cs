@@ -64,9 +64,20 @@ public static class ContentPack
     internal static readonly Dictionary<string, Func<PackArgs, Func<bool>>> Conditions = new Dictionary<string, Func<PackArgs, Func<bool>>>(StringComparer.OrdinalIgnoreCase);
     internal static readonly Dictionary<string, Func<PackArgs, Action>> Effects = new Dictionary<string, Func<PackArgs, Action>>(StringComparer.OrdinalIgnoreCase);
     // A condition packs can use as { "key": ... }: make reads the arguments once (at load) and returns the check.
-    public static void AddCondition(WorksMod mod, string key, Func<PackArgs, Func<bool>> make) { Conditions[key] = make; Log.Write("content: " + mod.Id + " adds the condition " + key); }
+    // Not a built-in key (Works' own come first, so it would never be reached); another mod's key: replaced, logged.
+    public static void AddCondition(WorksMod mod, string key, Func<PackArgs, Func<bool>> make)
+    {
+        if (Array.Exists(ContentPacks.CondMains, k => k.Equals(key, StringComparison.OrdinalIgnoreCase))) { Log.Write("content: " + mod.Id + ": \"" + key + "\" is a built-in condition: not added (name it after the mod)"); return; }
+        if (Conditions.ContainsKey(key)) Log.Write("content: " + mod.Id + " replaces the condition " + key + " another mod added");
+        Conditions[key] = make; Log.Write("content: " + mod.Id + " adds the condition " + key);
+    }
     // An effect packs can use in "do" lists: make reads the arguments and returns what to do.
-    public static void AddEffect(WorksMod mod, string key, Func<PackArgs, Action> make) { Effects[key] = make; Log.Write("content: " + mod.Id + " adds the effect " + key); }
+    public static void AddEffect(WorksMod mod, string key, Func<PackArgs, Action> make)
+    {
+        if (Array.Exists(ContentPacks.EffectMains, k => k.Equals(key, StringComparison.OrdinalIgnoreCase))) { Log.Write("content: " + mod.Id + ": \"" + key + "\" is a built-in effect: not added (name it after the mod)"); return; }
+        if (Effects.ContainsKey(key)) Log.Write("content: " + mod.Id + " replaces the effect " + key + " another mod added");
+        Effects[key] = make; Log.Write("content: " + mod.Id + " adds the effect " + key);
+    }
 }
 
 static class ContentPacks
@@ -91,9 +102,9 @@ static class ContentPacks
                     {
                         case "text": count += LoadText(kv.Value as Dictionary<string, object>); break;
                         case "quests": count += Each(kv.Value, where, "quest", LoadQuest); break;
-                        case "dialogs": foreach (var d in (kv.Value as Dictionary<string, object>) ?? new Dictionary<string, object>()) { LoadDialog(d.Key, d.Value as Dictionary<string, object>, where); count++; } break;
+                        case "dialogs": count += EachNamed(kv.Value, where, "dialog", (name, d) => LoadDialog(name, d, where)); break;
                         case "placements": count += Each(kv.Value, where, "placement", LoadPlacement); break;
-                        case "dialogpatches": foreach (var d in (kv.Value as Dictionary<string, object>) ?? new Dictionary<string, object>()) { LoadDialogPatch(mod.Id, d.Key, d.Value as Dictionary<string, object>); count++; } break;
+                        case "dialogpatches": count += EachNamed(kv.Value, where, "dialog patch", (name, d) => LoadDialogPatch(mod.Id, name, d)); break;
                         case "triggers": count += Each(kv.Value, where, "trigger", t => LoadTrigger(mod.Id, t)); break;
                         case "items": count += Each(kv.Value, where, "item", i => LoadItem(mod, i)); break;
                         case "itemedits": count += Each(kv.Value, where, "item edit", i => LoadItemEdit(mod, i)); break;
@@ -111,13 +122,30 @@ static class ContentPacks
         }
     }
 
+    // Each entry on its own: a bad one is reported (file, which entry) and the rest still load.
     static int Each(object list, string where, string what, Action<Dictionary<string, object>> load)
     {
-        int n = 0;
+        int n = 0, i = 0;
+        if (list != null && !(list is List<object>)) { Log.Write("content: " + where + ": the " + what + " section must be a list [ ... ]"); return 0; }
         foreach (var o in (list as List<object>) ?? new List<object>())
         {
-            try { load((Dictionary<string, object>)o); n++; }
-            catch (Exception ex) { Log.Write("content: " + where + ": a " + what + ": " + ex.Message); }
+            i++;
+            var d = o as Dictionary<string, object>;
+            object id = null; if (d != null) d.TryGetValue("id", out id);
+            try { if (d == null) throw new FormatException("must be an object { ... }"); load(d); n++; }
+            catch (Exception ex) { Log.Write("content: " + where + ": " + what + " " + i + (id != null ? " (\"" + id + "\")" : "") + ": " + ex.Message); }
+        }
+        return n;
+    }
+    static int EachNamed(object map, string where, string what, Action<string, Dictionary<string, object>> load)
+    {
+        int n = 0;
+        var d = map as Dictionary<string, object>;
+        if (map != null && d == null) { Log.Write("content: " + where + ": the " + what + " section must be an object { \"name\": { ... } }"); return 0; }
+        foreach (var kv in d ?? new Dictionary<string, object>())
+        {
+            try { var v = kv.Value as Dictionary<string, object>; if (v == null) throw new FormatException("must be an object { ... }"); load(kv.Key, v); n++; }
+            catch (Exception ex) { Log.Write("content: " + where + ": " + what + " \"" + kv.Key + "\": " + ex.Message); }
         }
         return n;
     }
@@ -248,16 +276,16 @@ static class ContentPacks
         if (v.ContainsKey("description")) d.Description = Str(v["description"]);
         if (v.ContainsKey("value")) d.Value = Num(v["value"]);
         if (v.ContainsKey("weight")) d.Weight = Num(v["weight"]);
-        if (v.ContainsKey("maxStack")) d.MaxStack = (int)Num(v["maxStack"]);
-        if (v.ContainsKey("actionPoints")) d.ActionPoints = (int)Num(v["actionPoints"]);
+        if (v.ContainsKey("maxStack")) d.MaxStack = WholeNum(v["maxStack"]);
+        if (v.ContainsKey("actionPoints")) d.ActionPoints = WholeNum(v["actionPoints"]);
         if (v.ContainsKey("critChance")) d.CritChance = Num(v["critChance"]);
         if (v.ContainsKey("critDamage")) d.CritDamage = Num(v["critDamage"]);
-        if (v.ContainsKey("minStrength")) d.MinStrength = (int)Num(v["minStrength"]);
+        if (v.ContainsKey("minStrength")) d.MinStrength = WholeNum(v["minStrength"]);
         if (v.ContainsKey("armorPenalty")) d.ArmorPenalty = Num(v["armorPenalty"]);
         if (v.ContainsKey("damage"))
             d.Damage = ((List<object>)v["damage"]).Cast<Dictionary<string, object>>().Select(x => new DamageRange { Type = Req(x, "type"), Min = Int(x, "min"), Max = Int(x, "max") }).ToList();
         if (v.ContainsKey("resistances"))
-            foreach (var kv in (Dictionary<string, object>)v["resistances"]) { var a = (List<object>)kv.Value; d.SetResistance(kv.Key, (int)Num(a[0]), (int)Num(a[1])); }
+            foreach (var kv in (Dictionary<string, object>)v["resistances"]) { var a = (List<object>)kv.Value; d.SetResistance(kv.Key, WholeNum(a[0]), WholeNum(a[1])); }
     }
 
     // "stores": [ { "store": "bigbret", "item": "path", "count": 3, "once": false } ]
@@ -313,7 +341,11 @@ static class ContentPacks
             if (once && Variables.Global.Get(onceVar, false)) return;
             if (when != null && !when.Test()) return;
             if (once) Variables.Global.Set(onceVar, true);
-            foreach (var e in effects) e.Run();
+            foreach (var e in effects)
+            {
+                try { e.Run(); }     // one failing effect doesn't stop the others (nor, after ten, the trigger)
+                catch (Exception ex) { Log.Write("content: " + mod + ": trigger " + (id ?? on) + ": an effect failed: " + ex.Message); }
+            }
         };
         Func<string, string> f = k => Opt(t, k);
         Func<string, string, bool> match = (want, got) => want == null || string.Equals(want, got, StringComparison.OrdinalIgnoreCase);
@@ -347,22 +379,41 @@ static class ContentPacks
 
     // --- Conditions and effects ------------------------------------------------------------------------------------
 
+    // One condition or effect per object: { "flag": "a", "money": 5 } is an error (it used to check only the first),
+    // and keys that belong to none are reported (a typo was ignored).
+    internal static readonly string[] CondMains = { "not", "all", "any", "flag", "atLeast", "equals", "quest", "money", "has", "skill", "ability", "level", "equipped", "status", "zone", "inCombat" };
+    static readonly string[] CondParams = { "is", "count", "min" };
+    internal static readonly string[] EffectMains = { "setFlag", "setInt", "addInt", "setString", "startQuest", "completeQuest", "failQuest", "give", "take", "giveMoney", "takeMoney", "xp", "log", "say", "effect" };
+    static readonly string[] EffectParams = { "to", "by", "count", "turns" };
+    static void OneKey(Dictionary<string, object> d, string what, string[] mains, string[] parms, ICollection<string> modKeys)
+    {
+        Func<string, string[], bool> isIn = (k, list) => Array.Exists(list, x => x.Equals(k, StringComparison.OrdinalIgnoreCase));
+        var found = d.Keys.Where(k => isIn(k, mains) || modKeys.Contains(k)).ToList();
+        if (found.Count > 1) throw new FormatException("one " + what + " per object (" + string.Join(", ", found.ToArray()) + "): put them in a list" + (what == "condition" ? " under \"all\"" : ""));
+        if (found.Count == 1 && isIn(found[0], mains))
+        {
+            var unknown = d.Keys.Where(k => !k.Equals(found[0], StringComparison.OrdinalIgnoreCase) && !isIn(k, parms)).ToList();
+            if (unknown.Count > 0) throw new FormatException("\"" + found[0] + "\" doesn't take " + string.Join(", ", unknown.ToArray()));
+        }
+    }
+
     static Condition Cond(object o)
     {
         var d = o as Dictionary<string, object>;
         if (d == null || d.Count == 0) throw new FormatException("a condition must be an object like { \"flag\": \"name\" }");
+        OneKey(d, "condition", CondMains, CondParams, ContentPack.Conditions.Keys);
         if (d.ContainsKey("not")) return Condition.Not(Cond(d["not"]));
         if (d.ContainsKey("all")) return Condition.All(((List<object>)d["all"]).Select(Cond).ToArray());
         if (d.ContainsKey("any")) return Condition.Any(((List<object>)d["any"]).Select(Cond).ToArray());
         if (d.ContainsKey("flag")) { var name = Str(d["flag"]); bool want = !d.ContainsKey("is") || Bool(d["is"]); return Condition.Flag(name, want); }
-        if (d.ContainsKey("atLeast")) { var a = (List<object>)d["atLeast"]; return Condition.AtLeast(Str(a[0]), (int)Num(a[1])); }
+        if (d.ContainsKey("atLeast")) { var a = (List<object>)d["atLeast"]; return Condition.AtLeast(Str(a[0]), WholeNum(a[1])); }
         if (d.ContainsKey("equals")) { var a = (List<object>)d["equals"]; return Condition.Equals(Str(a[0]), Str(a[1])); }
         if (d.ContainsKey("quest")) { var id = Str(d["quest"]); QuestState s; if (!Enum.TryParse(Opt(d, "is") ?? "active", true, out s)) throw new FormatException("quest state: notstarted, active, completed, failed"); return Condition.Quest(id, s); }
-        if (d.ContainsKey("money")) { int n = (int)Num(d["money"]); return Condition.Code(() => World.Player != null && World.Player.Inventory.Money >= n); }
-        if (d.ContainsKey("has")) { var code = Str(d["has"]); int n = d.ContainsKey("count") ? (int)Num(d["count"]) : 1; return Condition.Code(() => World.Player != null && World.Player.Inventory.Has(code, n, true)); }
-        if (d.ContainsKey("skill")) { var s = Str(d["skill"]); int min = (int)Num(d["min"]); return Condition.Code(() => World.Player != null && World.Player.Skill(s) >= min); }
-        if (d.ContainsKey("ability")) { var s = Str(d["ability"]); int min = (int)Num(d["min"]); return Condition.Code(() => World.Player != null && World.Player.Ability(s) >= min); }
-        if (d.ContainsKey("level")) { int n = (int)Num(d["level"]); return Condition.Code(() => World.Player != null && World.Player.Level >= n); }
+        if (d.ContainsKey("money")) { int n = WholeNum(d["money"]); return Condition.Code(() => World.Player != null && World.Player.Inventory.Money >= n); }
+        if (d.ContainsKey("has")) { var code = Str(d["has"]); int n = d.ContainsKey("count") ? WholeNum(d["count"]) : 1; return Condition.Code(() => World.Player != null && World.Player.Inventory.Has(code, n, true)); }
+        if (d.ContainsKey("skill")) { var s = Str(d["skill"]); int min = WholeNum(d["min"]); return Condition.Code(() => World.Player != null && World.Player.Skill(s) >= min); }
+        if (d.ContainsKey("ability")) { var s = Str(d["ability"]); int min = WholeNum(d["min"]); return Condition.Code(() => World.Player != null && World.Player.Ability(s) >= min); }
+        if (d.ContainsKey("level")) { int n = WholeNum(d["level"]); return Condition.Code(() => World.Player != null && World.Player.Level >= n); }
         if (d.ContainsKey("equipped")) { var code = Str(d["equipped"]); return Condition.Code(() => World.Player != null && World.Player.Equipment.All.Values.Any(i => i.Code == code)); }
         if (d.ContainsKey("status")) { var code = Str(d["status"]); return Condition.Code(() => World.Player != null && World.Player.HasStatusEffect(code)); }
         if (d.ContainsKey("zone")) { var zone = Str(d["zone"]); return Condition.Code(() => string.Equals(World.ZoneId, zone, StringComparison.OrdinalIgnoreCase)); }
@@ -379,32 +430,50 @@ static class ContentPacks
 
     static Outcome Effect(Dictionary<string, object> d)
     {
+        OneKey(d, "effect", EffectMains, EffectParams, ContentPack.Effects.Keys);
+        // No player yet (a newGame trigger runs before the character exists): effects on the player do nothing.
         Func<Character> p = () => World.Player;
+        Func<Action<Character>, Outcome> onPlayer = run => Outcome.Code(() => { var pl = p(); if (pl != null) run(pl); });
         if (d.ContainsKey("setFlag")) { var n = Str(d["setFlag"]); bool v = !d.ContainsKey("to") || Bool(d["to"]); return Outcome.SetFlag(n, v); }
-        if (d.ContainsKey("setInt")) return Outcome.SetInt(Str(d["setInt"]), (int)Num(d["to"]));
-        if (d.ContainsKey("addInt")) return Outcome.AddInt(Str(d["addInt"]), d.ContainsKey("by") ? (int)Num(d["by"]) : 1);
+        if (d.ContainsKey("setInt")) return Outcome.SetInt(Str(d["setInt"]), WholeNum(d["to"]));
+        if (d.ContainsKey("addInt")) return Outcome.AddInt(Str(d["addInt"]), d.ContainsKey("by") ? WholeNum(d["by"]) : 1);
         if (d.ContainsKey("setString")) return Outcome.SetString(Str(d["setString"]), Str(d["to"]));
         if (d.ContainsKey("startQuest")) return Outcome.StartQuest(Str(d["startQuest"]));
         if (d.ContainsKey("completeQuest")) return Outcome.CompleteQuest(Str(d["completeQuest"]));
         if (d.ContainsKey("failQuest")) return Outcome.FailQuest(Str(d["failQuest"]));
-        if (d.ContainsKey("give")) { var path = Str(d["give"]); int n = d.ContainsKey("count") ? (int)Num(d["count"]) : 1; return Outcome.Code(() => p().Inventory.Add(path, n)); }
-        if (d.ContainsKey("take")) { var code = Str(d["take"]); int n = d.ContainsKey("count") ? (int)Num(d["count"]) : 1; return Outcome.Code(() => p().Inventory.Take(code, n)); }
-        if (d.ContainsKey("giveMoney")) { int n = (int)Num(d["giveMoney"]); return Outcome.Code(() => p().Inventory.AddMoney(n)); }
-        if (d.ContainsKey("takeMoney")) { int n = (int)Num(d["takeMoney"]); return Outcome.Code(() => p().Inventory.TakeMoney(n)); }
-        if (d.ContainsKey("xp")) { int n = (int)Num(d["xp"]); return Outcome.Code(() => p().GiveExperience(n)); }
+        if (d.ContainsKey("give")) { var path = Str(d["give"]); int n = d.ContainsKey("count") ? WholeNum(d["count"]) : 1; return onPlayer(pl => pl.Inventory.Add(path, n)); }
+        if (d.ContainsKey("take")) { var code = Str(d["take"]); int n = d.ContainsKey("count") ? WholeNum(d["count"]) : 1; return onPlayer(pl => pl.Inventory.Take(code, n)); }
+        if (d.ContainsKey("giveMoney")) { int n = WholeNum(d["giveMoney"]); return onPlayer(pl => pl.Inventory.AddMoney(n)); }
+        if (d.ContainsKey("takeMoney")) { int n = WholeNum(d["takeMoney"]); return onPlayer(pl => pl.Inventory.TakeMoney(n)); }
+        if (d.ContainsKey("xp")) { int n = WholeNum(d["xp"]); return onPlayer(pl => pl.GiveExperience(n)); }
         if (d.ContainsKey("log")) return Outcome.Log(Str(d["log"]));
         if (d.ContainsKey("say")) { var t = Str(d["say"]); return Outcome.Code(() => Notify.OverPlayer(t)); }
-        if (d.ContainsKey("effect")) { var code = Str(d["effect"]); double turns = d.ContainsKey("turns") ? Num(d["turns"]) : 0; return Outcome.Code(() => StatusEffects.Apply(p(), code, turns)); }
+        if (d.ContainsKey("effect")) { var code = Str(d["effect"]); double turns = d.ContainsKey("turns") ? Num(d["turns"]) : 0; return onPlayer(pl => StatusEffects.Apply(pl, code, turns)); }
         foreach (var kv in ContentPack.Effects) if (d.ContainsKey(kv.Key)) { var run = kv.Value(new PackArgs(d)); return Outcome.Code(run); }
         throw new FormatException("unknown effect: " + string.Join(", ", d.Keys));
     }
 
     // --- Values ----------------------------------------------------------------------------------------------------
     static string Str(object o) { return o == null ? null : Convert.ToString(o, CultureInfo.InvariantCulture); }
-    static double Num(object o) { return o is double ? (double)o : double.Parse(Str(o), CultureInfo.InvariantCulture); }
-    static bool Bool(object o) { return o is bool ? (bool)o : Str(o) == "1" || string.Equals(Str(o), "true", StringComparison.OrdinalIgnoreCase); }
+    // A number (JSON's, or text "1.5"; never a thousands separator), a whole one where one is needed.
+    static double Num(object o)
+    {
+        if (o is double) return (double)o;
+        double d;
+        if (!double.TryParse(Str(o), NumberStyles.Float, CultureInfo.InvariantCulture, out d) || double.IsNaN(d) || double.IsInfinity(d)) throw new FormatException("\"" + Str(o) + "\" isn't a number");
+        return d;
+    }
+    static int WholeNum(object o) { var d = Num(o); if (d != Math.Floor(d)) throw new FormatException(d.ToString(CultureInfo.InvariantCulture) + " isn't a whole number"); return (int)d; }
+    static bool Bool(object o)
+    {
+        if (o is bool) return (bool)o;
+        var t = (Str(o) ?? "").Trim().ToLowerInvariant();
+        if (t == "1" || t == "true" || t == "yes" || t == "on") return true;
+        if (t == "0" || t == "false" || t == "no" || t == "off") return false;
+        throw new FormatException("\"" + Str(o) + "\" isn't true or false");
+    }
     static string Opt(Dictionary<string, object> d, string k) { object v; return d.TryGetValue(k, out v) ? Str(v) : null; }
     static string Req(Dictionary<string, object> d, string k) { var v = Opt(d, k); if (string.IsNullOrEmpty(v)) throw new FormatException("missing \"" + k + "\""); return v; }
-    static int Int(Dictionary<string, object> d, string k) { object v; return d.TryGetValue(k, out v) ? (int)Num(v) : 0; }
+    static int Int(Dictionary<string, object> d, string k) { object v; return d.TryGetValue(k, out v) ? WholeNum(v) : 0; }
 }
 }
