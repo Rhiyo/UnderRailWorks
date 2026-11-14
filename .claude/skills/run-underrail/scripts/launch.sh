@@ -11,7 +11,7 @@
 # Only when a test needs them, copy the player's own over (copies: theirs are never written):
 #   --config      config.dat (their video/game settings)
 #   --saves       every save            --save NAME   one save folder (repeatable), e.g. --save quicksave
-# Sound: the game plays normally, into this run's own silent PipeWire sink, so nothing is heard.
+# Sound: none (common.sh: SDL's dummy audio driver; WITH_SOUND=1 plays it on the normal output). No sink is made.
 # Returns when the game's process exists; the game keeps running in the background (log: $RUN_DIR/game.log).
 set -euo pipefail
 . "$(dirname "$0")/common.sh"
@@ -45,10 +45,9 @@ cd "$TEST_GAME"
 # The game's Steam API also finds the running Steam client by itself (steam_appid.txt in the game folder), whatever
 # the environment says: without it, a test run can't connect to Steam. Put back from the Steam folder with WITH_STEAM=1.
 if [ "${WITH_STEAM:-0}" = 1 ]; then cp "$STEAM_GAME/steam_appid.txt" "$TEST_GAME/" 2>/dev/null || true; else rm -f "$TEST_GAME/steam_appid.txt"; fi
-pactl load-module module-null-sink sink_name="$SINK" sink_properties=device.description="UnderRail-test-$RUN" > "$RUN_DIR/sink_module"
 backend=(--backend headless); [ "${VISIBLE:-0}" = 1 ] && backend=(-W "$W" -H "$H")
 # Its own process group (setsid): stop.sh ends exactly this gamescope, its reaper and Proton, nothing else.
-PULSE_SINK="$SINK" setsid nohup gamescope "${backend[@]}" -w "$W" -h "$H" -- python3 "$PROTON" waitforexitandrun "$TEST_GAME/underrail.exe" >"$RUN_DIR/game.log" 2>&1 &
+setsid nohup gamescope "${backend[@]}" -w "$W" -h "$H" -- python3 "$PROTON" waitforexitandrun "$TEST_GAME/underrail.exe" >"$RUN_DIR/game.log" 2>&1 &
 echo $! > "$RUN_DIR/pgid"
 for i in $(seq 90); do
     # This gamescope's control socket (gamescope-0, -1... when several run), for shot.sh.

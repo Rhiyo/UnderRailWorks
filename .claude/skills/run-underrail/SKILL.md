@@ -23,9 +23,9 @@ or their running game) in **headless gamescope**:
 - **No window**: it never takes focus from the user's desktop. Input goes to gamescope's own X server and
   screenshots come from gamescope itself, so the user keeps working while you drive the game. (Inside gamescope the
   game must still be the active window: see "Focus matters".)
-- **Silent**: the game's sound plays as normal, into the run's own silent PipeWire sink (`underrail_test_<run>`,
-  made by launch.sh, removed by stop.sh), so nothing comes out of the speakers. Don't mute or change the user's own
-  devices.
+- **Silent**: no sound reaches PipeWire at all (SDL's dummy audio driver, set in common.sh; `WITH_SOUND=1` to hear it).
+  Never create sinks for tests: a new sink made the desktop switch the player's output to it, and test sound was
+  heard over their own games (Nov 14 2026). Don't mute or change the user's own devices.
 - **One run per session, and you only touch your own**: several Claude sessions may be testing at the same time
   (see "Runs: track and close only your own").
 - `VISIBLE=1 launch.sh` shows it in a window instead, only when the user wants to watch (that window takes focus).
@@ -33,7 +33,7 @@ or their running game) in **headless gamescope**:
 | Script | Does |
 |---|---|
 | `setup.sh [--refresh-game] [--refresh-prefix]` | test copy `~/underrail-test` (the Steam folder's files, `data/` symlinked), base prefix `~/underrail-test-prefix` (the real prefix copied once, its `My Games/Underrail` emptied), builds the input helper. `--refresh-game` after installing a new build into the Steam folder. |
-| `launch.sh [--config] [--saves \| --save NAME] [W H]` | fresh run folder and prefix (`~/.cache/underrail-test/runs/<run>/`), then starts the game headless at W x H (default **1280x720**), sound into the silent sink; returns once the process exists. `--config` copies the player's config.dat in, `--saves` all their saves, `--save NAME` one save folder (repeatable, e.g. `--save quicksave`) |
+| `launch.sh [--config] [--saves \| --save NAME] [W H]` | fresh run folder and prefix (`~/.cache/underrail-test/runs/<run>/`), then starts the game headless at W x H (default **1280x720**), no sound; returns once the process exists. `--config` copies the player's config.dat in, `--saves` all their saves, `--save NAME` one save folder (repeatable, e.g. `--save quicksave`) |
 | `shot.sh OUT.png [SCALE%]` | screenshot of the game's screen (`gamescopectl screenshot`; no mouse cursor in it) |
 | `inp.sh CMD...` | input to the game, in game pixels |
 | `compare.sh [launch options] DRIVER...` | the same scene on several FNA3D drivers at once (e.g. `--saves D3D11 OpenGL Vulkan`): full-size shots, a stacked image, a pixel diff against D3D11; stops its runs (see "Checking a rendering bug") |

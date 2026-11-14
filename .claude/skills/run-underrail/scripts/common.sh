@@ -27,6 +27,10 @@ else
     unset SteamAppId SteamGameId SteamOverlayGameId SteamClientLaunch STEAM_COMPAT_APP_ID
     export PROTONFIXES_DISABLE=1     # GE-Proton's fixes look the game up by app id (UnderRail needs none)
 fi
+# No sound at all unless WITH_SOUND=1: the game's audio (FNA -> FAudio -> SDL3) gets SDL's dummy driver, so no stream
+# reaches PipeWire. (A silent null sink per run used to do this: the desktop switched the player's output to the new
+# device, and test sound was heard over the player's own games, Nov 14 2026.)
+if [ "${WITH_SOUND:-0}" != 1 ]; then export SDL_AUDIO_DRIVER=dummy SDL_AUDIODRIVER=dummy; fi
 export STEAM_COMPAT_DATA_PATH="$TEST_PFX" WINEDEBUG="${WINEDEBUG:--all}"     # WINEDEBUG=+keyboard,... launch.sh: Wine debug output into game.log
 # Wine processes (wineserver included) running in this run's prefix: only ours, whatever exe they run.
 prefix_pids() {
