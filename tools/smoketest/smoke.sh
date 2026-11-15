@@ -79,6 +79,8 @@ check "cross-mod calls"                   "cross-mod call: echo hi"
 check "cross-mod API through an interface" "cross-mod view: ECHO view, 42, Sad, loud True, heard view; wrong view: null"
 check "an interface that doesn't fit"     "doesn't fit IWrongView"
 check "damage from a damage handler stops" "recursion: handler ran [1-3] times, game alive"
+check "content: unknown item named"       'WorksTest/content/checks.json: no item "nothing.noSuchItem"'
+check "content: two keys refused"         "checks.json: trigger 2: one condition per object"
 check "Mods.Call widens numbers"          "cross-mod call widened: 2.5, hook emptied twice: ok"
 check "hook order (first)"                "order: first"
 check "hook order (last)"                 "order: last"

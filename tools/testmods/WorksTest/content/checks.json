@@ -1,0 +1,6 @@
+{
+  "triggers": [
+    { "on": "combatEnded", "if": { "flag": "worksTest.never" }, "do": [ { "give": "nothing\\noSuchItem" } ] },
+    { "on": "combatEnded", "if": { "flag": "worksTest.never", "money": 5 }, "do": [ { "log": "two keys in one condition must be refused" } ] }
+  ]
+}

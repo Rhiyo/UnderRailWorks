@@ -89,6 +89,7 @@ static class ContentPacks
         foreach (var file in Directory.GetFiles(dir, "*.json").OrderBy(f => f, StringComparer.OrdinalIgnoreCase))
         {
             var where = mod.Id + "/content/" + Path.GetFileName(file);
+            current = where;
             Dictionary<string, object> root;
             try { root = Json.Parse(File.ReadAllText(file)) as Dictionary<string, object>; }
             catch (Exception ex) { Log.Write("content: " + where + ": not valid JSON: " + ex.Message); continue; }
@@ -123,6 +124,24 @@ static class ContentPacks
     }
 
     // Each entry on its own: a bad one is reported (file, which entry) and the rest still load.
+    // Item paths the packs name (give, stores, loot, recipe results, new items' bases), checked once every pack and code
+    // mod has loaded (CheckReferences): a typo is said at start, with its file, not found out in game.
+    static string current;
+    static readonly List<KeyValuePair<string, string>> itemRefs = new List<KeyValuePair<string, string>>();
+    static string ItemRef(string path) { if (!string.IsNullOrEmpty(path)) itemRefs.Add(new KeyValuePair<string, string>(path, current ?? "?")); return path; }
+    internal static void CheckReferences()
+    {
+        int bad = 0;
+        foreach (var r in itemRefs.Distinct().ToList())
+        {
+            bool known;
+            try { known = Items.Exists(r.Key); } catch { continue; }     // can't tell now: not reported
+            if (!known) { bad++; Log.Write("content: " + r.Value + ": no item \"" + r.Key + "\" (an item path, as works.content lists them)"); }
+        }
+        itemRefs.Clear();
+        if (bad > 0) Log.Write("content: " + bad + " unknown item path(s) (see above)");
+    }
+
     static int Each(object list, string where, string what, Action<Dictionary<string, object>> load)
     {
         int n = 0, i = 0;
@@ -261,7 +280,7 @@ static class ContentPacks
     {
         var mod = Mod(info);
         var icon = Opt(i, "icon");
-        var path = Items.Add(mod, Req(i, "id"), Req(i, "base"), d => { Edit(d, i); if (i.ContainsKey("stats")) Edit(d, (Dictionary<string, object>)i["stats"]); });
+        var path = Items.Add(mod, Req(i, "id"), ItemRef(Req(i, "base")), d => { Edit(d, i); if (i.ContainsKey("stats")) Edit(d, (Dictionary<string, object>)i["stats"]); });
         if (icon != null) Icons.SetItemIcon(mod, "works." + info.Id + "." + Req(i, "id"), icon);
         Log.Write("content: " + info.Id + " item " + path);
     }
@@ -291,7 +310,7 @@ static class ContentPacks
     // "stores": [ { "store": "bigbret", "item": "path", "count": 3, "once": false } ]
     static void LoadStore(ModInfo info, Dictionary<string, object> s)
     {
-        var mod = Mod(info); var path = Req(s, "item"); int n = Math.Max(1, Int(s, "count"));
+        var mod = Mod(info); var path = ItemRef(Req(s, "item")); int n = Math.Max(1, Int(s, "count"));
         if (s.ContainsKey("once") && Bool(s["once"])) Stores.AddOnce(mod, Req(s, "store"), path, n); else Stores.AddRestock(mod, Req(s, "store"), path, n);
     }
 
@@ -300,7 +319,7 @@ static class ContentPacks
     {
         var who = Opt(l, "character"); bool boxes = l.ContainsKey("container") && Bool(l["container"]);
         Loot.Add(Mod(info), (c, box) => box != null ? boxes : c != null && (who == null || c.Name.IndexOf(who, StringComparison.OrdinalIgnoreCase) >= 0),
-            Req(l, "item"), l.ContainsKey("chance") ? Num(l["chance"]) : 1.0, Math.Max(1, Int(l, "count")));
+            ItemRef(Req(l, "item")), l.ContainsKey("chance") ? Num(l["chance"]) : 1.0, Math.Max(1, Int(l, "count")));
     }
 
     // "music": [ { "replace": "Junkyard", "file": "music/junk.ogg" } or { "add": "myTrack", "file": "..." } ]
@@ -322,7 +341,7 @@ static class ContentPacks
             var slot = RecipeSlot.AnyOf(Req(s, "label"), codes, Int(s, "skill"), Math.Max(1, Int(s, "count")));
             return s.ContainsKey("optional") && Bool(s["optional"]) ? slot.AsOptional() : slot;
         }).ToArray() : new RecipeSlot[0];
-        var recipe = Crafting.AddRecipe(Mod(info), Req(r, "id"), Req(r, "name"), Opt(r, "category") ?? "Devices", Req(r, "result"), slots);
+        var recipe = Crafting.AddRecipe(Mod(info), Req(r, "id"), Req(r, "name"), Opt(r, "category") ?? "Devices", ItemRef(Req(r, "result")), slots);
         if (r.ContainsKey("count")) recipe.Count = Math.Max(1, Int(r, "count"));
         if (r.ContainsKey("known")) recipe.KnownByDefault = Bool(r["known"]);
     }
@@ -441,7 +460,7 @@ static class ContentPacks
         if (d.ContainsKey("startQuest")) return Outcome.StartQuest(Str(d["startQuest"]));
         if (d.ContainsKey("completeQuest")) return Outcome.CompleteQuest(Str(d["completeQuest"]));
         if (d.ContainsKey("failQuest")) return Outcome.FailQuest(Str(d["failQuest"]));
-        if (d.ContainsKey("give")) { var path = Str(d["give"]); int n = d.ContainsKey("count") ? WholeNum(d["count"]) : 1; return onPlayer(pl => pl.Inventory.Add(path, n)); }
+        if (d.ContainsKey("give")) { var path = ItemRef(Str(d["give"])); int n = d.ContainsKey("count") ? WholeNum(d["count"]) : 1; return onPlayer(pl => pl.Inventory.Add(path, n)); }
         if (d.ContainsKey("take")) { var code = Str(d["take"]); int n = d.ContainsKey("count") ? WholeNum(d["count"]) : 1; return onPlayer(pl => pl.Inventory.Take(code, n)); }
         if (d.ContainsKey("giveMoney")) { int n = WholeNum(d["giveMoney"]); return onPlayer(pl => pl.Inventory.AddMoney(n)); }
         if (d.ContainsKey("takeMoney")) { int n = WholeNum(d["takeMoney"]); return onPlayer(pl => pl.Inventory.TakeMoney(n)); }

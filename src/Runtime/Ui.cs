@@ -670,6 +670,7 @@ static class UiHooks
         if (UnderRailWorks.Hud.Exists) { UnderRailWorks.Hud.Gone(); if (UiEvents.HudDestroyed.Any) UiEvents.HudDestroyed.Run(h => h()); }     // back to the main menu: no HUD
         UiWindows.HudGone();     // a main menu built anew (after Options): windows on the old one are gone with it
         UnderRailWorks.MainMenu.Built((a8k)__instance);
+        try { ContentPacks.CheckReferences(); } catch (Exception ex) { Log.Write("content: checking references: " + ex.Message); }     // once, when the game's item data is there
         WorksHealth.Tell();
         var root = UiElement.Of((euz)__instance);
         if (UiEvents.MainMenuCreated.Any) UiEvents.MainMenuCreated.Run(h => h(root));

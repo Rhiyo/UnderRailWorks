@@ -87,7 +87,11 @@ public static partial class Items
     {
         bk3 d;
         if (path == null) return null;
-        if (!cache.TryGetValue(path, out d)) { try { d = ez2.b(path, false); } catch { d = null; } cache[path] = d; }
+        if (!cache.TryGetValue(path, out d))
+        {
+            try { d = ez2.b(path, false); cache[path] = d; }
+            catch { d = null; }     // not remembered: a lookup before the game's data is ready fails, and would stay failed
+        }
         return d;
     }
 }
