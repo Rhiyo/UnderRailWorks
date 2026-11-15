@@ -203,6 +203,20 @@ static class ShowCovered
     internal static RenderTarget2D Mask, Work;
     static SpriteBatch batch;
     internal static Texture2D White;
+    // The GPU memory the effects hold: freed when they're switched off (between frames: Tidy, from the game's update) and
+    // when the mod is unloaded or reloaded. Up to three screen-sized targets (about 90 MB at 5120x1440).
+    internal static void Release(bool all)
+    {
+        Mask?.Dispose(); Mask = null; Work?.Dispose(); Work = null;
+        if (all) { batch?.Dispose(); batch = null; White?.Dispose(); White = null; dots?.Dispose(); dots = null; }
+    }
+    internal static void Tidy()
+    {
+        Refresh();
+        if (!on || Broken) { if (Mask != null || Work != null) Release(false); Keyhole.Release(false); }
+        else if (!anyKeyhole) Keyhole.Release(false);
+    }
+
     internal static void Targets(GraphicsDevice g)
     {
         Mask = Sized(g, Mask);
@@ -659,8 +673,8 @@ static class Keyhole
         while (Tiles.Count > n) { Tiles[Tiles.Count - 1].Target?.Dispose(); Tiles.RemoveAt(Tiles.Count - 1); }
         passContext.EndBatch();
         screen = g.GetRenderTargets(); screenViewport = g.Viewport; screenScissor = g.ScissorRectangle;
+        split = true;     // from here Abort puts the screen back and begins the world batch again, also if the next lines fail
         foreach (var t in Tiles) { g.Textures[0] = null; g.SetRenderTarget(t.Target); g.Clear(Color.Transparent); }
-        split = true;
         BindTile(Tiles[0], false);
         WorldBatch(DepthStencilState.Default);
     }
@@ -833,8 +847,10 @@ static class Keyhole
         }
         catch
         {
-            // The world batch has ended here; the game sets the screen next. Put it back and close our own batch.
+            // The game ends its world batch and sets the screen next: put the screen back, close our own batch and the
+            // world batch if a cut had begun it again (the game's next Begin would throw on a begun batch).
             try { batch?.End(); } catch { }
+            try { passContext.EndBatch(); } catch { }
             try { ToScreen(); } catch { }
             throw;
         }
@@ -931,9 +947,19 @@ static class Keyhole
         batch.End();
     }
 
+    internal static void Release(bool all)
+    {
+        if (split) return;     // never in the middle of a pass (Tidy and Unload run between frames)
+        foreach (var t in Tiles) t.Target?.Dispose();
+        Tiles.Clear();
+        behind?.Dispose(); behind = null; mask?.Dispose(); mask = null;
+        if (all) { batch?.Dispose(); batch = null; hole?.Dispose(); hole = null; holeStrength = -1; erase?.Dispose(); erase = null; covered.Clear(); strength.Clear(); lastHoles.Clear(); }
+    }
+
     static void Reset()
     {
         split = false; bound = null; intoTarget = null; open = null; Targets.Clear(); After.Clear();
+        pass = default(WorldView); passContext = default(DrawContext);     // the last map's view isn't kept alive (main menu)
     }
 
     // After an error in the middle of the world pass: the screen back as the target and the world batch begun again there,

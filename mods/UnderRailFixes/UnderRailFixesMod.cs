@@ -12,6 +12,9 @@ public sealed class UnderRailFixesMod : WorksMod
     static ModLog log;
     internal static void Note(string line) { if (log != null) log.Info(line); }
 
+    // Works removes the handlers and outline requests; the GPU memory is the mod's to free (a hot reload would leak it).
+    public override void Unload() { try { Keyhole.Release(true); ShowCovered.Release(true); } catch { } }
+
     public override void Load()
     {
         log = base.Log;
@@ -21,9 +24,11 @@ public sealed class UnderRailFixesMod : WorksMod
         if (fresh)
         {
             bool any = false;
+            // 1.x applied ShowCovered only while its group switch GameplayFixes was on.
+            bool group = WorksSettings.Get("GameplayFixes") != "0";
             foreach (string key in new[] { "ShowCovered", "ShowCoveredPlayer", "ShowCoveredHostile", "ShowCoveredOther", "ShowCoveredTransparency", "KeyholeTransparency", "KeyholeSize" })
             {
-                string v = WorksSettings.Get(key);
+                string v = key == "ShowCovered" && !group ? "0" : WorksSettings.Get(key);
                 if (v != null) { Settings.Set(key, v); any = true; }
             }
             if (any) { CoveredSettings.Config.Reload(); log.Info("settings taken from UnderrailFix.ini"); }
@@ -40,6 +45,7 @@ public sealed class UnderRailFixesMod : WorksMod
         WorldDraw.ShaderPassStarting.Add(this, ShowCovered.BeforePass);
         WorldDraw.ShaderPassDone.Add(this, ShowCovered.AfterPass);
         WorldDraw.InterfaceOffset.Add(this, Keyhole.Into);
+        GameEvents.Update.Add(this, seconds => { try { ShowCovered.Tidy(); } catch { } });     // frees the effects' GPU memory once they're off
         log.Info("occluded characters ready (" + (CoveredSettings.On ? "on" : "off") + ")");
     }
 }

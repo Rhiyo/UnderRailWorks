@@ -31,6 +31,10 @@ Func hooks turned into argument objects, the obvious duplicates made internal. S
   information comes as a new event or an args overload, never a changed delegate.
 - [x] `WorksMod.Load/PostLoad/Unload` stay public (Nov 14): as tModLoader's Mod.Load and SMAPI's Entry; protected
   would change every mod for little (a mod handed another's object could already do worse).
+- [ ] **Content-pack format** (frozen with the API): quest ids and flags are global and are written into saves
+  (`works_quest_<id>`, flags as global variables): prefix them with the mod's id automatically (with a way to name
+  another mod's or the game's), or keep them global with clashes logged (now)? Also `"is"` in conditions vs
+  `"state"` in triggers, and `give` taking a path while `take`/`has` take a code.
 - [ ] Reference assemblies per API version for the SDK (a mod built against 1.0 can't use 1.1 members by accident);
   ModCheck already refuses such a mod at load, by name.
 

@@ -1802,5 +1802,18 @@ Five read-only reviews (loader, save data, names, world/items, interface), each 
   a stronger one); feat keys are letters, digits and '_' (a '.' in the mod id lost the feat); an ability's AP never
   goes below 0; a failing `OnUse` is reported and doesn't run the stock use too; `TrapDisarmed` says Recovered only
   when the trap had an item; `GameOverAttempt.Who` names the death that ended the game.
+- **Content packs** (a seventh review): quest ids as defined (the game matches journal entries by exact name); one
+  condition / effect per object, unknown keys and built-in names taken by mods refused; numbers and true/false parsed
+  strictly; every entry reported with file, index and id; item paths checked at the first main menu (not at load:
+  the game's item data isn't there yet, and a failed lookup used to be cached for the session); effects safe
+  without a player (newGame); QuestChanged only on a change; a hot reload loads the pack again; mod files must be in
+  the mod's folder. Open (format decisions for 1.0): quest ids and flags are global and go into saves (prefix with
+  the mod id?); `"is"` (conditions) vs `"state"` (triggers); `give` takes a path, `take`/`has` a code.
+- **UnderRailFixes (Occluded Characters)**, an eighth review: a keyhole error no longer leaves the world batch begun
+  (the game's next Begin threw) nor a front tile bound (split is marked before the targets are switched); the GPU
+  memory (up to three screen-sized targets) is freed once the effects are off (between frames, from the game's
+  update) and on Unload (hot reload leaked ~90 MB at 5120x1440 each time); the last map's world view isn't kept
+  alive; settings taken from 1.x respect its GameplayFixes switch. Open: per-frame work before anyone is covered
+  (arrays per layer, Bounds reads) with the default Lines effects: measure before changing.
 - **Names** (TODO.md, "Before releasing the API as 1.0"): `Add` for registering, US spelling, `Character` for the
   acting character, `Interface.PixelsPerUnit`.
