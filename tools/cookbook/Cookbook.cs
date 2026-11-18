@@ -34,7 +34,7 @@ public sealed class Cookbook : WorksMod
         });
     }
 
-    #region Settings: a ModConfig class becomes the mod's page in Options -> Mods and its settings.ini
+    #region Settings: a ModConfig class becomes the mod's page in Options -> Works and its settings.ini
     void SettingsExample()
     {
         var c = GetConfig<CookbookConfig>();          // fields: bool -> tick box, enum -> dropdown, int/double -> slider

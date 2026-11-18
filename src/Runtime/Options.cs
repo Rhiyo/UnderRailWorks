@@ -28,7 +28,7 @@ enum StyleOnly { A }
 
 public static class UnderrailOptions
 {
-    const string TabName = "Mods";
+    const string TabName = "Works";
     internal const string TabTitle = TabName;
     sealed class Rows
     {
@@ -105,7 +105,7 @@ public static class UnderrailOptions
             var rows = new Rows();
             BuildTab(options, TabName, page =>
             {
-                // One view: Works' line, then a closed section per part (engine fixes, each mod with settings).
+                // One view: Works' own settings under its heading, then each mod with settings in a section of its own.
                 Action fixRows = !fixes ? (Action)null : () =>
                 {
                 bool first = true;

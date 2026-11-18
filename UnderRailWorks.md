@@ -1889,3 +1889,18 @@ checks. Next, only if a major ever needs it: SMAPI-style rewriting of renamed me
   gone or noted, changed DLLs reloaded), action buttons wrap into rows when they don't fit, long names cut, the list
   scrolls to the selection. Escape closes mod windows on the main menu too (the in-game key handler doesn't run there).
 
+## Works tab and staged Mods screen (Nov 18 2026, later)
+
+- The Options tab is called **Works**. Works' own settings (Resolution, Interface, Zoom, Frame rate groups) sit under
+  the "UnderRailWorks x.y.z" heading, not in a section; then a **Mods** heading and an accordion row per loaded mod with
+  settings. The row is drawn (Ui.Custom), not a button: the whole width clickable, a chevron at the left (right when
+  closed, down when open), the title in the interface's orange, the version right-aligned in grey, a one-unit rule in
+  dark orange under it, a faint fill under the mouse (web frameworks' accordion / disclosure header).
+- The Mods screen stages its changes: Switch on/off (requirements staged on, dependents staged off, each noted), Up /
+  Down / To top / Automatic order, profiles, Refresh's new mods; the list shows them in yellow ("on/off when
+  accepted"). **Accept** makes them (off first, then on in the staged order, the order written for the next start,
+  the profile marked in use, the main menu built again if needed) and closes; if a switch fails the window stays with
+  the reasons. Cancel, Escape and the close button drop them. Mods that failed to load are listed unnumbered after the
+  load order and aren't retried by Accept (switch off and on, or Refresh after fixing, to retry). The left bottom
+  buttons move to a row of their own when they don't fit beside Accept / Cancel.
+

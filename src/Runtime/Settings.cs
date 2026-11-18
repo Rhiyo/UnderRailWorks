@@ -26,7 +26,7 @@ public static class FixSettings
 
     const string Default =
 @"; UnderRailWorks settings (the engine fixes). Changes apply on the next launch; most can also be changed in game,
-; Options -> Mods -> Engine fixes. Mods keep their own settings in Mods\<mod>\settings.ini.
+; Options -> Works in game. Mods keep their own settings in Mods\<mod>\settings.ini.
 [UnderRailWorks]
 SettingsVersion=3
 

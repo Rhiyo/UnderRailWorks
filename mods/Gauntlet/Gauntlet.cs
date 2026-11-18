@@ -1,5 +1,5 @@
 // Gauntlet: an UnderRailWorks mod. Challenges chosen per game, as the game's own difficulty is: on the new-game screen
-// (Game Rules -> Mods tab, NewGameOptions) pick Off, Tough, Brutal or Custom (the values in Options -> Mods ->
+// (Game Rules -> Mods tab, NewGameOptions) pick Off, Tough, Brutal or Custom (the values in Options -> Works ->
 // Gauntlet, taken when the game starts). The choice is kept with that game (SaveData), so it can't be switched off
 // mid-fight; games started before Gauntlet are Off. Effects: damage the player takes and deals (Combat.ModifyIncomingDamage), action points per turn
 // (Combat.ModifyTurnPoints), merchants' prices (Prices.ModifyBuying), experience (Progression.ModifyExperience). A HUD

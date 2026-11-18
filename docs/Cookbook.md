@@ -6,7 +6,7 @@ the current API. Each is a method of a `WorksMod`: call it from `Load()`. The fu
 
 ## Settings
 
-A ModConfig class becomes the mod's page in Options -> Mods and its settings.ini.
+A ModConfig class becomes the mod's page in Options -> Works and its settings.ini.
 
 ```csharp
 void SettingsExample()

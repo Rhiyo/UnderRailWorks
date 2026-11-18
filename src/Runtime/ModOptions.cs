@@ -363,9 +363,9 @@ public static class ModOptions
 
     static void Gap(t1 options, int px) { UnderrailOptions.SetRowY(options, UnderrailOptions.RowY(options) + px); }
 
-    // The whole tab: Works' line, then a section per part, closed until clicked open (sections stay as the player left
-    // them while the game runs): Works' engine fixes (fixes: their rows, from Options.AddTab), then each loaded mod with
-    // settings, in load order.
+    // The whole tab: Works' own settings under its heading (fixes: their rows, from Options.AddTab), then a Mods heading
+    // and a section per loaded mod with settings, in load order, closed until its title is clicked (sections stay as the
+    // player left them while the game runs).
     internal static void ListView(t1 options, cvh page, Action fixes)
     {
         var tab = new Tab { Page = page };
@@ -375,15 +375,19 @@ public static class ModOptions
         tab.WithSettings = ModLoader.Mods.Where(m => m.Loaded && Pages.ContainsKey(m.Id)).OrderBy(m => m.LoadIndex).ToList();
 
         UnderrailOptions.HeadingRow(options, "UnderRailWorks " + FixVersion.Value);
-        Text(options, page, "Mods are switched on and off, and put in order, from the main menu's Mods button.", Quiet);
+        if (fixes != null) fixes();
+        Gap(options, 6);
+        UnderrailOptions.SeparatorRow(options);
+        UnderrailOptions.HeadingRow(options, "Mods");
+        Text(options, page, "Switch mods on and off, and change their order, with the main menu's Mods button.", Quiet);
         var troubled = ModLoader.Mods.Where(m => m.Loaded && m.Failures > 0).ToList();
         if (troubled.Count > 0) Text(options, page, "Errors this session: " + string.Join(", ", troubled.Select(m => m.Name + " (" + m.Failures + ")").ToArray()) + "; see UnderRailWorks.log", Bad);
-        if (fixes != null) Section(options, page, "Engine fixes (resolution, interface scale, zoom, frame rate)", "UnderRailWorks", fixes);
         if (tab.WithSettings.Count == 0) Text(options, page, ModLoader.Mods.Any(m => m.Loaded) ? "None of the loaded mods has settings." : "No mods are loaded.", Quiet);
+        Gap(options, 4);
         foreach (var mod in tab.WithSettings)
         {
             var m = mod;
-            Section(options, page, m.Name, m.Id, () =>
+            Section(options, page, m.Name, m.Version != null ? m.VersionText : null, m.Id, () =>
             {
                 try
                 {
@@ -400,26 +404,43 @@ public static class ModOptions
     // Open sections, by key (a mod's id), for this run of the game.
     static readonly HashSet<string> Open = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-    // A header button, then the rows build adds, folded away (TabScroll) until the header is clicked.
-    static void Section(t1 options, cvh page, string title, string key, Action build)
+    // An accordion row (as web frameworks' disclosure headers): the whole width is the title, a chevron at its left
+    // (pointing right when closed, down when open), the version at its right in grey, a thin rule under it in the
+    // interface's orange, a faint highlight under the mouse; a click anywhere on it opens or closes the rows build adds,
+    // which are folded away (TabScroll) while closed.
+    static readonly Color Title = new Color(222, 132, 40), TitleHot = new Color(250, 180, 90), Rule = new Color(120, 66, 12), HotFill = new Color(70, 40, 10, 110), Meta = new Color(150, 140, 125);
+    static void Section(t1 options, cvh page, string title, string meta, string key, Action build)
     {
-        Gap(options, 4);
         bool open = Open.Contains(key);
         TabScroll.Fold fold = null;
-        dak header = null;
-        header = UnderrailOptions.NewButton(options, "+  " + title, () =>
+        int width = UnderrailDropdownScroll.W(page.Size) - 2 * UnderrailOptions.Left(options) - 40;
+        UiElement header = null;
+        header = Ui.Custom(width, Ui.LineHeight + Ui.S(10), c =>
         {
-            if (fold == null) return;
-            fold.Closed = !fold.Closed;
-            if (fold.Closed) Open.Remove(key); else Open.Add(key);
-            header.Text = (fold.Closed ? "+  " : "-  ") + title;
-            TabScroll.Refold(page);
+            var b = c.Bounds;
+            bool hot = Ui.IsHot(header);
+            bool closed = fold == null || fold.Closed;
+            if (hot) c.Fill(b, HotFill);
+            var colour = hot ? TitleHot : Title;
+            int s = Math.Max(4, Ui.S(5)), cx = b.X + Ui.S(8) + s / 2, cy = b.Y + (b.Height - 1) / 2;
+            if (closed) for (int i = 0; i <= s; i++) c.Fill(new Rectangle(cx - s / 2 + i, cy - (s - i), 1, 2 * (s - i) + 1), colour);     // pointing right
+            else for (int j = 0; j <= s; j++) c.Fill(new Rectangle(cx - (s - j), cy - s / 2 + j, 2 * (s - j) + 1, 1), colour);           // pointing down
+            int textY = b.Y + (b.Height - Ui.LineHeight) / 2;
+            c.Text(title, b.X + Ui.S(8) + s + Ui.S(12), textY, colour);
+            if (meta != null) c.Text(meta, b.Right - Ui.S(8) - Ui.TextWidth(meta), textY, Meta);
+            c.Fill(new Rectangle(b.X, b.Bottom - 1, b.Width, 1), Rule);
+            if (hot && fold != null && Input.MousePressed(MouseButton.Left))
+            {
+                fold.Closed = !fold.Closed;
+                if (fold.Closed) Open.Remove(key); else Open.Add(key);
+                TabScroll.Refold(page);
+            }
         });
-        header.Text = (open ? "-  " : "+  ") + title;
-        UnderrailOptions.PlaceRow(options, header);
+        UnderrailOptions.PlaceRow(options, header.Control);
         int start = UnderrailOptions.RowY(options);
+        Gap(options, 4);
         build();
-        Gap(options, 8);
+        Gap(options, 10);
         fold = TabScroll.AddFold(page, start, UnderrailOptions.RowY(options), !open);
     }
 

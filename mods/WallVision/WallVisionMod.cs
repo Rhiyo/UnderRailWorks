@@ -50,7 +50,7 @@ public sealed class WallVisionMod : WorksMod
     }
 }
 
-// The settings (Options -> Mods -> Wall Vision, and Mods\WallVision\settings.ini).
+// The settings (Options -> Works -> Wall Vision, and Mods\WallVision\settings.ini).
 public sealed class WallVisionConfig : ModConfig
 {
     [Header("Occluded Characters")]

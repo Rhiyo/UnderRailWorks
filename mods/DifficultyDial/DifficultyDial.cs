@@ -1,5 +1,5 @@
 // Difficulty Dial: an UnderRailWorks mod. Tune combat to taste: damage you take, damage you deal, your hit chance,
-// your action points per turn. Every value is a setting (Options -> Mods -> Difficulty Dial settings) and applies at
+// your action points per turn. Every value is a setting (Options -> Works -> Difficulty Dial) and applies at
 // once; nothing is written to saves. Built from Works' combat API only.
 using System;
 using UnderRailWorks;

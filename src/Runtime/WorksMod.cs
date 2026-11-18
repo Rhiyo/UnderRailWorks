@@ -24,7 +24,7 @@ public abstract partial class WorksMod
     // A Harmony instance named after the mod, for patching the game where Works has no hook yet.
     internal Harmony Harmony { get; set; }
     // The mod's settings.ini as raw keys (defaults: SettingsDefaults, written on first start). GetConfig is the typed
-    // way, with the mod's page in Options -> Mods.
+    // way, with the mod's section in Options -> Works.
     public ModSettings Settings { get { return ModSettings.For(Id, SettingsDefaults); } }
     protected virtual string SettingsDefaults { get { return null; } }
 

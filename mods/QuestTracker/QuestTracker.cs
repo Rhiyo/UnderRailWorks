@@ -1,6 +1,6 @@
 // Quest Tracker: an UnderRailWorks mod. A panel on the HUD lists the active quests (newest first) with their journal
 // text, as the journal shows it; it updates when a quest starts, completes or fails, and a line in the chat log says
-// which. Settings: Options -> Mods -> Quest Tracker settings. Built from Works' API only (Quests, Ui, GameEvents).
+// which. Settings: Options -> Works -> Quest Tracker. Built from Works' API only (Quests, Ui, GameEvents).
 using System;
 using System.Collections.Generic;
 using System.Linq;

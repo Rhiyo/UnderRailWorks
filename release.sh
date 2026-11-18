@@ -135,7 +135,7 @@ $API_CHANGES
 ### Install
 1. Close the game, extract \`$NAME.zip\` and copy the contents of \`$NAME\` into the UnderRail folder.
 2. Windows: run \`UnderRailWorks-Patcher.exe\`. Linux / Steam Deck: run \`./underrailworks-patcher\`.
-3. Start the game from Steam as usual. Settings: **Options -> Mods** and \`UnderRailWorks.ini\`; mods go in the \`Mods\` folder.
+3. Start the game from Steam as usual. Mods: the main menu's **Mods** button; settings: **Options -> Works** and \`UnderRailWorks.ini\`; mods go in the \`Mods\` folder.
 
 The game then runs 64-bit on .NET 10 (included, in \`dotnet\`) and FNA. It replaces an UnderRailFixes 1.x install and takes over its settings. Saves stay compatible with the unmodded game. After a game update, run the patcher again. To uninstall, run it with \`--uninstall\` (or Steam's "Verify integrity of game files"). Details in the [README](https://github.com/$REPO#readme).
 

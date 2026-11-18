@@ -5,7 +5,7 @@
 // them (the game's own outline colours). Characters the game isn't drawing (out of sight, stealthed) are not shown.
 // A white box shows what the screen is looking at; left-click or drag on the map to look elsewhere (as an area map
 // does); right-click the minimap for a large map of the whole area (same box, same clicks).
-// It is rebuilt a few times a second, not every frame. Settings: Options -> Mods -> Minimap settings.
+// It is rebuilt a few times a second, not every frame. Settings: Options -> Works -> Minimap.
 // Built from Works' API only (World, Area, Character, Ui.Custom): it compiles without the game, so no scrambled names.
 using System;
 using System.Collections.Generic;

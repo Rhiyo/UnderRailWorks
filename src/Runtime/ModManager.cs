@@ -1,9 +1,10 @@
 // UnderRailWorks: the Mods screen, from the main menu's Mods button (as tModLoader's Mods menu): every installed mod
-// in a list (loaded ones numbered in load order, then the others by name), the selected one's details, and buttons to
-// switch it on or off (now: ModReloader.SwitchOn / SwitchOff, with what it requires or what requires it), move it up or
-// down in the load order (from the next start), and profiles (saved sets of mods and their order). Mod settings stay in
-// Options -> Mods. Only on the main menu: switching mods in a game would make its saves with other mods than it was
-// played with.
+// in a list (the ones that will be on numbered in load order, then the others by name), the selected one's details,
+// and buttons to switch it on or off, move it in the load order, use profiles and look in the Mods folder again.
+// Changes are staged and shown, and only made on Accept (Cancel, Escape or the close button drop them): mods are then
+// switched on and off at once (ModReloader.SwitchOn / SwitchOff), the order is written for the next start, and the main
+// menu is built again if a mod that changes it was switched. Mod settings stay in Options -> Works. Only on the main
+// menu: switching mods in a game would make its saves with other mods than it was played with.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,17 +14,27 @@ namespace UnderRailWorks.Internal
 {
 static class ModManager
 {
-    static readonly Color Good = new Color(130, 200, 100), Bad = new Color(225, 90, 70), Quiet = new Color(150, 140, 125), Plain = new Color(215, 215, 205), White = Color.White;
+    static readonly Color Good = new Color(130, 200, 100), Bad = new Color(225, 90, 70), Quiet = new Color(150, 140, 125), Plain = new Color(215, 215, 205),
+        White = Color.White, Pending = new Color(235, 190, 80);
 
     static UiWindow window;
     static UiList list, details;
     static UiElement switchButton, upButton, downButton, topButton, note;
     static List<ModInfo> shown = new List<ModInfo>();
-    static List<ModInfo> order = new List<ModInfo>();     // the loaded mods, top loads first (Up / Down change it for the next start)
-    static bool orderChanged;
-    static bool menuChanged;     // a mod that changes the main menu was switched: built again when the window closes
     static ModInfo selected;
-    static readonly Dictionary<ModInfo, string> messages = new Dictionary<ModInfo, string>();     // the last switch's result, per mod
+    // The staged state: which mods will be on, and the load order of those (top loads first).
+    static Dictionary<ModInfo, bool> want = new Dictionary<ModInfo, bool>();
+    static List<ModInfo> order = new List<ModInfo>();
+    static bool orderChanged, automatic;
+    static string profile;     // a profile used: in use (mods.ini @profile) once accepted
+    static readonly Dictionary<ModInfo, string> messages = new Dictionary<ModInfo, string>();     // per mod: why it changed, or what went wrong
+
+    static bool IsOn(ModInfo m) { return m.Loaded || m.Enabled; }
+    static bool Wants(ModInfo m) { bool w; return want.TryGetValue(m, out w) ? w : IsOn(m); }
+    static bool Changed(ModInfo m) { return Wants(m) != IsOn(m); }
+    // Switched on but it didn't load (an error): not in the load order; switching it off and on again (or Refresh after
+    // fixing it) tries again.
+    static bool Failed(ModInfo m) { return m.Enabled && !m.Loaded && !Changed(m); }
 
     internal static void Open()
     {
@@ -37,22 +48,32 @@ static class ModManager
         window = Ui.OpenWindow(null, "mods", "Mods", w, h);
         if (window == null) return;
         w = window.Width; h = window.Height;
-        window.Closed += () => { window = null; list = null; details = null; if (menuChanged) rebuildMenu = true; menuChanged = false; };
+        window.Closed += () => { window = null; list = null; details = null; };     // without Accept: nothing changes
+        want = ModLoader.Mods.ToDictionary(m => m, IsOn);
         order = ModLoader.Mods.Where(m => m.Loaded).OrderBy(m => m.LoadIndex).ToList();
-        orderChanged = false;
+        orderChanged = false; automatic = false; profile = null;
         messages.Clear();
 
-        // Bottom: profiles and automatic order on the left, a note above them.
+        // Bottom: profiles, automatic order and refresh on the left; Accept and Cancel on the right; a note above.
         var profiles = Ui.Button("Profiles...", Profiles);
         var auto = Ui.Button("Automatic order", AutomaticOrder);
         var rescan = Ui.Button("Refresh", Rescan);
-        int buttonsY = h - pad - Math.Max(profiles.Height, auto.Height);
-        Ui.Add(window, profiles, pad, buttonsY);
-        Ui.Add(window, auto, pad + profiles.Width + Ui.S(6), buttonsY);
-        Ui.Add(window, rescan, w - pad - rescan.Width, buttonsY);
-        Ui.Tooltip(rescan, "Looks in the Mods folder again: new mods are added (and switched on), removed ones go, changed DLLs are loaded again.");
+        Ui.Tooltip(rescan, "Looks in the Mods folder again: new mods are listed (on when you accept), removed ones go, changed DLLs are loaded again.");
+        var accept = Ui.Button("Accept", Accept);
+        var cancel = Ui.Button("Cancel", () => { if (window != null) window.Close(); });
+        int bh = new[] { profiles, auto, rescan, accept, cancel }.Max(b => b.Height), gap6 = Ui.S(6);
+        int buttonsY = h - pad - bh;
+        int acceptX = w - pad - cancel.Width - gap6 - accept.Width;
+        Ui.Add(window, cancel, w - pad - cancel.Width, buttonsY);
+        Ui.Add(window, accept, acceptX, buttonsY);
+        // Profiles / Automatic order / Refresh left of Accept, or in a row of their own above when they don't fit.
+        var left = new[] { profiles, auto, rescan };
+        int leftW = left.Sum(b => b.Width) + gap6 * (left.Length - 1);
+        int leftY = pad + leftW + gap6 * 2 <= acceptX ? buttonsY : buttonsY - bh - gap6;
+        int x = pad;
+        foreach (var b in left) { Ui.Add(window, b, x, leftY); x += b.Width + gap6; }
         note = Ui.Label("", w - 2 * pad);
-        int noteY = buttonsY - Ui.LineHeight - Ui.S(6);
+        int noteY = Math.Min(buttonsY, leftY) - Ui.LineHeight - Ui.S(6);
         Ui.Add(window, note, pad, noteY);
         Ui.SetColor(note, Quiet);
 
@@ -81,8 +102,8 @@ static class ModManager
         int actionsY = bottom - rowsOf.Count * rowH - (rowsOf.Count - 1) * gap;
         for (int r = 0; r < rowsOf.Count; r++)
         {
-            int x = rightX;
-            foreach (var b in rowsOf[r]) { Ui.Add(window, b, x, actionsY + r * (rowH + gap)); x += b.Width + gap; }
+            int bx = rightX;
+            foreach (var b in rowsOf[r]) { Ui.Add(window, b, bx, actionsY + r * (rowH + gap)); bx += b.Width + gap; }
         }
         details = Ui.List(rightW, actionsY - Ui.S(6) - top);
         Ui.Add(window, details.View, rightX, top);
@@ -92,18 +113,23 @@ static class ModManager
         Refresh();
     }
 
-    // The list as it is now, the selection kept.
+    // The list as staged, the selection kept.
     static void Refresh()
     {
         if (list == null) return;
-        order.RemoveAll(m => !m.Loaded);
-        foreach (var m in ModLoader.Mods.Where(m => m.Loaded && !order.Contains(m)).OrderBy(m => m.LoadIndex)) order.Add(m);
-        shown = order.Concat(ModLoader.Mods.Where(m => !m.Loaded).OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)).ToList();
+        foreach (var m in ModLoader.Mods) if (!want.ContainsKey(m)) want[m] = IsOn(m);
+        foreach (var m in want.Keys.Where(m => !ModLoader.Mods.Contains(m)).ToList()) want.Remove(m);
+        // The order holds the mods that will run: on (or to be switched on), not ones that failed to load (listed after, in red).
+        order.RemoveAll(m => !Wants(m) || Failed(m) || !ModLoader.Mods.Contains(m));
+        foreach (var m in ModLoader.Mods.Where(m => Wants(m) && !Failed(m) && !order.Contains(m)).OrderBy(m => m.Loaded ? m.LoadIndex : int.MaxValue)) order.Add(m);
+        shown = order.Concat(ModLoader.Mods.Where(m => !order.Contains(m)).OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase)).ToList();
         var items = new List<string>(); var colours = new List<Color>();
         for (int i = 0; i < shown.Count; i++)
         {
             var m = shown[i];
-            if (m.Loaded) { items.Add((i + 1) + ". " + m.Name); colours.Add(m.Failures > 0 ? Bad : White); }
+            bool on = Wants(m);
+            if (Changed(m)) { items.Add((on ? (i + 1) + ". " : "    ") + m.Name + (on ? "  (on when accepted)" : "  (off when accepted)")); colours.Add(Pending); }
+            else if (m.Loaded) { items.Add((i + 1) + ". " + m.Name); colours.Add(m.Failures > 0 ? Bad : White); }
             else if (!m.Enabled) { items.Add("    " + m.Name + "  (off)"); colours.Add(Quiet); }
             else { items.Add("    " + m.Name + "  (not loaded)"); colours.Add(Bad); }
         }
@@ -113,9 +139,10 @@ static class ModManager
         list.Selection = selected == null ? -1 : shown.IndexOf(selected);
         int visible = Math.Max(1, (list.View.Height - 4) / Math.Max(1, list.RowHeight));
         if (list.Selection >= 0 && (list.Selection < list.First || list.Selection >= list.First + visible)) list.First = Math.Max(0, list.Selection - visible / 2);     // keep it in view
+        int pending = ModLoader.Mods.Count(Changed);
         if (shown.Count == 0) Ui.SetText(note, "No mods installed: each mod is a folder in the game's Mods folder.");
-        else Ui.SetText(note, orderChanged ? "The new load order applies when you restart the game. Mod settings: Options -> Mods."
-            : "Switching a mod on or off applies now. Mod settings: Options -> Mods.");
+        else if (pending > 0 || orderChanged) Ui.SetText(note, (pending > 0 ? pending + (pending == 1 ? " mod" : " mods") + " to switch" : "Load order changed") + ": Accept makes the changes" + (orderChanged ? " (the order from the next start)" : "") + ".");
+        else Ui.SetText(note, "Mods switch on and off when you accept, without a restart. Their settings: Options -> Works.");
         ShowDetails();
     }
 
@@ -133,15 +160,19 @@ static class ModManager
             if (m.Author != null) add("by " + m.Author, Quiet);
             if (m.Works != null) add("Built for UnderRailWorks API " + m.Works.Major + "." + m.Works.Minor + (ModLoader.WorksVersionNote(m) != null ? " (this is " + WorksApi.Version.Major + "." + WorksApi.Version.Minor + "; everything it uses is checked when it loads)" : ""), Quiet);
             lines.Add(new KeyValuePair<string, Color>("", Plain));
-            string status = m.Loaded ? "Loaded" + (order.Contains(m) ? ", " + Ordinal(order.IndexOf(m) + 1) + " in the load order" : "")
-                : !m.Enabled ? "Switched off" : "Not loaded" + (m.Error != null ? ": " + m.Error : "");
+            if (Changed(m)) add(Wants(m) ? "Switched on when you accept" : "Switched off when you accept", Pending);
+            string status = m.Loaded ? "Loaded" + (order.Contains(m) && !orderChanged ? ", " + Ordinal(order.IndexOf(m) + 1) + " in the load order" : "")
+                : !m.Enabled ? "Off" : "Not loaded" + (m.Error != null ? ": " + m.Error : "");
             add(status, m.Loaded ? Good : !m.Enabled ? Quiet : Bad);
             string message;
             if (messages.TryGetValue(m, out message)) add(message, message.StartsWith("Couldn't") ? Bad : Quiet);
-            if (m.Loaded)
+            if (Wants(m))
             {
                 var late = m.Requires.Select(d => ModLoader.Find(d.Id)).Where(d => d != null && order.IndexOf(d) > order.IndexOf(m)).ToList();
                 if (late.Count > 0) add("Above " + string.Join(", ", late.Select(d => d.Name).ToArray()) + ", which it needs: it will still load after it.", Bad);
+            }
+            if (m.Loaded)
+            {
                 if (m.Warning != null) add("Note: " + m.Warning, Quiet);
                 if (m.Failures > 0) add("Errors this session: " + m.Failures + " (last: " + m.LastFailure + "); see UnderRailWorks.log", Bad);
             }
@@ -151,12 +182,12 @@ static class ModManager
                 foreach (var line in m.Description.Split('\n')) add(line.Trim(), Plain);
             }
             lines.Add(new KeyValuePair<string, Color>("", Plain));
-            if (m.Requires.Count > 0) add("Requires: " + string.Join(", ", m.Requires.Select(Describe).ToArray()), m.Requires.Any(d => Problem(d) != null) ? Bad : Quiet);
+            if (m.Requires.Count > 0) add("Requires: " + string.Join(", ", m.Requires.Select(Describe).ToArray()), m.Requires.Any(d => Problem(d) != null) && Wants(m) ? Bad : Quiet);
             if (m.Optional.Count > 0) add("Works with: " + string.Join(", ", m.Optional.Select(Describe).ToArray()), Quiet);
             if (m.Incompatible.Count > 0) add("Not with: " + string.Join(", ", m.Incompatible.Select(d => d.Id).ToArray()), Quiet);
-            var needed = ModReloader.Dependents(m);
+            var needed = Dependents(m).Where(Wants).ToList();
             if (needed.Count > 0) add("Needed by: " + string.Join(", ", needed.Select(d => d.Name).ToArray()), Quiet);
-            if (m.Loaded && ModOptions.HasPage(m.Id)) add("Settings: Options -> Mods -> " + m.Name, Quiet);
+            if (m.Loaded && ModOptions.HasPage(m.Id)) add("Settings: Options -> Works -> " + m.Name, Quiet);
             var links = new[] { m.Homepage, m.License == null ? null : "Licence: " + m.License, m.Game == null ? null : "Made for UnderRail " + m.Game }.Where(l => l != null).ToList();
             if (links.Count > 0) add(string.Join("   ", links), Quiet);
         }
@@ -165,10 +196,10 @@ static class ModManager
         details.First = 0; details.Selection = -1;
         bool any = m != null;
         Ui.Show(switchButton, any);
-        if (any) Ui.SetText(switchButton, m.Loaded || m.Enabled ? "Switch off" : "Switch on");
-        Ui.Show(upButton, any && m.Loaded && order.Count > 1);
-        Ui.Show(downButton, any && m.Loaded && order.Count > 1);
-        Ui.Show(topButton, any && m.Loaded && order.Count > 1 && order.IndexOf(m) > 0);
+        if (any) Ui.SetText(switchButton, Wants(m) ? "Switch off" : "Switch on");
+        Ui.Show(upButton, any && order.Contains(m) && order.Count > 1);
+        Ui.Show(downButton, any && order.Contains(m) && order.Count > 1);
+        Ui.Show(topButton, any && order.Contains(m) && order.IndexOf(m) > 0);
     }
 
     // Cut to a width, with "..." (a long name ran past the list's edge).
@@ -181,77 +212,42 @@ static class ModManager
 
     static string Ordinal(int n) { int t = n % 100; string s = t >= 11 && t <= 13 ? "th" : n % 10 == 1 ? "st" : n % 10 == 2 ? "nd" : n % 10 == 3 ? "rd" : "th"; return n + s; }
 
+    // As staged: a requirement that won't be on is a problem.
     static string Problem(ModDependency d)
     {
         var m = ModLoader.Find(d.Id);
         return m == null ? "not installed" : d.Min != null && (m.Version == null || m.Version < d.Min) ? "version " + (m.Version == null ? "?" : m.VersionText) + " installed"
-            : !m.Enabled ? "off" : m.Loaded ? null : "not loaded";
+            : !Wants(m) ? "off" : null;
     }
     static string Describe(ModDependency d)
     {
         var m = ModLoader.Find(d.Id); var p = Problem(d);
         return (m != null ? m.Name : d.Id) + (d.Min != null ? " " + d.Min + "+" : "") + (p == null ? "" : " (" + p + ")");
     }
+    static List<ModInfo> Dependents(ModInfo mod) { return ModLoader.Mods.Where(m => m != mod && m.Requires.Any(d => d.Id.Equals(mod.Id, StringComparison.OrdinalIgnoreCase))).ToList(); }
 
+    // Staged: on brings what it requires (and theirs), off takes what requires it (and theirs), each noted.
     static void Switch()
     {
         var m = selected;
         if (m == null) return;
-        if (m.Loaded || m.Enabled)
-        {
-            var also = AllDependents(m);
-            Action off = () =>
-            {
-                var gone = new List<ModInfo>();
-                foreach (var d in AllDependents(m)) if (TouchesMenu(d)) menuChanged = true;
-                var r = Switched(m, () => ModReloader.SwitchOff(m, gone));
-                if (r != null) messages[m] = "Couldn't switch it off: " + r;
-                else
-                {
-                    var left = ModScope.LeftBy(m.Id);
-                    if (left.Length > 0) messages[m] = "Its " + string.Join(", ", left) + " stay in the game until you restart it."; else messages.Remove(m);
-                    foreach (var g in gone) messages[g] = "Switched off with " + m.Name + ", which it needs.";
-                }
-                Refresh();
-            };
-            if (also.Count > 0) Ui.Confirm(null, "Switch off " + m.Name, string.Join(", ", also.Select(d => d.Name).ToArray()) + (also.Count == 1 ? " needs" : " need") + " it and will be switched off too.", off, "Switch off", "Cancel");
-            else off();
-        }
-        else
-        {
-            var also = MissingRequirements(m);
-            Action on = () =>
-            {
-                var added = new List<ModInfo>();
-                var r = Switched(m, () => ModReloader.SwitchOn(m, added)); foreach (var a2 in added) if (TouchesMenu(a2)) menuChanged = true;
-                if (r != null) messages[m] = "Couldn't switch it on: " + r; else messages.Remove(m);
-                foreach (var a in added) messages[a] = "Switched on for " + m.Name + ", which needs it.";
-                Refresh();
-            };
-            if (also.Count > 0) Ui.Confirm(null, "Switch on " + m.Name, "It needs " + string.Join(", ", also.Select(d => d.Name).ToArray()) + ", which will be switched on too.", on, "Switch on", "Cancel");
-            else on();
-        }
-    }
-
-    static List<ModInfo> AllDependents(ModInfo m)
-    {
-        var all = new List<ModInfo>();
-        var queue = new Queue<ModInfo>(new[] { m });
-        while (queue.Count > 0) foreach (var d in ModReloader.Dependents(queue.Dequeue())) if (!all.Contains(d)) { all.Add(d); queue.Enqueue(d); }
-        return all;
-    }
-
-    static List<ModInfo> MissingRequirements(ModInfo m)
-    {
-        var all = new List<ModInfo>();
+        bool on = !Wants(m);
+        want[m] = on;
+        messages.Remove(m);
         var queue = new Queue<ModInfo>(new[] { m });
         while (queue.Count > 0)
-            foreach (var d in queue.Dequeue().Requires)
+        {
+            var cur = queue.Dequeue();
+            var next = on ? cur.Requires.Select(d => ModLoader.Find(d.Id)).Where(d => d != null && !Wants(d)).ToList()
+                          : Dependents(cur).Where(Wants).ToList();
+            foreach (var d in next)
             {
-                var dep = ModLoader.Find(d.Id);
-                if (dep != null && !dep.Loaded && dep != m && !all.Contains(dep)) { all.Add(dep); queue.Enqueue(dep); }
+                want[d] = on;
+                messages[d] = on ? "Switched on with " + m.Name + ", which needs it." : "Switched off with " + m.Name + ", which it needs.";
+                queue.Enqueue(d);
             }
-        return all;
+        }
+        Refresh();
     }
 
     static void Move(int by)
@@ -259,8 +255,7 @@ static class ModManager
         int i = order.IndexOf(selected), j = i + by;
         if (i < 0 || j < 0 || j >= order.Count) return;
         order[i] = order[j]; order[j] = selected;
-        ModLoader.SetPlayerOrder(order.Select(m => m.Id).ToList());
-        orderChanged = true;
+        orderChanged = true; automatic = false;
         Refresh();
     }
 
@@ -269,21 +264,30 @@ static class ModManager
         int i = order.IndexOf(selected);
         if (i <= 0) return;
         order.RemoveAt(i); order.Insert(0, selected);
-        ModLoader.SetPlayerOrder(order.Select(m => m.Id).ToList());
-        orderChanged = true;
+        orderChanged = true; automatic = false;
         Refresh();
     }
 
-    // The Mods folder again: new mods switched on as they would be at a start, removed ones gone, changed DLLs reloaded.
+    // The mods' own order (requirements, sortAfter / sortBefore, then names), without the player's.
+    static void AutomaticOrder()
+    {
+        var keep = ModLoader.PlayerOrder;
+        try { ModLoader.PlayerOrder = new List<string>(); order = ModLoader.Order(order.ToList()); }
+        finally { ModLoader.PlayerOrder = keep; }
+        orderChanged = true; automatic = true;
+        Refresh();
+    }
+
+    // The Mods folder again: new mods listed (on when accepted, as mods.ini says), removed ones gone, changed DLLs
+    // loaded again now (they're already on).
     static void Rescan()
     {
         List<ModInfo> gone;
         var added = ModLoader.Rescan(out gone);
         foreach (var m in added)
         {
-            if (!m.Enabled || m.Error != null) { messages[m] = m.Error != null ? "Found, can't load: " + m.Error : "Found (switched off)."; continue; }
-            var r = Switched(m, () => ModReloader.SwitchOn(m));
-            messages[m] = r != null ? "Found, but couldn't switch it on: " + r : "Found and switched on.";
+            want[m] = m.Enabled && m.Error == null;
+            messages[m] = m.Error != null ? "New: can't load: " + m.Error : m.Enabled ? "New: switched on when you accept." : "New (switched off).";
         }
         int reloads = ModReloader.RequestChanged();
         Notify.Log("Mods: " + (added.Count == 0 && gone.Count == 0 && reloads == 0 ? "nothing new in the Mods folder." :
@@ -292,38 +296,56 @@ static class ModManager
         Refresh();
     }
 
-    // Does mod change the main menu (its buttons, a texture, a handler on its creation)?
+    // The staged changes made: off first (what goes may be in the way of what comes), then on in the staged order, then
+    // the order written. Closes the window unless something failed (then the reasons are shown).
+    static void Accept()
+    {
+        bool menu = false, failed = false;
+        if (profile != null) ModLoader.UseProfile(profile);
+        foreach (var m in ModLoader.Mods.Where(m => !Wants(m) && IsOn(m)).ToList())
+        {
+            if (!IsOn(m)) continue;     // went with a mod switched off before it
+            bool touched = TouchesMenu(m);
+            var r = ModReloader.SwitchOff(m);
+            if (r != null) { messages[m] = "Couldn't switch it off: " + r; failed = true; }
+            else { menu |= touched; var left = ModScope.LeftBy(m.Id); if (left.Length > 0) messages[m] = "Its " + string.Join(", ", left) + " stay in the game until you restart it."; }
+        }
+        foreach (var m in order.Where(m => !m.Loaded && Wants(m)).ToList())
+        {
+            if (m.Loaded) continue;     // came with a mod switched on before it
+            var r = ModReloader.SwitchOn(m);
+            if (r != null) { messages[m] = "Couldn't switch it on: " + r; failed = true; }
+            else { messages.Remove(m); menu |= TouchesMenu(m); }
+        }
+        if (orderChanged) ModLoader.SetPlayerOrder(automatic ? null : order.Where(IsOn).Select(m => m.Id).ToList());
+        Log.Write("mods: Mods screen accepted" + (failed ? " (some failed)" : ""));
+        if (menu) rebuildMenu = true;
+        if (failed)
+        {
+            want = ModLoader.Mods.ToDictionary(m => m, IsOn);
+            orderChanged = false;
+            Refresh();
+            Notify.Log("Mods: some mods couldn't be switched; see the Mods screen.");
+            return;
+        }
+        if (window != null) window.Close();
+    }
+
+    // Does mod change the main menu (its buttons, a texture, a handler on its creation, music)?
     static bool TouchesMenu(ModInfo m)
     {
         return MainMenu.HasButtons(m.Id) || AssetStore.Replaces(m.Id) || UiEvents.MainMenuCreated.HasOwner(m.Id) || ModScope.LeftBy(m.Id).Contains("music");
     }
-    // Runs a switch, noting whether the main menu needs building again (checked before, for what goes, and after, for
-    // what comes).
-    static string Switched(ModInfo m, Func<string> run)
-    {
-        bool before = TouchesMenu(m);
-        var r = run();
-        if (before || TouchesMenu(m)) menuChanged = true;
-        return r;
-    }
     static bool rebuildMenu;
-    // Every update: the main menu built again once the window closed (not from inside its own close).
+    // Every update: the main menu built again once the window closed (not from inside a click on it).
     internal static void Tick()
     {
-        if (!rebuildMenu) return;
+        if (!rebuildMenu || (window != null && window.IsOpen)) return;
         rebuildMenu = false;
         try { MainMenu.Rebuild(); } catch (Exception ex) { Log.Write("main menu: building it again failed: " + ex.Message); }
     }
 
-    static void AutomaticOrder()
-    {
-        ModLoader.SetPlayerOrder(null);
-        order = ModLoader.Order(order.ToList());
-        orderChanged = true;
-        Refresh();
-    }
-
-    // Save the mods switched on now and their order; use one (switched now, the order from the next start); delete one.
+    // Profiles: save what's staged; use one (staged too, made on Accept); delete one.
     static void Profiles()
     {
         var names = ModLoader.Profiles().Take(6).ToList();     // the message box holds a few buttons
@@ -337,10 +359,8 @@ static class ModManager
             if (i == 0)
                 Ui.Ask(null, "Profile name:", current ?? "My mods", name =>
                 {
-                    bool ok = ModLoader.SaveProfile(name, ModLoader.Mods.Select(m => new KeyValuePair<string, bool>(m.Id, m.Loaded || m.Enabled)), order.Select(m => m.Id).ToList());
-                    if (ok) ModLoader.UseProfile(name);
+                    bool ok = ModLoader.SaveProfile(name, ModLoader.Mods.Select(m => new KeyValuePair<string, bool>(m.Id, Wants(m))), order.Select(m => m.Id).ToList());
                     Notify.Log(ok ? "Mods: profile \"" + ModLoader.ProfileName(name) + "\" saved." : "Mods: couldn't save that profile.");
-                    Refresh();
                 }, "Save", " -_'()");
             else if (i >= 1 && i <= names.Count) UseProfile(names[i - 1]);
             else if (names.Count > 0 && i == names.Count + 1)
@@ -352,23 +372,16 @@ static class ModManager
     static void UseProfile(string name)
     {
         var p = ModLoader.ReadProfile(name);
-        if (p == null || !ModLoader.UseProfile(name)) return;
-        // Off first (what the profile leaves out may be in the way of what it switches on), then on.
-        foreach (var kv in p.Value.Key.Where(kv => !kv.Value))
+        if (p == null) return;
+        foreach (var kv in p.Value.Key)
         {
             var m = ModLoader.Find(kv.Key);
-            if (m != null && (m.Loaded || m.Enabled)) { var r = Switched(m, () => ModReloader.SwitchOff(m)); if (r != null) messages[m] = "Couldn't switch it off: " + r; }
+            if (m != null && Wants(m) != kv.Value) { want[m] = kv.Value; messages[m] = "Switched " + (kv.Value ? "on" : "off") + " by the profile \"" + name + "\"."; }
         }
-        foreach (var kv in p.Value.Key.Where(kv => kv.Value))
-        {
-            var m = ModLoader.Find(kv.Key);
-            if (m != null && !m.Loaded) { var r = Switched(m, () => ModReloader.SwitchOn(m)); messages[m] = r != null ? "Couldn't switch it on: " + r : "Switched on by the profile."; }
-        }
-        var want = p.Value.Value ?? new List<string>();
-        Func<ModInfo, int> rank = m => { int r = want.FindIndex(id => id.Equals(m.Id, StringComparison.OrdinalIgnoreCase)); return r < 0 ? int.MaxValue : r; };
-        order = ModLoader.Mods.Where(m => m.Loaded).OrderBy(rank).ThenBy(m => m.LoadIndex).ToList();
-        orderChanged = want.Count > 0;
-        Notify.Log("Mods: profile \"" + name + "\" in use.");
+        var wanted = p.Value.Value ?? new List<string>();
+        Func<ModInfo, int> rank = m => { int r = wanted.FindIndex(id => id.Equals(m.Id, StringComparison.OrdinalIgnoreCase)); return r < 0 ? int.MaxValue : r; };
+        order = ModLoader.Mods.Where(Wants).OrderBy(rank).ThenBy(m => m.Loaded ? m.LoadIndex : int.MaxValue).ToList();
+        orderChanged = wanted.Count > 0; automatic = false; profile = name;
         Refresh();
     }
 }

@@ -167,7 +167,7 @@ static class Patcher
         string version;
         using (var m = ModuleDefinition.ReadModule(Path.Combine(dir, Runtime))) version = Version(m);
         Console.WriteLine("Installed UnderRailWorks " + version + ": the game runs 64-bit on .NET 10 (dotnet\\) and FNA.");
-        Console.WriteLine("Settings: UnderRailWorks.ini (created on the next launch); mods: the Mods folder and Options -> Mods in game.");
+        Console.WriteLine("Settings: UnderRailWorks.ini (created on the next launch); mods: the Mods folder, the main menu's Mods button, and Options -> Works in game.");
         Console.WriteLine("To undo: run the patcher with --uninstall, or Steam's \"Verify integrity of game files\".");
         return 0;
     }

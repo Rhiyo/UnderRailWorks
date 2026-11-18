@@ -9,7 +9,7 @@ game is in UnderRailWorks.md.
 1. Install UnderRailWorks into the game (the patcher), and the .NET SDK 8 or newer.
 2. Copy `sdk/template` (with `sdk/UnderRailWorks.Mod.targets`), rename `MyMod` (folder, `.cs`, `.csproj`, `mod.json`).
 3. `dotnet build` builds the mod and copies it to the game's `Mods/MyMod`. Start the game; the main menu's Mods screen
-   lists it, with any errors, and switches it on and off without a restart (its settings are in Options -> Mods).
+   lists it, with any errors, and switches it on and off without a restart (its settings are in Options -> Works).
 4. `dotnet build -t:PackMod` makes `bin/MyMod-1.0.0.zip` to share.
 
 Set `UnderRailPath` if the game isn't in Steam's default folder. No code at all? A **content pack** is a mod with only
@@ -125,7 +125,7 @@ public override void PostLoad()     // every mod's Load has run: the API is ther
 ### Settings
 
 A class deriving from `ModConfig` is the mod's settings: Works writes `settings.ini` with defaults and comments, and
-shows its rows in **Options -> Mods**, in a section of the mod's own that the player opens by clicking it (Cookbook:
+shows its rows in **Options -> Works**, in a section of the mod's own that the player opens by clicking it (Cookbook:
 "Settings"). Rows can depend on others, live while the player edits, before Accept:
 
 - `[EnabledIf("Field")]` greys a row out while another setting is off (or, with a value, `[EnabledIf("Mode", "Custom")]`,

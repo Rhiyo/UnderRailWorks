@@ -109,7 +109,7 @@ public abstract class ModConfig
     string IniText()
     {
         var b = new StringBuilder();
-        b.Append("; ").Append(Mod.Name).Append(" settings (an UnderRailWorks mod). Options -> Mods in game changes them.\n");
+        b.Append("; ").Append(Mod.Name).Append(" settings (an UnderRailWorks mod). Options -> Works in game changes them.\n");
         foreach (var f in Fields())
         {
             var header = f.GetCustomAttribute<HeaderAttribute>();

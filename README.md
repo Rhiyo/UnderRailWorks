@@ -47,7 +47,7 @@ left and `UnderRailWorks.md` for the design.
 
 1. Close the game, extract the release zip and copy its contents into the UnderRail folder.
 2. Windows: run `UnderRailWorks-Patcher.exe`. Linux / Steam Deck: run `./underrailworks-patcher`.
-3. Start the game from Steam as usual. Mods: the main menu's **Mods** button (on/off, order, profiles); their settings: **Options -> Mods**; mods go in `Mods`.
+3. Start the game from Steam as usual. Mods: the main menu's **Mods** button (on/off, order, profiles); their settings: **Options -> Works**; mods go in `Mods`.
 
 The patcher backs up `underrail.exe` as `underrail.exe.backup`, writes the patched game as `UnderRail.Game.exe` and
 puts a small .NET 10 launcher in `underrail.exe`'s place (the runtime is in `dotnet`, nothing to install). It replaces
@@ -90,7 +90,7 @@ Works' own plumbing, not API: don't use it.
 ```csharp
 using UnderRailWorks;
 
-public sealed class MyConfig : ModConfig            // settings: Works builds the Mods tab rows and settings.ini
+public sealed class MyConfig : ModConfig            // settings: Works builds its section in Options -> Works and settings.ini
 {
     [Header("Visuals")]
     [Label("Show the effect")] public bool ShowEffect = true;

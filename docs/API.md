@@ -1915,7 +1915,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `ModInfo Info`
 - `string Id`
 - `ModLog Log` — Lines in UnderRailWorks.log, marked with the mod's id (with Log=1 in UnderRailWorks.ini; errors always).
-- `ModSettings Settings` — The mod's settings.ini as raw keys (defaults: SettingsDefaults, written on first start). GetConfig is the typed way, with the mod's page in Options -> Mods.
+- `ModSettings Settings` — The mod's settings.ini as raw keys (defaults: SettingsDefaults, written on first start). GetConfig is the typed way, with the mod's section in Options -> Works.
 - `T GetConfig<T>() where T : ModConfig` — The mod's ModConfig class (ModConfig.cs), loaded from settings.ini on first use.
 - `virtual void Load()`
 - `virtual void PostLoad()`
