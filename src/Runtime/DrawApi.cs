@@ -94,6 +94,8 @@ public struct LayerShader
     public void SetParameters(Effect effect, Layer layer, WorldView view) { DrawContexts.ShaderParameters(Game, effect, layer.Game, view.Game); }
 }
 
+public enum LayerKind { Other = 0, Floor, Scenery, Body, Shadow, Marker, Shield, Outline }
+
 // One sprite layer of the world pass (a2f): a creature's body, a wall piece, a floor tile, a shadow...
 public struct Layer : IEquatable<Layer>
 {
@@ -127,6 +129,41 @@ public struct Layer : IEquatable<Layer>
     [Preview("the world pass, built for Wall Vision")] public void DrawAsGame(DrawContext context, LayerView view) { Game.f3(context.Game, view.Game); }
     // The same in the shader pass, where the world view itself is the view (a7m is a bkx).
     [Preview("the world pass, built for Wall Vision")] public void DrawAsGame(DrawContext context, WorldView view) { Game.f3(context.Game, view.Game); }
+    // What it is: Floor (floor and ground, flat), Scenery (walls, props, doors: standing), Body (a character's own
+    // sprite), Shadow, Marker (selection marks under characters), Shield, Outline (the shader pass's, step 4).
+    public LayerKind Kind
+    {
+        get
+        {
+            if (Game == null) return LayerKind.Other;
+            if (Game.u != null) return LayerKind.Outline;
+            var id = Id;
+            if (id == "SHD") return LayerKind.Shadow;
+            if (id == "marker") return LayerKind.Marker;
+            if (id == "shield") return LayerKind.Shield;
+            if (IsFlat) return LayerKind.Floor;
+            var e = Layers.Entity(Game);
+            if (e == null) return LayerKind.Other;
+            return Entities.Character(e) != null ? LayerKind.Body : LayerKind.Scenery;
+        }
+    }
+    // Standing scenery that is in front of the character: on its square or nearer the camera on both map axes (Wall
+    // Vision's rule, measured). Draw order can't tell: a walking character is drawn after the wall piece on the square
+    // it's leaving, and floor beside it is drawn after it.
+    public bool IsInFrontOf(Character character)
+    {
+        if (character == null || Kind != LayerKind.Scenery) return false;
+        var own = Entities.MapPosition(Layers.Entity(Game));
+        var at = character.Position;
+        return own.X > (float)Math.Floor(at.X) - 0.01f && own.Y > (float)Math.Floor(at.Y) - 0.01f;
+    }
+    // In front of the character and over where it was drawn last frame: this layer hides part of it.
+    public bool Covers(Character character)
+    {
+        if (!IsInFrontOf(character)) return false;
+        var b = character.ScreenBounds;
+        return b != null && Bounds.Intersects(b.Value);
+    }
     // A plain sprite (e4m), not a character's composite (by8, which rebuilds its cached picture when drawn).
     public bool IsPlainSprite { get { return Game.d is e4m; } }
     // The sprite source's kind, for logs.

@@ -1924,3 +1924,22 @@ layer hid it from the keyhole (holes, scenery that never faded).
 - `works.drawstats`: layers coloured, routed (by mod), drawn by a look (by mod; inside a route), tile marks (inside a
   route). drawing.sh: `wt.drawcompose` with the keyhole on must show looks and marks inside Wall Vision's route
   (measured: 12,182 looks and 13,606 marks inside the route over 600 frames); `wt.drawbadlook` must be stopped.
+
+## Drawing: post-processing, Lights, trace, helpers, docs/Drawing.md (Nov 19 2026)
+- **Post-processing stage** (`WorldDraw.PostProcess`, stable): a new patch point `WorldDrawHooks.WorldStarting` after
+  the world pass's first `cp9.a()` (in the method with the SetRenderTarget(null) reset; check-release's hook list has
+  it). While an effect exists, Works binds its own screen-sized target (Depth24Stencil8, PreserveContents: Wall Vision
+  switches away and back) there, keeping the viewport; Wall Vision saves that as its "screen", so its keyhole
+  composites into Works' picture. After WorldDone's handlers the effects run in load order (ping-pong between two
+  targets; false = unchanged), then the result is drawn onto what was bound before (screen or save screenshot).
+- **Lights** (stable): the game lights per tile (ak1.d: Guid -> c3y stamps, alr.aej() -> ae8 colour/kind; ak1.Lightning
+  = area start light with stamps, clamped min/max); a thing's light = its tiles' average; a7m.a(b0b, bool inSight)
+  returns it and a7m.ir multiplies each layer's tint by it. `Lights.GameLighting` is a Harmony postfix on that method
+  (only for things in sight: the fog of war's remembered colour is left). `Lights.Sources` groups stamps by source Guid
+  (the game keeps no other position for a light): light-weighted centre, reach, brightest colour; cached 0.5 s/area.
+- **Helpers:** `Layer.Kind` (LayerKind), `Layer.IsInFrontOf(character)` / `Covers` (Wall Vision's measured rule).
+- **`works.drawtrace [frames]`:** drawtrace.txt in the game folder; looks run inside a router are held and written
+  after the router's line.
+- **Examples:** `examples/Lantern` (game lighting off, per-tile light with Bresenham wall shadows through LayerColour,
+  glow through PostProcess) and `examples/Hologram` (a DrawLayer look). drawing.sh runs both with the keyhole and
+  checks drawstats and the trace (39 checks). Every hook comment names its step of the frame (WorldDraw.cs).

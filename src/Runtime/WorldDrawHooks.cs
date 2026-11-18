@@ -24,7 +24,9 @@ public static class WorldDrawHooks
     public static void Drawn(a7m view, cp9 context, a2f layer, bool shaderPass)
     {
         Untint();
-        if (!shaderPass) { World.LayerDrawn(layer); if (WorldDraw.LayerColour.Any && layer.d != null) Colour(layer); }
+        string colouredBy = null;
+        if (!shaderPass) { World.LayerDrawn(layer); if (WorldDraw.LayerColour.Any && layer.d != null) colouredBy = Colour(layer); }
+        if (DrawTrace.On) DrawTrace.Layer(layer, shaderPass, colouredBy);
         var hook = WorldDraw.LayerStarting;
         if (!hook.Any) return;
         var v = new WorldView(view); var c = new DrawContext(context); var l = new Layer(layer);
@@ -32,23 +34,27 @@ public static class WorldDrawHooks
         for (int i = 0; i < list.Length; i++) { long t = hook.Starting(); try { list[i](v, c, l, shaderPass); } catch (Exception ex) { hook.Failed(list, i, ex); } finally { hook.Done(i, t); } }
     }
 
-    static void Colour(a2f layer)
+    // Who changed the colour (for works.drawtrace), or null.
+    static string Colour(a2f layer)
     {
         var hook = WorldDraw.LayerColour;
         var was = Layers.Tint(layer);
         var start = was ?? Color.White; var colour = start;
         var l = new Layer(layer);
         var list = hook.Snapshot;
+        string by = null;
         for (int i = 0; i < list.Length; i++)
         {
             long t = hook.Starting();
             var before = colour;
             try { list[i](l, ref colour); } catch (Exception ex) { colour = before; hook.Failed(list, i, ex); } finally { hook.Done(i, t); }
+            if (DrawTrace.On && colour != before) by = (by == null ? "" : by + ", ") + hook.OwnerAt(list, i);
         }
-        if (colour == start) return;
+        if (colour == start) return null;
         tinted = layer; tintWas = was;
         Layers.SetTint(layer, colour);
         WorldDraw.Coloured++;
+        return by ?? "?";
     }
 
     // a7m.a's a2f.f3 call: a router (RouteLayer) may take the layer; else its look.
@@ -66,14 +72,14 @@ public static class WorldDrawHooks
                 {
                     long t = hook.Starting();
                     routing++;
-                    try { if (list[i](l, c, v)) { WorldDraw.Routed++; Count(WorldDraw.RoutedBy, hook.OwnerAt(list, i)); return; } }
+                    try { if (list[i](l, c, v)) { WorldDraw.Routed++; Count(WorldDraw.RoutedBy, hook.OwnerAt(list, i)); if (DrawTrace.On) { DrawTrace.Line("      routed by " + hook.OwnerAt(list, i)); DrawTrace.Release(); } return; } }
                     catch (Exception ex) { hook.Failed(list, i, ex); }
                     finally { routing--; hook.Done(i, t); }
                 }
             }
             Look(layer, context, view);
         }
-        finally { Untint(); }
+        finally { Untint(); if (DrawTrace.On) DrawTrace.Release(); }
     }
     static void Count(Dictionary<string, long> d, string mod) { if (mod == null) return; long n; d.TryGetValue(mod, out n); d[mod] = n + 1; }
 
@@ -104,6 +110,7 @@ public static class WorldDrawHooks
                     }
                     WorldDraw.Looked++; if (routing > 0) WorldDraw.LookedRouted++;
                     Count(WorldDraw.LookedBy, hook.OwnerAt(list, i));
+                    if (DrawTrace.On) { var line = "      drawn by " + hook.OwnerAt(list, i) + "'s look" + (routing > 0 ? " (inside the route)" : ""); if (routing > 0) DrawTrace.Hold(line); else DrawTrace.Line(line); }
                     return;
                 }
                 catch (Exception ex) { hook.Failed(list, i, ex); }
@@ -129,23 +136,39 @@ public static class WorldDrawHooks
             {
                 long t = hook.Starting();
                 tileRouting++;
-                try { if (list[i](v, c, mt)) return; } catch (Exception ex) { hook.Failed(list, i, ex); } finally { tileRouting--; hook.Done(i, t); }
+                try { if (list[i](v, c, mt)) { if (DrawTrace.On) DrawTrace.Line("    tile " + tile.Location.X + "," + tile.Location.Y + " extras, routed by " + hook.OwnerAt(list, i)); return; } }
+                catch (Exception ex) { hook.Failed(list, i, ex); } finally { tileRouting--; hook.Done(i, t); }
             }
         }
+        if (DrawTrace.On) DrawTrace.Line("    tile " + tile.Location.X + "," + tile.Location.Y + " extras");
         WorldDraw.GameTileExtras(view, context, tile);
         TileMarks.DrawOn(view, context, tile);
+    }
+
+    // The world pass's start (after its first cp9.a(), no batch begun).
+    public static void WorldStarting(a7m view, cp9 context)
+    {
+        Untint();
+        Lights.Frame();
+        DrawTrace.FrameStarting();
+        PostProcess.Starting(view, context);
+        if (DrawTrace.On) DrawTrace.Line("world pass starts" + (WorldDraw.PostProcess.Any ? " (into Works' picture for post-processing)" : ""));
     }
 
     public static void WorldDone(a7m view, cp9 context)
     {
         Untint();
         World.WorldDone();
+        if (DrawTrace.On) DrawTrace.Line("world done: " + Owners(WorldDraw.WorldDone) + "; game lighting at " + Lights.GameStrength.ToString("0.##"));
         if (WorldDraw.WorldDone.Any) { var v = new WorldView(view); var c = new DrawContext(context); WorldDraw.WorldDone.Run(h => h(v, c)); }
+        if (DrawTrace.On && WorldDraw.PostProcess.Any) DrawTrace.Line("post-processing: " + Owners(WorldDraw.PostProcess) + ", in this order");
+        PostProcess.Done(view, context);
     }
 
     public static void BeforePass(a7m view)
     {
         Outlines.BeforePass(view);
+        if (DrawTrace.On) DrawTrace.Line("outline pass starts (ShaderPassStarting: " + Owners(WorldDraw.ShaderPassStarting) + ")");
         if (WorldDraw.ShaderPassStarting.Any) { var v = new WorldView(view); WorldDraw.ShaderPassStarting.Run(h => h(v)); }
     }
 
@@ -153,6 +176,15 @@ public static class WorldDrawHooks
     {
         if (WorldDraw.ShaderPassDone.Any) { var v = new WorldView(view); var c = new DrawContext(context); WorldDraw.ShaderPassDone.Run(h => h(v, c)); }
         Outlines.AfterPass(view);
+        DrawTrace.FrameDone();
+    }
+    static string Owners<T>(HookBase<T> hook) where T : class
+    {
+        var list = hook.Snapshot;
+        if (list.Length == 0) return "no handlers";
+        var names = new List<string>();
+        for (int i = 0; i < list.Length; i++) names.Add(hook.OwnerAt(list, i) ?? "?");
+        return string.Join(", ", names.ToArray());
     }
 }
 }

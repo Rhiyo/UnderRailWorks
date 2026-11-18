@@ -37,14 +37,11 @@ game's own popups (`Ui.Ask`, `Ui.AskNumber`, `Ui.Confirm`, `Ui.Choose`); lay tex
 `Ui.TextWidth`; give other sizes in Small's units through `Ui.S(n)`; move things only with `Ui.Move` (or what uses it);
 test at Small and at Huge.
 
-**Drawing in the world: compose, don't take over.** `TileMarks` (tiles on the floor), `WorldDraw.LayerColour` (tint or
-fade any layer), `World.ToScreen`/`World.TileBounds` with `Ui.Overlay` (marks and text at map positions) and
-`Character.ScreenBounds` combine with every other mod's drawing and with Wall Vision's keyhole: use these first
-(Cookbook, "Drawing in the world"). The world pass itself (`WorldDraw.RouteLayer`, `DrawLayer`, `DrawTileExtras`,
-`Outlines`...) is **[Preview]**: built for Wall Vision, and only one mod can route or draw a given layer. A `DrawLayer`
-look draws with `context.Batch` into whatever is set (Wall Vision may be drawing that layer into its own picture);
-one that changes the render target is stopped like a handler that throws. `works.drawstats` shows which mods
-coloured, routed and drew layers.
+**Drawing in the world: compose, don't take over.** Read [Drawing.md](Drawing.md): how a frame is drawn, and which
+parts combine with every other mod's drawing and Wall Vision's keyhole: `TileMarks`, `WorldDraw.LayerColour`,
+`WorldDraw.PostProcess` (effects over the finished world), `Lights`, and `World.ToScreen`/`TileBounds` with
+`Ui.Overlay`. The world pass itself (`RouteLayer`, `DrawLayer`, `Outlines`...) is **[Preview]**, with rules on each
+member. `works.drawtrace` writes one frame step by step into drawtrace.txt; `examples/Lantern` is a lighting mod.
 
 **Handlers never throw into the game.** Works catches and reports a failing handler (log, the mod's card in the Mods
 tab, one message to the player), but keep per-frame handlers cheap and null-check the player (there is none in the

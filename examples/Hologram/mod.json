@@ -1,0 +1,2 @@
+{ "id": "Hologram", "name": "Hologram", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9", "multiplayer": "client",
+  "description": "Example of the low-level drawing API (a DrawLayer look): the player's character drawn as a see-through blue hologram. Works alongside Wall Vision's keyhole." }

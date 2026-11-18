@@ -83,7 +83,8 @@ WorldDrawHooks.Drawn
 WorldDrawHooks.Interactive
 WorldDrawHooks.Reverse
 WorldDrawHooks.TileExtras
-WorldDrawHooks.WorldDone"
+WorldDrawHooks.WorldDone
+WorldDrawHooks.WorldStarting"
 
 EXPECTED64="$(printf '%s\n' "$EXPECTED" "FixMusic.Create" "FixMusic.Dispose" "FixMusic.Play" "FixMusic.SetLoop" "FixMusic.SetPitch" "FixMusic.SetVolume" "FixMusic.Status" "FixMusic.Stop" "FnaMode.SaveTypeName" "FnaMode.SavedName" "FnaMode.WrittenAssembly" "FnaMode.WrittenTypeName" "FnaWindow.Form" "GalaxyBridge..ctor" "FnaWindow.GetBorderStyle" "FnaWindow.GetHeight" "FnaWindow.GetLocation" "FnaWindow.GetWidth" "FnaWindow.Hwnd" "FnaWindow.SetBorderStyle" "FnaWindow.SetLocation" "FnaWindow.SetStartPosition" "SteamBridge.ClearAchievement" "SteamBridge.IncrementStat" "SteamBridge.InitSteam" "SteamBridge.IsOnSteamDeck" "SteamBridge.IsRunningOnWine" "SteamBridge.ResetAllStats" "SteamBridge.SetAchievement" "SteamBridge.ShowKeyboard" "SteamBridge.ShutdownSteam" | LC_ALL=C sort)"
 SFML="sfmlnet-audio-2.dll sfmlnet-window-2.dll"

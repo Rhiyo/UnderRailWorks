@@ -112,6 +112,9 @@ mkdir -p "$HERE/build/Mods/GameText"
 mcs -nologo -optimize+ -target:library -out:"$HERE/build/Mods/GameText/GameText.dll" -r:"$FNA" -r:"$WORKS" -r:"$HARMONY" -r:System.Core.dll "$HERE/examples/GameText/GameText.cs"
 cp "$HERE/examples/GameText/mod.json" "$HERE/build/Mods/GameText/"
 mod GameTextUser "$HERE/build/Mods" "$HERE/examples/GameTextUser"
+# The drawing examples (docs/Drawing.md): drawing.sh runs them with Wall Vision.
+mod Lantern "$HERE/build/Mods" "$HERE/examples/Lantern"
+mod Hologram "$HERE/build/Mods" "$HERE/examples/Hologram"
 # WorksTest (test keys, never shipped): into build/Mods.
 mod WorksTest "$HERE/build/Mods" "$HERE/tools/testmods/WorksTest"
 mod HalfBroken "$HERE/build/Mods" "$HERE/tools/testmods/HalfBroken"
@@ -200,10 +203,10 @@ mod Cookbook "$HERE/build/Mods" "$HERE/tools/cookbook/Cookbook.cs"
 python3 "$HERE/tools/cookbook/cookbook.py" >/dev/null || echo "docs/Cookbook.md not written" >&2
 # The API reference (docs/API.md) from the source comments.
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/ApiSurface.exe" "$WORKS" "$HERE/build/api-now.txt" >/dev/null || echo "build/api-now.txt not written" >&2
-# Which stable API members the tests exercise (the test mods smoke.sh loads), which only shipped mods use, which nothing
+# Which stable API members the tests exercise (the test mods smoke.sh and drawing.sh load), which only shipped mods use, which nothing
 # (docs/Versioning.md "Behaviour"): build/api-coverage.txt.
 mcs -nologo -out:"$HERE/build/ApiUse.exe" -r:"$CECIL" "$HERE/tools/apicheck/ApiUse.cs" || { echo "ApiUse didn't build" >&2; exit 1; }
-TESTED=(); for t in WorksTest HalfBroken OldButFine GameText GameTextUser; do TESTED+=("$HERE/build/Mods/$t/$t.dll"); done
+TESTED=(); for t in WorksTest HalfBroken OldButFine GameText GameTextUser Lantern Hologram; do TESTED+=("$HERE/build/Mods/$t/$t.dll"); done
 MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/ApiUse.exe" "$WORKS" "$HERE/build/api-coverage.txt" --tested "${TESTED[@]}" --shipped "$OUT"/Mods/*/*.dll || echo "build/api-coverage.txt not written" >&2
 python3 "$HERE/tools/apidoc/apidoc.py" >/dev/null || echo "docs/API.md not written" >&2
 patchers "$OUT" UnderRailWorks-Patcher.exe underrailworks-patcher

@@ -1,0 +1,2 @@
+{ "id": "Lantern", "name": "Lantern", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9", "multiplayer": "client",
+  "description": "Example lighting mod: the game's lighting replaced by light from its own sources and a lantern you carry, stopped by walls, with a glow around lights. Built from Works' composing drawing API (docs/Drawing.md)." }

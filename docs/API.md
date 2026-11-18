@@ -885,6 +885,9 @@ One sprite layer of the world pass (a2f): a creature's body, a wall piece, a flo
 - `void Draw(DrawContext context, Color colour)` **(preview)** — Its sprite with another colour (e.g. white for a silhouette).
 - `void DrawAsGame(DrawContext context, LayerView view)` **(preview)** — Drawn the game's way (a2f.f3), e.g. from a DrawLayer handler that draws it somewhere else.
 - `void DrawAsGame(DrawContext context, WorldView view)` **(preview)** — The same in the shader pass, where the world view itself is the view (a7m is a bkx).
+- `LayerKind Kind` — What it is: Floor (floor and ground, flat), Scenery (walls, props, doors: standing), Body (a character's own sprite), Shadow, Marker (selection marks under characters), Shield, Outline (the shader pass's, step 4).
+- `bool IsInFrontOf(Character character)` — Standing scenery that is in front of the character: on its square or nearer the camera on both map axes (Wall Vision's rule, measured). Draw order can't tell: a walking character is drawn after the wall piece on the square it's leaving, and floor beside it is drawn after it.
+- `bool Covers(Character character)` — In front of the character and over where it was drawn last frame: this layer hides part of it.
 - `bool IsPlainSprite` — A plain sprite (e4m), not a character's composite (by8, which rebuilds its cached picture when drawn).
 - `string SpriteKind` — The sprite source's kind, for logs.
 - `bool Equals(Layer o)`
@@ -892,6 +895,10 @@ One sprite layer of the world pass (a2f): a creature's body, a wall piece, a flo
 - `override int GetHashCode()`
 - `static bool operator ==(Layer a, Layer b)`
 - `static bool operator !=(Layer a, Layer b)`
+
+## LayerKind  _(enum, DrawApi.cs)_
+
+Values: `Other = 0, Floor, Scenery, Body, Shadow, Marker, Shield, Outline`
 
 ## LayerSet  _(struct, DrawApi.cs)_
 
@@ -923,6 +930,27 @@ An entity's layers for one frame (bym: new every frame).
 - `int Ability`
 - `int Skill`
 - `int Feat`
+
+## Lights  _(class, Lights.cs)_
+
+- `static void GameLighting(WorksMod mod, Func<float> strength)` — How much of the game's own lighting is used for things in sight: 1 the game's, 0 none (everything at full light, for a mod that lights the world itself, e.g. with LayerColour or a PostProcess effect). Every mod's request multiplies (two mods at 0.5: 0.25); checked once per frame. A mod's requests go with it.
+- `static float GameStrength` — The strength in use this frame.
+- `static Color? At(Area area, int x, int y)` — The game's light on a tile of an area (the result of its sources, the colour things there are multiplied by); null outside the area.
+- `static Color Ambient(Area area)` — The area's light where no source reaches, and the limits the game keeps every tile's light in.
+- `static Color Darkest(Area area)`
+- `static Color Brightest(Area area)`
+- `static IList<LightSource> Sources(Area area)` — The light sources of an area, from the stamps on its tiles (worked out again at most every half second per area; a light switched off disappears from the list).
+
+## LightSource  _(class, Lights.cs)_
+
+A light source as its light lands on the tiles (the game keeps no other position for it): where its light is centred, how far it reaches, its brightest colour.
+
+- `Guid Id`
+- `Vector2 Centre`
+- `float Radius`
+- `Color Colour`
+- `bool Darkens`
+- `int Tiles`
 
 ## Lock  _(class, Containers.cs)_
 
@@ -1977,12 +2005,30 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 
 ## WorldDraw  _(class, WorldDraw.cs)_
 
-- `static readonly Hook<ColourHandler> LayerColour = new Hook<ColourHandler>("LayerColour")` — Each world layer's colour (not the shader pass's outlines): see ColourHandler. Composes across mods.
+- `static readonly Hook<ColourHandler> LayerColour = new Hook<ColourHandler>("LayerColour")` — Step 2, first for each world layer (not the shader pass's outlines): its colour, see ColourHandler. Composes across mods.
+- `static readonly Hook<Func<WorldPicture, bool>> PostProcess = new Hook<Func<WorldPicture, bool>>("PostProcess")` — Step 3, after WorldDone: the finished world (Wall Vision's keyhole included) as a picture; draw the next one into picture.Output and return true (false: you drew nothing, the picture goes on unchanged). Effects run in load order (HookOrder to go earlier or later) and each gets the one before's result. Tab outlines and the interface come after and aren't processed. While any effect is added the world pass draws into Works' picture; it costs a screen-sized copy per effect per frame.
 
 ## WorldMap  _(class, WorldMap.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
 
 - `static void Mark(WorksMod mod, string key, string zoneId, Color colour)`
 - `static void Unmark(WorksMod mod, string key)`
+
+## WorldPicture  _(class, PostProcess.cs)_
+
+What an effect gets: the world so far (Input) and the picture to draw (Output, already set as the render target). Draw the whole picture: Input changed as you like (CopyInput draws it unchanged first). Your own render targets are fine (Scratch keeps them per size); set Output again before drawing the result. Coordinates are pixels of the picture (the screen's, or the save screenshot's); ToPixels turns map positions and interface rectangles into them.
+
+- `Texture2D Input`
+- `RenderTarget2D Output`
+- `GraphicsDevice Device`
+- `int Width`
+- `int Height`
+- `SpriteBatch Batch` — A sprite batch for effects (not begun; End it before returning).
+- `float Zoom` — The world's zoom (1080p-equivalent: 1.5 at the default view).
+- `bool ForSaveScreenshot` — This picture is the save screenshot's, not the screen's.
+- `Vector2? ToPixels(Vector3 mapPosition)` — A map position (as World.ToScreen) in this picture's pixels; null without a world.
+- `Rectangle ToPixels(Rectangle interfaceUnits)` — An interface rectangle (Character.ScreenBounds, World.TileBounds) in this picture's pixels.
+- `void CopyInput()` — Input drawn unchanged into Output.
+- `RenderTarget2D Scratch(WorksMod mod, string name, int width, int height)` — A render target of the effect's own, kept between frames (name: yours per use; made again at another size).
 
 ## WorldView  _(struct, DrawApi.cs)_
 

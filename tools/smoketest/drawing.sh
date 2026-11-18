@@ -22,6 +22,7 @@ export TEST_GAME="$WORK/game" RUN=drawing
 . "$HERE/gamecopy.sh"
 timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 gamecopy "$TEST_GAME" || exit 1
+for f in Lantern Hologram; do rm -rf "$TEST_GAME/Mods/$f"; cp -r "$MODS/$f" "$TEST_GAME/Mods/"; done
 [ -n "${UISCALE:-}" ] && printf 'UiScaleFix=1\nUiScale=%s\n' "$UISCALE" >> "$TEST_GAME/UnderRailWorks.ini"
 LOG="$TEST_GAME/UnderRailWorks.log"; AUTO="$TEST_GAME/Mods/WorksTest/autorun.txt"
 SHOTS="$WORK/shots"; rm -rf "$SHOTS"; mkdir -p "$SHOTS"
@@ -34,7 +35,7 @@ sleep 40
 # world fades in.
 read W H <<< "$SIZE"; timeout 30 "$SKILL/inp.sh" focus click $((W/2)) $((H*3/10)) >/dev/null 2>&1; sleep 3
 step "wt.load $SAVE"; sleep 2; timeout 30 "$SKILL/inp.sh" focus >/dev/null 2>&1; sleep 15
-step "works.config WallVision ShowCovered true" "works.config WallVision KeyholeDebug 1" \
+step "works.config Lantern On false" "works.config Hologram On false" "works.config WallVision ShowCovered true" "works.config WallVision KeyholeDebug 1" \
      "works.config WallVision ShowCoveredPlayer Keyhole" "works.config WallVision ShowCoveredOther Keyhole" \
      "wt.crowd 12 creatures\\rathoundalpha 9" "wait 3" "wt.drawprobe 120"; sleep 15
 "$SKILL/shot.sh" "$SHOTS/keyhole.png" >/dev/null 2>&1
@@ -43,6 +44,11 @@ step "works.config WallVision ShowCovered true" "works.config WallVision Keyhole
 step "works.drawstats" "wt.drawcompose 600"; sleep 4
 "$SKILL/shot.sh" "$SHOTS/compose.png" >/dev/null 2>&1
 sleep 10; step "works.drawstats"; sleep 3
+# The lighting example (game lighting off, its own light and shadows through LayerColour, a glow through PostProcess)
+# and the low-level example (Hologram's DrawLayer look on the player) with the keyhole on, traced for one frame.
+step "works.config Lantern On true" "works.config Hologram On true" "wait 2" "works.drawstats"; sleep 6
+"$SKILL/shot.sh" "$SHOTS/lantern.png" >/dev/null 2>&1
+step "works.drawtrace" "wait 2" "works.drawstats" "works.config Lantern On false" "works.config Hologram On false"; sleep 6
 for fx in Lines Dither Fill Outline; do
     step "works.config WallVision ShowCoveredOther $fx" "wt.drawprobe 60"; sleep 6
     "$SKILL/shot.sh" "$SHOTS/$(echo $fx | tr A-Z a-z).png" >/dev/null 2>&1
@@ -76,6 +82,19 @@ never "occluded characters never failed"      "occluded characters: .* failed"
 check "compose: tints, looks, ToScreen (no errors)"  "drawcompose: tinted [1-9][0-9]*, looks [1-9][0-9]*, errors 0"
 check "compose: Wall Vision routed layers through WorksTest's look, and tile marks" \
     "drawstats: layers coloured [1-9][0-9]*, routed [1-9][0-9]* \(WallVision [1-9][0-9]*\), drawn by a mod's look [1-9][0-9]* \(WorksTest [1-9][0-9]*\) \(inside a route [1-9][0-9]*\), tile marks drawn [1-9][0-9]* \(inside a route [1-9]"
+check "lighting: Lantern coloured, Wall Vision routed, Hologram's look, Lantern's effect drawn each frame" \
+    "drawstats: layers coloured [1-9][0-9]*, routed [1-9][0-9]* \(WallVision [1-9][0-9]*\), drawn by a mod's look [1-9][0-9]* \(Hologram [1-9][0-9]*\).*post-processed frames [1-9][0-9]* \(effects drawn [1-9]"
+TRACE="$TEST_GAME/drawtrace.txt"
+tr() { if grep -qE "$2" "$TRACE" 2>/dev/null; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: $1 (expected in drawtrace.txt: $2)"; fi; }
+check "drawtrace written"                     "drawtrace: 1 frame\(s\) written to"
+tr "trace: the pass starts into Works' picture" "world pass starts \(into Works' picture"
+tr "trace: layers coloured by Lantern"        "coloured by Lantern"
+tr "trace: layers routed by Wall Vision"      "routed by WallVision"
+tr "trace: Hologram's look"                   "drawn by Hologram's look"
+tr "trace: game lighting off"                 "game lighting at 0"
+tr "trace: Lantern's effect after WorldDone"  "post-processing: Lantern"
+tr "trace: the outline pass after it"         "outline pass starts"
+never "Lantern and Hologram never failed"     "mods: (Lantern|Hologram): its .* handler failed|post-processing: .*off until restart|tile marks: .*off until restart"
 check "a look that switches the render target: stopped" "WorksTest: its DrawLayer handler failed: .*changed the render target"
 ok "... and WorksTest's drawing off again (two stops)" "$([ "$(grep -c 'WorksTest: an error while drawing' "$LOG")" -ge 2 ] && echo 1)"
 check "a failing drawing handler: reported"   "WorksTest: its DrawLayer handler failed"
@@ -84,7 +103,7 @@ last=$(grep -n "drawprobe: frames" "$LOG" | tail -1 | cut -d: -f1); thrown=$(gre
 ok "... its other drawing handlers removed too (no probe finishes after the throw)" "$([ -n "$thrown" ] && [ "${last:-0}" -lt "$thrown" ] && echo 1)"
 check "the game goes on (commands after it)"  "console: works.health -> "
 ok "the game still running at the end"       "$alive"
-for f in keyhole compose lines dither fill outline off after-throw; do ok "world drawn in $f.png" "$(lit "$SHOTS/$f.png")"; done
+for f in keyhole compose lantern lines dither fill outline off after-throw; do ok "world drawn in $f.png" "$(lit "$SHOTS/$f.png")"; done
 # Test runs never connect to Steam (run-underrail's common.sh; WITH_STEAM=1 only to test Steam itself).
 [ "${WITH_STEAM:-0}" = 1 ] || { if grep -q "helper: InitSteam -> 1" "$LOG"; then fail=$((fail+1)); echo "FAIL: connected to Steam"; else pass=$((pass+1)); fi; }
 echo "drawing: $pass passed, $fail failed (log: $LOG, shots: $SHOTS)"

@@ -488,6 +488,18 @@ static class Patcher
                 && ((FieldReference)i.Previous.Previous.Operand).DeclaringType.Name == "cp9").Select(i => new { m, i })).ToList();
             Expect("world pass target resets", resets.Count, 1);
             {
+                // The world pass's first cp9.a() (ends the batch before the world batch begins, before its scissor is
+                // set again): WorldDrawHooks.WorldStarting(view, context), where the post-processing stage binds its picture.
+                var passMethod = resets[0].m;
+                var firstEnd = passMethod.Body.Instructions.FirstOrDefault(i => (i.OpCode == OpCodes.Callvirt || i.OpCode == OpCodes.Call) && i.Operand is MethodReference r
+                    && r.DeclaringType.Name == "cp9" && r.Name == "a" && r.Parameters.Count == 0 && r.ReturnType.MetadataType == MetadataType.Void);
+                if (firstEnd == null || !firstEnd.Previous.OpCode.Name.StartsWith("ldarg")) throw new Exception("this game version isn't supported (world pass start)");
+                var startIl = passMethod.Body.GetILProcessor();
+                startIl.InsertAfter(firstEnd, Instruction.Create(OpCodes.Call, hook("WorldDrawHooks", "WorldStarting")));
+                startIl.InsertAfter(firstEnd, firstEnd.Previous.Operand is ParameterDefinition sp ? Instruction.Create(firstEnd.Previous.OpCode, sp) : Instruction.Create(firstEnd.Previous.OpCode));
+                startIl.InsertAfter(firstEnd, Instruction.Create(OpCodes.Ldarg_0));
+            }
+            {
                 var loadContext = resets[0].i.Previous.Previous.Previous;
                 var resetIl = resets[0].m.Body.GetILProcessor();
                 resetIl.InsertBefore(loadContext, Instruction.Create(OpCodes.Ldarg_0));

@@ -10,10 +10,11 @@ Func hooks turned into argument objects, the obvious duplicates made internal. S
 
 - [ ] **When to call it 1.0.** Raise `WorksApi.Major`/`Minor` to 1.0 (WorksMod.cs) and every shipped mod's
   `"works"` to "1.0" (one sed), and release; from then on the build refuses breaking changes.
+- [ ] **Release notes**: the 1.0 draft was lost with the scratchpad (Nov 19); write them again for a 0.9 preview release.
 - [ ] **What stays Preview at 1.0**: co-op's plumbing (Simulation, PlayerScreens, TalkAs, PlayerOrder, CharacterControl,
   remote Character members...), ability ids, the AI's target, the world pass layer by layer (WorldDraw's hooks,
   Outlines, the batch/context handles: back to Preview on Nov 18, one user so far). The composing drawing parts
-  (TileMarks, LayerColour, World.ToScreen/TileBounds) are stable, with Stealth Lens and drawing.sh as users. Promote (drop [Preview]) only what has a second user or a
+  (TileMarks, LayerColour, PostProcess, Lights, World.ToScreen/TileBounds) are stable, with Stealth Lens, Lantern and drawing.sh as users. Open: whether tile marks should be lit (they are, by whatever lights the floor). Promote (drop [Preview]) only what has a second user or a
   shape we're sure of.
 - [x] **Two save-data stores**: `WorksMod.Data` removed (Nov 14); `SaveData` (and CharacterData) is the one store.
 - [x] **Overlapping names** (Nov 14): `Interface.Scale` -> `Interface.PixelsPerUnit` (Ui.Scale is the game's size

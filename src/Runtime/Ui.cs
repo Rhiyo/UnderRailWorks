@@ -625,6 +625,7 @@ static class UiHooks
         Group("dialog patches", () => Dialogs.InstallPatches(harmony));
         Group("containers, loot and locks", () => ContainerHooks.Install(harmony));
         Group("stealth", () => StealthHooks.Install(harmony));
+        Group("lights", () => LightsHooks.Install(harmony));
         Group("mod windows", () => UiWindows.Install(harmony));
         Group("game windows", () => WindowSideHooks.Install(harmony));
         Group("config defaults", () => ConfigDefaults.Install(harmony));
