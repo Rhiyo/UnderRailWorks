@@ -1818,3 +1818,17 @@ Five read-only reviews (loader, save data, names, world/items, interface), each 
   (arrays per layer, Bounds reads) with the default Lines effects: measure before changing.
 - **Names** (TODO.md, "Before releasing the API as 1.0"): `Add` for registering, US spelling, `Character` for the
   acting character, `Interface.PixelsPerUnit`.
+
+## API mods (Nov 18 2026)
+
+When Works lacks something that needs the game's code, a mod can patch it with Harmony once and offer it to other
+mods (SMAPI's framework mods, tModLoader's library mods), so the game code lives in one place and other mods build on
+a stable API. Works' part: `new Hook<T>(mod, name)` / `new ReplaceHook<T>(mod, name)` (public now), giving an API
+mod's events the same ownership, order and failure handling as Works' hooks; only the maker runs one
+(`Run(mod, ...)`, `RunUntil`; Works' own hooks can't be run by mods, logged once), and a hook goes with its maker's code
+on unload/reload (with the handlers other mods added: they re-add on `Mods.Reloaded`). With `Mods.Provide` /
+`Mods.Api<T>` (interfaces, no DLL reference) and `requires` versions that's the whole pattern. Example pair:
+`examples/GameText` (one patch on the game's text lookup `qv.b`, offered as `Shown`) and `examples/GameTextUser`;
+smoke.sh checks the chain, the refusal, and a hot reload of the API mod (the consumer re-hooks, the text changes once).
+Guide: docs/ModdingGuide.md "Making an API mod". An API mod used by several mods is the first candidate to move into
+Works.

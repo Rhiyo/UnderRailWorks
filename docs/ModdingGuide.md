@@ -21,7 +21,8 @@ Set `UnderRailPath` if the game isn't in Steam's default folder. No code at all?
 **Use Works' API, not the game's code.** Mods reference `UnderRailWorks.dll` and `FNA.dll`, not `underrail.exe`.
 The game's names are scrambled and change with game updates; Works keeps one readable layer over them, checked at
 startup, so a game update means fixing Works once instead of every mod breaking. Works also carries the traps you'd
-otherwise hit alone (obfuscated property accessors, members that share names, state the game caches).
+otherwise hit alone (obfuscated property accessors, members that share names, state the game caches). When Works lacks
+something that needs the game's code, see 3: an API mod keeps that code in one mod that others build on.
 
 **Saves stay loadable by the stock game.** Never put a mod's own types into the game's save. Keep your data in
 `SaveData` (`SaveData.Set("kills", 12)`, JSON next to the save); things you put in the world (characters,
@@ -56,10 +57,15 @@ In this order:
    fit. Or `Mods.Call("YourMod", "Method", args)` for one call, or events with `Mods.Event(name)` / `Raise`. Declare
    your API in your documentation, and only add to it (new members, new overloads): renaming or removing a member
    breaks the mods that use it. Ask for it in PostLoad or later; after the providing mod is hot-reloaded, ask again (`Mods.Reloaded` says which mod).
-4. **Last resort: raw game access.** Harmony on the game's types (by reflection, or by referencing the game yourself)
-   works, but it breaks when the game updates and you're on your own. If you do it, keep it in one class, check every
-   lookup for null and switch the feature off with a log line when one is missing, and never touch saves this way.
-   Then ask for the piece in Works (2), so you can drop it. Make your own Harmony instance
+4. **Raw game access, done once: an API mod.** When the piece needs Harmony on the game's code, put it in a mod of
+   its own that offers it to other mods the way Works offers its API (below), rather than patching inside your
+   feature mod. Then only that one mod breaks when the game updates, and every mod that needs the piece shares one
+   patch instead of each making its own, clashing ones. Ask for it in Works too (2): an API mod that several mods use
+   has proved its shape, and is the best candidate to move into Works.
+
+   Harmony on the game's types (by reflection, or by referencing the game yourself) breaks when the game updates and
+   you're on your own: keep it in one class, check every lookup for null and switch the feature off with a log line
+   when one is missing, and never touch saves this way. Make your own Harmony instance
    (`new HarmonyLib.Harmony("YourMod")`, with `<UseHarmony>true</UseHarmony>` in the project); the Mods tab notes that
    the mod may break with a game update.
 
@@ -78,6 +84,43 @@ runs last, for replace / "first answer" hooks (`ReplaceHook`, the AI's ChooseTar
 Versions: your `mod.json` says which Works API you built for (`"works": "1.0"`), and Works refuses a mod that uses
 something it doesn't have, by name, instead of crashing later. Parts marked `[Preview]` may still change; the Mods tab
 notes mods that use them. Details: [Versioning](Versioning.md).
+
+### Making an API mod
+
+As SMAPI's framework mods (SpaceCore, Content Patcher) and tModLoader's library mods. A working pair, built and tested
+on every build: `examples/GameText` (the API mod: one Harmony patch on the game's text lookup, offered as a hook) and
+`examples/GameTextUser` (a mod built on it without referencing its DLL).
+
+- **Your own id and namespace**, never `UnderRailWorks`: players, the Mods tab and the version checks must be able to
+  tell your API from Works'.
+- **One public API class**, published in `Load` with `Mods.Provide(this, api)`. Use .NET and Works types in its
+  members (`string`, `Character`, `Func<...>`, Works' `Hook<T>`), so other mods can describe it in an interface of their
+  own and need no reference to your DLL. (Types of your own make them reference it: that works, but a hot reload of
+  your mod then needs theirs reloaded too.)
+- **Events as hooks:** `new Hook<T>(this, "YourMod.Something")` (or `ReplaceHook<T>` for "one handler takes the
+  step"), exposed as a property. Other mods add handlers with `api.Something.Add(this, handler)`, as with Works' own
+  hooks: they're kept in load order (`HookOrder` moves one), a handler that keeps failing is removed with its mod
+  named, and a mod's handlers go when it's unloaded or reloaded. You fire it with `Something.Run(this, h => h(...))`
+  (or `RunUntil` / `ReplaceHook.Run`); only the mod that made a hook can run it, and nobody can run Works' hooks.
+- **Versioning:** your `mod.json` `"version"` is your API's version. Within a major version only add (members,
+  overloads, hooks); renaming or removing something is a new major version. Dependents write
+  `"requires": ["YourMod >= 1.2"]`: they load after you, and aren't loaded (with the reason shown) without you.
+- **Game updates:** check every game lookup when you load. If one is missing, leave the feature off, say so with one
+  log line, and keep the API there (with a `Working`-style property), so dependents load and can tell.
+- **Hot reload:** when your mod is reloaded, your hooks go with your old code, including the handlers other mods
+  added. They ask for your API again on `Mods.Reloaded` (GameTextUser shows how).
+
+A mod built on yours:
+
+```csharp
+public interface IGameText { Hook<Func<string, string, string>> Shown { get; } bool Working { get; } }
+
+public override void PostLoad()     // every mod's Load has run: the API is there
+{
+    var text = Mods.Api<IGameText>("GameText");     // null (and a log line naming the member) if it doesn't fit
+    text.Shown.Add(this, (key, value) => key == "ui/MainMenu_Version" ? "Modded | " + value : value);
+}
+```
 
 ## 4. Testing
 

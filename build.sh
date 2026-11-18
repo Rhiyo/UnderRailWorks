@@ -106,6 +106,12 @@ mod HelloQuest "$HERE/build/Mods" "$HERE/examples/HelloQuest"
 mod TheStranger "$HERE/build/Mods" "$HERE/examples/TheStranger"
 # TheProspector: a content pack (JSON only, no code), into build/Mods for testing.
 rm -rf "$HERE/build/Mods/TheProspector"; cp -r "$HERE/examples/TheProspector" "$HERE/build/Mods/TheProspector"
+# GameText (an API mod: one Harmony patch offered as a hook) and GameTextUser (built on it without referencing it):
+# examples for docs/ModdingGuide.md "Making an API mod", into build/Mods for testing.
+mkdir -p "$HERE/build/Mods/GameText"
+mcs -nologo -optimize+ -target:library -out:"$HERE/build/Mods/GameText/GameText.dll" -r:"$FNA" -r:"$WORKS" -r:"$HARMONY" -r:System.Core.dll "$HERE/examples/GameText/GameText.cs"
+cp "$HERE/examples/GameText/mod.json" "$HERE/build/Mods/GameText/"
+mod GameTextUser "$HERE/build/Mods" "$HERE/examples/GameTextUser"
 # WorksTest (test keys, never shipped): into build/Mods.
 mod WorksTest "$HERE/build/Mods" "$HERE/tools/testmods/WorksTest"
 mod HalfBroken "$HERE/build/Mods" "$HERE/tools/testmods/HalfBroken"

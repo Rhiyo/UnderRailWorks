@@ -9,6 +9,9 @@
 // A handler that throws is logged with its mod's name and keeps running; one that fails 10 times is removed (a broken
 // per-frame handler would otherwise fill the log). The game and the other mods carry on (tModLoader lets such an
 // exception through). With no handlers, the game runs as stock.
+// Mods make hooks too (an API mod offering its own events: new Hook<T>(this, "MyLib.Something")): the same ownership,
+// order and failure handling for the handlers other mods add. Only the mod that made a hook runs it (Run(this, ...)),
+// and its hooks go with its code when it is unloaded or reloaded (dependents add their handlers again on Mods.Reloaded).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,11 +41,36 @@ public abstract class HookBase<T> : IModOwned, HookOwner where T : class
         owners = o; orders = r; handlers = h;
     }
     const int MaxFailures = 10;
-    internal HookBase(string name) { this.name = name; lock (ModScope.Hooks) ModScope.Hooks.Add(this); }
+    // The mod that made this hook (null: Works' own).
+    readonly string maker;
+    internal HookBase(string name) : this(name, null) { }
+    internal HookBase(string name, string maker) { this.name = name; this.maker = maker; lock (ModScope.Hooks) ModScope.Hooks.Add(this); }
+    internal static string MakerId(WorksMod mod)
+    {
+        if (mod == null) throw new ArgumentNullException("mod", "a mod's hook needs its mod: new Hook<T>(this, name)");
+        return mod.Id;
+    }
+    readonly HashSet<string> refused = new HashSet<string>();
+    // Run(mod, ...) by the mod that made the hook; anyone else (or a hook of Works') is refused, logged once per mod.
+    internal bool RunBy(WorksMod mod)
+    {
+        string id = mod == null ? null : mod.Id;
+        if (maker != null && id != null && string.Equals(id, maker, StringComparison.OrdinalIgnoreCase)) return true;
+        lock (refused) if (refused.Add(id ?? "?")) Log.Write("mods: " + (id ?? "?") + " can't run the hook " + name + ": only " + (maker ?? "UnderRailWorks") + ", which made it, runs it");
+        return false;
+    }
 
-    // Reloading a mod: its handlers go (the new code adds its own).
+    // Reloading a mod: its handlers go (the new code adds its own). A hook it made goes as a whole: its handlers
+    // (other mods' too: they ask the new code's API again on Mods.Reloaded) and its place in the list.
     void IModOwned.RemoveOwner(string mod)
     {
+        if (maker != null && string.Equals(maker, mod, StringComparison.OrdinalIgnoreCase))
+        {
+            failures.Clear();
+            Set(new T[0], new string[0], new int[0]);
+            lock (ModScope.Hooks) ModScope.Hooks.Remove(this);
+            return;
+        }
         var keep = Enumerable.Range(0, handlers.Length).Where(i => owners[i] != mod).ToList();
         if (keep.Count == handlers.Length) return;
         foreach (var i in Enumerable.Range(0, handlers.Length).Where(i => owners[i] == mod)) failures.Remove(handlers[i]);     // nothing keeps the old code alive
@@ -136,6 +164,12 @@ public abstract class HookBase<T> : IModOwned, HookOwner where T : class
 public sealed class Hook<T> : HookBase<T> where T : class
 {
     internal Hook(string name) : base(name) { }
+    // A hook of your mod's, for other mods to handle (an API mod's events). name: for the log ("MyLib.Something").
+    public Hook(WorksMod mod, string name) : base(name, MakerId(mod)) { }
+    // Runs every handler (from your mod only: the one that made the hook). call: how to call one, e.g. h => h(value).
+    public void Run(WorksMod mod, Action<T> call) { if (RunBy(mod)) Run(call); }
+    // Handlers until one returns true, from the last in load order (the lower mod has the final say); true if one did.
+    public bool RunUntil(WorksMod mod, Func<T, bool> call) { return RunBy(mod) && Each(call); }
     internal void Run(Action<T> call)
     {
         var list = handlers;
@@ -156,6 +190,10 @@ public sealed class Hook<T> : HookBase<T> where T : class
 public sealed class ReplaceHook<T> : HookBase<T> where T : class
 {
     internal ReplaceHook(string name) : base(name) { }
+    // A hook of your mod's where one handler can take the step (returns true) and the rest are skipped.
+    public ReplaceHook(WorksMod mod, string name) : base(name, MakerId(mod)) { }
+    // True if a handler took the step (then skip your own). From your mod only: the one that made the hook.
+    public bool Run(WorksMod mod, Func<T, bool> call) { return RunBy(mod) && Run(call); }
     internal bool Run(Func<T, bool> call) { return Each(call); }
 }
 }

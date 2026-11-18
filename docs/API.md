@@ -621,6 +621,9 @@ One of the game's sprite batches (ob).
 
 Every handler runs.
 
+- `Hook(WorksMod mod, string name)` — A hook of your mod's, for other mods to handle (an API mod's events). name: for the log ("MyLib.Something").
+- `void Run(WorksMod mod, Action<T> call)` — Runs every handler (from your mod only: the one that made the hook). call: how to call one, e.g. h => h(value).
+- `bool RunUntil(WorksMod mod, Func<T, bool> call)` — Handlers until one returns true, from the last in load order (the lower mod has the final say); true if one did.
 
 ## HookBase<T>  _(class, Hooks.cs)_
 
@@ -1439,6 +1442,8 @@ Values: `NotStarted, Active, Completed, Failed`
 
 The first handler that returns true replaces the game's step.
 
+- `ReplaceHook(WorksMod mod, string name)` — A hook of your mod's where one handler can take the step (returns true) and the rest are skipped.
+- `bool Run(WorksMod mod, Func<T, bool> call)` — True if a handler took the step (then skip your own). From your mod only: the one that made the hook.
 
 ## Resistance  _(struct, World.cs)_
 

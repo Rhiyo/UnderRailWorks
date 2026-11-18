@@ -1,0 +1,3 @@
+{ "id": "GameTextUser", "name": "Game Text User", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+  "requires": ["GameText >= 1.0"],
+  "description": "Example: builds on the Game Text API mod (examples/GameText) without referencing its DLL." }

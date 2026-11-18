@@ -49,6 +49,12 @@ public sealed partial class WorksTest : WorksMod
         Action<double> probe = s => { };
         for (int round = 0; round < 2; round++) { GameEvents.Update.Add(this, probe); GameEvents.Update.Remove(probe); }
         Log.Info("cross-mod call widened: " + Mods.Call("WorksTest", "Half", 5) + ", hook emptied twice: ok");
+        // A hook of a mod's own (an API mod's events): its handlers run when it runs it; nobody else may run it, nor Works' hooks.
+        var mine = new Hook<Action<int>>(this, "WorksTest.Ping"); int got = 0;
+        mine.Add(this, n => got += n); mine.Run(this, h => h(2)); bool first = mine.RunUntil(this, h => { h(1); return true; });
+        GameEvents.Update.Run(this, h => h(0));
+        Log.Info("mod hook: ran " + got + ", until " + first + "; Works' hook run by a mod: refused (logged)");
+        Commands.Add(this, "wt.text", "wt.text: the main menu's version text, through the game's lookup", a => { var t = Text.Get("ui/MainMenu_Version"); Log.Info("game text: " + t); return t; });
         // The same API through interfaces of our own (no reference to the providing mod): one that fits, one that doesn't.
         var view = Mods.Api<IEchoView>("WorksTest");
         string heard = null; if (view != null) { view.Heard += x => heard = x; view.Loud = true; }

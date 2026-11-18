@@ -54,6 +54,10 @@ wait 3
 wt.slay
 wait 3
 wt.recurse
+wt.text
+works.reload GameText
+wait 2
+wt.text
 works.health
 STEPS
 timeout 100 "$SKILL/launch.sh" --save "$SAVE" 2560 720 >/dev/null 2>&1
@@ -76,6 +80,12 @@ check "Harmony use noted"                 "HelloWorks: patches code with Harmony
 check "works.health"                      "console: works.health -> UnderRailWorks .*API"
 check "translations"                      "translation: Hello, player!"
 check "cross-mod calls"                   "cross-mod call: echo hi"
+check "a mod's own hook runs"             "mod hook: ran 3, until True"
+check "only its maker runs a hook"          "WorksTest can't run the hook Update: only UnderRailWorks"
+check "a mod built on an API mod"           "GameTextUser: hooked GameText.Shown"
+check "an API mod's hook changes the game"  "game text: .*Game Text example \\| "
+check "API mod reloaded, dependent re-added" "GameTextUser: hooked GameText.Shown again"
+never "an API mod's old hook kept running"  "game text: .*(Game Text example \\| .*){2}"
 check "cross-mod API through an interface" "cross-mod view: ECHO view, 42, Sad, loud True, heard view; wrong view: null"
 check "an interface that doesn't fit"     "doesn't fit IWrongView"
 check "damage from a damage handler stops" "recursion: handler ran [1-3] times, game alive"

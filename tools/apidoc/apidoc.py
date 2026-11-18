@@ -38,6 +38,7 @@ for path in sorted(glob.glob(os.path.join(root, 'src', 'Runtime', '*.cs'))):
         if mm and current and not s.startswith('public sealed class') and not s.startswith('public class'):
             sig = re.sub(r'\s*\{.*$', '', s); sig = re.sub(r'\s*=>.*$', '', sig).rstrip(';').strip()
             sig = sig.replace('public ', '', 1)
+            sig = re.sub(r'\)\s*:\s*(?:base|this)\s*\(.*$', ')', sig)     # a constructor's base(...) call
             types[current]['members'].append(('member', sig, comment, bool(preview)))
         comment = []
 # The compiled API (build/api-now.txt, tools/apicheck/ApiSurface.cs) decides what is listed: a member found in the

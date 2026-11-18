@@ -1,0 +1,2 @@
+{ "id": "GameText", "name": "Game Text", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.9",
+  "description": "Example API mod: lets other mods change any of the game's text as it is shown (one Harmony patch, offered as a hook)." }
