@@ -31,7 +31,7 @@ Everything public in the `UnderRailWorks` namespace, and nothing else:
   e.g. Harmony's, would freeze its version into the API).
 - `object`-typed keys (`Layer.Key`, `WorldView.Key`...) are opaque: compare them, don't look inside.
 - The world-drawing surface (WorldDraw, Outlines, Layer, LayerSet, MapObject, WorldView, DrawContext, GameBatch,
-  LayerShader, Interface) is stable since Nov 2026, for Occluded Characters (UnderRailFixes) as one of the first
+  LayerShader, Interface) is stable since Nov 2026, for Occluded Characters (Wall Vision) as one of the first
   mods. Guarantees: with no handlers every drawing point does what the stock game does; a drawing handler that throws
   switches off all of that mod's drawing handlers and outline requests for the session (the game's drawing state may
   be half changed), the game carries on; outline requests belong to a mod (forgotten on reload, errors reported).

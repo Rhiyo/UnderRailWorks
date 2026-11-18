@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Drawing API test (the parts Occluded Characters in UnderRailFixes uses): one scripted session with the current build
+# Drawing API test (the parts Occluded Characters in Wall Vision uses): one scripted session with the current build
 # (dist/) and the test mods, Occluded Characters switched on through works.config, characters placed around the
 # player (some behind scenery), and WorksTest's drawing probe (wt.drawprobe: every drawing event handled, every
 # member of every handle read, some layers and tile extras drawn by the probe the game's way) with each effect in
@@ -31,17 +31,17 @@ sleep 40
 # world fades in.
 read W H <<< "$SIZE"; timeout 30 "$SKILL/inp.sh" focus click $((W/2)) $((H*3/10)) >/dev/null 2>&1; sleep 3
 step "wt.load $SAVE"; sleep 2; timeout 30 "$SKILL/inp.sh" focus >/dev/null 2>&1; sleep 15
-step "works.config UnderRailFixes ShowCovered true" "works.config UnderRailFixes KeyholeDebug 1" \
-     "works.config UnderRailFixes ShowCoveredPlayer Keyhole" "works.config UnderRailFixes ShowCoveredOther Keyhole" \
+step "works.config WallVision ShowCovered true" "works.config WallVision KeyholeDebug 1" \
+     "works.config WallVision ShowCoveredPlayer Keyhole" "works.config WallVision ShowCoveredOther Keyhole" \
      "wt.crowd 12 creatures\\rathoundalpha 9" "wait 3" "wt.drawprobe 120"; sleep 15
 "$SKILL/shot.sh" "$SHOTS/keyhole.png" >/dev/null 2>&1
 for fx in Lines Dither Fill Outline; do
-    step "works.config UnderRailFixes ShowCoveredOther $fx" "wt.drawprobe 60"; sleep 6
+    step "works.config WallVision ShowCoveredOther $fx" "wt.drawprobe 60"; sleep 6
     "$SKILL/shot.sh" "$SHOTS/$(echo $fx | tr A-Z a-z).png" >/dev/null 2>&1
 done
-step "works.config UnderRailFixes ShowCovered false" "wt.drawprobe 60"; sleep 6
+step "works.config WallVision ShowCovered false" "wt.drawprobe 60"; sleep 6
 "$SKILL/shot.sh" "$SHOTS/off.png" >/dev/null 2>&1
-step "works.config UnderRailFixes ShowCovered true" "works.config UnderRailFixes ShowCoveredOther Keyhole" "wait 2" "wt.drawthrow"; sleep 6
+step "works.config WallVision ShowCovered true" "works.config WallVision ShowCoveredOther Keyhole" "wait 2" "wt.drawthrow"; sleep 6
 step "wt.drawprobe 30" "works.health"; sleep 6
 "$SKILL/shot.sh" "$SHOTS/after-throw.png" >/dev/null 2>&1
 alive=0; . "$SKILL/common.sh" 2>/dev/null; game_pid >/dev/null 2>&1 && alive=1
@@ -53,7 +53,7 @@ never() { if grep -qE "$2" "$LOG"; then fail=$((fail+1)); echo "FAIL: $1 (found:
 ok() { if [ "$2" = 1 ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: $1"; fi; }
 # Bright pixels' share of a screenshot's world area (the HUD's corners left out): a drawn world isn't black.
 lit() { magick "$1" -gravity center -crop 60%x60%+0+0 -colorspace gray -threshold 8% -format '%[fx:mean>0.05?1:0]' info: 2>/dev/null || echo 0; }
-check "works.config sets a mod's setting"     "console: works.config UnderRailFixes ShowCovered true -> UnderRailFixes.ShowCovered = 1"
+check "works.config sets a mod's setting"     "console: works.config WallVision ShowCovered true -> WallVision.ShowCovered = 1"
 check "characters placed around the player"   "crowd: [1-9][0-9]* of 12"
 probes=$(grep -c "drawprobe: frames" "$LOG")
 ok "every probe before the throw finished (6, got $probes)" "$([ "$probes" = 6 ] && echo 1)"
@@ -62,7 +62,7 @@ check "probe: layers drawn by a handler"      "drawprobe: frames 120/120.*replac
 check "probe: hidden outlines (requested)"    "drawprobe: frames 120/120.*outlines [1-9][0-9]* \(hidden [1-9]"
 check "probe: shader passes"                  "drawprobe: frames 120/120.*shader passes [1-9]"
 never "probe: no errors reading the API"      "drawprobe: .*errors [1-9]"
-check "keyhole made"                          "UnderRailFixes: keyhole (circle|layer|: front picture)"
+check "keyhole made"                          "WallVision: keyhole (circle|layer|: front picture)"
 never "occluded characters never failed"      "occluded characters: .* failed"
 check "a failing drawing handler: reported"   "WorksTest: its DrawLayer handler failed"
 check "... and its drawing stopped"           "WorksTest: an error while drawing; its drawing is off until the game restarts"

@@ -51,7 +51,7 @@ static class ShowCovered
 
     internal static void Failed(string where, Exception ex)
     {
-        if (!Broken) UnderRailFixesMod.Note("occluded characters: " + where + " failed, turned off until the game restarts: " + ex);
+        if (!Broken) WallVisionMod.Note("occluded characters: " + where + " failed, turned off until the game restarts: " + ex);
         Broken = true;
     }
 
@@ -134,7 +134,7 @@ static class ShowCovered
                 foreach (var kv in all)
                 {
                     var sample = kv.Value.Count > 0 ? kv.Value[0] : default(Layer);
-                    UnderRailFixesMod.Note("shader pass: \"" + kv.Key + "\" x" + kv.Value.Count + (sample.IsNull ? "" : " e.g. entity " + (sample.Entity.IsNull ? "-" : sample.Entity.Key.GetType().Name) + " id " + (sample.Id ?? "-") + " at " + sample.Bounds));
+                    WallVisionMod.Note("shader pass: \"" + kv.Key + "\" x" + kv.Value.Count + (sample.IsNull ? "" : " e.g. entity " + (sample.Entity.IsNull ? "-" : sample.Entity.Key.GetType().Name) + " id " + (sample.Id ?? "-") + " at " + sample.Bounds));
                 }
         }
         if (!On) return;
@@ -659,7 +659,7 @@ static class Keyhole
         if (nx * ny != loggedTiles)
         {
             loggedTiles = nx * ny;
-            UnderRailFixesMod.Note($"keyhole: front picture {tw}x{th}");
+            WallVisionMod.Note($"keyhole: front picture {tw}x{th}");
         }
         int n = 0;
         for (int y = 0; y < ny; y++)
@@ -882,7 +882,7 @@ static class Keyhole
             using (var f = System.IO.File.Create(System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "keyhole-" + name + ".png"))) copy.SaveAsPng(f, r.Width, r.Height);
             copy.Dispose();
         }
-        catch (Exception ex) { UnderRailFixesMod.Note("dump " + name + " failed: " + ex.Message); }
+        catch (Exception ex) { WallVisionMod.Note("dump " + name + " failed: " + ex.Message); }
     }
 
     static void CutHoles()
@@ -916,13 +916,13 @@ static class Keyhole
                 {
                     var own = Map(d.Layer.Owner);
                     var tex = d.Layer.SpriteKind;
-                    UnderRailFixesMod.Note("keyhole layer " + d.Index + " (target last " + t.Last + ") kind " + d.Kind + " " + (c ? "CUT" : "kept")
+                    WallVisionMod.Note("keyhole layer " + d.Index + " (target last " + t.Last + ") kind " + d.Kind + " " + (c ? "CUT" : "kept")
                         + " map " + own.X.ToString("0.##") + "," + own.Y.ToString("0.##") + " (target " + at.X.ToString("0.##") + "," + at.Y.ToString("0.##") + ")"
                         + " id " + (d.Layer.Id ?? "-") + " tex " + tex + " px " + d.Pixels + " entity " + (d.Layer.Entity.IsNull ? "-" : d.Layer.Entity.Key.GetType().Name)
                         + (d.Layer.Owner == t.Owner ? " (target's own)" : ""));
                 }
             }
-            if (debugNow) UnderRailFixesMod.Note("keyhole circle " + circle + " cover " + cover.Count + " rest " + rest.Count);
+            if (debugNow) WallVisionMod.Note("keyhole circle " + circle + " cover " + cover.Count + " rest " + rest.Count);
             // Ease in while covered, out after; a fading-out hole is still cut.
             float alpha = Math.Max(0f, Math.Min(1f, Strength(t.Owner) + (covered ? step : -step)));
             if (alpha <= 0f) continue;
@@ -935,7 +935,7 @@ static class Keyhole
                 Dump("2-mask", mask, new Rectangle(0, 0, circle.Width, circle.Height));
                 Dump("3-behind", behind, new Rectangle(0, 0, circle.Width, circle.Height));
                 foreach (var tile in Tiles) { var part = Rectangle.Intersect(tile.Area, circle); if (part.Width > 0) Dump("4-front-after", tile.Target, new Rectangle(part.X - tile.Area.X, part.Y - tile.Area.Y, part.Width, part.Height)); }
-                UnderRailFixesMod.Note("dumped keyhole pictures, circle " + circle);
+                WallVisionMod.Note("dumped keyhole pictures, circle " + circle);
                 dumped = true;
             }
             Holes.Add(round);

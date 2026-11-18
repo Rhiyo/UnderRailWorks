@@ -1,14 +1,14 @@
-// UnderRailFixes as an UnderRailWorks mod: Occluded characters (ShowCovered.cs) on Works' world-drawing events, with
-// its settings in Mods\UnderRailFixes\settings.ini and its rows in the Mods tab.
+// Wall Vision: Occluded characters (ShowCovered.cs) on Works' world-drawing events, with
+// its settings in Mods\WallVision\settings.ini and its rows in the Mods tab.
 using System;
 using Microsoft.Xna.Framework;
 using UnderRailWorks;
 
-[assembly: System.Reflection.AssemblyVersion("2.0.0")]
+[assembly: System.Reflection.AssemblyVersion("1.0.0")]
 
-public sealed class UnderRailFixesMod : WorksMod
+public sealed class WallVisionMod : WorksMod
 {
-    internal const string Name = "UnderRailFixes";
+    internal const string Name = "WallVision";
     static ModLog log;
     internal static void Note(string line) { if (log != null) log.Info(line); }
 
@@ -19,7 +19,7 @@ public sealed class UnderRailFixesMod : WorksMod
     {
         log = base.Log;
         bool fresh = !System.IO.File.Exists(System.IO.Path.Combine(Info.Folder, "settings.ini"));
-        CoveredSettings.Config = GetConfig<FixesConfig>();
+        CoveredSettings.Config = GetConfig<WallVisionConfig>();
         // First start: the player's settings from UnderRailFixes 1.x's UnderrailFix.ini, if there is one.
         if (fresh)
         {
@@ -50,8 +50,8 @@ public sealed class UnderRailFixesMod : WorksMod
     }
 }
 
-// The settings (Options -> Mods -> UnderRailFixes settings, and Mods\UnderRailFixes\settings.ini).
-public sealed class FixesConfig : ModConfig
+// The settings (Options -> Mods -> Wall Vision, and Mods\WallVision\settings.ini).
+public sealed class WallVisionConfig : ModConfig
 {
     [Header("Occluded Characters")]
     [Label("Show occluded characters"), Tooltip("Occluded characters: characters hidden behind scenery are shown where they're hidden. 1 = on.\nFollows the game's Character Outlines option: none with \"Never\".")]
@@ -84,7 +84,7 @@ public enum CoveredEffect
 
 static class CoveredSettings
 {
-    internal static FixesConfig Config;
+    internal static WallVisionConfig Config;
     internal static int Changes { get { return Config.Changes; } }
     internal static bool On { get { return Config.ShowCovered; } }
     internal static CoveredEffect Player { get { return Config.ShowCoveredPlayer; } }

@@ -46,6 +46,6 @@ public sealed class HelloUI : WorksMod
         });
     }
 
-    public override void PostLoad() { Log.Info("UnderRailFixes is " + (ModLoader.IsLoaded("UnderRailFixes") ? "here too" : "not loaded")); }
+    public override void PostLoad() { Log.Info("Wall Vision is " + (ModLoader.IsLoaded("WallVision") ? "here too" : "not loaded")); }
 
 }

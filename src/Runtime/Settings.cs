@@ -1,7 +1,7 @@
 // UnderRailWorks.ini next to the game: the engine fixes' settings (mods keep theirs in Mods\<mod>\settings.ini). Read
 // once at launch; Width/Height are written back when the in-game menu changes them. First start after UnderRailFixes 1.x:
 // the values are taken from its UnderrailFix.ini (which is left as it is; Raw also reads its other keys, e.g. for the
-// UnderRailFixes mod's Occluded characters settings).
+// Wall Vision mod's settings).
 using System;
 using System.Collections.Generic;
 using System.IO;

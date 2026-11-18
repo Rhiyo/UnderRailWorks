@@ -1,6 +1,6 @@
 // UnderRailWorks: loads mods from Mods\<folder>\ in the game folder (64-bit mode only).
 // Each mod may have a mod.json manifest (readable JSON; everything optional):
-//   { "id": "UnderRailFixes", "name": "UnderRailFixes", "version": "2.0.0", "author": "...", "description": "...",
+//   { "id": "WallVision", "name": "Wall Vision", "version": "1.0.0", "author": "...", "description": "...",
 //     "works": "0.9", "requires": ["OtherMod >= 1.2"], "optional": ["SomeMod"], "sortAfter": [], "sortBefore": [],
 //     "incompatible": ["Rival@2.0"], "homepage": "https://...", "issues": "https://...", "license": "MIT", "game": "1.3.1.2",
 //     "multiplayer": "both" }

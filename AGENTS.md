@@ -3,8 +3,8 @@
 Notes for whoever (person or AI agent) works on this next. The game's title is stylized **UnderRail**.
 
 **UnderRailWorks** (this repo) is the engine upgrade and mod framework: the game on .NET 10 and FNA, the mod loader,
-the Mods tab, the API (events, readable names, settings), and the engine fixes. **UnderRailFixes** is now a mod on
-it (`mods/UnderRailFixes`: Occluded characters). Works started from UnderRailFixes 1.0.8
+the Mods tab, the API (events, readable names, settings), and the engine fixes. UnderRailFixes' game-side feature is now
+the **Wall Vision** mod (`mods/WallVision`: characters behind scenery, called UnderRailFixes 2.0 until Nov 18 2026). Works started from UnderRailFixes 1.0.8
 (github.com/Rhiyo/UnderRailFixes, the released 1.x line, kept separately), so much of the code, and this file below,
 still describe the 1.x structure and names (`UnderrailFix*`): see `UnderRailWorks.md` for the framework's design,
 decisions and status, and `TODO.md` for the work list. The game knowledge below (obfuscated names, how the game draws,

@@ -3,7 +3,7 @@
 #   UnderRailWorks.dll             the runtime (engine fixes, mod loader, API), loaded by the patched game
 #   UnderRailLauncher.*, dotnet/   the .NET 10 launcher (installed as underrail.exe) and the Windows .NET 10 runtime
 #   FNA.dll, x64/, NVorbis.dll, UnderrailSteamHost.exe, 0Harmony.dll   the 64-bit game's libraries
-#   Mods/UnderRailFixes/           the UnderRailFixes mod (Occluded characters)
+#   Mods/WallVision/               the Wall Vision mod (characters behind scenery)
 #   UnderRailWorks-Patcher.exe     Windows patcher (.NET Framework 4) + Mono.Cecil.dll
 #   underrailworks-patcher         Linux patcher (single binary with the Mono runtime bundled)
 # ./build.sh install   also patches the local Steam copy.
@@ -94,11 +94,11 @@ cp "$FNA" "$OUT64/"
 cp "$HERE"/lib/fna/x64/*.dll "$OUT64/x64/"
 
 # The shipped mods, into dist's Mods/.
-for m in UnderRailFixes Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic BountyHunter Beastmaster Hunger Ambushes Scavenger CharacterBuilder HousePets PackMule WorkbenchPlanner ShotBreakdown StealthLens SurveyPins Gauntlet Grudges CollectorsChecklist Coop; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
+for m in WallVision Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic BountyHunter Beastmaster Hunger Ambushes Scavenger CharacterBuilder HousePets PackMule WorkbenchPlanner ShotBreakdown StealthLens SurveyPins Gauntlet Grudges CollectorsChecklist Coop; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
 cp "$HERE/mods/FieldMedic/treat.wav" "$OUT/Mods/FieldMedic/"
 # Content packs (JSON only, no code).
 for m in CampfireCooking; do rm -rf "$OUT/Mods/$m"; cp -r "$HERE/mods/$m" "$OUT/Mods/$m"; done
-# HelloUI (the UI toolkit and ModConfig example): built like UnderRailFixes, into build/Mods for testing.
+# HelloUI (the UI toolkit and ModConfig example): built like Wall Vision, into build/Mods for testing.
 mod HelloUI "$HERE/build/Mods" "$HERE/examples/HelloUI"
 # HelloQuest (quests, dialogs, variables): built without the game, into build/Mods for testing.
 mod HelloQuest "$HERE/build/Mods" "$HERE/examples/HelloQuest"

@@ -88,7 +88,7 @@ sealed class OggMusic : IDisposable
         lock (playing)
         {
             playing.Add(this);
-            if (streamer == null) { streamer = new System.Threading.Thread(Stream) { IsBackground = true, Name = "UnderRailFixes music" }; streamer.Start(); }
+            if (streamer == null) { streamer = new System.Threading.Thread(Stream) { IsBackground = true, Name = "UnderRailWorks music" }; streamer.Start(); }
         }
     }
 

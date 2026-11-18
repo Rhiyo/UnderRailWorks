@@ -9,7 +9,7 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
   [Harmony](https://github.com/pardeike/Harmony). Dependencies and load order work like
   [tModLoader](https://github.com/tModLoader/tModLoader)'s.
 - **Mods that ship with it** (in `mods/`, each can be switched off in Options -> Mods):
-  - UnderRailFixes: Occluded characters (keyhole, fills, outlines).
+  - Wall Vision: see and select characters behind walls and scenery (keyhole, fills, outlines).
   - Minimap: the area around you, exits, and the characters you can see in their Tab outline colours.
   - Quest Tracker: your active quests on the HUD.
   - Word Gets Around: nearby characters comment on what you've done.
@@ -40,7 +40,7 @@ stable version of the fixes. Works is a separate product (starting at 1.0) that 
 and the API are not compatible with 1.x.
 
 Working today (tested under Proton): the game on .NET 10, the mod loader and Mods tab, mod dependencies, the drawing
-API and the UnderRailFixes mod, save compatibility with the stock game (`tools/savecheck`). See `TODO.md` for what's
+API and the Wall Vision mod, save compatibility with the stock game (`tools/savecheck`). See `TODO.md` for what's
 left and `UnderRailWorks.md` for the design.
 
 ## Installing (once released)
@@ -80,7 +80,7 @@ A mod is a folder in `Mods\` with a `mod.json` and a DLL whose main class derive
 
 ```json
 { "id": "MyMod", "name": "My Mod", "version": "1.0.0", "author": "me", "works": "0.9",
-  "description": "What it does.", "requires": ["UnderRailFixes@2.0"] }
+  "description": "What it does.", "requires": ["WallVision@1.0"] }
 ```
 
 The API is in the `UnderRailWorks` namespace and is a **preview (0.9)**: a mod declares the API version it was built
@@ -129,7 +129,7 @@ Pictures and sounds: `Assets.Texture` / `Sound`, replacing any game texture (`As
 `MainMenu.SetBackground`; `Assets.Export` writes a game texture to PNG to start from.
 
 Saves stay loadable by the stock game: placed characters are never saved, mod quests and mod state are kept in plain
-variables. `examples/` has small mods; `mods/UnderRailFixes` is a full one. Docs and a mod template are on the TODO list.
+variables. `examples/` has small mods; `mods/WallVision` is a full one. Docs and a mod template are on the TODO list.
 
 ## Building
 

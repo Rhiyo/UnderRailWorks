@@ -14,7 +14,8 @@ A mod framework for UnderRail (Styg). Two parts:
 
 Mods are .NET DLLs that change the game at runtime with **Harmony** (MIT).
 
-**UnderRailFixes** becomes a mod on UnderRailWorks, keeping the game-side fixes (Occluded characters). The engine fixes
+UnderRailFixes' game-side fix (Occluded characters) becomes a mod on UnderRailWorks, **Wall Vision** (`mods/WallVision`;
+named the UnderRailFixes mod, 2.0.0, until Nov 18 2026, when it was renamed: it's not a fix, and the name clashed with the 1.x download). The engine fixes
 move into Works: resolution, zoom, UI scale and insets, frame rate, 64-bit mode, window icon, DPI, save screenshots.
 
 ## Rules (never break these)
@@ -96,7 +97,7 @@ Two separate systems, as tModLoader's ModConfig and its UI toolkit:
    members names the choices). Works finds it, writes `settings.ini` with comments and defaults the first time, builds
    the Mods tab rows (bool: tick box, enum: dropdown, int: slider) with a Restore defaults button, writes changed values
    on Accept and calls `OnChanged`. The mod writes no UI code; `GetConfig<T>()` gives it the values. `ModPage` stays for
-   anything a config can't express. UnderRailFixes uses a config class (`FixesConfig`).
+   anything a config can't express. Wall Vision uses a config class (`WallVisionConfig`).
 2. **UI toolkit** (`src/Runtime/Ui.cs`). The game's own controls under readable names (`Ui.Label`, `Ui.Button`,
    `Ui.TickBox`, `Ui.Panel`, `Ui.Add/Remove/Move/Resize/Show/SetText/SetColor`), so mod UI looks like the game's and
    follows Works' interface scale and insets. The game has no named interface layers like Terraria's; instead mods
@@ -1203,9 +1204,9 @@ real Windows, GOG, long sessions, and the stock game loading a .NET 10 config.da
 - Proven under Proton in 64-bit and 32-bit mode; a throwing mod is contained.
 - Running in the user's Steam copy.
 - Item overlay and save spike done: see "How the game is opened up".
-- **Occluded characters as a mod** (`mods/UnderRailFixes/`): runs on Works' world-drawing events (`WorldDraw.cs`:
+- **Occluded characters as a mod** (`mods/WallVision/`, the UnderRailFixes mod until Nov 18): runs on Works' world-drawing events (`WorldDraw.cs`:
   the existing patch points call it; with no handler each does exactly what the game does; a throwing handler is
-  removed). Its settings are in `Mods/UnderRailFixes/settings.ini` (taken from `UnderrailFix.ini` on first start).
+  removed). Its settings are in `Mods/WallVision/settings.ini` (taken from `UnderrailFix.ini` on first start).
 - **Mods tab** (replaces the Fixes tab: the game's tab row has no room for an eighth tab), after tModLoader's Mods
   menu: a card per mod (switch, name, version, author, Loaded / Off / Not loaded, why, description, Requires /
   Works with, a settings button). Each mod's settings and Works' engine fixes are views of their own in the same tab
@@ -1258,7 +1259,7 @@ biggest risk of going 64-bit only), GOG.
 ## Open questions
 
 - Repo layout: a new `UnderRailWorks` repo, or this one renamed? Where does the UnderRailFixes mod live?
-- (Settled) Names: `UnderRailWorks.dll`, `UnderRailWorks-Patcher`; Works starts at 1.0.0, the UnderRailFixes mod at 2.0.0; a 1.x install is detected and replaced.
+- (Settled) Names: `UnderRailWorks.dll`, `UnderRailWorks-Patcher`; Works starts at 1.0.0, the UnderRailFixes mod at 2.0.0 (renamed Wall Vision 1.0.0, Nov 18); a 1.x install is detected and replaced.
 - The manifest format, and how per-mod settings look in the Mods tab.
 - How Harmony patches behave across game updates, and how mods state which game versions they support.
 
@@ -1374,7 +1375,7 @@ fight instead). The `]` key and the ammo bar didn't reload in a headless run.
   Tab lets you click through walls. Characters out of the player's line of sight aren't drawn at all, so nothing
   (Tab included) can pick them.
 - `Outlines.PickThrough(mod, wanted)`: hidden outlines (built for a mod's request, not drawn) go into the pick list as
-  Tab's would. UnderRailFixes: "Select characters behind scenery" (default on, works with the effects off).
+  Tab's would. Wall Vision: "Select characters behind scenery" (default on, works with the effects off).
   Tested A/B in the same scene by toggling the setting live (works.reload): a dog behind the living room's front
   wall, seen through the keyhole, is picked only with the option.
 - `Ui.Ask(mod, question, initial, onAnswer, okText)` now opens the game's save-name popup (`e4u`) with the question
