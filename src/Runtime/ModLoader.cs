@@ -157,6 +157,7 @@ public static class ModLoader
         All.AddRange(all.Except(order).OrderBy(m => m.Name, StringComparer.OrdinalIgnoreCase));
         Log.Write("mods: load order: " + string.Join(", ", order.Select(m => m.Id).ToArray()));
         foreach (var m in all.Where(m => m.Error != null)) Log.Write("mods: " + m.Id + " not loaded: " + m.Error);
+        foreach (var m in order) { var note = WorksVersionNote(m); if (note != null) Log.Write("mods: " + m.Id + ": " + note + "; checked against this one when it loads"); }
         foreach (var m in all.Where(m => !m.Enabled)) Log.Write("mods: " + m.Id + " is switched off");
 
         try { GameNames.Check(); } catch (Exception ex) { Log.Always("UnderRailWorks: game names check failed: " + ex); }
@@ -272,14 +273,15 @@ public static class ModLoader
         return m;
     }
 
-    // The mod's "works" version against this Works (null: fine).
-    internal static string WorksVersionProblem(ModInfo m)
+    // The mod's "works" version against this Works: information only (null: the same). Whether a mod built for another
+    // Works loads is decided by what it uses (ModCheck: everything there, with the same signatures), as SMAPI does, not
+    // by the number: a major version then only stops the mods that use what it changed.
+    internal static string WorksVersionNote(ModInfo m)
     {
         if (m.Works == null) return null;
-        if (m.Works.Major != WorksApi.Version.Major || m.Works > ModInfo.Norm(WorksApi.Version)
-            || (WorksApi.Version.Major == 0 && m.Works.Minor != WorksApi.Version.Minor))     // 0.x (preview): each minor may break
-            return "built for UnderRailWorks API " + m.Works.ToString(2) + " (this is " + WorksApi.Version.ToString(2) + ")";
-        return null;
+        var mine = new Version(WorksApi.Version.Major, WorksApi.Version.Minor);
+        var theirs = new Version(m.Works.Major, m.Works.Minor);
+        return theirs == mine ? null : "built for UnderRailWorks API " + theirs + " (this is " + mine + ")";
     }
 
     // A mod switched on live: its folder is where its own libraries are found too.
@@ -293,11 +295,6 @@ public static class ModLoader
         while (changed)
         {
             changed = false;
-            foreach (var m in all.Where(m => m.Enabled && m.Error == null && m.Works != null))
-            {
-                var problem = WorksVersionProblem(m);
-                if (problem != null) { m.Error = problem; changed = true; }
-            }
             foreach (var m in all.Where(m => m.Enabled && m.Error == null))
                 foreach (var d in m.Incompatible)
                 {

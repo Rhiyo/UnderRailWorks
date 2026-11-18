@@ -9,7 +9,7 @@ gamecopy() {
     ln -s "$GAME/data" "$dir/data"
     cp -r "$DIST"/. "$dir/"
     "$dir/underrailworks-patcher" "$dir" >/dev/null || { echo "patcher failed in $dir" >&2; return 1; }
-    for f in WorksTest HalfBroken NeedsNewer HelloWorks GameText GameTextUser; do rm -rf "$dir/Mods/$f"; cp -r "$MODS/$f" "$dir/Mods/"; done
+    for f in WorksTest HalfBroken NeedsNewer OldButFine GoneOverride HelloWorks GameText GameTextUser; do rm -rf "$dir/Mods/$f"; cp -r "$MODS/$f" "$dir/Mods/"; done
     printf '[UnderRailWorks]\nSettingsVersion=3\nLog=1\n' > "$dir/UnderRailWorks.ini"
 }
 win() { echo "Z:$(echo "$1" | tr / '\\')"; }

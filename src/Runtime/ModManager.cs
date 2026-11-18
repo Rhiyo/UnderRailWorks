@@ -108,6 +108,7 @@ static class ModManager
         {
             add(m.Name + (m.Version != null ? "  " + m.VersionText : ""), White);
             if (m.Author != null) add("by " + m.Author, Quiet);
+            if (m.Works != null) add("Built for UnderRailWorks API " + m.Works.Major + "." + m.Works.Minor + (ModLoader.WorksVersionNote(m) != null ? " (this is " + WorksApi.Version.Major + "." + WorksApi.Version.Minor + "; everything it uses is checked when it loads)" : ""), Quiet);
             lines.Add(new KeyValuePair<string, Color>("", Plain));
             string status = m.Loaded ? "Loaded" + (order.Contains(m) ? ", " + Ordinal(order.IndexOf(m) + 1) + " in the load order" : "")
                 : !m.Enabled ? "Switched off" : "Not loaded" + (m.Error != null ? ": " + m.Error : "");

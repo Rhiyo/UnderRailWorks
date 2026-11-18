@@ -84,7 +84,7 @@ A mod is a folder in `Mods\` with a `mod.json` and a DLL whose main class derive
 ```
 
 The API is in the `UnderRailWorks` namespace and is a **preview (0.9)**: a mod declares the API version it was built
-for, and until 1.0 a new minor version may change what mods use (they must be rebuilt). `UnderRailWorks.Internal` is
+for, and until 1.0 a new minor version may change what mods use. Works checks every mod against what it actually uses when it loads: a mod built for another version loads if everything it uses is still there, and is refused by name otherwise. `UnderRailWorks.Internal` is
 Works' own plumbing, not API: don't use it.
 
 ```csharp

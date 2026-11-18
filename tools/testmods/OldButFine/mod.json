@@ -1,0 +1,2 @@
+{ "id": "OldButFine", "name": "Old but fine (test)", "version": "1.0.0", "author": "UnderRailWorks", "works": "0.5",
+  "description": "Test only: built for an older Works API, using nothing that changed, so it must load." }

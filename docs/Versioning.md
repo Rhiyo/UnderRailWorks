@@ -47,14 +47,29 @@ The API as of the last release is listed in `api/UnderRailWorks.api.txt` (one li
 Semantic versioning, applied to the API:
 
 - **Minor** (1.2 -> 1.3): something was added. Every mod built for 1.0-1.2 keeps working.
-- **Major** (1.x -> 2.0): something mods could use was removed or its signature changed. Mods built for 1.x are
-  refused with a message until they're rebuilt.
-- **0.x** (now: 0.9): a preview. Each minor may break; mods must match the minor exactly.
+- **Major** (1.x -> 2.0): something mods could use was removed or its signature changed.
+- **0.x** (now: 0.9): a preview; any minor may remove or change things.
 
-A mod built for `"works": "1.2"` loads on any 1.x from 1.2 up, and is refused on 1.0-1.1 (too old) and on 2.0
-(a break). Before loading, Works also checks every type and member the mod's DLL uses from Works (`ModCheck`); if one
-is missing or no longer public (a mod built for a newer Works than its `mod.json` says, or an old build after a change), it isn't loaded, and the Mods screen names what's
-missing. The game never crashes later on a missing method.
+**What decides whether a mod loads is what it uses, not the number** (as SMAPI, unlike tModLoader). Before a mod's
+code loads, Works checks it against the installed UnderRailWorks.dll (`ModCheck`, metadata only, nothing runs):
+
+- every Works type and member it uses exists, with the same signature, and is still public;
+- every override in its classes still overrides a Works method (else it would silently never be called);
+- every abstract member of a Works class it derives from, and every member of a Works interface it implements, is
+  implemented (else it would fail to load).
+
+If all of that holds, the mod loads, whatever `"works"` version its `mod.json` declares: a mod built for 1.4 runs on
+2.0 when 2.0 didn't touch what it uses, and on 1.2 when it uses nothing added after 1.2. A major version then only
+stops the mods that use what it changed. When something is missing, the mod isn't loaded and the Mods screen names
+what (up to five), so the player knows it needs an update; the game never crashes later on a missing method.
+
+The declared version is information: the Mods screen shows it ("Built for UnderRailWorks API 1.4"), and the log notes a
+difference. Players get no warning for it: a mod that passed the check works, and a warning they can't act on would
+only teach them to ignore warnings. Notes that do appear on a mod (grey, in its details): it uses retired API
+(`[Obsolete]`, still working, removed at the next major), preview API, Works' internals, the game's own code or Harmony.
+
+What the check can't see: a member that kept its signature but changed what it does. That's why the rule below is
+"add instead of change".
 
 ## When it's locked: at GitHub releases only
 
@@ -72,7 +87,8 @@ Between releases nothing is locked and no version number changes: development is
 ## Changing the API without breaking mods
 
 - **Add** instead of change: a new overload, a new optional event, a new property.
-- **Retire** a member by marking it `[Obsolete("use X")]` and keeping it working until the next major version.
+- **Retire** a member by marking it `[Obsolete("use X")]` and keeping it working until the next major version (mods
+  using it get a note, so their authors hear before it goes).
 - **Never** change a public signature in place, turn a field into a property (or back), make a public type sealed or
   abstract, change an enum's values, or change a `const` (mods compile constants into themselves).
 - Default parameter values are compiled into mods too: changing one only reaches mods when they're rebuilt.

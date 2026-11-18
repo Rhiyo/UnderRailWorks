@@ -262,8 +262,6 @@ namespace UnderRailWorks.Internal
             if (Hud.Exists) return "mods are switched on and off from the main menu";
             if (mod.Loaded) return null;
             if (mod.ReadError != null) return mod.ReadError;
-            var version = ModLoader.WorksVersionProblem(mod);
-            if (version != null) return version;
             foreach (var m in ModLoader.Mods.Where(m => m.Loaded))
             {
                 if (mod.Incompatible.Any(d => d.Id.Equals(m.Id, StringComparison.OrdinalIgnoreCase) && (d.Min == null || (m.Version != null && m.Version >= d.Min)))

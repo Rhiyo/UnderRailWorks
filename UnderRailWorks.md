@@ -1852,3 +1852,15 @@ registrations are in load order already). Console: `works.mod on|off <id>`. smok
 with it) and GameTextUser on (GameText with it) on the menu, then checks the API mod works in game, and that switching
 in a game is refused. tModLoader and SMAPI both need a reload/restart for this.
 
+## Old mods on a new Works: decided by use, not by number (Nov 18 2026)
+
+The loader no longer refuses a mod because its mod.json `"works"` differs (another major, a newer minor, another 0.x
+minor). ModCheck decides: every Works type/member used exists with the same signature and is public; every override
+in the mod's classes still overrides a Works method (else silently never called); every abstract member of a Works base
+and every member of a Works interface it implements is implemented. All there: it loads, the declared version shown in
+the Mods screen's details and logged when different; no player warning (nothing to act on). Retired API
+(`[Obsolete]`) is noted for authors. As SMAPI (tModLoader refuses builds for other tModLoader versions and ports source
+with tModPorter). Test mods: OldButFine (declares 0.5, loads), GoneOverride (overrides a stand-in WorksMod.OnFuture:
+refused by name), NeedsNewer (uses World.FutureFeature: refused). Not covered by a test yet: the abstract/interface
+checks. Next, only if a major ever needs it: SMAPI-style rewriting of renamed members at load.
+

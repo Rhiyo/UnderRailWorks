@@ -80,8 +80,9 @@ naming the differences).
 **The final say:** when two mods change the same thing, the one lower in the load order wins: for ordinary hooks it
 runs last, for replace / "first answer" hooks (`ReplaceHook`, the AI's ChooseTarget and ShouldFlee) it's asked first.
 
-Versions: your `mod.json` says which Works API you built for (`"works": "1.0"`), and Works refuses a mod that uses
-something it doesn't have, by name, instead of crashing later. Parts marked `[Preview]` may still change; the Mods screen
+Versions: your `mod.json` says which Works API you built for (`"works": "1.0"`). Whether your mod loads on another
+Works is decided by what it uses: if everything is there (same signatures, your overrides still override something),
+it loads, on older and newer Works alike; if not, it's refused by name instead of crashing later. Parts marked `[Preview]` may still change; the Mods screen
 notes mods that use them. Details: [Versioning](Versioning.md).
 
 ### Making an API mod

@@ -75,7 +75,10 @@ check() { if grep -qE "$2" "$LOG"; then pass=$((pass+1)); else fail=$((fail+1));
 never() { if grep -qE "$2" "$LOG"; then fail=$((fail+1)); echo "FAIL: $1 (found: $(grep -m1 -E "$2" "$LOG" | cut -c1-160))"; else pass=$((pass+1)); fi; }
 check "game members all found"            "mods: [0-9]+ game members checked"
 check "the player's load order first"     "mods: load order: WorksTest, HelloWorks, AfterActionReport, "
-check "a mod for a newer Works refused"   "NeedsNewer not loaded .*not here: UnderRailWorks.World.FutureFeature"
+check "a mod for a newer Works refused"   "NeedsNewer not loaded .*doesn't have.*UnderRailWorks.World.FutureFeature"
+check "an old API version that fits loads" "mods: loaded OldButFine"
+check "its version noted, not refused"     "OldButFine: built for UnderRailWorks API 0.5 \\(this is 0.9\\); checked against this one"
+check "an override of a gone method refused" "GoneOverride not loaded .*GoneOverride.OnFuture overrides UnderRailWorks.WorksMod.OnFuture, which is gone"
 check "a failed mod's registrations go"   "HalfBroken: what it registered before failing was removed"
 never "nothing of a failed mod runs"      "must never appear"
 check "Harmony use noted"                 "HelloWorks: patches code with Harmony"

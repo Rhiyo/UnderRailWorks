@@ -119,6 +119,11 @@ mkdir -p "$HERE/build/stub" "$HERE/build/Mods/NeedsNewer"     # built against a 
 mcs -nologo -target:library -out:"$HERE/build/stub/UnderRailWorks.dll" "$HERE/tools/testmods/NeedsNewer/FutureWorks.cs"
 mcs -nologo -target:library -out:"$HERE/build/Mods/NeedsNewer/NeedsNewer.dll" -r:"$HERE/build/stub/UnderRailWorks.dll" "$HERE/tools/testmods/NeedsNewer/NeedsNewer.cs"
 cp "$HERE/tools/testmods/NeedsNewer/mod.json" "$HERE/build/Mods/NeedsNewer/"
+for t in OldButFine GoneOverride; do     # an old "works" version using nothing changed (loads); an override of a gone method (refused)
+    mkdir -p "$HERE/build/Mods/$t"
+    mcs -nologo -target:library -out:"$HERE/build/Mods/$t/$t.dll" -r:"$HERE/build/stub/UnderRailWorks.dll" "$HERE/tools/testmods/$t/$t.cs"
+    cp "$HERE/tools/testmods/$t/mod.json" "$HERE/build/Mods/$t/"
+done
 rm -rf "$HERE/build/Mods/WorksTest/content"; cp -r "$HERE/tools/testmods/WorksTest/content" "$HERE/build/Mods/WorksTest/"; cp -r "$HERE/tools/testmods/WorksTest/i18n" "$HERE/tools/testmods/WorksTest/music" "$HERE/build/Mods/WorksTest/"
 
 # The .NET 10 launcher (installed as underrail.exe; src/Launcher) and the Windows .NET 10 runtime it runs the game on
