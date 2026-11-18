@@ -229,6 +229,13 @@ public static partial class World
     public static string ZoneId { get { var game = bpo.GetService<cnk>(); return game == null || game.aqu() == null || game.aqu().c() == null ? null : game.aqu().c().b(); } }
 
     static readonly Dictionary<string, string> placementOwners = new Dictionary<string, string>();
+    // A mod switched off: its placements go (a reload keeps them: the new code places them again by id).
+    internal static void ForgetPlacements(string mod)
+    {
+        var ids = placementOwners.Where(kv => string.Equals(kv.Value, mod, StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key).ToList();
+        foreach (var id in ids) placementOwners.Remove(id);
+        lock (placements) placements.RemoveAll(p => ids.Contains(p.Id));
+    }
     public static void Place(Placement p)
     {
         if (Simulation.Refuses("World.Place")) return;

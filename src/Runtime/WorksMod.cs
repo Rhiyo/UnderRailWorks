@@ -4,7 +4,8 @@
 //   PostLoad() after every mod's Load (as PostSetupContent): look at other mods (ModLoader.IsLoaded).
 //   Unload()   before the mod's code is loaded again (works.reload, HotReload=1): anything Works doesn't know about
 //              (threads, files, game objects it changed directly). What it registered through Works goes by itself.
-// Switching a mod on or off still applies at the next start.
+// Switching a mod on or off (the main menu's Mods screen) applies at once: Unload, then everything Works knows it
+// registered goes; switched on, Load and PostLoad run.
 // The base class can grow (new virtuals, properties) without breaking mods built against an older Works.
 using System;
 using System.Collections.Generic;

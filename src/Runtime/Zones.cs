@@ -31,6 +31,7 @@ namespace UnderRailWorks
         public static void Add(WorksMod mod, string id, string name, string likeZone = null)
         {
             if (mod == null || string.IsNullOrEmpty(id)) throw new ArgumentException("a zone needs a mod and an id");
+            ModScope.Leaves(mod.Id, "zones");
             var folder = Path.Combine(mod.Info.Folder, "data", "Maps");
             if (!File.Exists(Path.Combine(folder, id + ".uz"))) Log.Write("zones: " + mod.Id + ": no " + id + ".uz in " + folder);
             added[id] = new Entry { Mod = mod, Id = id, Name = name ?? id, Like = likeZone, Folder = folder };

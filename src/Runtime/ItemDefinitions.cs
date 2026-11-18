@@ -238,6 +238,7 @@ namespace UnderRailWorks.Internal
 
         internal static string Define(string mod, string id, string basePath, Action<ItemDefinition> edit)
         {
+            ModScope.Leaves(mod, "items");
             var path = "works\\" + mod + "\\" + id;
             Defined[path] = new KeyValuePair<string, Action<ItemDefinition>>(Norm(basePath), d => { d.Code = "works." + mod + "." + id; if (edit != null) edit(d); });
             return path;

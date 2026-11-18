@@ -8,8 +8,8 @@ game is in UnderRailWorks.md.
 
 1. Install UnderRailWorks into the game (the patcher), and the .NET SDK 8 or newer.
 2. Copy `sdk/template` (with `sdk/UnderRailWorks.Mod.targets`), rename `MyMod` (folder, `.cs`, `.csproj`, `mod.json`).
-3. `dotnet build` builds the mod and copies it to the game's `Mods/MyMod`. Start the game; the Mods tab in Options
-   lists it, with any errors.
+3. `dotnet build` builds the mod and copies it to the game's `Mods/MyMod`. Start the game; the main menu's Mods screen
+   lists it, with any errors, and switches it on and off without a restart (its settings are in Options -> Mods).
 4. `dotnet build -t:PackMod` makes `bin/MyMod-1.0.0.zip` to share.
 
 Set `UnderRailPath` if the game isn't in Steam's default folder. No code at all? A **content pack** is a mod with only
@@ -66,15 +66,14 @@ In this order:
    Harmony on the game's types (by reflection, or by referencing the game yourself) breaks when the game updates and
    you're on your own: keep it in one class, check every lookup for null and switch the feature off with a log line
    when one is missing, and never touch saves this way. Make your own Harmony instance
-   (`new HarmonyLib.Harmony("YourMod")`, with `<UseHarmony>true</UseHarmony>` in the project); the Mods tab notes that
+   (`new HarmonyLib.Harmony("YourMod")`, with `<UseHarmony>true</UseHarmony>` in the project); the Mods screen notes that
    the mod may break with a game update.
 
 Load order and multiplayer, in `mod.json`: `requires` / `optional` load those mods first (`"OtherMod >= 1.2"` for a
-minimum version); `sortAfter` / `sortBefore` only order. Otherwise the order is the player's: the Mods tab lists
-loaded mods in load order with Up / Down (saved as `@order=` in `Mods/mods.ini`; "Automatic order" clears it), never
+minimum version); `sortAfter` / `sortBefore` only order. Otherwise the order is the player's: the main menu's Mods screen
+lists loaded mods in load order with Up / Down (from the next start) (saved as `@order=` in `Mods/mods.ini`; "Automatic order" clears it), never
 against requirements. A handler that must run before other mods' uses `HookOrder.First` (Co-op's do), not load order.
-Players can save the switched-on mods and their order as profiles (Mods tab, main menu: Save as profile / Use
-profile; files in `Mods/profiles/`, the same lines as `mods.ini`), as RimWorld's saved mod lists.
+Players can save the switched-on mods and their order as profiles (the Mods screen's Profiles button; files in `Mods/profiles/`, the same lines as `mods.ini`), as RimWorld's saved mod lists.
 `"multiplayer": "client"` for a mod that only changes this player's screen (a minimap, a HUD layout): co-op players
 needn't have it. The default, `"both"`, means every player needs it, same version (Co-op refuses a joiner otherwise,
 naming the differences).
@@ -82,7 +81,7 @@ naming the differences).
 runs last, for replace / "first answer" hooks (`ReplaceHook`, the AI's ChooseTarget and ShouldFlee) it's asked first.
 
 Versions: your `mod.json` says which Works API you built for (`"works": "1.0"`), and Works refuses a mod that uses
-something it doesn't have, by name, instead of crashing later. Parts marked `[Preview]` may still change; the Mods tab
+something it doesn't have, by name, instead of crashing later. Parts marked `[Preview]` may still change; the Mods screen
 notes mods that use them. Details: [Versioning](Versioning.md).
 
 ### Making an API mod
@@ -91,7 +90,7 @@ As SMAPI's framework mods (SpaceCore, Content Patcher) and tModLoader's library 
 on every build: `examples/GameText` (the API mod: one Harmony patch on the game's text lookup, offered as a hook) and
 `examples/GameTextUser` (a mod built on it without referencing its DLL).
 
-- **Your own id and namespace**, never `UnderRailWorks`: players, the Mods tab and the version checks must be able to
+- **Your own id and namespace**, never `UnderRailWorks`: players, the Mods screen and the version checks must be able to
   tell your API from Works'.
 - **One public API class**, published in `Load` with `Mods.Provide(this, api)`. Use .NET and Works types in its
   members (`string`, `Character`, `Func<...>`, Works' `Hook<T>`), so other mods can describe it in an interface of their
@@ -124,6 +123,11 @@ public override void PostLoad()     // every mod's Load has run: the API is ther
 
 ## 4. Testing
 
+- Switching your mod off and on from the main menu's Mods screen (or `works.mod off|on <id>` in the console, main
+  menu only) runs the same steps as a reload, halved: off runs your `Unload()` and removes what you registered through
+  Works, your Harmony patches and your placements; on runs `Load` and `PostLoad`. What the game itself already holds
+  (item definitions, feats, quests, status effects, zones, pictures, sounds) stays until a restart, and the Mods screen
+  says so. Mods that use your API hear of you being switched on through `Mods.Reloaded`.
 - `works.reload` (console, ` key) re-reads pictures, translations and settings.
 - Code without restarting: `HotReload=1` in UnderRailWorks.ini, then build your mod into its folder while the game
   runs: within a couple of seconds the new DLL is loaded (the log says "reload: reloaded <id>"). Or by hand:

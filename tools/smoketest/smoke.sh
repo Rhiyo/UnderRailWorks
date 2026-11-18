@@ -26,7 +26,8 @@ printf '@order=WorksTest,HelloWorks\n' >> "$TEST_GAME/Mods/mods.ini"
 inp() { timeout 30 "$SKILL/inp.sh" "$@" >/dev/null 2>&1; }
 
 # The session. No clicks: the test mod loads the save from the main menu (menurun.txt), then runs autorun.txt.
-printf 'wait 8\nwt.load %s\n' "$SAVE" > "$TEST_GAME/Mods/WorksTest/menurun.txt"     # the save list isn't ready in the menu's first frames
+# On the main menu, an API mod switched off (its dependent with it) and back on through its dependent, live.
+printf 'wait 8\nworks.mod off GameText\nworks.mod on GameTextUser\nwt.load %s\n' "$SAVE" > "$TEST_GAME/Mods/WorksTest/menurun.txt"     # the save list isn't ready in the menu's first frames
 cat > "$AUTO" <<'STEPS'
 wait 3
 works.health
@@ -54,6 +55,7 @@ wait 3
 wt.slay
 wait 3
 wt.recurse
+works.mod off Minimap
 wt.text
 works.reload GameText
 wait 2
@@ -82,6 +84,9 @@ check "translations"                      "translation: Hello, player!"
 check "cross-mod calls"                   "cross-mod call: echo hi"
 check "a mod's own hook runs"             "mod hook: ran 3, until True"
 check "only its maker runs a hook"          "WorksTest can't run the hook Update: only UnderRailWorks"
+check "switched off live, with dependents"  "console: works.mod off GameText -> GameText switched off, with GameTextUser"
+check "switched on live, with requirements" "console: works.mod on GameTextUser -> GameTextUser switched on, with GameText"
+check "no switching in a game"              "console: works.mod off Minimap -> .error.Minimap: mods are switched on and off from the main menu"
 check "a mod built on an API mod"           "GameTextUser: hooked GameText.Shown"
 check "an API mod's hook changes the game"  "game text: .*Game Text example \\| "
 check "API mod reloaded, dependent re-added" "GameTextUser: hooked GameText.Shown again"

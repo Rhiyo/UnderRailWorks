@@ -35,7 +35,8 @@ namespace UnderRailWorks
         {
             List<Entry> list;
             lock (entries) list = entries.ToList();
-            if (list.Count == 0) return;
+            // Works' own first: the Mods screen (switching mods on and off, their order, profiles).
+            list.Insert(0, new Entry { Mod = "UnderRailWorks", Text = "Mods", Click = ModManager.Open });
             try
             {
                 var buttons = typeof(a8k).GetFields(Fields).Where(f => f.FieldType == typeof(zt)).Select(f => (zt)f.GetValue(menu)).Where(b => b != null).ToList();

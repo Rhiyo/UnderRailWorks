@@ -8,12 +8,12 @@
 // works: the Works API version the mod was built for (WorksApi.Version: same major, at least that minor).
 // As tModLoader's build.txt: requires = modReferences (must be present, on and at least that version, and is loaded
 // first), optional = weakReferences (loaded first when present), sortAfter / sortBefore = load order only (the player
-// can change the rest: Options -> Mods, mods.ini "@order"). multiplayer: "both" (default; everyone in a multiplayer game needs it, same version) or
+// can change the rest: the main menu's Mods screen, mods.ini "@order"). multiplayer: "both" (default; everyone in a multiplayer game needs it, same version) or
 // "client" (only this player's screen: a minimap, a HUD layout).
 // The id defaults to the folder name, the version to the DLL's.
 // A mod's code: one public class deriving from WorksMod (WorksMod.cs: Load, then PostLoad once every mod has
 // loaded), or, minimal, any public class with a static OnLoad(Harmony) or OnLoad(Harmony, Action<string> log).
-// Mods\mods.ini switches mods on and off (<id>=0; the Mods tab writes it; applies at the next start).
+// Mods\mods.ini switches mods on and off (<id>=0; the main menu's Mods screen writes it, and switches them at once).
 // A mod whose requirements aren't met, or that fails, is skipped with the reason shown in the Mods tab.
 using System;
 using System.Collections.Generic;
@@ -50,6 +50,9 @@ public sealed class ModInfo
     public string Author { get; internal set; }
     public string Description { get; internal set; }
     public string Error { get; internal set; }
+    // A problem found when the mod was read (its mod.json, its id, a second folder with the same id): switching it
+    // on from the Mods screen can't fix it.
+    internal string ReadError;
     // Loaded, but something to know (it uses Works' internals or the game's own code: it may break with an update).
     public string Warning { get; internal set; }
     public Version Version { get; internal set; }
@@ -135,9 +138,10 @@ public static class ModLoader
         foreach (var g in all.GroupBy(m => m.Id, StringComparer.OrdinalIgnoreCase).Where(g => g.Count() > 1))
             foreach (var m in g.Skip(1)) if (m.Error == null) m.Error = "the same id as the mod in " + Path.GetFileName(g.First().Folder) + " (remove one of the two folders)";
         foreach (var m in all.Where(m => m.Error == null && !ModInfo.ValidId(m.Id))) m.Error = "its id \"" + m.Id + "\" may only use letters, digits, '.', '_' and '-'";
+        foreach (var m in all) m.ReadError = m.Error;
         // "startsOff" mods (gameplay changes a player should choose) that mods.ini doesn't name yet: off, written down
         // so the Mods tab and the file show it.
-        foreach (var m in all.Where(m => m.StartsOff && !listed.Contains(m.Id))) { m.Enabled = false; SetEnabled(m.Id, false); Log.Write("mods: " + m.Id + " starts switched off (switch it on in Options -> Mods)"); }
+        foreach (var m in all.Where(m => m.StartsOff && !listed.Contains(m.Id))) { m.Enabled = false; SetEnabled(m.Id, false); Log.Write("mods: " + m.Id + " starts switched off (switch it on from the main menu's Mods screen)"); }
         if (all.Count == 0) return;
         if (IntPtr.Size != 8)
         {
@@ -268,6 +272,19 @@ public static class ModLoader
         return m;
     }
 
+    // The mod's "works" version against this Works (null: fine).
+    internal static string WorksVersionProblem(ModInfo m)
+    {
+        if (m.Works == null) return null;
+        if (m.Works.Major != WorksApi.Version.Major || m.Works > ModInfo.Norm(WorksApi.Version)
+            || (WorksApi.Version.Major == 0 && m.Works.Minor != WorksApi.Version.Minor))     // 0.x (preview): each minor may break
+            return "built for UnderRailWorks API " + m.Works.ToString(2) + " (this is " + WorksApi.Version.ToString(2) + ")";
+        return null;
+    }
+
+    // A mod switched on live: its folder is where its own libraries are found too.
+    internal static void AddFolder(string folder) { if (!Folders.Contains(folder)) Folders.Add(folder); }
+
     // Requirements: each required mod installed, switched on, new enough and itself loadable; repeated until stable,
     // so a mod whose requirement is skipped is skipped too.
     static void CheckRequirements(List<ModInfo> all)
@@ -277,12 +294,10 @@ public static class ModLoader
         {
             changed = false;
             foreach (var m in all.Where(m => m.Enabled && m.Error == null && m.Works != null))
-                if (m.Works.Major != WorksApi.Version.Major || m.Works > ModInfo.Norm(WorksApi.Version)
-                    || (WorksApi.Version.Major == 0 && m.Works.Minor != WorksApi.Version.Minor))     // 0.x (preview): each minor may break
-                {
-                    m.Error = "built for UnderRailWorks API " + m.Works.ToString(2) + " (this is " + WorksApi.Version.ToString(2) + ")";
-                    changed = true;
-                }
+            {
+                var problem = WorksVersionProblem(m);
+                if (problem != null) { m.Error = problem; changed = true; }
+            }
             foreach (var m in all.Where(m => m.Enabled && m.Error == null))
                 foreach (var d in m.Incompatible)
                 {
@@ -309,8 +324,8 @@ public static class ModLoader
     }
 
     // Load order: requirements, present optional mods and sortAfter before a mod, sortBefore after it; otherwise by
-    // name; the player's order (Options -> Mods) before the alphabet. A loop leaves its mods out with an error.
-    static List<ModInfo> Order(List<ModInfo> mods)
+    // name; the player's order (the Mods screen) before the alphabet. A loop leaves its mods out with an error.
+    internal static List<ModInfo> Order(List<ModInfo> mods)
     {
         Func<string, ModInfo> get = id => mods.FirstOrDefault(m => m.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
         var before = mods.ToDictionary(m => m, m => new HashSet<ModInfo>());     // mods that must load before m
@@ -326,7 +341,7 @@ public static class ModLoader
         }
         // A requirement written after an ordering of the same pair is still a requirement.
         foreach (var m in mods) foreach (var id in m.Requires.Select(d => d.Id)) { var o = get(id); if (o != null) soft[m].Remove(o); }
-        // The player's order (Options -> Mods, mods.ini "@order") comes before the alphabet; requirements and named sortAfter/sortBefore still hold. Mods it doesn't name go after those it does.
+        // The player's order (the Mods screen, mods.ini "@order") comes before the alphabet; requirements and named sortAfter/sortBefore still hold. Mods it doesn't name go after those it does.
         Func<ModInfo, int> rank = m => { int i = PlayerOrder.FindIndex(x => x.Equals(m.Id, StringComparison.OrdinalIgnoreCase)); return i < 0 ? int.MaxValue : i; };
         var order = new List<ModInfo>();
         var left = new List<ModInfo>(mods);
@@ -402,7 +417,7 @@ public static class ModLoader
         }
         catch (Exception ex) { Log.Write("mods: mods.ini: " + ex.Message); return new List<string>(); }
     }
-    // From the Mods tab: the player's load order for the next start (null: back to the mods' own).
+    // From the Mods screen: the player's load order for the next start (null: back to the mods' own).
     // A new order that names only some mods (the loaded ones) keeps the others where the old order had them, each
     // after the mod it followed: a mod switched off for a while comes back to its place, not to the end.
     internal static List<string> KeepPlaces(IList<string> ids, IList<string> old)
@@ -425,12 +440,12 @@ public static class ModLoader
         try
         {
             var lines = File.Exists(ListPath) ? File.ReadAllLines(ListPath).ToList()
-                : new List<string> { "; UnderRailWorks: which mods load. <mod id>=0 switches one off (applies at the next start)." };
+                : new List<string> { "; UnderRailWorks: which mods load. <mod id>=0 switches one off." };
             lines.RemoveAll(l => l.TrimStart().StartsWith(OrderKey + "=", StringComparison.OrdinalIgnoreCase) || l.TrimStart().StartsWith("; " + OrderKey, StringComparison.Ordinal));
             ids = KeepPlaces(ids, PlayerOrder);
             if (ids != null && ids.Count > 0)
             {
-                lines.Add("; " + OrderKey + ": the load order set in Options -> Mods (first loads first; later has the final say). Delete the line for the mods' own order.");
+                lines.Add("; " + OrderKey + ": the load order set in the main menu's Mods screen (first loads first; later has the final say). Delete the line for the mods' own order.");
                 lines.Add(OrderKey + "=" + string.Join(",", ids.ToArray()));
             }
             File.WriteAllText(ListPath, string.Join("\n", lines) + "\n");
@@ -469,7 +484,7 @@ public static class ModLoader
         try
         {
             Directory.CreateDirectory(ProfileFolder);
-            var lines = new List<string> { "; UnderRailWorks mod profile \"" + name + "\": which mods are on (<id>=1/0) and their load order. Options -> Mods -> Use profile." };
+            var lines = new List<string> { "; UnderRailWorks mod profile \"" + name + "\": which mods are on (<id>=1/0) and their load order. Main menu -> Mods -> Profiles." };
             lines.AddRange(mods.Select(kv => kv.Key + "=" + (kv.Value ? "1" : "0")));
             if (order != null && order.Count > 0) lines.Add(OrderKey + "=" + string.Join(",", order.ToArray()));
             File.WriteAllText(Path.Combine(ProfileFolder, name + ".ini"), string.Join("\n", lines) + "\n");
@@ -505,7 +520,7 @@ public static class ModLoader
         foreach (var kv in p.Value.Key) if (Find(kv.Key) != null) SetEnabled(kv.Key, kv.Value);
         SetPlayerOrder(p.Value.Value.Count > 0 ? p.Value.Value : null);
         SetLine("@profile", ProfileName(name));
-        Log.Write("mods: profile " + name + " used (next start)");
+        Log.Write("mods: profile " + name + " used");
         return true;
     }
     internal static bool DeleteProfile(string name)
@@ -525,13 +540,13 @@ public static class ModLoader
         catch (Exception ex) { Log.Write("mods: could not write mods.ini: " + ex.Message); }
     }
 
-    // From the Mods tab: switch a mod on or off for the next start.
+    // Written when a mod is switched on or off (the Mods screen switches it at once too, ModReloader.SwitchOn/Off).
     internal static void SetEnabled(string id, bool on)
     {
         try
         {
             var lines = File.Exists(ListPath) ? File.ReadAllLines(ListPath).ToList()
-                : new List<string> { "; UnderRailWorks: which mods load. <mod id>=0 switches one off (applies at the next start)." };
+                : new List<string> { "; UnderRailWorks: which mods load. <mod id>=0 switches one off." };
             // Every line for this id (hand-written "Foo = 0", duplicates) becomes the one new line.
             Func<string, bool> mine = l => { var t = l.Trim(); int eq = t.IndexOf('='); return eq > 0 && t[0] != ';' && t.Substring(0, eq).Trim().Equals(id, StringComparison.OrdinalIgnoreCase); };
             int i = lines.FindIndex(l => mine(l));
@@ -539,7 +554,7 @@ public static class ModLoader
             lines.RemoveAll(l => mine(l));
             if (i >= 0) lines.Insert(Math.Min(i, lines.Count), line); else lines.Add(line);
             File.WriteAllText(ListPath, string.Join("\n", lines) + "\n");
-            Log.Write("mods: " + id + (on ? " switched on" : " switched off") + " (next start)");
+            Log.Write("mods: " + id + (on ? " on" : " off") + " in mods.ini");
         }
         catch (Exception ex) { Log.Write("mods: could not write mods.ini: " + ex.Message); }
     }

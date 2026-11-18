@@ -1832,3 +1832,23 @@ on unload/reload (with the handlers other mods added: they re-add on `Mods.Reloa
 smoke.sh checks the chain, the refusal, and a hot reload of the API mod (the consumer re-hooks, the text changes once).
 Guide: docs/ModdingGuide.md "Making an API mod". An API mod used by several mods is the first candidate to move into
 Works.
+
+## Mods screen and live switching (Nov 18 2026)
+
+Switching mods on and off, their order and profiles moved out of Options -> Mods into a **Mods** button on the main
+menu (Works' own, first above the mods' buttons): `ModManager.cs`, a Works window (`Ui.OpenWindow` with no mod: centred,
+place not remembered) with the mod list (loaded ones numbered in load order, then the rest by name), the selected mod's
+details (status, the last switch's result, description, requires / works with / not with / needed by, a pointer to its
+settings) and Switch on/off, Up, Down; Profiles... and Automatic order at the bottom. Options -> Mods keeps the
+settings: Works' engine fixes and a button per loaded mod with settings.
+
+Switching is live, from the main menu only (in a game it's refused: that game's saves would be made with other mods
+than it was played with): `ModReloader.SwitchOff` (dependents first, Unload, Forget as a reload, placements, the code
+released) and `SwitchOn` (requirements first, Works version, incompatibilities, LoadCode into a collectible context,
+content and texture packs, PostLoad, after the loaded mods; Mods.Reloaded raised). `ModScope.Leaves(mod, what)` records
+what the game keeps until a restart (items, feats, quests, status effects, zones, pictures, music, sounds); the screen
+says so after switching such a mod off. Order changes apply from the next start (the loaded mods' patches and
+registrations are in load order already). Console: `works.mod on|off <id>`. smoke.sh switches GameText off (GameTextUser
+with it) and GameTextUser on (GameText with it) on the menu, then checks the API mod works in game, and that switching
+in a game is refused. tModLoader and SMAPI both need a reload/restart for this.
+

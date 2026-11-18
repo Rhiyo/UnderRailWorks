@@ -101,6 +101,15 @@ namespace UnderRailWorks
             Add("UnderRailWorks", "works.config", "works.config <mod> [setting] [value]: a mod's settings, one setting, or set it (as Accept in Options -> Mods)", a =>
                 a.Length == 0 ? "works.config <mod> [setting] [value]" : ModConfig.Console(a[0], a.Length > 1 ? a[1] : null, a.Length > 2 ? string.Join(" ", a.Skip(2).ToArray()) : null));
             Add("UnderRailWorks", "works.mods", "works.mods: the mods and their state", a => string.Join("\n", ModLoader.Mods.Select(m => m.Name + " " + m.VersionText + ": " + (m.Loaded ? "loaded" : m.Enabled ? "not loaded (" + m.Error + ")" : "off") + (m.Failures > 0 ? ", " + m.Failures + " errors" : ""))));
+            Add("UnderRailWorks", "works.mod", "works.mod on|off <mod id>: switch a mod on or off now (main menu only; what it requires, or what requires it, too)", a =>
+            {
+                if (a.Length < 2 || (a[0] != "on" && a[0] != "off")) return "works.mod on|off <mod id>";
+                var m = ModLoader.Find(a[1]);
+                if (m == null) return "[error]no mod " + a[1];
+                var also = new List<ModInfo>();
+                var r = a[0] == "on" ? ModReloader.SwitchOn(m, also) : ModReloader.SwitchOff(m, also);
+                return r != null ? "[error]" + m.Id + ": " + r : m.Id + " switched " + a[0] + (also.Count > 0 ? ", with " + string.Join(", ", also.Select(x => x.Id).ToArray()) : "");
+            });
             Add("UnderRailWorks", "works.health", "works.health: versions, parts that didn't start, patch errors, mods with problems (for bug reports)", a =>
             {
                 var lines = new List<string>();

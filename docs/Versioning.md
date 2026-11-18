@@ -19,7 +19,7 @@ release. Mods that offer APIs to other mods version those themselves (their own 
 Everything public in the `UnderRailWorks` namespace, and nothing else:
 
 - `UnderRailWorks.Internal` is public only because the patched game calls into it. It changes whenever it needs to.
-  A mod that uses it gets a note in the Mods tab ("uses UnderRailWorks internals").
+  A mod that uses it gets a note in the Mods screen ("uses UnderRailWorks internals").
 - The game's own types (scrambled names: `c5x`, `bm6`...) are not API, and they change with every game update. Works
   wraps what mods need; a gap is filled in Works, not worked around in mods (UnderRailWorks.md, "Mods use only Works").
   Mods that reference the game or use Harmony anyway get a note ("may break with a game update").
@@ -53,7 +53,7 @@ Semantic versioning, applied to the API:
 
 A mod built for `"works": "1.2"` loads on any 1.x from 1.2 up, and is refused on 1.0-1.1 (too old) and on 2.0
 (a break). Before loading, Works also checks every type and member the mod's DLL uses from Works (`ModCheck`); if one
-is missing or no longer public (a mod built for a newer Works than its `mod.json` says, or an old build after a change), it isn't loaded, and the Mods tab names what's
+is missing or no longer public (a mod built for a newer Works than its `mod.json` says, or an old build after a change), it isn't loaded, and the Mods screen names what's
 missing. The game never crashes later on a missing method.
 
 ## When it's locked: at GitHub releases only

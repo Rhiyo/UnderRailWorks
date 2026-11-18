@@ -32,7 +32,7 @@ public sealed class UiWindow : UiPanel
         if (!UiWindows.Open.Remove(this)) return;
         Ui.Remove(this);
         var c = Closed; Closed = null;
-        if (c != null) try { c(); } catch (Exception ex) { Log.Write("mods: " + Mod.Id + ": a window's Closed failed: " + ex.Message); }
+        if (c != null) try { c(); } catch (Exception ex) { Log.Write("mods: " + (Mod == null ? "UnderRailWorks" : Mod.Id) + ": a window's Closed failed: " + ex.Message); }
     }
 }
 
@@ -44,7 +44,14 @@ public static partial class Ui
     // (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
     public static UiWindow Window(WorksMod mod, string id, string title, int width, int height)
     {
-        if (PlayerScreens.ActingIsRemote) { Log.Write("mods: " + mod.Id + ": a window (" + title + ") for a player on another machine: not opened here"); return null; }
+        if (mod == null) throw new ArgumentNullException("mod");
+        return OpenWindow(mod, id, title, width, height);
+    }
+
+    // mod null: Works' own window (the Mods screen): opened in the middle each time, its place not remembered.
+    internal static UiWindow OpenWindow(WorksMod mod, string id, string title, int width, int height)
+    {
+        if (PlayerScreens.ActingIsRemote) { Log.Write("mods: " + (mod == null ? "UnderRailWorks" : mod.Id) + ": a window (" + title + ") for a player on another machine: not opened here"); return null; }
         var hud = Hud.Root;
         if (hud == null) { var screen = UiPopups.Screen(); if (screen is a8k) hud = UiElement.Of(screen); }     // on the main menu: over it (closed when a game starts)
         if (hud == null) return null;
@@ -66,7 +73,7 @@ public static partial class Ui
         game.a((EventHandler<el5>)((sender, e) => w.Close()));     // its own close button
         Add(hud, w, (hud.Width - UnderrailDropdownScroll.W(game.Size)) / 2, Math.Max(10, hud.Height / 6));
         { var inside = Ui.KeepInside(w, w.X, w.Y); if (inside.X != w.X || inside.Y != w.Y) Ui.Move(w, inside.X, inside.Y); }     // a tall or wide window: on screen from the start
-        var place = mod.Settings.Get("window." + id);
+        var place = mod == null ? null : mod.Settings.Get("window." + id);
         if (!string.IsNullOrEmpty(place)) Restore(w, place);
         UiWindows.Open.Add(w);
         return w;
@@ -131,7 +138,7 @@ static class UiWindows
         if (!Input.MouseDown(MouseButton.Left))
         {
             var place = Ui.Place(dragging);
-            if (place != null) dragging.Mod.Settings.Set("window." + dragging.Id, place);
+            if (place != null && dragging.Mod != null) dragging.Mod.Settings.Set("window." + dragging.Id, place);
             dragging = null;
         }
     }

@@ -29,6 +29,15 @@ namespace UnderRailWorks.Internal
         // The mod being loaded again (registries skip what mustn't happen twice).
         internal static string Reloading;
         internal static readonly List<IModOwned> Hooks = new List<IModOwned>();
+        // What a mod gave the game that can't be taken back while it runs (item definitions, feats, pictures...): a mod
+        // switched off live is only fully gone after a restart. mod id -> what, for the Mods screen.
+        static readonly Dictionary<string, HashSet<string>> leaves = new Dictionary<string, HashSet<string>>(StringComparer.OrdinalIgnoreCase);
+        internal static void Leaves(string mod, string what)
+        {
+            if (string.IsNullOrEmpty(mod) || mod == "UnderRailWorks") return;
+            lock (leaves) { HashSet<string> s; if (!leaves.TryGetValue(mod, out s)) leaves[mod] = s = new HashSet<string>(); s.Add(what); }
+        }
+        internal static string[] LeftBy(string mod) { lock (leaves) { HashSet<string> s; return leaves.TryGetValue(mod, out s) ? s.OrderBy(x => x).ToArray() : new string[0]; } }
         // Runs a mod's callback (a widget's, a popup's answer, a button) as that mod, found from the delegate's code (or
         // given): what it adds to the interface is its own and goes when the mod is reloaded.
         internal static void As(string mod, Delegate code, Action call)
@@ -207,6 +216,95 @@ namespace UnderRailWorks.Internal
             var reloaded = mod.Id;
             if (Mods.Reloaded.Any) Mods.Reloaded.Run(h => h(reloaded));
             return "reloaded " + mod.Id + " " + mod.VersionText + (removedUi > 0 ? " (" + removedUi + " interface element(s) of the old code removed)" : "");
+        }
+
+        // --- Switching mods on and off while the game runs (the main menu's Mods screen; never in a game: its saves
+        // would then be made with other mods than it was played with). The same steps as a reload, halved.
+
+        // Off: its Unload, everything Works knows it registered, its patches and placements; mods that require it go
+        // first. What the game itself already holds stays until a restart (ModScope.LeftBy says what). Null when done,
+        // else why not.
+        internal static string SwitchOff(ModInfo mod, List<ModInfo> alsoOff = null)
+        {
+            if (Hud.Exists) return "mods are switched on and off from the main menu";
+            foreach (var d in Dependents(mod)) { var r = SwitchOff(d, alsoOff); if (r != null) return r; if (alsoOff != null) alsoOff.Add(d); }
+            ModLoader.SetEnabled(mod.Id, false);
+            mod.Enabled = false;
+            if (!mod.Loaded) { if (mod.ReadError == null) mod.Error = null; return null; }
+            var was = ModScope.Current;
+            try
+            {
+                ModScope.Current = mod.Id;
+                if (mod.Instance != null) try { mod.Instance.Unload(); } catch (Exception ex) { Log.Write("mods: " + mod.Id + ": its Unload failed: " + ex); }
+                ModScope.Current = was;
+                Forget(mod);
+                try { World.ForgetPlacements(mod.Id); } catch (Exception ex) { Log.Write("mods: " + mod.Id + ": placements: " + ex.Message); }
+                ModConfig.Forget(ModCode.Release(mod));
+            }
+            finally { ModScope.Current = was; }
+            mod.Instance = null; mod.Loaded = false; mod.LoadIndex = -1; mod.Error = null;
+            var left = ModScope.LeftBy(mod.Id);
+            Log.Always("mods: switched off " + mod.Id + (left.Length > 0 ? " (" + string.Join(", ", left) + " stay until a restart)" : ""));
+            return null;
+        }
+
+        // Loaded mods that require mod.
+        internal static List<ModInfo> Dependents(ModInfo mod)
+        {
+            return ModLoader.Mods.Where(m => m.Loaded && m != mod && m.Requires.Any(d => d.Id.Equals(mod.Id, StringComparison.OrdinalIgnoreCase))).ToList();
+        }
+
+        // On: what it requires first (switched on too), then its code, content pack, texture pack and PostLoad, after the
+        // mods already loaded. Null when it's loaded, else why not (it stays switched on, as after a start where it
+        // failed, so the Mods screen shows the reason).
+        internal static string SwitchOn(ModInfo mod, List<ModInfo> alsoOn = null)
+        {
+            if (Hud.Exists) return "mods are switched on and off from the main menu";
+            if (mod.Loaded) return null;
+            if (mod.ReadError != null) return mod.ReadError;
+            var version = ModLoader.WorksVersionProblem(mod);
+            if (version != null) return version;
+            foreach (var m in ModLoader.Mods.Where(m => m.Loaded))
+            {
+                if (mod.Incompatible.Any(d => d.Id.Equals(m.Id, StringComparison.OrdinalIgnoreCase) && (d.Min == null || (m.Version != null && m.Version >= d.Min)))
+                    || m.Incompatible.Any(d => d.Id.Equals(mod.Id, StringComparison.OrdinalIgnoreCase) && (d.Min == null || (mod.Version != null && mod.Version >= d.Min))))
+                    return "incompatible with " + m.Name + " (switch one off)";
+            }
+            foreach (var d in mod.Requires)
+            {
+                var dep = ModLoader.Find(d.Id);
+                if (dep == null) return "needs " + d.Id + " (not installed)";
+                if (d.Min != null && (dep.Version == null || dep.Version < d.Min)) return "needs " + dep.Name + " " + d.Min + "+ (" + (dep.Version == null ? "?" : dep.VersionText) + " installed)";
+                if (dep.Loaded) continue;
+                var r = SwitchOn(dep, alsoOn);
+                if (r != null) return "needs " + dep.Name + ": " + r;
+                if (alsoOn != null) alsoOn.Add(dep);
+            }
+            if (IntPtr.Size != 8) return "needs the 64-bit mode";
+            ModLoader.SetEnabled(mod.Id, true);
+            mod.Enabled = true; mod.Error = null; mod.Instance = null;
+            ModLoader.AddFolder(mod.Folder);
+            var was = ModScope.Current;
+            try
+            {
+                ModLoader.LoadCode(mod, true);
+                if (mod.Loaded) { ModScope.Current = mod.Id; try { ContentPacks.Load(mod); } catch (Exception ex) { Log.Write("content: " + mod.Id + ": " + ex.Message); } ModScope.Current = was; }
+                if (mod.Loaded) { try { AssetStore.ScanTexturePack(mod); } catch (Exception ex) { Log.Write("assets: " + mod.Id + ": " + ex.Message); } }
+                if (mod.Loaded && mod.Instance != null)
+                {
+                    ModScope.Current = mod.Id;
+                    try { mod.Instance.PostLoad(); }
+                    catch (Exception ex) { mod.Error = "PostLoad failed: " + ex.Message; mod.Loaded = false; Log.Write("mods: " + mod.Id + " PostLoad failed: " + ex); Forget(mod); mod.Instance = null; }
+                    ModScope.Current = was;
+                }
+            }
+            finally { ModScope.Current = was; }
+            if (!mod.Loaded) { if (mod.Error == null) mod.Error = "failed to load"; mod.LoadIndex = -1; return mod.Error; }
+            mod.LoadIndex = ModLoader.Mods.Max(m => m.LoadIndex) + 1;     // after the mods already loaded (its place by the rules from the next start)
+            Log.Always("mods: switched on " + mod.Id + " " + mod.VersionText);
+            var on = mod.Id;
+            if (Mods.Reloaded.Any) Mods.Reloaded.Run(h => h(on));     // mods that use its API (optional) ask again
+            return null;
         }
 
         // A game is running: the reloaded mod's handlers for how it started.

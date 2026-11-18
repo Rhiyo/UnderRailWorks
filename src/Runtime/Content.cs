@@ -91,6 +91,7 @@ public static class Quests
     internal static void Define(string id, string group, string journalText, int xp = 0, int oddityXp = 0) { Define(ModScope.Current, id, group, journalText, xp, oddityXp); }
     internal static void Define(string owner, string id, string group, string journalText, int xp, int oddityXp)
     {
+        ModScope.Leaves(owner, "quests");
         if (string.IsNullOrEmpty(id) || string.IsNullOrEmpty(journalText)) throw new ArgumentException("a quest needs an id and journal text");
         string had;
         // The same mod again (it was reloaded): the game's registry keeps the quest; its text is updated.

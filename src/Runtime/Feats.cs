@@ -50,6 +50,7 @@ namespace UnderRailWorks
         // A new feat on the level-up screen (call in Load). icon: a PNG in the mod's folder (optional).
         public static ModFeat Add(WorksMod mod, string id, string name, string description, FeatRequirements requires = null, string icon = null, StatBonus[] bonuses = null)
         {
+            ModScope.Leaves(mod.Id, "feats");
             var f = new ModFeat { Mod = mod.Id, Id = id, Name = name, Description = description, Requires = requires ?? new FeatRequirements(), Bonuses = bonuses ?? new StatBonus[0] };
             ModFeat before;
             if (All.TryGetValue(f.Key, out before) && before.Type != null)

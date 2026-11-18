@@ -606,6 +606,7 @@ public static class StatusEffects
     // ("Status.Poison", "Status.PsiBoost", "Status.5"..., or one from Icons.Add).
     public static ModStatus Add(WorksMod mod, string id, string name, string description, string icon, params StatBonus[] bonuses)
     {
+        ModScope.Leaves(mod.Id, "status effects");
         var s = new ModStatus { Mod = mod.Id, Id = id, Name = name, Description = description, Icon = icon, Bonuses = bonuses ?? new StatBonus[0] };
         UnderRailWorks.Internal.ModStatusStore.Types[s.Code] = s;
         return s;

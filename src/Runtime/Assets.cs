@@ -59,6 +59,7 @@ namespace UnderRailWorks
         // game takes an icon name.
         public static string Add(WorksMod mod, string id, string file)
         {
+            ModScope.Leaves(mod.Id, "pictures");
             var name = "works:" + mod.Id + ":" + id;
             AssetStore.Icon(name, ModFiles.Resolve(mod, file, "icon " + id));
             return name;
@@ -220,13 +221,13 @@ namespace UnderRailWorks.Internal
         }
 
         internal static void Replace(string mod, string gameAsset, string file)
-        {
+        { ModScope.Leaves(mod, "pictures");
             replaced[Norm(gameAsset)] = new Pending { Mod = mod, File = file };
             dirty = true;
         }
 
         internal static void Replace(string mod, string gameAsset, Texture2D texture)
-        {
+        { ModScope.Leaves(mod, "pictures");
             if (texture != null) ours.Add(texture);
             replaced[Norm(gameAsset)] = new Pending { Mod = mod, Texture = texture };
             dirty = true;

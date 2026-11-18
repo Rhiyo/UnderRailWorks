@@ -5,10 +5,10 @@ An engine upgrade and mod framework for [UnderRail](https://store.steampowered.c
 - **Engine upgrade:** the game runs 64-bit on modern .NET (.NET 10) and FNA, on Windows and under Proton, with display
   fixes (any resolution, interface scale, zoom, frame rate).
 - **Mod framework:** mods are .NET DLLs in the game's `Mods` folder. They hook the game through UnderRailWorks' API
-  (events, readable names for the game's scrambled classes, settings, an in-game Mods tab) or patch it with
+  (events, readable names for the game's scrambled classes, settings, a Mods screen on the main menu) or patch it with
   [Harmony](https://github.com/pardeike/Harmony). Dependencies and load order work like
   [tModLoader](https://github.com/tModLoader/tModLoader)'s.
-- **Mods that ship with it** (in `mods/`, each can be switched off in Options -> Mods):
+- **Mods that ship with it** (in `mods/`, each can be switched on or off from the main menu's Mods button):
   - Wall Vision: see and select characters behind walls and scenery (keyhole, fills, outlines).
   - Minimap: the area around you, exits, and the characters you can see in their Tab outline colours.
   - Quest Tracker: your active quests on the HUD.
@@ -39,7 +39,7 @@ Every file the game writes (saves, config.dat) stays readable by the stock game.
 stable version of the fixes. Works is a separate product (starting at 1.0) that grew out of UnderRailFixes 1.0.8: installs, files
 and the API are not compatible with 1.x.
 
-Working today (tested under Proton): the game on .NET 10, the mod loader and Mods tab, mod dependencies, the drawing
+Working today (tested under Proton): the game on .NET 10, the mod loader and Mods screen, mod dependencies, the drawing
 API and the Wall Vision mod, save compatibility with the stock game (`tools/savecheck`). See `TODO.md` for what's
 left and `UnderRailWorks.md` for the design.
 
@@ -47,7 +47,7 @@ left and `UnderRailWorks.md` for the design.
 
 1. Close the game, extract the release zip and copy its contents into the UnderRail folder.
 2. Windows: run `UnderRailWorks-Patcher.exe`. Linux / Steam Deck: run `./underrailworks-patcher`.
-3. Start the game from Steam as usual. Settings: **Options -> Mods** and `UnderRailWorks.ini`; mods go in `Mods`.
+3. Start the game from Steam as usual. Mods: the main menu's **Mods** button (on/off, order, profiles); their settings: **Options -> Mods**; mods go in `Mods`.
 
 The patcher backs up `underrail.exe` as `underrail.exe.backup`, writes the patched game as `UnderRail.Game.exe` and
 puts a small .NET 10 launcher in `underrail.exe`'s place (the runtime is in `dotnet`, nothing to install). It replaces
@@ -64,7 +64,7 @@ an UnderRailFixes 1.x install and takes over its settings. After a game update, 
 2. In the game, open the console (the ` key) and type `works.health`: it lists the versions, any part of Works that
    didn't start, and mods with problems.
 3. Send `UnderRailWorks.log` (in the game folder) with what you did. Mods' own problems go to their authors; the
-   Mods tab (Options -> Mods) shows which mod had errors.
+   Mods screen (the main menu's Mods button) shows which mod had errors.
 
 After a game update, the main menu says if parts of Works don't fit the new version; mods using them may not work
 until Works is updated. Saves stay loadable by the unmodded game either way (checked before every release).
