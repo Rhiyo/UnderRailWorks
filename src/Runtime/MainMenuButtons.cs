@@ -46,6 +46,17 @@ namespace UnderRailWorks
         static readonly PropertyInfo Alignment = typeof(zt).GetProperty("VerticalAlignment");
 
         // After a8k.c(): the mods' buttons go where Exit was, Exit below them, the panel grows upwards.
+        // The main menu's button column (the panel holding New Game ... Exit), shown or hidden (the Mods screen hides it
+        // while it's open, as the game's own screens replace the menu).
+        internal static void ShowButtons(bool visible)
+        {
+            var menu = UiPopups.Screen() as a8k;
+            if (menu == null) return;
+            var button = typeof(a8k).GetFields(Fields).Where(f => f.FieldType == typeof(zt)).Select(f => f.GetValue(menu) as zt).FirstOrDefault(b => b != null);
+            var panel = button == null ? null : button.Parent;
+            if (panel != null) panel.Visible = visible;
+        }
+
         internal static void Built(a8k menu)
         {
             List<Entry> list;

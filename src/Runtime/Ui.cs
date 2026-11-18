@@ -295,7 +295,9 @@ public static partial class Ui
     {
         if (!IsShown(element)) return false;
         var cc = element.Control as UiCustomControl;
-        return cc != null ? cc.MouseOver : element.Bounds.Contains(Input.Mouse);
+        // MouseOver comes from the game's enter/leave events, which only fire when the mouse moves: an element that moved
+        // away from under a still mouse (rows folding open, a list scrolling) kept it. The bounds settle that.
+        return cc != null ? cc.MouseOver && element.Bounds.Contains(Input.Mouse) : element.Bounds.Contains(Input.Mouse);
     }
 
     public static void Resize(UiElement element, int width, int height) { element.Control.Size = new esj(width, height); }

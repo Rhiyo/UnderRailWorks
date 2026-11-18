@@ -48,7 +48,8 @@ static class ModManager
         window = Ui.OpenWindow(null, "mods", "Mods", w, h);
         if (window == null) return;
         w = window.Width; h = window.Height;
-        window.Closed += () => { window = null; list = null; details = null; };     // without Accept: nothing changes
+        window.Closed += () => { window = null; list = null; details = null; MainMenu.ShowButtons(true); };     // without Accept: nothing changes
+        MainMenu.ShowButtons(false);     // the menu's buttons go while the screen is up, as for the game's own screens
         want = ModLoader.Mods.ToDictionary(m => m, IsOn);
         order = ModLoader.Mods.Where(m => m.Loaded).OrderBy(m => m.LoadIndex).ToList();
         orderChanged = false; automatic = false; profile = null;
