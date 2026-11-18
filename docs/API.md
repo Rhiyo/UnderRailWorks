@@ -1054,6 +1054,7 @@ A map tile (ak1), as the world pass hands it to the tile-extras step.
 - `int Changes` — Bumped whenever values change (load, Accept), so code reading settings per frame can keep its own copy.
 - `event Action Changed` — After the values changed (Accept in the Mods tab, works.reload): for code that copies settings elsewhere.
 - `virtual void OnChanged()` — After Accept wrote new values.
+- `virtual void OnEdit(string field, SettingsEdit edit)` — While the player edits the Options page, before Accept: field (a field of this config) was just changed. Change other settings to match with edit.Set (this mod's, or another's: edit.Set("OtherMod", "Field", value)); a value set here doesn't call OnEdit again. E.g. switching an effect on switches on what it needs: public override void OnEdit(string field, SettingsEdit edit) { if (field == "Fancy" && edit.On("Fancy")) edit.Set("Shadows", true); }
 - `void Reload()` — Reads settings.ini again (after Accept wrote it, or after the mod changed values with Settings.Set).
 
 ## ModDependency  _(class, ModLoader.cs)_
@@ -1471,6 +1472,17 @@ The first handler that returns true replaces the game's step.
 What the player gets for selling: Factor is the multiplier so far (the difficulty's sold item value).
 
 - `float Factor { get; set; }`
+
+## SettingsEdit  _(class, ModConfig.cs)_
+
+The Options page while the player edits it (ModConfig.OnEdit): read and change settings as the rows show them now, this mod's or another loaded mod's. Values in settings.ini's form: "1"/"0", an enum's name, a number. Changes are shown at once and saved with Accept (Cancel drops them). Set returns false when there's no such row.
+
+- `string Get(string field)`
+- `string Get(string mod, string field)`
+- `bool On(string field)`
+- `bool On(string mod, string field)`
+- `bool Set(string field, object value)`
+- `bool Set(string mod, string field, object value)`
 
 ## Shot  _(class, ShotBreakdown.cs)_
 

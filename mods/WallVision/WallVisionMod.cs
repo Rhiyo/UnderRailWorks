@@ -56,15 +56,15 @@ public sealed class WallVisionConfig : ModConfig
     [Header("Occluded Characters")]
     [Label("Show occluded characters"), Tooltip("Occluded characters: characters hidden behind scenery are shown where they're hidden. 1 = on.\nFollows the game's Character Outlines option: none with \"Never\".")]
     public bool ShowCovered = false;
-    [Label("Player"), Tooltip("Effect per kind of character: off, keyhole (a see-through hole in what stands in front), lines,\ndither, fill (the covered part in the colour Tab gives them), outline.")]
+    [EnabledIf("ShowCovered"), Label("Player"), Tooltip("Effect per kind of character: off, keyhole (a see-through hole in what stands in front), lines,\ndither, fill (the covered part in the colour Tab gives them), outline.")]
     public CoveredEffect ShowCoveredPlayer = CoveredEffect.Keyhole;
-    [Label("Hostile")] public CoveredEffect ShowCoveredHostile = CoveredEffect.Lines;
-    [Label("Other")] public CoveredEffect ShowCoveredOther = CoveredEffect.Lines;
-    [Label("Fill transparency"), Range(0, 100), Increment(5), Tooltip("How see-through the lines, dots, fill and outline are, in percent (0 = solid).")]
+    [EnabledIf("ShowCovered"), Label("Hostile")] public CoveredEffect ShowCoveredHostile = CoveredEffect.Lines;
+    [EnabledIf("ShowCovered"), Label("Other")] public CoveredEffect ShowCoveredOther = CoveredEffect.Lines;
+    [EnabledIf("ShowCovered"), Label("Fill transparency"), Range(0, 100), Increment(5), Tooltip("How see-through the lines, dots, fill and outline are, in percent (0 = solid).")]
     public int ShowCoveredTransparency = 75;
-    [Label("Keyhole transparency"), Range(0, 100), Increment(5), Tooltip("How see-through the keyhole is at its centre, in percent.")]
+    [EnabledIf("ShowCovered"), Label("Keyhole transparency"), Range(0, 100), Increment(5), Tooltip("How see-through the keyhole is at its centre, in percent.")]
     public int KeyholeTransparency = 75;
-    [Label("Keyhole size"), Range(50, 200), Increment(5), Tooltip("The keyhole's size, in percent of the default (about the character's height).")]
+    [EnabledIf("ShowCovered"), Label("Keyhole size"), Range(50, 200), Increment(5), Tooltip("The keyhole's size, in percent of the default (about the character's height).")]
     public int KeyholeSize = 100;
     [Label("Select characters behind scenery"), Tooltip("Characters behind walls and other scenery can be hovered and clicked\nwithout holding Tab, as the game allows while Tab is held.\nWorks with the effects off too.")]
     public bool SelectBehindScenery = true;

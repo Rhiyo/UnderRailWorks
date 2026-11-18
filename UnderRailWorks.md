@@ -1864,3 +1864,28 @@ with tModPorter). Test mods: OldButFine (declares 0.5, loads), GoneOverride (ove
 refused by name), NeedsNewer (uses World.FutureFeature: refused). Not covered by a test yet: the abstract/interface
 checks. Next, only if a major ever needs it: SMAPI-style rewriting of renamed members at load.
 
+## Options -> Mods sections, settings rules, main menu rebuilt (Nov 18 2026)
+
+- **Sections:** Options -> Mods is one view: Works' line, then a section per part (Works' engine fixes, each loaded mod
+  with settings) behind a "+ Name" header button, closed until clicked (open ones stay open while the game runs).
+  `TabScroll.Fold`: a y-range of the page (as built) that can be closed; Show places rows at their y less the closed
+  folds above (a fold inside a closed fold isn't counted twice); Refold recounts the scroll range. By y-range rather
+  than by control, so dropdowns (added to the page last by t1) fold with their row.
+- **Settings rules** (ModConfig.cs): `[EnabledIf]`, `[ShowIf]` (a setting of this mod or "OtherMod:Field", a value or
+  "!value"), `[EnabledIfMod]`, `[ShowIfMod]`; `OnEdit(field, SettingsEdit)` for changing settings while the player
+  edits (SettingsEdit.Get/On/Set, this mod's or another loaded mod's; a value set there doesn't call OnEdit again, so
+  two mods can't loop). ModPage records each row's controls and y-range; ModOptions.Tick (every update while an Options
+  page with mod settings exists) polls the rows for the player's edits, calls OnEdit, then applies every row's rules
+  (greyed: controls disabled, labels in grey; hidden: the row's fold closed). Wall Vision greys its effect rows while
+  Show occluded characters is off. Tested in game (WorksTest's config): greyed and hidden rows, a missing mod, another
+  mod's setting, OnEdit setting its own and Wall Vision's settings. Greyed dropdowns don't open but keep their colours.
+- **Main menu rebuilt** when the Mods window closes, if a mod switched while it was open changes the main menu (its
+  buttons, a texture replacement, a MainMenuCreated handler, music): `MainMenu.Rebuild` = a new a8k with the current
+  one's controller (as the game does). Switching off now undoes a mod's texture replacements (`AssetStore.Forget`:
+  dropped from the game's cache, the original loads next time) and its item icons, so pictures no longer stay until a
+  restart; a reload puts them back (the texture pack is scanned again). Tested: a texture-pack mod replacing the menu
+  art switched on (art shown) and off (the game's art back) live, Co-op off (Join a Game gone).
+- **Mods screen:** To top, Refresh (`ModLoader.Rescan`: new folders read and switched on as at a start, removed ones
+  gone or noted, changed DLLs reloaded), action buttons wrap into rows when they don't fit, long names cut, the list
+  scrolls to the selection. Escape closes mod windows on the main menu too (the in-game key handler doesn't run there).
+

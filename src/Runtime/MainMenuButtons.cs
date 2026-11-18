@@ -24,6 +24,21 @@ namespace UnderRailWorks
         }
 
         internal static void Forget(string mod) { lock (entries) entries.RemoveAll(e => e.Mod == mod); }
+        internal static bool HasButtons(string mod) { lock (entries) return entries.Any(e => string.Equals(e.Mod, mod, StringComparison.OrdinalIgnoreCase)); }
+
+        // The main menu built anew (as the game does when it returns to it: a new a8k with the same controller), e.g.
+        // after mods that change it were switched on or off: its buttons, its background and what mods add to it.
+        static readonly FieldInfo Controller = typeof(a8k).GetFields(BindingFlags.Instance | BindingFlags.NonPublic).FirstOrDefault(f => f.FieldType == typeof(azl));
+        internal static bool Rebuild()
+        {
+            var menu = UiPopups.Screen() as a8k;
+            var controller = menu == null || Controller == null ? null : Controller.GetValue(menu) as azl;
+            if (controller == null) return false;
+            AssetStore.Apply();
+            bjn.b().aav(new a8k(controller));
+            Log.Write("main menu: built again (mods that change it were switched)");
+            return true;
+        }
 
         const BindingFlags Fields = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly;
         static readonly MethodInfo Style = typeof(a8k).GetMethod("a", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(zt) }, null);

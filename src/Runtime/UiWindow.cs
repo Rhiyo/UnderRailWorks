@@ -119,6 +119,13 @@ static class UiWindows
         UiPopups.Tick();
         Open.RemoveAll(w => !w.IsOpen);
         if (Open.Count == 0) { dragging = null; return; }
+        // On the main menu the in-game key handler (KeyPressed) doesn't run: Escape closes the topmost window here,
+        // unless a game popup (a question) is open over it, which takes Escape itself.
+        if (!Hud.Exists && !Input.Typing && Input.Pressed(Keys.Escape))
+        {
+            var screen = UiPopups.Screen();
+            if (screen is a8k && !screen.Controls.Cast<euz>().Any(c => c is bnr || c is e4u || c is tg)) { Open[Open.Count - 1].Close(); return; }
+        }
         var m = Input.Mouse;
         if (dragging == null && Input.MousePressed(MouseButton.Left))
         {

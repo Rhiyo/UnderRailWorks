@@ -53,6 +53,93 @@ public sealed class ModPage
     }
     readonly List<Binding> bindings = new List<Binding>();
 
+    // Each row as built (its controls and its y range), for EnabledIf / ShowIf.
+    sealed class Row
+    {
+        public string Key; public List<euz> Controls; public int Start, End;
+        public Func<bool> Enabled, Shown; public TabScroll.Fold Fold; public bool? WasEnabled;
+        public Dictionary<avo, Microsoft.Xna.Framework.Color> Colours = new Dictionary<avo, Microsoft.Xna.Framework.Color>();
+    }
+    readonly List<Row> rows = new List<Row>();
+    int rowFrom, rowY;
+    void BeginRow() { rowFrom = Page.Controls.Count; rowY = UnderrailOptions.RowY(Options); }
+    void EndRow(string key, euz alsoMine)
+    {
+        var mine = Page.Controls.Cast<euz>().Skip(rowFrom).ToList();
+        if (alsoMine != null && !mine.Contains(alsoMine)) mine.Add(alsoMine);     // a dropdown joins the page at the end
+        rows.Add(new Row { Key = key, Controls = mine, Start = rowY, End = UnderrailOptions.RowY(Options) });
+    }
+    // Conditions for the row just built for key (null: none of that kind).
+    internal void Rule(string key, Func<bool> enabled, Func<bool> shown)
+    {
+        var r = rows.LastOrDefault(x => x.Key == key);
+        if (r == null) return;
+        r.Enabled = enabled; r.Shown = shown;
+        if (shown != null) r.Fold = TabScroll.AddFold(Page, r.Start, r.End, false);
+    }
+
+    // The value a row shows now (settings.ini's form), and setting it (shown at once, saved on Accept).
+    internal string Value(string key) { var b = bindings.FirstOrDefault(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase)); return b == null ? null : b.Value; }
+    readonly Dictionary<string, string> seen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    internal bool SetValue(string key, string value)
+    {
+        var b = bindings.FirstOrDefault(x => x.Key.Equals(key, StringComparison.OrdinalIgnoreCase));
+        if (b == null || value == null) return false;
+        b.Show(value);
+        seen[b.Key] = b.Value;     // not an edit of the player's: OnEdit isn't called for it
+        return true;
+    }
+    // The keys the player changed since the last call.
+    internal List<string> Edited()
+    {
+        var list = new List<string>();
+        foreach (var b in bindings)
+        {
+            string v = b.Value, last;
+            if (!seen.TryGetValue(b.Key, out last)) last = b.Was;
+            if (v == last) continue;
+            seen[b.Key] = v;
+            list.Add(b.Key);
+        }
+        return list;
+    }
+    static readonly System.Reflection.PropertyInfo LabelColour = typeof(avo).GetProperty("Color");
+    static readonly Microsoft.Xna.Framework.Color Greyed = new Microsoft.Xna.Framework.Color(110, 105, 95);
+    // Applies the rows' conditions; true when a row was hidden or shown (the page must be laid out again).
+    internal bool ApplyRules()
+    {
+        bool moved = false;
+        foreach (var r in rows)
+        {
+            if (r.Enabled != null)
+            {
+                bool on = true;
+                try { on = r.Enabled(); } catch (Exception ex) { ModErrors.Report(mod, "a setting's EnabledIf", ex); r.Enabled = null; }
+                if (r.WasEnabled != on)
+                {
+                    r.WasEnabled = on;
+                    foreach (var c in r.Controls)
+                    {
+                        var label = c as avo;
+                        if (label != null && LabelColour != null)
+                        {
+                            if (!r.Colours.ContainsKey(label)) r.Colours[label] = (Microsoft.Xna.Framework.Color)LabelColour.GetValue(label, null);
+                            LabelColour.SetValue(label, on ? r.Colours[label] : Greyed, null);
+                        }
+                        else c.Enabled = on;
+                    }
+                }
+            }
+            if (r.Shown != null && r.Fold != null)
+            {
+                bool show = true;
+                try { show = r.Shown(); } catch (Exception ex) { ModErrors.Report(mod, "a setting's ShowIf", ex); r.Shown = null; }
+                if (r.Fold.Closed == show) { r.Fold.Closed = !show; moved = true; }
+            }
+        }
+        return moved;
+    }
+
     internal ModPage(t1 options, cvh page, ModSettings settings, string mod)
     {
         Options = options; Page = page; Settings = settings; this.mod = mod;
@@ -79,7 +166,10 @@ public sealed class ModPage
     public void Toggle(string key, string label, bool fallback)
     {
         bool v = Settings.Bool(key, fallback);
-        bindings.Add(new Tick { Key = key, Was = v ? "1" : "0", Box = UnderrailOptions.TickBox(Options, label, v) });
+        BeginRow();
+        var box = UnderrailOptions.TickBox(Options, label, v);
+        bindings.Add(new Tick { Key = key, Was = v ? "1" : "0", Box = box });
+        EndRow(key, box);
     }
 
     public void Choice(string key, string label, string[] texts, string[] values, string fallback)
@@ -89,15 +179,19 @@ public sealed class ModPage
         if (v == null || !items.Any(i => i.Value.Equals(v, StringComparison.OrdinalIgnoreCase))) v = fallback;
         if (items.Count == 0) return;
         var current = items.FirstOrDefault(i => i.Value.Equals(v, StringComparison.OrdinalIgnoreCase)) ?? items[0];     // a default that isn't one of them (an enum field left at 0)
+        BeginRow();
         var combo = UnderrailOptions.Add(Options, label, items, current, current);
         bindings.Add(new Pick { Key = key, Was = current.Value, Combo = combo, Items = items });
+        EndRow(key, combo);
     }
 
     public void Slider(string key, string label, int min, int max, int step, int fallback)
     {
         int v = Settings.Int(key, fallback, min, max);
+        BeginRow();
         var slider = UnderrailOptions.SliderRow(Options, Page, "works." + mod + "." + key, label, v, min, max, step, false);
         if (slider != null) bindings.Add(new Slide { Key = key, Was = v.ToString(System.Globalization.CultureInfo.InvariantCulture), Slider = slider });
+        EndRow(key, slider);
     }
 
     // A decimal setting (float/double fields): the game's slider counts in steps of step.
@@ -107,9 +201,11 @@ public sealed class ModPage
         double v = fallback; double parsed;
         var raw = Settings.Get(key);
         if (raw != null && double.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out parsed)) v = Math.Max(min, Math.Min(max, parsed));
+        BeginRow();
         var slider = UnderrailOptions.SliderRow(Options, Page, "works." + mod + "." + key, label, (int)Math.Round(v / step), (int)Math.Round(min / step), (int)Math.Round(max / step), 1,
             false, i => Math.Round(i * step, 4).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture));
         if (slider != null) bindings.Add(new Slide { Key = key, Was = v.ToString(System.Globalization.CultureInfo.InvariantCulture), Slider = slider, Scale = step });
+        EndRow(key, slider);
     }
 
     // A button on its own row; click runs on the options screen (e.g. to put rows back with Set).
@@ -124,7 +220,9 @@ public sealed class ModPage
     {
         var note = Ui.Label(text, 360);
         Ui.SetColor(note, new Microsoft.Xna.Framework.Color(160, 160, 150));
+        BeginRow();
         UnderrailOptions.ControlRow(Options, label, note.Control);
+        EndRow(label, note.Control);
     }
 
     // Shows a value in a row (not saved until Accept), e.g. for a reset button.
@@ -161,7 +259,7 @@ public sealed class ModPage
 
 public static class ModOptions
 {
-    sealed class Entry { public Action<ModPage> Build; public Action Changed; }
+    sealed class Entry { public Action<ModPage> Build; public Action Changed; public Action<string, SettingsEdit> Edited; }
     static readonly Dictionary<string, Entry> Pages = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
 
     sealed class Tab
@@ -175,9 +273,73 @@ public static class ModOptions
     // From a mod's OnLoad: its settings rows in the Mods tab. changed runs after Accept wrote new values.
     internal static void Forget(string mod) { Pages.Remove(mod); }
     internal static bool HasPage(string mod) { return Pages.ContainsKey(mod); }
-    internal static void Register(string mod, Action<ModPage> build, Action changed = null)
+    internal static void Register(string mod, Action<ModPage> build, Action changed = null, Action<string, SettingsEdit> edited = null)
     {
-        Pages[mod] = new Entry { Build = build, Changed = changed };
+        Pages[mod] = new Entry { Build = build, Changed = changed, Edited = edited };
+    }
+
+    // --- Settings that depend on others (ModConfig's EnabledIf / ShowIf / OnEdit), live on the open Options page ---
+
+    static Tab Live { get { var o = UiHooks.CurrentOptions; Tab t; return o != null && Tabs.TryGetValue(o, out t) ? t : null; } }
+
+    // A setting as the page shows it now (the open Options page), else as saved (settings.ini); null: no such mod or key.
+    internal static string Value(string mod, string key)
+    {
+        var tab = Live;
+        if (tab != null) foreach (var p in tab.Pages) if (p.Key.Equals(mod, StringComparison.OrdinalIgnoreCase)) { var v = p.Value.Value(key); if (v != null) return v; }
+        var m = ModLoader.Find(mod);
+        if (m == null || !m.Loaded || !Pages.ContainsKey(m.Id)) return null;
+        return ModSettings.For(m.Id).Get(key);
+    }
+    internal static bool SetValue(string mod, string key, string value)
+    {
+        var tab = Live;
+        if (tab == null) return false;
+        foreach (var p in tab.Pages) if (p.Key.Equals(mod, StringComparison.OrdinalIgnoreCase)) return p.Value.SetValue(key, value);
+        return false;
+    }
+    internal static bool Truthy(string v) { return v != null && (v == "1" || v.Equals("true", StringComparison.OrdinalIgnoreCase) || v.Equals("on", StringComparison.OrdinalIgnoreCase)); }
+    // want: null = on; "x" = equals x (any case; numbers by value); "!x" = anything but x.
+    internal static bool Matches(string actual, string want)
+    {
+        if (want == null) return Truthy(actual);
+        bool not = want.StartsWith("!");
+        if (not) want = want.Substring(1);
+        bool same;
+        double a, b;
+        if (actual != null && double.TryParse(actual, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out a)
+            && double.TryParse(want, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out b)) same = a == b;
+        else if (want.Equals("true", StringComparison.OrdinalIgnoreCase) || want.Equals("false", StringComparison.OrdinalIgnoreCase)) same = Truthy(actual) == want.Equals("true", StringComparison.OrdinalIgnoreCase);
+        else same = string.Equals(actual, want, StringComparison.OrdinalIgnoreCase);
+        return not ? !same : same;
+    }
+
+    // Every update while an Options page with mod settings exists: the player's edits go to their mod's OnEdit, then
+    // every row's conditions are applied (greyed / hidden), across mods.
+    static Tab ticked;
+    internal static void Tick()
+    {
+        var tab = Live;
+        if (tab == null) return;
+        bool first = ticked != tab; ticked = tab;
+        bool edited = false;
+        foreach (var p in tab.Pages)
+        {
+            var keys = p.Value.Edited();
+            if (keys.Count == 0) continue;
+            edited = true;
+            Entry e;
+            if (!Pages.TryGetValue(p.Key, out e) || e.Edited == null) continue;
+            foreach (var k in keys)
+            {
+                var key = k; var edit = new SettingsEdit(p.Key);
+                try { ModScope.As(p.Key, e.Edited, () => e.Edited(key, edit)); } catch (Exception ex) { ModErrors.Report(p.Key, "OnEdit", ex); }
+            }
+        }
+        if (!first && !edited) return;
+        bool moved = false;
+        foreach (var p in tab.Pages) moved |= p.Value.ApplyRules();
+        if (moved) TabScroll.Refold(tab.Page);
     }
 
     static readonly Color Bad = new Color(225, 90, 70), Quiet = new Color(150, 140, 125);
@@ -201,68 +363,65 @@ public static class ModOptions
 
     static void Gap(t1 options, int px) { UnderrailOptions.SetRowY(options, UnderrailOptions.RowY(options) + px); }
 
-    // View 0: Works' own part (engine fixes), then a Settings button per loaded mod that has settings, in load order.
-    internal static void ListView(t1 options, cvh page, List<int> views, bool fixes)
+    // The whole tab: Works' line, then a section per part, closed until clicked open (sections stay as the player left
+    // them while the game runs): Works' engine fixes (fixes: their rows, from Options.AddTab), then each loaded mod with
+    // settings, in load order.
+    internal static void ListView(t1 options, cvh page, Action fixes)
     {
         var tab = new Tab { Page = page };
         Tabs.Remove(options);
         Tabs.Add(options, tab);
-        views.Add(UnderrailOptions.RowY(options));
         Gap(options, TopMargin);
-        int next = fixes ? 2 : 1;
         tab.WithSettings = ModLoader.Mods.Where(m => m.Loaded && Pages.ContainsKey(m.Id)).OrderBy(m => m.LoadIndex).ToList();
 
         UnderrailOptions.HeadingRow(options, "UnderRailWorks " + FixVersion.Value);
-        Text(options, page, "Engine fixes: resolution, interface scale, zoom, frame rate, 64-bit mode.", Quiet);
-        if (fixes) ButtonRow(options, page, "Engine fixes", 1);
-        UnderrailOptions.SeparatorRow(options);
-        UnderrailOptions.HeadingRow(options, "Mod settings");
         Text(options, page, "Mods are switched on and off, and put in order, from the main menu's Mods button.", Quiet);
         var troubled = ModLoader.Mods.Where(m => m.Loaded && m.Failures > 0).ToList();
         if (troubled.Count > 0) Text(options, page, "Errors this session: " + string.Join(", ", troubled.Select(m => m.Name + " (" + m.Failures + ")").ToArray()) + "; see UnderRailWorks.log", Bad);
+        if (fixes != null) Section(options, page, "Engine fixes (resolution, interface scale, zoom, frame rate)", "UnderRailWorks", fixes);
         if (tab.WithSettings.Count == 0) Text(options, page, ModLoader.Mods.Any(m => m.Loaded) ? "None of the loaded mods has settings." : "No mods are loaded.", Quiet);
-        for (int i = 0; i < tab.WithSettings.Count; i++) ButtonRow(options, page, tab.WithSettings[i].Name, next + i);
-    }
-
-    // A button at the left column that shows a view.
-    static void ButtonRow(t1 options, cvh page, string text, int view)
-    {
-        var button = UnderrailOptions.NewButton(options, text, () => TabScroll.SetView(page, view));
-        Gap(options, 4);
-        UnderrailOptions.PlaceRow(options, button);
-    }
-
-    // The top of a settings view: back to the list, and the view's title.
-    internal static void BackRow(t1 options, cvh page, string title)
-    {
-        Gap(options, TopMargin);
-        var button = UnderrailOptions.NewButton(options, "Back to mods", () => TabScroll.SetView(page, 0));
-        UnderrailOptions.PlaceRow(options, button);
-        UnderrailOptions.HeadingRow(options, title);
-        UnderrailOptions.SeparatorRow(options);
-    }
-
-    // One view per mod with settings (the Settings buttons' targets, in the same order).
-    internal static void ModViews(t1 options, cvh page, List<int> views)
-    {
-        Tab tab;
-        if (!Tabs.TryGetValue(options, out tab)) return;
         foreach (var mod in tab.WithSettings)
         {
-            views.Add(UnderrailOptions.RowY(options));
-            try
+            var m = mod;
+            Section(options, page, m.Name, m.Id, () =>
             {
-                BackRow(options, page, mod.Name + " settings");
-                var modPage = new ModPage(options, page, ModSettings.For(mod.Id), mod.Id);
-                Pages[mod.Id].Build(modPage);
-                modPage.Finish();
-                tab.Pages.Add(new KeyValuePair<string, ModPage>(mod.Id, modPage));
-            }
-            catch (Exception ex) { Log.Write("mods: " + mod.Id + ": settings rows failed: " + ex); }
-            Gap(options, 40);
+                try
+                {
+                    var modPage = new ModPage(options, page, ModSettings.For(m.Id), m.Id);
+                    Pages[m.Id].Build(modPage);
+                    modPage.Finish();
+                    tab.Pages.Add(new KeyValuePair<string, ModPage>(m.Id, modPage));
+                }
+                catch (Exception ex) { Log.Write("mods: " + m.Id + ": settings rows failed: " + ex); }
+            });
         }
     }
 
+    // Open sections, by key (a mod's id), for this run of the game.
+    static readonly HashSet<string> Open = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+    // A header button, then the rows build adds, folded away (TabScroll) until the header is clicked.
+    static void Section(t1 options, cvh page, string title, string key, Action build)
+    {
+        Gap(options, 4);
+        bool open = Open.Contains(key);
+        TabScroll.Fold fold = null;
+        dak header = null;
+        header = UnderrailOptions.NewButton(options, "+  " + title, () =>
+        {
+            if (fold == null) return;
+            fold.Closed = !fold.Closed;
+            if (fold.Closed) Open.Remove(key); else Open.Add(key);
+            header.Text = (fold.Closed ? "+  " : "-  ") + title;
+            TabScroll.Refold(page);
+        });
+        header.Text = (open ? "-  " : "+  ") + title;
+        UnderrailOptions.PlaceRow(options, header);
+        int start = UnderrailOptions.RowY(options);
+        build();
+        Gap(options, 8);
+        fold = TabScroll.AddFold(page, start, UnderrailOptions.RowY(options), !open);
+    }
 
     internal static void Save(t1 options)
     {

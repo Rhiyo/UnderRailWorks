@@ -35,6 +35,34 @@ namespace UnderRailWorks
 [AttributeUsage(AttributeTargets.Field)] public sealed class ReloadRequiredAttribute : Attribute { }
 [AttributeUsage(AttributeTargets.Field)] public sealed class HiddenAttribute : Attribute { }
 
+// Settings that depend on others, applied live on the Options page while the player edits (before Accept).
+// setting: a field of this config ("ShowEffect"), or another mod's setting ("OtherMod:Field"). value: what it must be:
+// omitted = a tick box that's ticked; an enum's name, a number, "1"/"0"; "!x" = anything but x. Several attributes: all
+// must hold.
+//   [EnabledIf("ShowEffect")] public int Strength = 75;                 // greyed out while ShowEffect is off
+//   [ShowIf("Style", "Custom")] public int CustomSize = 10;             // only shown while Style is Custom
+//   [EnabledIfMod("Minimap")] public bool PinsOnMinimap = true;         // greyed out unless Minimap is loaded
+//   [ShowIf("WallVision:ShowCovered")] public bool Outline = true;      // another mod's setting
+[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)] public sealed class EnabledIfAttribute : Attribute { public readonly string Setting, Value; public EnabledIfAttribute(string setting, string value = null) { Setting = setting; Value = value; } }
+[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)] public sealed class ShowIfAttribute : Attribute { public readonly string Setting, Value; public ShowIfAttribute(string setting, string value = null) { Setting = setting; Value = value; } }
+[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)] public sealed class EnabledIfModAttribute : Attribute { public readonly string Mod; public EnabledIfModAttribute(string mod) { Mod = mod; } }
+[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)] public sealed class ShowIfModAttribute : Attribute { public readonly string Mod; public ShowIfModAttribute(string mod) { Mod = mod; } }
+
+// The Options page while the player edits it (ModConfig.OnEdit): read and change settings as the rows show them now,
+// this mod's or another loaded mod's. Values in settings.ini's form: "1"/"0", an enum's name, a number. Changes are
+// shown at once and saved with Accept (Cancel drops them). Set returns false when there's no such row.
+public sealed class SettingsEdit
+{
+    internal SettingsEdit(string mod) { Mod = mod; }
+    internal readonly string Mod;
+    public string Get(string field) { return ModOptions.Value(Mod, field); }
+    public string Get(string mod, string field) { return ModOptions.Value(mod, field); }
+    public bool On(string field) { return ModOptions.Truthy(Get(field)); }
+    public bool On(string mod, string field) { return ModOptions.Truthy(Get(mod, field)); }
+    public bool Set(string field, object value) { return ModOptions.SetValue(Mod, field, ModConfig.Format(value)); }
+    public bool Set(string mod, string field, object value) { return ModOptions.SetValue(mod, field, ModConfig.Format(value)); }
+}
+
 
 public abstract class ModConfig
 { protected ModConfig() { }
@@ -46,6 +74,12 @@ public abstract class ModConfig
 
     // After Accept wrote new values.
     public virtual void OnChanged() { }
+
+    // While the player edits the Options page, before Accept: field (a field of this config) was just changed. Change
+    // other settings to match with edit.Set (this mod's, or another's: edit.Set("OtherMod", "Field", value)); a value set
+    // here doesn't call OnEdit again. E.g. switching an effect on switches on what it needs:
+    //   public override void OnEdit(string field, SettingsEdit edit) { if (field == "Fancy" && edit.On("Fancy")) edit.Set("Shadows", true); }
+    public virtual void OnEdit(string field, SettingsEdit edit) { }
 
 
     ModSettings settings;
@@ -159,6 +193,7 @@ public abstract class ModConfig
             else if (f.FieldType == typeof(string))
                 page.Note(label, (Format(v) ?? "") + "   (edit Mods/" + Path.GetFileName(Mod.Folder) + "/settings.ini)");
             else continue;     // ini only
+            Rules(page, f);
             any = true;
         }
         // The mod's keys: shown here, changed in the Controls tab (one place for every key).
@@ -192,6 +227,25 @@ public abstract class ModConfig
         var c = Changed;
         if (c != null) try { ModScope.As(Mod.Id, null, c); } catch (Exception ex) { ModErrors.Report(Mod.Id, "settings changed", ex); }
 
+    }
+
+    // A row's EnabledIf / ShowIf / ...Mod attributes, as live conditions on the page.
+    void Rules(ModPage page, FieldInfo f)
+    {
+        var enabled = new List<Func<bool>>(); var shown = new List<Func<bool>>();
+        string mine = Mod.Id;
+        Func<string, string, Func<bool>> setting = (target, want) =>
+        {
+            int colon = target.IndexOf(':');
+            string mod = colon > 0 ? target.Substring(0, colon) : mine, key = colon > 0 ? target.Substring(colon + 1) : target;
+            return () => ModOptions.Matches(ModOptions.Value(mod, key), want);
+        };
+        foreach (var a in f.GetCustomAttributes<EnabledIfAttribute>()) enabled.Add(setting(a.Setting, a.Value));
+        foreach (var a in f.GetCustomAttributes<ShowIfAttribute>()) shown.Add(setting(a.Setting, a.Value));
+        foreach (var a in f.GetCustomAttributes<EnabledIfModAttribute>()) { var id = a.Mod; enabled.Add(() => ModLoader.IsLoaded(id)); }
+        foreach (var a in f.GetCustomAttributes<ShowIfModAttribute>()) { var id = a.Mod; shown.Add(() => ModLoader.IsLoaded(id)); }
+        if (enabled.Count == 0 && shown.Count == 0) return;
+        page.Rule(f.Name, enabled.Count == 0 ? null : (Func<bool>)(() => enabled.All(x => x())), shown.Count == 0 ? null : (Func<bool>)(() => shown.All(x => x())));
     }
 
     static string Spaced(string name)
@@ -256,7 +310,8 @@ public abstract class ModConfig
             configs.Add(c);
         }
         if (configs.Count == 0) return;
-        ModOptions.Register(mod.Id, page => { foreach (var c in configs) c.Build(page); }, () => { foreach (var c in configs) c.Reload(); });
+        ModOptions.Register(mod.Id, page => { foreach (var c in configs) c.Build(page); }, () => { foreach (var c in configs) c.Reload(); },
+            (field, edit) => { foreach (var c in configs) if (c.Fields().Any(x => x.Name == field)) c.OnEdit(field, edit); });
         Log.Write("mods: " + mod.Id + ": settings from " + string.Join(", ", configs.Select(c => c.GetType().Name).ToArray()));
     }
 }

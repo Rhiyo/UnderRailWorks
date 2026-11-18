@@ -17,10 +17,11 @@ static class ModManager
 
     static UiWindow window;
     static UiList list, details;
-    static UiElement switchButton, upButton, downButton, note;
+    static UiElement switchButton, upButton, downButton, topButton, note;
     static List<ModInfo> shown = new List<ModInfo>();
     static List<ModInfo> order = new List<ModInfo>();     // the loaded mods, top loads first (Up / Down change it for the next start)
     static bool orderChanged;
+    static bool menuChanged;     // a mod that changes the main menu was switched: built again when the window closes
     static ModInfo selected;
     static readonly Dictionary<ModInfo, string> messages = new Dictionary<ModInfo, string>();     // the last switch's result, per mod
 
@@ -36,7 +37,7 @@ static class ModManager
         window = Ui.OpenWindow(null, "mods", "Mods", w, h);
         if (window == null) return;
         w = window.Width; h = window.Height;
-        window.Closed += () => { window = null; list = null; details = null; };
+        window.Closed += () => { window = null; list = null; details = null; if (menuChanged) rebuildMenu = true; menuChanged = false; };
         order = ModLoader.Mods.Where(m => m.Loaded).OrderBy(m => m.LoadIndex).ToList();
         orderChanged = false;
         messages.Clear();
@@ -44,9 +45,12 @@ static class ModManager
         // Bottom: profiles and automatic order on the left, a note above them.
         var profiles = Ui.Button("Profiles...", Profiles);
         var auto = Ui.Button("Automatic order", AutomaticOrder);
+        var rescan = Ui.Button("Refresh", Rescan);
         int buttonsY = h - pad - Math.Max(profiles.Height, auto.Height);
         Ui.Add(window, profiles, pad, buttonsY);
         Ui.Add(window, auto, pad + profiles.Width + Ui.S(6), buttonsY);
+        Ui.Add(window, rescan, w - pad - rescan.Width, buttonsY);
+        Ui.Tooltip(rescan, "Looks in the Mods folder again: new mods are added (and switched on), removed ones go, changed DLLs are loaded again.");
         note = Ui.Label("", w - 2 * pad);
         int noteY = buttonsY - Ui.LineHeight - Ui.S(6);
         Ui.Add(window, note, pad, noteY);
@@ -60,11 +64,26 @@ static class ModManager
         switchButton = Ui.Button("Switch off", Switch);
         upButton = Ui.Button("Up", () => Move(-1));
         downButton = Ui.Button("Down", () => Move(1));
+        topButton = Ui.Button("To top", ToTop);
         int rightX = pad * 2 + listW, rightW = w - rightX - pad;
-        int actionsY = bottom - switchButton.Height;
-        Ui.Add(window, switchButton, rightX, actionsY);
-        Ui.Add(window, upButton, rightX + switchButton.Width + Ui.S(6), actionsY);
-        Ui.Add(window, downButton, rightX + switchButton.Width + upButton.Width + Ui.S(12), actionsY);
+        // The buttons in rows as wide as the details (the game's buttons have a minimum width that grows with the
+        // interface size: at some sizes four don't fit in one row).
+        var buttons = new[] { switchButton, upButton, downButton, topButton };
+        int gap = Ui.S(6), rowH = buttons.Max(b => b.Height);
+        var rowsOf = new List<List<UiElement>> { new List<UiElement>() };
+        int used = 0;
+        foreach (var b in buttons)
+        {
+            if (rowsOf[rowsOf.Count - 1].Count > 0 && used + gap + b.Width > rightW) { rowsOf.Add(new List<UiElement>()); used = 0; }
+            used += (rowsOf[rowsOf.Count - 1].Count > 0 ? gap : 0) + b.Width;
+            rowsOf[rowsOf.Count - 1].Add(b);
+        }
+        int actionsY = bottom - rowsOf.Count * rowH - (rowsOf.Count - 1) * gap;
+        for (int r = 0; r < rowsOf.Count; r++)
+        {
+            int x = rightX;
+            foreach (var b in rowsOf[r]) { Ui.Add(window, b, x, actionsY + r * (rowH + gap)); x += b.Width + gap; }
+        }
         details = Ui.List(rightW, actionsY - Ui.S(6) - top);
         Ui.Add(window, details.View, rightX, top);
         details.Selected += i => details.Selection = -1;     // text, not choices
@@ -88,8 +107,12 @@ static class ModManager
             else if (!m.Enabled) { items.Add("    " + m.Name + "  (off)"); colours.Add(Quiet); }
             else { items.Add("    " + m.Name + "  (not loaded)"); colours.Add(Bad); }
         }
+        int room = list.View.Width - Ui.S(16);
+        for (int i = 0; i < items.Count; i++) items[i] = Fit(items[i], room);
         list.Items = items; list.ItemColors = colours;
         list.Selection = selected == null ? -1 : shown.IndexOf(selected);
+        int visible = Math.Max(1, (list.View.Height - 4) / Math.Max(1, list.RowHeight));
+        if (list.Selection >= 0 && (list.Selection < list.First || list.Selection >= list.First + visible)) list.First = Math.Max(0, list.Selection - visible / 2);     // keep it in view
         if (shown.Count == 0) Ui.SetText(note, "No mods installed: each mod is a folder in the game's Mods folder.");
         else Ui.SetText(note, orderChanged ? "The new load order applies when you restart the game. Mod settings: Options -> Mods."
             : "Switching a mod on or off applies now. Mod settings: Options -> Mods.");
@@ -145,6 +168,15 @@ static class ModManager
         if (any) Ui.SetText(switchButton, m.Loaded || m.Enabled ? "Switch off" : "Switch on");
         Ui.Show(upButton, any && m.Loaded && order.Count > 1);
         Ui.Show(downButton, any && m.Loaded && order.Count > 1);
+        Ui.Show(topButton, any && m.Loaded && order.Count > 1 && order.IndexOf(m) > 0);
+    }
+
+    // Cut to a width, with "..." (a long name ran past the list's edge).
+    static string Fit(string text, int width)
+    {
+        if (Ui.TextWidth(text) <= width) return text;
+        while (text.Length > 1 && Ui.TextWidth(text + "...") > width) text = text.Substring(0, text.Length - 1);
+        return text.TrimEnd() + "...";
     }
 
     static string Ordinal(int n) { int t = n % 100; string s = t >= 11 && t <= 13 ? "th" : n % 10 == 1 ? "st" : n % 10 == 2 ? "nd" : n % 10 == 3 ? "rd" : "th"; return n + s; }
@@ -171,7 +203,8 @@ static class ModManager
             Action off = () =>
             {
                 var gone = new List<ModInfo>();
-                var r = ModReloader.SwitchOff(m, gone);
+                foreach (var d in AllDependents(m)) if (TouchesMenu(d)) menuChanged = true;
+                var r = Switched(m, () => ModReloader.SwitchOff(m, gone));
                 if (r != null) messages[m] = "Couldn't switch it off: " + r;
                 else
                 {
@@ -190,7 +223,7 @@ static class ModManager
             Action on = () =>
             {
                 var added = new List<ModInfo>();
-                var r = ModReloader.SwitchOn(m, added);
+                var r = Switched(m, () => ModReloader.SwitchOn(m, added)); foreach (var a2 in added) if (TouchesMenu(a2)) menuChanged = true;
                 if (r != null) messages[m] = "Couldn't switch it on: " + r; else messages.Remove(m);
                 foreach (var a in added) messages[a] = "Switched on for " + m.Name + ", which needs it.";
                 Refresh();
@@ -229,6 +262,57 @@ static class ModManager
         ModLoader.SetPlayerOrder(order.Select(m => m.Id).ToList());
         orderChanged = true;
         Refresh();
+    }
+
+    static void ToTop()
+    {
+        int i = order.IndexOf(selected);
+        if (i <= 0) return;
+        order.RemoveAt(i); order.Insert(0, selected);
+        ModLoader.SetPlayerOrder(order.Select(m => m.Id).ToList());
+        orderChanged = true;
+        Refresh();
+    }
+
+    // The Mods folder again: new mods switched on as they would be at a start, removed ones gone, changed DLLs reloaded.
+    static void Rescan()
+    {
+        List<ModInfo> gone;
+        var added = ModLoader.Rescan(out gone);
+        foreach (var m in added)
+        {
+            if (!m.Enabled || m.Error != null) { messages[m] = m.Error != null ? "Found, can't load: " + m.Error : "Found (switched off)."; continue; }
+            var r = Switched(m, () => ModReloader.SwitchOn(m));
+            messages[m] = r != null ? "Found, but couldn't switch it on: " + r : "Found and switched on.";
+        }
+        int reloads = ModReloader.RequestChanged();
+        Notify.Log("Mods: " + (added.Count == 0 && gone.Count == 0 && reloads == 0 ? "nothing new in the Mods folder." :
+            added.Count + " new, " + gone.Count + " removed" + (reloads > 0 ? ", " + reloads + " changed (loading again)" : "") + "."));
+        if (added.Count > 0) selected = added[0];
+        Refresh();
+    }
+
+    // Does mod change the main menu (its buttons, a texture, a handler on its creation)?
+    static bool TouchesMenu(ModInfo m)
+    {
+        return MainMenu.HasButtons(m.Id) || AssetStore.Replaces(m.Id) || UiEvents.MainMenuCreated.HasOwner(m.Id) || ModScope.LeftBy(m.Id).Contains("music");
+    }
+    // Runs a switch, noting whether the main menu needs building again (checked before, for what goes, and after, for
+    // what comes).
+    static string Switched(ModInfo m, Func<string> run)
+    {
+        bool before = TouchesMenu(m);
+        var r = run();
+        if (before || TouchesMenu(m)) menuChanged = true;
+        return r;
+    }
+    static bool rebuildMenu;
+    // Every update: the main menu built again once the window closed (not from inside its own close).
+    internal static void Tick()
+    {
+        if (!rebuildMenu) return;
+        rebuildMenu = false;
+        try { MainMenu.Rebuild(); } catch (Exception ex) { Log.Write("main menu: building it again failed: " + ex.Message); }
     }
 
     static void AutomaticOrder()
@@ -273,12 +357,12 @@ static class ModManager
         foreach (var kv in p.Value.Key.Where(kv => !kv.Value))
         {
             var m = ModLoader.Find(kv.Key);
-            if (m != null && (m.Loaded || m.Enabled)) { var r = ModReloader.SwitchOff(m); if (r != null) messages[m] = "Couldn't switch it off: " + r; }
+            if (m != null && (m.Loaded || m.Enabled)) { var r = Switched(m, () => ModReloader.SwitchOff(m)); if (r != null) messages[m] = "Couldn't switch it off: " + r; }
         }
         foreach (var kv in p.Value.Key.Where(kv => kv.Value))
         {
             var m = ModLoader.Find(kv.Key);
-            if (m != null && !m.Loaded) { var r = ModReloader.SwitchOn(m); messages[m] = r != null ? "Couldn't switch it on: " + r : "Switched on by the profile."; }
+            if (m != null && !m.Loaded) { var r = Switched(m, () => ModReloader.SwitchOn(m)); messages[m] = r != null ? "Couldn't switch it on: " + r : "Switched on by the profile."; }
         }
         var want = p.Value.Value ?? new List<string>();
         Func<ModInfo, int> rank = m => { int r = want.FindIndex(id => id.Equals(m.Id, StringComparison.OrdinalIgnoreCase)); return r < 0 ? int.MaxValue : r; };

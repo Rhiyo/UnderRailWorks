@@ -685,6 +685,8 @@ static class UiHooks
         Input.Tick();
         Keybinds.Tick();
         UiWindows.Tick();
+        try { ModManager.Tick(); } catch (Exception ex) { Log.Write("mods screen: " + ex.Message); }
+        try { ModOptions.Tick(); } catch (Exception ex) { Log.Write("options: " + ex.Message); }
         AssetStore.Apply();
         try { World.FollowTick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("follow: " + ex.Message); }
         try { ControlHooks.SettleTick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("settle: " + ex.Message); }

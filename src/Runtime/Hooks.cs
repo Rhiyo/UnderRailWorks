@@ -93,6 +93,7 @@ public abstract class HookBase<T> : IModOwned, HookOwner where T : class
     internal string OwnerAt(T[] list, int i) { string[] o; return list != null && ownersOf.TryGetValue(list, out o) && i < o.Length ? o[i] : null; }
 
     public bool Any { get { return handlers.Length > 0; } }
+    internal bool HasOwner(string mod) { return owners.Any(o => string.Equals(o, mod, StringComparison.OrdinalIgnoreCase)); }
 
     public void Add(WorksMod mod, T handler) { Add(mod.Id, handler, HookOrder.Normal); }
     // order: where among the handlers this one runs (First before the rest...); the same order keeps load order.

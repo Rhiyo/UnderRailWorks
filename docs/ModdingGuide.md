@@ -122,6 +122,21 @@ public override void PostLoad()     // every mod's Load has run: the API is ther
 }
 ```
 
+### Settings
+
+A class deriving from `ModConfig` is the mod's settings: Works writes `settings.ini` with defaults and comments, and
+shows its rows in **Options -> Mods**, in a section of the mod's own that the player opens by clicking it (Cookbook:
+"Settings"). Rows can depend on others, live while the player edits, before Accept:
+
+- `[EnabledIf("Field")]` greys a row out while another setting is off (or, with a value, `[EnabledIf("Mode", "Custom")]`,
+  isn't that value; `"!x"` = anything but x); `[ShowIf(...)]` hides it instead.
+- Another mod's setting: `[ShowIf("OtherMod:Field")]`; another mod being loaded: `[EnabledIfMod("OtherMod")]`,
+  `[ShowIfMod("OtherMod")]`.
+- `OnEdit(field, edit)` runs when the player changes a setting; `edit.Set(...)` changes others to match (this mod's, or
+  another loaded mod's: `edit.Set("OtherMod", "Field", value)`), shown at once and saved with Accept.
+
+Cookbook: "Settings that depend on others".
+
 ## 4. Testing
 
 - Switching your mod off and on from the main menu's Mods screen (or `works.mod off|on <id>` in the console, main

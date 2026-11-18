@@ -59,7 +59,6 @@ namespace UnderRailWorks
         // game takes an icon name.
         public static string Add(WorksMod mod, string id, string file)
         {
-            ModScope.Leaves(mod.Id, "pictures");
             var name = "works:" + mod.Id + ":" + id;
             AssetStore.Icon(name, ModFiles.Resolve(mod, file, "icon " + id));
             return name;
@@ -221,13 +220,13 @@ namespace UnderRailWorks.Internal
         }
 
         internal static void Replace(string mod, string gameAsset, string file)
-        { ModScope.Leaves(mod, "pictures");
+        {
             replaced[Norm(gameAsset)] = new Pending { Mod = mod, File = file };
             dirty = true;
         }
 
         internal static void Replace(string mod, string gameAsset, Texture2D texture)
-        { ModScope.Leaves(mod, "pictures");
+        {
             if (texture != null) ours.Add(texture);
             replaced[Norm(gameAsset)] = new Pending { Mod = mod, Texture = texture };
             dirty = true;
@@ -278,7 +277,27 @@ namespace UnderRailWorks.Internal
         // A game icon name (e.g. "Feat.<key>") answered with a mod's picture.
         internal static void IconAlias(string name, string file) { iconFiles[name] = file; icons.Remove(name); aliases.Add(name); }
         static readonly HashSet<string> aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        internal static void ItemIcon(string code, string icon) { itemIcons[code] = icon; }
+        static readonly Dictionary<string, string> itemIconOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        internal static void ItemIcon(string code, string icon) { itemIcons[code] = icon; itemIconOwners[code] = ModScope.Current; }
+
+        // A mod switched off or reloaded: its texture replacements go back to the game's own (dropped from the game's
+        // cache, so the next request loads the original), its item icons too. Reloaded: Load and the texture pack put
+        // them back.
+        internal static void Forget(string mod)
+        {
+            foreach (var kv in replaced.Where(kv => string.Equals(kv.Value.Mod, mod, StringComparison.OrdinalIgnoreCase)).ToList())
+            {
+                replaced.Remove(kv.Key);
+                if (Ready() && cache.Contains(kv.Key))
+                {
+                    var shown = entryObject.GetValue(cache[kv.Key]);
+                    if (shown != null && (ReferenceEquals(shown, kv.Value.Texture) || ours.Contains(shown as Texture2D) || files.Values.Contains(shown as Texture2D))) cache.Remove(kv.Key);
+                }
+            }
+            foreach (var code in itemIconOwners.Where(kv => string.Equals(kv.Value, mod, StringComparison.OrdinalIgnoreCase)).Select(kv => kv.Key).ToList()) { itemIcons.Remove(code); itemIconOwners.Remove(code); }
+            dirty = true;
+        }
+        internal static bool Replaces(string mod) { return replaced.Values.Any(p => string.Equals(p.Mod, mod, StringComparison.OrdinalIgnoreCase)); }
 
         static readonly FieldInfo IconSize = typeof(c3i).GetField("a");
         static readonly ConstructorInfo PieceCtor = typeof(abu).GetConstructors().First(c => c.GetParameters().Length == 3);

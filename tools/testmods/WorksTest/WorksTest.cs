@@ -100,8 +100,10 @@ public sealed partial class WorksTest : WorksMod
     }
     bool logOutlines, hoverWatch;
     string lastHover;
+    internal static WorksTest Me;
     public override void Load()
     {
+        Me = this;
         DrawProbe();
         GameEvents.StatusApplying.Add(this, c => { Log.Info("status applying " + c.Code + " on " + (c.Character == null ? "?" : c.Character.Name)); if (c.Code == "Hidden" && SaveData.Get("noHide", false)) c.Cancel = true; });
         GameEvents.StatusApplied.Add(this, c => Log.Info("status applied " + c.Code + " (" + c.Name + ")"));
@@ -766,3 +768,23 @@ public interface ICoopRules { bool TravelTogether { get; set; } }
 public interface IWrongView { string Echo(string text, int times); }
 
 static class TestExtensions { public static T Also<T>(this T value, System.Action a) { a(); return value; } }
+
+// Settings that depend on others (Options -> Mods -> WorksTest): greyed, hidden, by another mod's presence or setting,
+// and OnEdit changing settings (this mod's and Wall Vision's) when Master is ticked.
+public enum TestMode { Simple, Custom }
+public sealed class WorksTestConfig : ModConfig
+{
+    [Header("Settings rules (test)")]
+    [Label("Master switch")] public bool Master = false;
+    [Label("Child amount"), Range(0, 100), Increment(5), EnabledIf("Master")] public int Child = 10;
+    [Label("Mode")] public TestMode Mode = TestMode.Simple;
+    [Label("Custom size"), Range(0, 50), ShowIf("Mode", "Custom")] public int CustomSize = 5;
+    [Label("Only with Game Text"), ShowIfMod("GameText")] public bool WithGameText = true;
+    [Label("Only with a missing mod"), EnabledIfMod("NoSuchMod")] public bool WithMissing = false;
+    [Label("While Wall Vision's effect is on"), ShowIf("WallVision:ShowCovered")] public bool CrossMod = false;
+    public override void OnEdit(string field, SettingsEdit edit)
+    {
+        if (WorksTest.Me != null) WorksTest.Me.Log.Info("settings edit: " + field + " = " + edit.Get(field));
+        if (field == "Master" && edit.On("Master")) { edit.Set("Child", 50); edit.Set("WallVision", "ShowCovered", true); }
+    }
+}

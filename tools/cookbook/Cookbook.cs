@@ -234,3 +234,23 @@ public sealed class Cookbook : WorksMod
     }
     #endregion
 }
+
+#region Settings that depend on others: greyed out or hidden by another setting (this mod's or another mod's) or by whether a mod is loaded, and OnEdit changing settings while the player edits (live on the Options page, saved with Accept)
+public enum Glow { Off, Soft, Custom }
+public sealed class LightsConfig : ModConfig
+{
+    [Header("Lights")]
+    [Label("Lights on")] public bool Lights = true;
+    [Label("Brightness"), Range(0, 100), EnabledIf("Lights")] public int Brightness = 60;     // greyed while Lights is off
+    [Label("Glow")] public Glow Glow = Glow.Soft;
+    [Label("Glow size"), Range(1, 20), ShowIf("Glow", "Custom")] public int GlowSize = 4;     // only shown for Custom
+    [Label("Show lights on the minimap"), ShowIfMod("Minimap")] public bool OnMinimap = true;     // only if Minimap is loaded
+    [Label("Outline lit characters"), EnabledIf("WallVision:ShowCovered")] public bool Outline;  // another mod's setting
+
+    // Switching the lights on brings the brightness up if it was at 0; another mod's settings can be set the same way.
+    public override void OnEdit(string field, SettingsEdit edit)
+    {
+        if (field == "Lights" && edit.On("Lights") && edit.Get("Brightness") == "0") edit.Set("Brightness", 60);
+    }
+}
+#endregion

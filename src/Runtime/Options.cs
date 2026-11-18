@@ -105,12 +105,9 @@ public static class UnderrailOptions
             var rows = new Rows();
             BuildTab(options, TabName, page =>
             {
-                // View 0: the list of mods (ModOptions); view 1: Works' own fixes; then one per mod with settings.
-                var views = new List<int>();
-                ModOptions.ListView(options, page, views, fixes);
-                if (!fixes) { ModOptions.ModViews(options, page, views); return views; }
-                views.Add(RowY(options));
-                ModOptions.BackRow(options, page, "Engine fixes");
+                // One view: Works' line, then a closed section per part (engine fixes, each mod with settings).
+                Action fixRows = !fixes ? (Action)null : () =>
+                {
                 bool first = true;
                 Action<string> group = title =>
                 {
@@ -155,8 +152,9 @@ public static class UnderrailOptions
                     rows.MaxFps = Add(options, "Frame rate cap", caps, CurrentFps(), caps[0]);
                 }
                 catch (Exception ex) { Failed("Frame rate", ex); }
-                ModOptions.ModViews(options, page, views);
-                return views;
+                };
+                ModOptions.ListView(options, page, fixRows);
+                return null;
             });
             Added.Remove(options);
             Added.Add(options, rows);
@@ -454,11 +452,52 @@ static class TabScroll
     {
         public List<Tuple<euz, int, int>> Items; public int Offset, Room, Content; public cs9 Bar; public cvh Page;
         public List<int> Starts; public int View;
+        public List<TabScroll.Fold> Folds = new List<TabScroll.Fold>();
+        // Where an item shows now: its y as built, less the height of the closed folds above it; null when it's inside a
+        // closed fold.
+        public int? Y(Tuple<euz, int, int> i)
+        {
+            int y = i.Item2, less = 0;
+            foreach (var f in Folds)
+            {
+                if (!f.Closed) continue;
+                if (y >= f.Start && y < f.End) return null;
+                // A closed fold inside another closed one (a hidden setting in a closed section) is already counted.
+                if (y >= f.End && !Folds.Any(g => g != f && g.Closed && g.Start <= f.Start && f.End <= g.End && (g.Start < f.Start || g.End > f.End))) less += f.End - f.Start;
+            }
+            return y - less;
+        }
         public int Start { get { return Starts[View]; } }
         public int End { get { return View + 1 < Starts.Count ? Starts[View + 1] : int.MaxValue; } }
         public bool InView(Tuple<euz, int, int> i) { return i.Item2 >= Start && i.Item2 < End; }
     }
     static readonly System.Runtime.CompilerServices.ConditionalWeakTable<cvh, State> States = new System.Runtime.CompilerServices.ConditionalWeakTable<cvh, State>();
+    // A range of rows (their y as built, Start inclusive, End exclusive) that can be closed: its rows hide and the rows
+    // below move up (a collapsed mod section, a setting hidden by another). Added while building; shown by Attach.
+    internal sealed class Fold { public int Start, End; public bool Closed; }
+    static readonly System.Runtime.CompilerServices.ConditionalWeakTable<cvh, List<Fold>> Pending = new System.Runtime.CompilerServices.ConditionalWeakTable<cvh, List<Fold>>();
+    internal static Fold AddFold(cvh page, int start, int end, bool closed)
+    {
+        var f = new Fold { Start = start, End = end, Closed = closed };
+        if (end > start) Pending.GetOrCreateValue(page).Add(f);
+        return f;
+    }
+    // After folds opened or closed: the rows where they now belong, the scroll range anew (the scroll kept if it fits).
+    internal static void Refold(cvh page)
+    {
+        State s;
+        if (!States.TryGetValue(page, out s)) return;
+        Count(s);
+        s.Offset = Math.Max(0, Math.Min(s.Offset, Math.Max(0, s.Content - s.Room)));
+        s.Bar.a(Math.Max(0, s.Content - s.Room));
+        s.Bar.e(s.Offset);
+        Show(s);
+    }
+    static void Count(State s)
+    {
+        var mine = s.Items.Where(s.InView).Select(i => new { y = s.Y(i), h = i.Item3 }).Where(x => x.y != null).ToList();
+        s.Content = mine.Count == 0 ? 0 : mine.Max(x => x.y.Value + x.h) - s.Start;
+    }
     static readonly FieldInfo Accept = typeof(t1).GetField("ac", BindingFlags.Instance | BindingFlags.NonPublic), Tabs = typeof(t1).GetField("u", BindingFlags.Instance | BindingFlags.NonPublic);
     static readonly FieldInfo BarSize = typeof(wj).GetField("bm");
     static readonly PropertyInfo Location = typeof(euz).GetProperty("Location");
@@ -480,6 +519,7 @@ static class TabScroll
             wj theme = wj.a();
             int barWidth = theme.c() ? 26 : UnderrailDropdownScroll.W((esj)BarSize.GetValue(theme));
             var s = new State { Items = items, Room = room, Page = page, Starts = starts };
+            List<Fold> folds; if (Pending.TryGetValue(page, out folds)) { s.Folds = folds; Pending.Remove(page); }
             bdl bar = theme.c() ? new bdl() : new dg8();
             bar.IsPrivateComponent = true;
             bar.b(0);
@@ -519,8 +559,7 @@ static class TabScroll
         foreach (var i in s.Items) if (Open(i)) Close.Invoke(i.Item1, null);
         s.View = view;
         s.Offset = 0;
-        var mine = s.Items.Where(s.InView).ToList();
-        s.Content = mine.Count == 0 ? 0 : mine.Max(i => i.Item2 + i.Item3) - s.Start;
+        Count(s);
         s.Bar.a(Math.Max(0, s.Content - s.Room));
         s.Bar.e(0);
         Show(s);
@@ -556,7 +595,9 @@ static class TabScroll
         foreach (var i in s.Items)
         {
             if (!s.InView(i)) continue;
-            int y = i.Item2 - s.Start - s.Offset;
+            var at = s.Y(i);
+            if (at == null) continue;
+            int y = at.Value - s.Start - s.Offset;
             if (y < 0 || y + i.Item3 > s.Room) continue;
             UnderrailDropdownScroll.Move(i.Item1, UnderrailDropdownScroll.X(Location.GetValue(i.Item1, null)), y);
             UnderrailDropdownScroll.Add(s.Page, i.Item1);

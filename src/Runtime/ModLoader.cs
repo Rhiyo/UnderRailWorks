@@ -380,6 +380,40 @@ public static class ModLoader
         return order;
     }
 
+    // The Mods screen's Refresh: mod folders added since the start (read and checked as at startup, switched on or off
+    // as mods.ini says; the caller switches them on) and ones removed (a loaded mod keeps running until a restart, with
+    // a note; others leave the list). Mods already known aren't read again (their DLLs: works.reload code).
+    internal static List<ModInfo> Rescan(out List<ModInfo> gone)
+    {
+        gone = new List<ModInfo>();
+        var added = new List<ModInfo>();
+        if (!Directory.Exists(ModsFolder)) return added;
+        HashSet<string> listed;
+        var off = Disabled(out listed);
+        var known = new HashSet<string>(All.Select(m => Path.GetFullPath(m.Folder)), StringComparer.OrdinalIgnoreCase);
+        foreach (var dir in Directory.GetDirectories(ModsFolder).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
+        {
+            if (known.Contains(Path.GetFullPath(dir))) continue;
+            var m = Read(dir);
+            m.Enabled = !off.Contains(m.Id);
+            if (m.Error == null && Find(m.Id) != null) m.Error = "the same id as the mod in " + Path.GetFileName(Find(m.Id).Folder) + " (remove one of the two folders)";
+            if (m.Error == null && !ModInfo.ValidId(m.Id)) m.Error = "its id \"" + m.Id + "\" may only use letters, digits, '.', '_' and '-'";
+            m.ReadError = m.Error;
+            if (m.StartsOff && !listed.Contains(m.Id)) { m.Enabled = false; SetEnabled(m.Id, false); }
+            All.Add(m);
+            added.Add(m);
+            Log.Write("mods: found " + m.Id + (m.Error != null ? " (" + m.Error + ")" : ""));
+        }
+        foreach (var m in All.Where(m => !Directory.Exists(m.Folder)).ToList())
+        {
+            gone.Add(m);
+            if (m.Loaded) m.Warning = "its folder is gone: it keeps running until the game restarts";
+            else All.Remove(m);
+            Log.Write("mods: " + m.Id + "'s folder is gone");
+        }
+        return added;
+    }
+
     static HashSet<string> Disabled(out HashSet<string> listed)
     {
         var off = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

@@ -201,6 +201,7 @@ namespace UnderRailWorks.Internal
                 ModLoader.LoadCode(mod, true);
                 // Its content pack again (Forget took its dialogs, texts, triggers, stores, loot, recipes with the code).
                 if (mod.Loaded) { ModScope.Current = mod.Id; try { ContentPacks.Load(mod); } catch (Exception ex) { Log.Write("content: " + mod.Id + ": " + ex.Message); } ModScope.Current = was; }
+                if (mod.Loaded) { try { AssetStore.ScanTexturePack(mod); } catch (Exception ex) { Log.Write("assets: " + mod.Id + ": " + ex.Message); } }
                 if (mod.Loaded && mod.Instance != null)
                 {
                     ModScope.Current = mod.Id;
@@ -359,6 +360,7 @@ namespace UnderRailWorks.Internal
             step("sound remaps", () => Sound.Forget(id));
             step("item edits", () => ItemHooks.Forget(id));
             step("api", () => Mods.Forget(id));
+            step("pictures", () => AssetStore.Forget(id));
             step("new game options", () => NewGameOptions.Forget(id));
             step("main menu buttons", () => MainMenu.Forget(id));
             step("party rules", () => { Party.Forget(id); Exits.Forget(id); WorldMap.Forget(id); });
