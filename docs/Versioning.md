@@ -103,6 +103,35 @@ The save records which version of each mod wrote its data (`SaveData.WrittenBy`;
 recorded it), so a mod can migrate an older layout when a save loads. Data of a mod that isn't installed is kept in
 the save untouched, with the version that wrote it.
 
+## Behaviour: what the signature check can't see
+
+A member can keep its signature and change what it does, on purpose or by accident. No framework catches that
+mechanically; in every one (SMAPI's migration pages, tModLoader's porting notes and month-long preview branch,
+Forge's changelogs) the mod's author updates the mod. Works keeps such changes rare, makes them visible early, and
+limits the damage:
+
+- **Don't change, add.** A behaviour that must change becomes a new member or an option; the old one keeps its
+  behaviour, marked `[Obsolete]` until the next major version.
+- **Tests on results, not just signatures.** smoke.sh and drawing.sh check what the API does (damage dealt, what an
+  event passes, what a save holds, every drawing handle's members). `build/api-coverage.txt` (tools/apicheck/ApiUse.cs,
+  every build) lists the stable members the test mods exercise, those only shipped mods use (they run, nothing checks
+  the result) and those nothing uses: at Nov 18 2026, 487 / 289 / 321 of 1,097. A stable member without a test can
+  change unnoticed, so **release.sh refuses a release that adds a stable member without one** (against
+  `api/UnderRailWorks.untested.txt`, written at each release): test it, or mark it `[Preview]` until it has one. The
+  backlog is worked down over time (TODO.md).
+- **Say it.** Every release's notes have a "Behaviour changes:" line for mod authors ("none." when none; release.sh
+  refuses notes without it), and the notes carry the API changes since the last release.
+- **Early.** A version with a "-" (`1.1.0-preview.1`) is published as a GitHub pre-release: authors can test against
+  it before players get it.
+- **Contained.** A mod that breaks anyway doesn't take the game down: its failing handler is reported with its name,
+  switched off after repeated failures, and the Mods screen shows which mod had errors.
+- **If it's ever unavoidable:** the mods' declared `"works"` version allows keeping the old behaviour for mods built
+  before the change (as Android's targetSdkVersion), where Works knows which mod is calling (handlers, registrations).
+  Not used so far.
+
+Update checks (telling players a newer version of a mod exists, as SMAPI does) wait until there's a settled place
+mods are published.
+
 ## Game updates
 
 Works reaches the game through readable wrappers tied to one game build (`MadeForGameVersion`). After a game update:

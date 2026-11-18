@@ -25,6 +25,9 @@ esac
 die() { echo "release: $*" >&2; exit 1; }
 
 # 1. Preconditions.
+# Mod authors must hear what Works now does differently, not just what was added (docs/Versioning.md, "Behaviour"):
+# the notes say so in a line of their own, "Behaviour changes: none." when there are none.
+grep -qiE '^[#* -]*behaviou?r changes' <<<"$DESCRIPTION" || die "the notes need a \"Behaviour changes:\" line for mod authors (\"Behaviour changes: none.\" if there are none; docs/Versioning.md)"
 [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] || die "version must look like 1.0.0 or 1.0.0-preview.1"
 # main, or a release/* branch (fixes for an older release line without what's on main since)
 BRANCH="$(git branch --show-current)"
@@ -54,6 +57,15 @@ API_RELEASE=1 ./build.sh
 tools/check-release.sh
 tools/savecheck/check-saves.sh --play
 tools/smoketest/smoke.sh
+# No new stable API member without a test (build/api-coverage.txt against the last release's list of untested ones).
+UNTESTED_FILE=api/UnderRailWorks.untested.txt
+untested() { awk '/^## Exercised/{exit} /^UnderRailWorks\./' build/api-coverage.txt | sort; }
+if [ -f "$UNTESTED_FILE" ]; then
+    NEW_UNTESTED="$(comm -13 <(sort "$UNTESTED_FILE") <(untested))"
+    [ -z "$NEW_UNTESTED" ] || die "stable API members added since the last release without a test (add a smoke check, or mark them [Preview]):
+$NEW_UNTESTED"
+fi
+API_CHANGES="$(MONO_PATH="$CECIL_DIR" mono build/ApiSurface.exe --check dist/UnderRailWorks/UnderRailWorks.dll api/UnderRailWorks.api.txt 2>&1 || true)"
 tools/smoketest/coop.sh
 tools/smoketest/coop-midfight.sh
 tools/smoketest/drawing.sh
@@ -109,6 +121,13 @@ NOTES="$WORK/notes.md"
 cat > "$NOTES" <<EOF
 $DESCRIPTION
 
+<details><summary>API changes since the last release (for mod authors)</summary>
+
+\`\`\`
+$API_CHANGES
+\`\`\`
+</details>
+
 ---
 
 **Built against UnderRail $GAME_VERSION** (Steam build $STEAM_BUILD). On another game version the patcher checks every place it changes first, and stops without changing anything if the game's code moved.
@@ -126,7 +145,8 @@ EOF
 # 7. Commit the version (if it changed), tag, push, publish.
 # This release's API becomes the baseline the next builds compare with.
 MONO_PATH="$(dirname /usr/lib/mono/gac/Mono.Cecil/0.11.1.0__0738eb9f132ed756/Mono.Cecil.dll)" mono build/ApiSurface.exe dist/UnderRailWorks/UnderRailWorks.dll api/UnderRailWorks.api.txt >/dev/null
-if [ -n "$(git status --porcelain -- "$VFILE" api/UnderRailWorks.api.txt)" ]; then git add api/UnderRailWorks.api.txt; git commit -q -m "Release v$VERSION" -- "$VFILE" api/UnderRailWorks.api.txt; fi
+untested > "$UNTESTED_FILE"     # this release's untested stable members: the next release may not add to them
+if [ -n "$(git status --porcelain -- "$VFILE" api/UnderRailWorks.api.txt "$UNTESTED_FILE")" ]; then git add api/UnderRailWorks.api.txt "$UNTESTED_FILE"; git commit -q -m "Release v$VERSION" -- "$VFILE" api/UnderRailWorks.api.txt "$UNTESTED_FILE"; fi
 committed=1
 git tag -a "v$VERSION" -m "UnderRailWorks $VERSION (UnderRail $GAME_VERSION)"
 git push -q origin "$BRANCH" "v$VERSION"

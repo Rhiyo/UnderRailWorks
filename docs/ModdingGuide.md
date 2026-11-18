@@ -1,7 +1,7 @@
 # Writing an UnderRailWorks mod
 
 This guide is the starting point for mod authors. The examples are in [Cookbook.md](Cookbook.md) (one per API area,
-compiled and run on every build), every type and member is in [API.md](API.md), and how each part works inside the
+compiled on every build), every type and member is in [API.md](API.md), and how each part works inside the
 game is in UnderRailWorks.md.
 
 ## 1. Set up

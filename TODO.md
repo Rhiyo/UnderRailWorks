@@ -62,6 +62,14 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
   copies from dist/.
 - [x] **Mods' save data** (works.json and per-mod JSON, when built): the stock game must still load saves that have them.
 
+## API behaviour tests (docs/Versioning.md "Behaviour")
+
+- [ ] Work down `build/api-coverage.txt`: 321 stable members no code of ours uses and 289 only shipped mods use (Nov 18
+  2026, of 1,097). A smoke check per member (or [Preview] until it has one). release.sh already refuses new untested
+  members.
+- [ ] Later, once there's a settled place mods are published: update checks (mod.json names where; Works tells players a
+  newer version exists, as SMAPI). An option, since it contacts the internet.
+
 ## Housekeeping
 
 - [x] **Commit the Works code**: moved from the UnderRailFixes `works-poc` branch into this repo (github.com/Rhiyo/UnderRailWorks).
