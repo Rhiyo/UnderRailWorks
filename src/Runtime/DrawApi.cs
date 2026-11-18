@@ -22,14 +22,14 @@ public struct WorldView : IEquatable<WorldView>
     public object Key { get { return Game; } }
     public float Zoom { get { return WorldViews.Zoom(Game); } }
     // The view's clipping rasterizer state.
-    public RasterizerState Clip { get { return WorldViews.Clip(Game); } }
+    [Preview("the world pass, built for Wall Vision")] public RasterizerState Clip { get { return WorldViews.Clip(Game); } }
     // Starts the world batch the way the world pass does (lighting shader included).
-    public void BeginWorldBatch(DrawContext context, SpriteSortMode sort, BlendState blend, SamplerState sampler, DepthStencilState depth, RasterizerState rasterizer)
+    [Preview("the world pass, built for Wall Vision")] public void BeginWorldBatch(DrawContext context, SpriteSortMode sort, BlendState blend, SamplerState sampler, DepthStencilState depth, RasterizerState rasterizer)
     {
         WorldViews.BeginWorldBatch(Game, context.Game, sort, blend, sampler, depth, rasterizer);
     }
     // Layers with their own shader, drawn after the world (key: the shader's name, e.g. "Outline").
-    public IDictionary<string, IList<Layer>> ShaderLayers
+    [Preview("the world pass, built for Wall Vision")] public IDictionary<string, IList<Layer>> ShaderLayers
     {
         get
         {
@@ -47,6 +47,7 @@ public struct WorldView : IEquatable<WorldView>
 }
 
 // The game's draw context (cp9) for the frame.
+[Preview("the world pass, built for Wall Vision")]
 public struct DrawContext : IEquatable<DrawContext>
 {
     internal readonly cp9 Game;
@@ -67,6 +68,7 @@ public struct DrawContext : IEquatable<DrawContext>
 }
 
 // One of the game's sprite batches (ob).
+[Preview("the world pass, built for Wall Vision")]
 public struct GameBatch
 {
     internal readonly ob Game;
@@ -80,6 +82,7 @@ public struct GameBatch
 }
 
 // A layer shader of the game (cmk), e.g. "Outline".
+[Preview("the world pass, built for Wall Vision")]
 public struct LayerShader
 {
     internal readonly cmk Game;
@@ -103,7 +106,7 @@ public struct Layer : IEquatable<Layer>
     public Rectangle Source { get { return Layers.Source(Game); } }
     // Its tint (null: none).
     public Color? Tint { get { return Layers.Tint(Game); } }
-    public void SetTint(Color? tint) { Layers.SetTint(Game, tint); }
+    [Preview("the world pass, built for Wall Vision")] public void SetTint(Color? tint) { Layers.SetTint(Game, tint); }
     public float Rotation { get { return Layers.Rotation(Game); } }
     public SpriteEffects Flip { get { return Layers.Flip(Game); } }
     // Its id: "SHD" a shadow, "marker", "shield"..., or null for a body or a piece of scenery.
@@ -119,11 +122,11 @@ public struct Layer : IEquatable<Layer>
     // Floor or ground: flat on the floor.
     public bool IsFlat { get { return Layers.IsFlat(Game); } }
     // Its sprite with another colour (e.g. white for a silhouette).
-    public void Draw(DrawContext context, Color colour) { Layers.Draw(Game, context.Game, colour); }
+    [Preview("the world pass, built for Wall Vision")] public void Draw(DrawContext context, Color colour) { Layers.Draw(Game, context.Game, colour); }
     // Drawn the game's way (a2f.f3), e.g. from a DrawLayer handler that draws it somewhere else.
-    public void DrawAsGame(DrawContext context, LayerView view) { Game.f3(context.Game, view.Game); }
+    [Preview("the world pass, built for Wall Vision")] public void DrawAsGame(DrawContext context, LayerView view) { Game.f3(context.Game, view.Game); }
     // The same in the shader pass, where the world view itself is the view (a7m is a bkx).
-    public void DrawAsGame(DrawContext context, WorldView view) { Game.f3(context.Game, view.Game); }
+    [Preview("the world pass, built for Wall Vision")] public void DrawAsGame(DrawContext context, WorldView view) { Game.f3(context.Game, view.Game); }
     // A plain sprite (e4m), not a character's composite (by8, which rebuilds its cached picture when drawn).
     public bool IsPlainSprite { get { return Game.d is e4m; } }
     // The sprite source's kind, for logs.
@@ -144,7 +147,7 @@ public struct LayerSet : IEquatable<LayerSet>
     public object Key { get { return Game; } }
     public MapObject Entity { get { return new MapObject(Game == null ? null : Game.b); } }
     // Tab would outline this entity this frame.
-    public bool HasOutline { get { return Outlines.Has(Game); } }
+    [Preview("the world pass, built for Wall Vision")] public bool HasOutline { get { return Outlines.Has(Game); } }
     public bool Equals(LayerSet o) { return ReferenceEquals(Game, o.Game); }
     public override bool Equals(object o) { return o is LayerSet && Equals((LayerSet)o); }
     public override int GetHashCode() { return RuntimeHelpers.GetHashCode(Game); }
@@ -171,8 +174,16 @@ public struct MapObject : IEquatable<MapObject>
 }
 
 // A map tile (ak1), as the world pass hands it to the tile-extras step.
-public struct MapTile { internal readonly ak1 Game; internal MapTile(ak1 tile) { Game = tile; } }
+public struct MapTile
+{
+    internal readonly ak1 Game;
+    internal MapTile(ak1 tile) { Game = tile; }
+    public bool IsNull { get { return Game == null; } }
+    // Its tile coordinates (as TileMarks and World.HoveredTile).
+    public Point Location { get { return Game == null ? Point.Zero : Game.Location; } }
+}
 
 // The view a layer is drawn for (bkx), passed through to DrawAsGame.
+[Preview("the world pass, built for Wall Vision")]
 public struct LayerView { internal readonly bkx Game; internal LayerView(bkx view) { Game = view; } }
 }

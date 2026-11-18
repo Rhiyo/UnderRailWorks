@@ -15,47 +15,88 @@ namespace UnderRailWorks
 public static class WorldDraw
 {
     public delegate bool OffsetHandler(out Vector2 from);
+    // A layer's colour this frame: change colour to tint or fade it (it starts as the game's tint, usually white). Colours
+    // are premultiplied: colour * 0.5f fades to half, colour.R/G/B scaled alone tints. Every handler runs, in load order,
+    // each on what the one before left, so tints from several mods combine.
+    public delegate void ColourHandler(Layer layer, ref Color colour);
 
+    // Two levels (docs/ModdingGuide.md, "Drawing"):
+    // - Composing (stable): LayerColour, TileMarks, World.ToScreen/TileBounds, Character.ScreenBounds, Ui.Overlay. Every
+    //   mod's changes show together, and none of them can break another mod's drawing.
+    // - The world pass itself ([Preview]): layer by layer, render targets and batches. Built for Wall Vision; a mod that
+    //   uses it shares the frame with Wall Vision's keyhole, so keep to the rules on each member.
+    //
     // A drawing handler that throws may have left a batch open or another render target set: that mod's drawing
-    // handlers (all of them, and its outline requests) are removed for the rest of the session at its first error, so
-    // the game's own drawing goes on as stock. The game itself keeps running; the Mods tab shows the error.
+    // handlers (all of them, its outline requests and tile marks) are removed for the rest of the session at its first
+    // error, so the game's own drawing goes on as stock. The game itself keeps running; the Mods tab shows the error.
     static WorldDraw()
     {
-        foreach (var h in new HookOwner[] { LayerStarting, DrawLayer, DrawTileExtras, WorldDone, ShaderPassStarting, ShaderPassDone, InterfaceOffset })
-            h.SetOnFailure(StopDrawing);
+        foreach (var h in All) h.SetOnFailure(StopDrawing);
     }
+    static HookOwner[] All { get { return new HookOwner[] { LayerColour, LayerStarting, RouteLayer, DrawLayer, DrawTileExtras, WorldDone, ShaderPassStarting, ShaderPassDone, InterfaceOffset }; } }
     static readonly HashSet<string> stopped = new HashSet<string>();
     internal static void StopDrawing(string mod)
     {
         if (mod == null) return;
         lock (stopped) if (!stopped.Add(mod)) return;
-        foreach (var h in new IModOwned[] { LayerStarting, DrawLayer, DrawTileExtras, WorldDone, ShaderPassStarting, ShaderPassDone, InterfaceOffset }) h.RemoveOwner(mod);
+        foreach (var h in All) ((IModOwned)h).RemoveOwner(mod);
         Outlines.Forget(mod);
+        TileMarks.Forget(mod);
         Log.Always("mods: " + mod + ": an error while drawing; its drawing is off until the game restarts");
         lock (stopped) stopped.Remove(mod);     // a reloaded copy may add handlers again
     }
 
+    // Each world layer's colour (not the shader pass's outlines): see ColourHandler. Composes across mods.
+    public static readonly Hook<ColourHandler> LayerColour = new Hook<ColourHandler>("LayerColour");
+
     // Start of a7m.a(cp9, a2f, bool shaderPass, bkx): each layer the world pass draws, in drawing order (back to front).
+    // Watch only: don't draw or change render targets here.
+    [Preview("the world pass, built for Wall Vision")]
     public static readonly Hook<Action<WorldView, DrawContext, Layer, bool>> LayerStarting = new Hook<Action<WorldView, DrawContext, Layer, bool>>("LayerStarting");
-    // The layer is drawn (a2f.f3): return true to draw it yourself instead.
+    // Where a layer goes: return true to take it and draw it somewhere else (another render target, several, or not at
+    // all), drawing it with LayerStep wherever it should appear, so other mods' DrawLayer looks still show. One mod
+    // takes a layer (asked from the lowest mod in the load order up): Wall Vision's keyhole takes every layer after its
+    // split, so two mods that both route layers don't combine; `works.drawstats` names the mods that took layers.
+    // Leave the screen and the world batch as they were when you return.
+    [Preview("the world pass, built for Wall Vision")]
+    public static readonly ReplaceHook<Func<Layer, DrawContext, LayerView, bool>> RouteLayer = new ReplaceHook<Func<Layer, DrawContext, LayerView, bool>>("RouteLayer");
+    // How a layer looks: return true to draw it yourself instead of the game. Draw with context.Batch (the world batch,
+    // begun) into whatever is set: Wall Vision may be drawing this layer into its own picture. Don't end or begin batches
+    // or change render targets here; a handler that does is stopped like one that throws. One mod draws a layer (asked
+    // from the lowest mod in the load order up); for tints and fades use LayerColour, which composes.
+    [Preview("the world pass, built for Wall Vision")]
     public static readonly ReplaceHook<Func<Layer, DrawContext, LayerView, bool>> DrawLayer = new ReplaceHook<Func<Layer, DrawContext, LayerView, bool>>("DrawLayer");
-    // A tile's extras after its floor (a7m.b(cp9, ak1): tile grid, transition tiles...): return true to draw them yourself
-    // (TileExtrasStep draws them the game's way).
+    // Where a tile's extras go (a7m.b(cp9, ak1): the tile grid, transition tiles, Works' tile marks): return true to
+    // take them, drawing them with TileExtrasStep wherever they should appear. The same rules as RouteLayer.
+    [Preview("the world pass, built for Wall Vision")]
     public static readonly ReplaceHook<Func<WorldView, DrawContext, MapTile, bool>> DrawTileExtras = new ReplaceHook<Func<WorldView, DrawContext, MapTile, bool>>("DrawTileExtras");
     // The world pass is done, right before the screen is set as the target again.
+    [Preview("the world pass, built for Wall Vision")]
     public static readonly Hook<Action<WorldView, DrawContext>> WorldDone = new Hook<Action<WorldView, DrawContext>>("WorldDone");
     // Start / end of the pass for layers with their own shader (a7m.b(cp9): outlines). Outline layers are in
     // view.ShaderLayers["Outline"]; outlines built only for mods are already taken out (Outlines.IsHidden).
+    [Preview("the world pass, built for Wall Vision")]
     public static readonly Hook<Action<WorldView>> ShaderPassStarting = new Hook<Action<WorldView>>("ShaderPassStarting");
+    [Preview("the world pass, built for Wall Vision")]
     public static readonly Hook<Action<WorldView, DrawContext>> ShaderPassDone = new Hook<Action<WorldView, DrawContext>>("ShaderPassDone");
     // The interface is being drawn into an off-screen picture placed at from (screen pixels): the handler that
     // returns true sets it (asked from the lowest mod in the load order up), and UiScaleFix maps drawing by it.
+    [Preview("the world pass, built for Wall Vision")]
     public static readonly ReplaceHook<OffsetHandler> InterfaceOffset = new ReplaceHook<OffsetHandler>("InterfaceOffset");
 
     // The game's own tile-extras step.
     internal static readonly Action<a7m, cp9, ak1> GameTileExtras = (Action<a7m, cp9, ak1>)Delegate.CreateDelegate(typeof(Action<a7m, cp9, ak1>),
         typeof(a7m).GetMethod("b", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(cp9), typeof(ak1) }, null));
-    public static void TileExtrasStep(WorldView view, DrawContext context, MapTile tile) { GameTileExtras(view.Game, context.Game, tile.Game); }
+    // A tile's extras as they'd be drawn with no RouteLayer-style taker: the game's, then mods' tile marks.
+    [Preview("the world pass, built for Wall Vision")]
+    public static void TileExtrasStep(WorldView view, DrawContext context, MapTile tile)
+    {
+        GameTileExtras(view.Game, context.Game, tile.Game);
+        TileMarks.DrawOn(view.Game, context.Game, tile.Game);
+    }
+    // A layer drawn as it would be with no router: by the mod whose DrawLayer takes it, else the game's way.
+    [Preview("the world pass, built for Wall Vision")]
+    public static void LayerStep(Layer layer, DrawContext context, LayerView view) { WorldDrawHooks.Look(layer.Game, context.Game, view.Game); }
 
     internal static bool Offset(out Vector2 from)
     {
@@ -64,12 +105,25 @@ public static class WorldDraw
         from = found;
         return set;
     }
+
+    // works.drawstats: what the composing parts and the routers did since the last call.
+    internal static long Coloured, Routed, Looked, LookedRouted, MarksDrawn, MarksRouted;
+    internal static readonly Dictionary<string, long> RoutedBy = new Dictionary<string, long>(), LookedBy = new Dictionary<string, long>();
+    internal static string Stats()
+    {
+        Func<Dictionary<string, long>, string> who = d => d.Count == 0 ? "" : " (" + string.Join(", ", System.Linq.Enumerable.Select(d, kv => kv.Key + " " + kv.Value)) + ")";
+        var s = "drawstats: layers coloured " + Coloured + ", routed " + Routed + who(RoutedBy) + ", drawn by a mod's look " + Looked + who(LookedBy)
+            + " (inside a route " + LookedRouted + "), tile marks drawn " + MarksDrawn + " (inside a route " + MarksRouted + ")";
+        Coloured = Routed = Looked = LookedRouted = MarksDrawn = MarksRouted = 0; RoutedBy.Clear(); LookedBy.Clear();
+        return s;
+    }
 }
 
 // Creature outlines (eg0 builds them while Tab or the reverse-highlight key is held, or a creature is hovered, or in
 // combat with Always). A mod can ask for outlines for every creature Tab would outline, all the time and during zone
 // transitions too (Request); those extra outlines are hidden: Works takes them out of the game's shader pass, and
 // mods draw them as they like (e.g. only where the creature is covered). The game's own outlines stay as they are.
+[Preview("built for Wall Vision")]
 public static class Outlines
 {
     // Each mod's "I want outlines" / "pick through" questions; a mod's are forgotten when it is reloaded. One that throws

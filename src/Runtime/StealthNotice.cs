@@ -46,5 +46,28 @@ namespace UnderRailWorks
             }
             catch (Exception ex) { UnderRailWorks.Internal.Log.Write("stealth: notice: " + ex.Message); return null; }
         }
+
+        // Whether the observer would gain on the player if the player stood on that tile now, in the light the player
+        // stands in now (the game's detection rule with that tile's distance and angle; walls between aren't checked).
+        // For drawing where an enemy would notice: one rule check per tile, no search.
+        public static bool NoticesAt(Character observer, Point tile)
+        {
+            try
+            {
+                var player = World.Player;
+                if (player == null || observer == null || observer.IsPlayer) return false;
+                var obs = observer.Entity as c5x; var me = player.Entity as c5x;
+                var o = observer.GameData; var p = player.GameData;
+                if (obs == null || me == null || o == null || p == null) return false;
+                int detection = o.Detection, stealth = p.Skills.Get<a2n>().g();
+                double sight = o.SightRange;
+                double distance = bnx.a(d6e.a(obs.aj()), tile);
+                if (distance > sight) return false;
+                if (bui.a(detection, stealth)) return true;
+                double angle = bnx.a(d6e.b(obs.Location), obs.VisualDirection, new Vector2(tile.X, tile.Y));
+                return bui.a(p, detection, stealth, distance, sight, angle, me.l(), o.Darkvision) > 0;
+            }
+            catch (Exception ex) { UnderRailWorks.Internal.Log.Write("stealth: notices at: " + ex.Message); return false; }
+        }
     }
 }

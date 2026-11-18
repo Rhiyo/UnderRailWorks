@@ -110,6 +110,7 @@ namespace UnderRailWorks
                 var r = a[0] == "on" ? ModReloader.SwitchOn(m, also) : ModReloader.SwitchOff(m, also);
                 return r != null ? "[error]" + m.Id + ": " + r : m.Id + " switched " + a[0] + (also.Count > 0 ? ", with " + string.Join(", ", also.Select(x => x.Id).ToArray()) : "");
             });
+            Add("UnderRailWorks", "works.drawstats", "works.drawstats: what mods' drawing did since the last call (layers coloured, routed and drawn by mods, tile marks)", a => WorldDraw.Stats());
             Add("UnderRailWorks", "works.health", "works.health: versions, parts that didn't start, patch errors, mods with problems (for bug reports)", a =>
             {
                 var lines = new List<string>();

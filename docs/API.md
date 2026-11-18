@@ -466,8 +466,6 @@ A door in the player's area. IsOpen set: opens or closes it at once (passability
 
 ## DrawContext  _(struct, DrawApi.cs)_
 
-The game's draw context (cp9) for the frame.
-
 - `bool IsNull`
 - `GraphicsDevice Device`
 - `void EndBatch()` — Ends whichever batch is active.
@@ -534,8 +532,6 @@ Zone exits (the tiles World.ExitTiles lists) switched off and on. An exit that's
 - `static bool Give(Character who, string key)` — Gives a feat (a mod's or the game's, by key) to a character, as the game does (no feat point is spent).
 
 ## GameBatch  _(struct, DrawApi.cs)_
-
-One of the game's sprite batches (ob).
 
 - `bool IsNull`
 - `void End()`
@@ -876,7 +872,7 @@ One sprite layer of the world pass (a2f): a creature's body, a wall piece, a flo
 - `Rectangle Bounds` — Where it is drawn (layout units; UiScaleFix.ToPixels gives screen pixels), its part of the texture.
 - `Rectangle Source`
 - `Color? Tint` — Its tint (null: none).
-- `void SetTint(Color? tint)`
+- `void SetTint(Color? tint)` **(preview)**
 - `float Rotation`
 - `SpriteEffects Flip`
 - `string Id` — Its id: "SHD" a shadow, "marker", "shield"..., or null for a body or a piece of scenery.
@@ -886,9 +882,9 @@ One sprite layer of the world pass (a2f): a creature's body, a wall piece, a flo
 - `string ShaderName` — Drawn with its own shader after the world (e.g. "Outline"; null for ordinary layers), and that shader's values.
 - `object ShaderParameter(string name)`
 - `bool IsFlat` — Floor or ground: flat on the floor.
-- `void Draw(DrawContext context, Color colour)` — Its sprite with another colour (e.g. white for a silhouette).
-- `void DrawAsGame(DrawContext context, LayerView view)` — Drawn the game's way (a2f.f3), e.g. from a DrawLayer handler that draws it somewhere else.
-- `void DrawAsGame(DrawContext context, WorldView view)` — The same in the shader pass, where the world view itself is the view (a7m is a bkx).
+- `void Draw(DrawContext context, Color colour)` **(preview)** — Its sprite with another colour (e.g. white for a silhouette).
+- `void DrawAsGame(DrawContext context, LayerView view)` **(preview)** — Drawn the game's way (a2f.f3), e.g. from a DrawLayer handler that draws it somewhere else.
+- `void DrawAsGame(DrawContext context, WorldView view)` **(preview)** — The same in the shader pass, where the world view itself is the view (a7m is a bkx).
 - `bool IsPlainSprite` — A plain sprite (e4m), not a character's composite (by8, which rebuilds its cached picture when drawn).
 - `string SpriteKind` — The sprite source's kind, for logs.
 - `bool Equals(Layer o)`
@@ -904,7 +900,7 @@ An entity's layers for one frame (bym: new every frame).
 - `bool IsNull`
 - `object Key`
 - `MapObject Entity`
-- `bool HasOutline` — Tab would outline this entity this frame.
+- `bool HasOutline` **(preview)** — Tab would outline this entity this frame.
 - `bool Equals(LayerSet o)`
 - `override bool Equals(object o)`
 - `override int GetHashCode()`
@@ -913,16 +909,12 @@ An entity's layers for one frame (bym: new every frame).
 
 ## LayerShader  _(struct, DrawApi.cs)_
 
-A layer shader of the game (cmk), e.g. "Outline".
-
 - `bool IsNull`
 - `static LayerShader Find(string name)`
 - `Effect Effect(DrawContext context, WorldView view)` — Its effect and its parameters for one layer, as the shader pass uses them.
 - `void SetParameters(Effect effect, Layer layer, WorldView view)`
 
 ## LayerView  _(struct, DrawApi.cs)_
-
-The view a layer is drawn for (bkx), passed through to DrawAsGame.
 
 
 ## LevelPoints  _(class, Progression.cs)_
@@ -1018,6 +1010,8 @@ Something on the map (b0b): a wall piece, a prop, a creature, a floor tile.
 
 A map tile (ak1), as the world pass hands it to the tile-extras step.
 
+- `bool IsNull`
+- `Point Location` — Its tile coordinates (as TileMarks and World.HoveredTile).
 
 ## Markers  _(class, Markers.cs)_
 
@@ -1265,8 +1259,7 @@ Something a line or option does when reached.
 
 ## Outlines  _(class, WorldDraw.cs)_
 
-Creature outlines (eg0 builds them while Tab or the reverse-highlight key is held, or a creature is hovered, or in combat with Always). A mod can ask for outlines for every creature Tab would outline, all the time and during zone transitions too (Request); those extra outlines are hidden: Works takes them out of the game's shader pass, and mods draw them as they like (e.g. only where the creature is covered). The game's own outlines stay as they are.
-
+- `void RemoveOwner(string mod)`
 - `static bool GameOff` — The game's Character Outlines option is "Never" (no outlines at all, as with Tab).
 - `static void Request(WorksMod mod, Func<bool> wanted)` — wanted: checked each frame (e.g. "my effect is on").
 - `static void PickThrough(WorksMod mod, Func<bool> wanted)` — Hidden outlines still pick their creature, as Tab's outlines do: the game checks outline layers before the world's and keeps their creature even when a wall comes next (a7m's hit test), so a character behind scenery can be hovered and clicked without Tab. Ask with Request too (no outline, nothing to pick). wanted: checked each frame.
@@ -1577,6 +1570,7 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 - `static readonly Hook<Action<Detection>> ModifyDetection = new Hook<Action<Detection>>("ModifyDetection")`
 - `static readonly Hook<Action<InstantDetection>> ModifyInstant = new Hook<Action<InstantDetection>>("ModifyInstant")`
 - `static Notice Notice(Character observer)` — The observer's view of the player as they stand now (null: no player, or not characters).
+- `static bool NoticesAt(Character observer, Point tile)` — Whether the observer would gain on the player if the player stood on that tile now, in the light the player stands in now (the game's detection rule with that tile's distance and angle; walls between aren't checked). For drawing where an enemy would notice: one rule check per tile, no search.
 
 ## Stores  _(class, LootStores.cs)_
 
@@ -1623,6 +1617,25 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 
 What a tile holds, as a map would show it.
 
+
+## TileMarks  _(class, TileMarks.cs)_
+
+A mod's set of marked tiles in the area on screen (tile coordinates as World.HoveredTile; a character's tile is its Position rounded down). Keep one per kind of mark; it stays until changed or cleared (a zone change doesn't clear it), and goes with its mod.
+
+- `TileMarks(WorksMod mod)`
+- `void Set(Point tile, Color colour)` — A colour per tile; its alpha is the mark's strength (Color * 0.5f: half). Set replaces that tile's mark.
+- `void Set(IEnumerable<Point> tiles, Color colour)`
+- `void Replace(IEnumerable<Point> tiles, Color colour)` — All marks replaced by these at once.
+- `void Remove(Point tile)`
+- `void Clear()`
+- `int Count`
+- `bool Has(Point tile)`
+- `bool Shown` — Hidden marks are kept, not drawn.
+- `TileMarkStyle Style` — Fill: a soft fill with a bright edge; Outline: the edge only.
+
+## TileMarkStyle  _(enum, TileMarks.cs)_
+
+Values: `Fill = 0, Outline = 1`
 
 ## Tooltip  _(class, ItemDefinitions.cs)_
 
@@ -1952,6 +1965,8 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static IList<Point> ExitTiles` **(preview)** — The tiles of the player's area with a zone exit (what the player clicks to leave; Character.TakeExitAt).
 - `static IList<Door> Doors` **(preview)** — The doors in the player's area.
 - `static Character ByEntityId(string id)` **(preview)** — The character with this EntityId in the player's area, or null.
+- `static Vector2? ToScreen(Vector3 position)` — Where a map position is on screen, in interface units (as Ui elements and Character.ScreenBounds): a whole-number position is the middle of that tile (a character's Position: the middle of the tile it stands on), Z lifts it. Valid for the frame the world was last drawn in; null without a world on screen.
+- `static Rectangle? TileBounds(Point tile)` — The rectangle a tile's floor diamond fills on screen (interface units); null without a world on screen.
 - `static bool OpenTrade(Character merchant)` **(preview)** — The game's barter screen between the player and merchant (as a conversation's "let's trade"). False: no player, not a merchant.
 - `static bool IsTrading` **(preview)** — The barter screen is open.
 - `static Character Player` — The player's character, as the game finds it (cnk.aqu(): the player's data au2, its entity).
@@ -1962,14 +1977,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 
 ## WorldDraw  _(class, WorldDraw.cs)_
 
-- `static readonly Hook<Action<WorldView, DrawContext, Layer, bool>> LayerStarting = new Hook<Action<WorldView, DrawContext, Layer, bool>>("LayerStarting")` — Start of a7m.a(cp9, a2f, bool shaderPass, bkx): each layer the world pass draws, in drawing order (back to front).
-- `static readonly ReplaceHook<Func<Layer, DrawContext, LayerView, bool>> DrawLayer = new ReplaceHook<Func<Layer, DrawContext, LayerView, bool>>("DrawLayer")` — The layer is drawn (a2f.f3): return true to draw it yourself instead.
-- `static readonly ReplaceHook<Func<WorldView, DrawContext, MapTile, bool>> DrawTileExtras = new ReplaceHook<Func<WorldView, DrawContext, MapTile, bool>>("DrawTileExtras")` — A tile's extras after its floor (a7m.b(cp9, ak1): tile grid, transition tiles...): return true to draw them yourself (TileExtrasStep draws them the game's way).
-- `static readonly Hook<Action<WorldView, DrawContext>> WorldDone = new Hook<Action<WorldView, DrawContext>>("WorldDone")` — The world pass is done, right before the screen is set as the target again.
-- `static readonly Hook<Action<WorldView>> ShaderPassStarting = new Hook<Action<WorldView>>("ShaderPassStarting")` — Start / end of the pass for layers with their own shader (a7m.b(cp9): outlines). Outline layers are in view.ShaderLayers["Outline"]; outlines built only for mods are already taken out (Outlines.IsHidden).
-- `static readonly Hook<Action<WorldView, DrawContext>> ShaderPassDone = new Hook<Action<WorldView, DrawContext>>("ShaderPassDone")`
-- `static readonly ReplaceHook<OffsetHandler> InterfaceOffset = new ReplaceHook<OffsetHandler>("InterfaceOffset")` — The interface is being drawn into an off-screen picture placed at from (screen pixels): the handler that returns true sets it (asked from the lowest mod in the load order up), and UiScaleFix maps drawing by it.
-- `static void TileExtrasStep(WorldView view, DrawContext context, MapTile tile)`
+- `static readonly Hook<ColourHandler> LayerColour = new Hook<ColourHandler>("LayerColour")` — Each world layer's colour (not the shader pass's outlines): see ColourHandler. Composes across mods.
 
 ## WorldMap  _(class, WorldMap.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
 
@@ -1983,9 +1991,9 @@ The world view (a7m): the map's drawing for one frame.
 - `bool IsNull`
 - `object Key`
 - `float Zoom`
-- `RasterizerState Clip` — The view's clipping rasterizer state.
-- `void BeginWorldBatch(DrawContext context, SpriteSortMode sort, BlendState blend, SamplerState sampler, DepthStencilState depth, RasterizerState rasterizer)` — Starts the world batch the way the world pass does (lighting shader included).
-- `IDictionary<string, IList<Layer>> ShaderLayers` — Layers with their own shader, drawn after the world (key: the shader's name, e.g. "Outline").
+- `RasterizerState Clip` **(preview)** — The view's clipping rasterizer state.
+- `void BeginWorldBatch(DrawContext context, SpriteSortMode sort, BlendState blend, SamplerState sampler, DepthStencilState depth, RasterizerState rasterizer)` **(preview)** — Starts the world batch the way the world pass does (lighting shader included).
+- `IDictionary<string, IList<Layer>> ShaderLayers` **(preview)** — Layers with their own shader, drawn after the world (key: the shader's name, e.g. "Outline").
 - `bool Equals(WorldView o)`
 - `override bool Equals(object o)`
 - `override int GetHashCode()`

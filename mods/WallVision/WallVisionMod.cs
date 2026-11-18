@@ -39,7 +39,7 @@ public sealed class WallVisionMod : WorksMod
         // Characters behind scenery can be hovered and clicked as if Tab were held.
         Outlines.PickThrough(this, () => CoveredSettings.Config.SelectBehindScenery);
         WorldDraw.LayerStarting.Add(this, ShowCovered.Drawn);
-        WorldDraw.DrawLayer.Add(this, ShowCovered.DrawLayer);
+        WorldDraw.RouteLayer.Add(this, ShowCovered.DrawLayer);
         WorldDraw.DrawTileExtras.Add(this, ShowCovered.TileExtras);
         WorldDraw.WorldDone.Add(this, ShowCovered.WorldDone);
         WorldDraw.ShaderPassStarting.Add(this, ShowCovered.BeforePass);

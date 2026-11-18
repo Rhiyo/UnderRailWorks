@@ -3,6 +3,11 @@
 //     handle it gets is read; every 7th plain floor layer and every 5th tile's extras are drawn by the probe the game's
 //     way (DrawLayer / DrawTileExtras taken over). Then one line: "drawprobe: ..." with counts and errors.
 //   wt.drawthrow: the next DrawLayer handler call throws: Works must stop WorksTest's drawing and the game go on.
+//   wt.drawcompose [frames]: the composing drawing parts alongside Wall Vision's keyhole: characters tinted
+//     (LayerColour), tiles around the player marked (TileMarks, both styles), every 3rd standing plain sprite drawn by
+//     WorksTest's look (DrawLayer, into whatever is set), World.ToScreen/TileBounds checked against the player's
+//     ScreenBounds. Then "drawcompose: ...". works.drawstats shows whether Wall Vision routed those looks and marks.
+//   wt.drawbadlook: a DrawLayer look that switches the render target: Works must stop it (and WorksTest's drawing).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,8 +25,79 @@ public sealed partial class WorksTest
 
     void ProbeError(string where, Exception ex) { probeErrors++; if (probeFirstError == null) probeFirstError = where + ": " + ex.GetType().Name + ": " + ex.Message; }
 
+    int composeLeft, composeTinted, composeLooks, composeErrors; string composeError; bool badLook;
+    TileMarks composeFill, composeEdge; RenderTarget2D badTarget;
+
     void DrawProbe()
     {
+        composeFill = new TileMarks(this); composeEdge = new TileMarks(this) { Style = TileMarkStyle.Outline };
+        Commands.Add(this, "wt.drawcompose", "wt.drawcompose [frames]: tints, tile marks and a layer look alongside Wall Vision, then log a summary", a =>
+        {
+            composeLeft = a.Length > 0 ? int.Parse(a[0]) : 120;
+            composeTinted = composeLooks = composeErrors = 0; composeError = null;
+            var at = World.Player.Position;
+            int px = (int)Math.Floor(at.X), py = (int)Math.Floor(at.Y);
+            var ring = new List<Point>(); var edge = new List<Point>();
+            for (int y = py - 4; y <= py + 4; y++) for (int x = px - 4; x <= px + 4; x++) { int d = Math.Abs(x - px) + Math.Abs(y - py); if (d >= 2 && d <= 4) ring.Add(new Point(x, y)); else if (d == 5) edge.Add(new Point(x, y)); }
+            for (int x = px - 5; x <= px + 5; x++) edge.Add(new Point(x, py + 5));
+            composeFill.Replace(ring, new Color(40, 220, 255) * 0.7f);
+            composeEdge.Replace(edge, Color.Yellow);
+            if (composeFill.Count != ring.Count || !composeFill.Has(ring[0])) composeErrors++;
+            Commands.CloseConsole();
+            return "composing " + composeLeft + " frames";
+        });
+        // Added when run (after wt.drawthrow has stopped WorksTest's other drawing handlers).
+        Commands.Add(this, "wt.drawbadlook", "wt.drawbadlook: a DrawLayer look that switches the render target (Works must stop it)", a =>
+        {
+            badLook = true;
+            WorldDraw.DrawLayer.Add(this, (layer, context, view) =>
+            {
+                if (!badLook || !layer.Drawable) return false;
+                badLook = false;
+                Log.Info("drawbadlook: switching the render target now");
+                if (badTarget == null) badTarget = new RenderTarget2D(context.Device, 16, 16);
+                context.Device.SetRenderTarget(badTarget);
+                layer.Draw(context, Color.White);
+                return true;
+            });
+            Commands.CloseConsole();
+            return "bad look on";
+        });
+        WorldDraw.LayerColour.Add(this, (Layer layer, ref Color colour) =>
+        {
+            if (composeLeft <= 0) return;
+            var c = layer.Entity.Character;
+            if (c == null || layer.Id == "SHD" || layer.Id == "marker") return;
+            colour = new Color(colour.R, (byte)(colour.G * 0.55f), (byte)(colour.B * 0.55f), colour.A);
+            composeTinted++;
+        });
+        int standingSeen = 0;
+        WorldDraw.DrawLayer.Add(this, (layer, context, view) =>
+        {
+            if (composeLeft <= 0 || layer.IsFlat || !layer.IsPlainSprite || layer.ShaderName != null || (++standingSeen % 3) != 0) return false;
+            layer.Draw(context, layer.Tint ?? Color.White);     // the sprite as the game would, by the mod: into whatever is set
+            composeLooks++;
+            return true;
+        });
+        WorldDraw.WorldDone.Add(this, (view, context) =>
+        {
+            if (composeLeft <= 0) return;
+            try
+            {
+                var p = World.Player; var b = p == null ? null : p.ScreenBounds; var feet = p == null ? null : World.ToScreen(p.Position);
+                var at = p.Position; var tile = World.TileBounds(new Point((int)Math.Floor(at.X), (int)Math.Floor(at.Y)));
+                if (b != null && feet != null && tile != null)
+                {
+                    var r = b.Value; r.Inflate(r.Width / 2, r.Height / 2);
+                    if (!r.Contains((int)feet.Value.X, (int)feet.Value.Y)) throw new InvalidOperationException("ToScreen " + feet.Value + " far from the player's bounds " + b.Value);
+                    if (!tile.Value.Contains((int)feet.Value.X, (int)feet.Value.Y)) throw new InvalidOperationException("ToScreen " + feet.Value + " outside its tile " + tile.Value);
+                }
+            }
+            catch (Exception ex) { composeErrors++; if (composeError == null) composeError = ex.Message; }
+            if (--composeLeft > 0) return;
+            composeFill.Clear(); composeEdge.Clear();
+            Log.Info("drawcompose: tinted " + composeTinted + ", looks " + composeLooks + ", errors " + composeErrors + (composeError == null ? "" : " (first: " + composeError + ")"));
+        });
         Commands.Add(this, "wt.drawprobe", "wt.drawprobe [frames]: exercise the drawing API for that many frames, then log a summary", a =>
         {
             probeFrames = probeLeft = a.Length > 0 ? int.Parse(a[0]) : 120;

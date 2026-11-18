@@ -1904,3 +1904,23 @@ checks. Next, only if a major ever needs it: SMAPI-style rewriting of renamed me
   load order and aren't retried by Accept (switch off and on, or Refresh after fixing, to retry). The left bottom
   buttons move to a row of their own when they don't fit beside Accept / Cancel.
 
+
+## Drawing API: composing parts, routing, the world pass back to Preview (Nov 18 2026)
+The drawing API had one user (Wall Vision) and let mods break each other: `DrawLayer` was the only way to change a
+layer, one mod took it, and the keyhole took every layer after its split, so a mod lower in the load order that took a
+layer hid it from the keyhole (holes, scenery that never faded).
+- **Composing parts (stable):** `TileMarks` (a mod's set of marked tiles; drawn in each tile's extras step right after
+  the game's grid, with the world batch, so they lie on the floor and the keyhole carries them), `WorldDraw.LayerColour`
+  (every handler changes the colour in turn; Works sets the layer's tint before LayerStarting and puts it back after
+  the layer is drawn: scenery layers persist between frames), `World.ToScreen(Vector3)` / `World.TileBounds(Point)`
+  (a7m.vq; the tile size is a7m.as, an esj, read by reflection), `Stealth.NoticesAt(observer, tile)`.
+- **Routing vs looks:** `RouteLayer` (where a layer goes; Wall Vision) and `DrawLayer` (how it looks) are separate.
+  A router draws with `WorldDraw.LayerStep`, which runs the looks, so a mod's look shows inside the keyhole's picture;
+  `TileExtrasStep` includes tile marks. A look that changes the render target is stopped (checked with FNA's
+  GetRenderTargetsNoAllocEXT, only when looks exist). Two routers still don't combine (documented).
+- **Preview again:** every world-pass hook, `Outlines`, `DrawContext`, `GameBatch`, `LayerShader`, `LayerView`, and
+  the drawing/tint members of `Layer`, `WorldView`. Read-only handle members stay stable (LayerColour hands out Layer).
+- **Second user:** Stealth Lens marks the floor where each enemy in view would notice the player (setting, on).
+- `works.drawstats`: layers coloured, routed (by mod), drawn by a look (by mod; inside a route), tile marks (inside a
+  route). drawing.sh: `wt.drawcompose` with the keyhole on must show looks and marks inside Wall Vision's route
+  (measured: 12,182 looks and 13,606 marks inside the route over 600 frames); `wt.drawbadlook` must be stopped.

@@ -180,6 +180,38 @@ void UiExample()
 }
 ```
 
+## Drawing in the world
+
+Tile marks on the floor, tints on characters, labels at map positions. These combine with every other mod's (and Wall Vision's keyhole); the layer-by-layer hooks are Preview.
+
+```csharp
+TileMarks range;
+void DrawingExample()
+{
+    // Tiles within 3 of the player, marked; Replace swaps the whole set (call it when the range changes).
+    range = new TileMarks(this);
+    GameEvents.Update.Add(this, seconds =>
+    {
+        var p = World.Player;
+        if (p == null) { range.Clear(); return; }
+        int px = (int)Math.Floor(p.Position.X), py = (int)Math.Floor(p.Position.Y);
+        range.Replace(Enumerable.Range(-3, 7).SelectMany(dx => Enumerable.Range(-3, 7).Select(dy => new Point(px + dx, py + dy))), Color.SkyBlue * 0.5f);
+    });
+    // Hostile characters tinted red; colours are premultiplied, so a fade is colour * alpha.
+    WorldDraw.LayerColour.Add(this, (Layer layer, ref Color colour) =>
+    {
+        var c = layer.Entity.Character;
+        if (c != null && c.IsHostile) colour = new Color(colour.R, (byte)(colour.G * 0.6f), (byte)(colour.B * 0.6f), colour.A);
+    });
+    // Text at a map position, over the world (Ui.Overlay draws above it each frame).
+    Ui.Overlay(canvas =>
+    {
+        var p = World.Player; var at = p == null ? null : World.ToScreen(p.Position);
+        if (at != null) canvas.Text("here", (int)at.Value.X, (int)at.Value.Y, Color.White);
+    });
+}
+```
+
 ## Map markers
 
 Places on the Minimap (per save).

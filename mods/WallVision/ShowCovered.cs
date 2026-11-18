@@ -82,8 +82,9 @@ static class ShowCovered
         catch (Exception ex) { Failed("keyhole", ex); Keyhole.Abort(true); }
     }
 
-    // WorldView.a's Layer.f3(DrawContext, LayerView) call: the layer is drawn, by the game, or by the keyhole when it's in front of a keyhole.
-    // True: the keyhole drew it (Works skips the game's draw).
+    // WorldDraw.RouteLayer: where a layer goes. The keyhole takes every layer after its split and draws it into its own
+    // picture (and floor near a hole onto the screen too) with WorldDraw.LayerStep, so other mods' looks (DrawLayer)
+    // and colours (LayerColour) still show. True: the keyhole drew it.
     internal static bool DrawLayer(Layer layer, DrawContext context, LayerView view)
     {
         if (keyholeLayer)
@@ -781,22 +782,22 @@ static class Keyhole
                 // Onto the screen as drawn; in the front picture it only clears what's under it (Cut: front x (1 - its
                 // alpha)). Drawn normally there too, a partly see-through floor counted twice once the front went over
                 // the screen.
-                AlsoOnScreen(() => layer.DrawAsGame(context, view));
-                EraseInFront(pixels, byGame => { if (byGame) layer.DrawAsGame(context, view); else Again(layer, context); });
+                AlsoOnScreen(() => WorldDraw.LayerStep(layer, context, view));
+                EraseInFront(pixels, byGame => { if (byGame) WorldDraw.LayerStep(layer, context, view); else Again(layer, context); });
                 return true;
             }
         }
 
-        if (!drawable || Tiles.Count == 1) { layer.DrawAsGame(context, view); return true; }
+        if (!drawable || Tiles.Count == 1) { WorldDraw.LayerStep(layer, context, view); return true; }
         bool first = true;
         foreach (var t in Tiles)
         {
             if (!t.Area.Intersects(pixels)) continue;
             if (bound != t) BindTile(t, true);
-            if (first) { layer.DrawAsGame(context, view); first = false; }
+            if (first) { WorldDraw.LayerStep(layer, context, view); first = false; }
             else Again(layer, context);
         }
-        if (first) layer.DrawAsGame(context, view);
+        if (first) WorldDraw.LayerStep(layer, context, view);
         return true;
     }
 
