@@ -1,5 +1,4 @@
-// Co-op experience: Shared XP, the host's option when hosting (0-100 %, default 100). Whoever earns XP gets it in
-// full; every other player gets that percentage of it. A joined character's kill: the game gives kill XP to the
+// Co-op experience: everyone gets all the XP anyone earns (Co-op 0.0.1: 100 %, not an option). A joined character's kill: the game gives kill XP to the
 // host's player, so it's moved to the killer (who then shares it). A conversation's XP goes to whoever held it
 // (Works' TalkAs swaps the sheet in). Other mods can build other rules on Works' Progression.ModifyExperience.
 using System;
@@ -9,13 +8,12 @@ using UnderRailWorks;
 
 public sealed partial class Coop
 {
-    internal int xpShare = 100;
+    internal const int xpShare = 100;
     bool sharing;
     Character lastKiller; double killTime, clock;
 
     void LoadXp()
     {
-        int v; xpShare = int.TryParse(Settings.Get("xp.share"), out v) ? Math.Max(0, Math.Min(100, v)) : 100;
         GameEvents.Update.Add(this, dt => clock += dt);
         GameEvents.CharacterDying.Add(this, (dead, killer) =>
         {

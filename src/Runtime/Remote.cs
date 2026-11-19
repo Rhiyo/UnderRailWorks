@@ -263,6 +263,24 @@ namespace UnderRailWorks
         }
         // The save's folder on disk (it may not exist).
         public static string Folder(string name) { return d5x.d(name); }
+        // The saves the Load Game window lists, newest first (folder names, as Load takes them).
+        public static IList<string> Names
+        {
+            get
+            {
+                var g = Game;
+                if (g == null) return new List<string>();
+                return g.arm().Where(s => !string.IsNullOrEmpty(s.FolderName)).OrderByDescending(s => s.SaveTime).Select(s => s.FolderName).ToList();
+            }
+        }
+        // A mod's saved value (SaveData.Of(mod).Get(key)) from a save on disk, without loading it: e.g. a lobby showing
+        // the characters a save has. Null: no such save, value, or data.
+        public static object ModData(WorksMod mod, string save, string key)
+        {
+            if (mod == null) throw new ArgumentNullException("mod");
+            var section = SaveFiles.Section(save, mod.Id) as Dictionary<string, object>;
+            object v; return section != null && key != null && section.TryGetValue(key, out v) ? v : null;
+        }
         // Loads that save (from the main menu or in game). False: there's no such save, or this game can't load it
         // (another major version, or DLC it doesn't have). The load happens over the next frames.
         public static bool Load(string name)

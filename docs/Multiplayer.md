@@ -11,6 +11,27 @@ group travels), and talk (the conversation runs on the host for their character,
 fights like anyone: in sight of an enemy or by fighting. Everyone is in the host's zone (see "Players in different
 zones" below).
 
+## Sessions: players join only before the game starts (Nov 20 2026, Co-op 0.0.1)
+
+Joining a game under way caused the hardest problems (a world that moved on: fights, conversations, other zones, a
+character arriving mid-fight), so for the first release players join only in a lobby, before the game starts:
+
+- **Host New Game** (main menu): the host chooses the number of players (2-4, the host included). Each joiner makes a
+  character in the game's own creation on their machine and takes a place. When every place is taken the host starts:
+  they make their own character, and everyone starts together.
+- **Host Saved Game** (main menu): the host picks a save. Its co-op characters are the places; each joiner takes one
+  (the host can add new places for joiners who make a new character). The save loads only when every place is taken:
+  a saved character never goes missing from the game it belongs to.
+- After the start nobody joins (refused: "the game has already started"). A player who leaves leaves their character,
+  passing its turns. With "dead for good", a dead player's player watches (no new character mid-game).
+- The host loading another game while hosting: only one with exactly the players' co-op characters (reloading after a
+  defeat, an earlier save of this game); any other ends the session.
+- Fixed rules in 0.0.1: the group travels together (every player near the exit, 10 tiles), and everyone gets all the XP
+  anyone earns (no Shared XP option).
+- Later, to make it more dynamic: rejoining your own character after a disconnect, joining between zones.
+- Console (tests): `coop.hostnew <players> [port]`, `coop.hostsave <save> [new players] [port]`, `coop.start`;
+  Works: `SaveGames.Names`, `SaveGames.ModData` (a save's co-op characters without loading it).
+
 ## What it should do (the player's design)
 
 - An option in game (on the HUD, or its own menu) makes the running game a multiplayer one (the host).

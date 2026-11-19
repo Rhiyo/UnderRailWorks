@@ -1507,6 +1507,8 @@ The first handler that returns true replaces the game's step.
 - `static bool SaveNow(string name)` — Writes the current game into the save folder name now (replacing it). False: not in a game, or no save came out.
 - `static bool Delete(string name)` — Deletes that save as the Load Game window's Delete does (cnk.arn). False: no such save, or it couldn't be deleted.
 - `static string Folder(string name)` — The save's folder on disk (it may not exist).
+- `static IList<string> Names` — The saves the Load Game window lists, newest first (folder names, as Load takes them).
+- `static object ModData(WorksMod mod, string save, string key)` — A mod's saved value (SaveData.Of(mod).Get(key)) from a save on disk, without loading it: e.g. a lobby showing the characters a save has. Null: no such save, value, or data.
 - `static bool Load(string name)` — Loads that save (from the main menu or in game). False: there's no such save, or this game can't load it (another major version, or DLC it doesn't have). The load happens over the next frames.
 
 ## SellPrice  _(class, Hud.cs)_

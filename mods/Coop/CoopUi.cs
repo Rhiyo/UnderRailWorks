@@ -1,8 +1,11 @@
 // Co-op's interface: a "Co-op" button on the HUD (top right, with the other mod buttons) opens the Co-op window, the
 // game's titled window. What it shows follows the state:
-//   not connected   Host this game / Join a game... (the address asked with the game's text popup)
-//   hosting         the addresses others join with, who is connected and what they play, Stop hosting
-//   choosing        the host's character list (the host's own and taken ones greyed), Play selected / New character...
+//   not connected   Join a game... (the address asked with the game's text popup); hosting starts on the main menu
+//   lobby (host)    the places and who took them, the addresses others join with, Start (every place taken) / Stop
+//   hosting         who is playing what, Stop hosting
+//   choosing        the lobby's places (saved characters, "new character" places; taken ones greyed), Play selected /
+//                   New character...
+//   ready           the character you'll play, waiting for the host to start
 //   playing         your character's health and whose turn it is, the messages, End turn / Attack nearest enemy /
 //                   Follow host / Walk to... / Leave ("Attack nearest": the nearest character hostile to yours)
 // Built from Works' UI (Ui.Window, Ui.List, Ui.Button, Ui.Ask, Hud.AddPart), sized with Ui.S and Ui.LineHeight.
@@ -46,8 +49,8 @@ public sealed partial class Coop
 
     string Mode()
     {
-        if (listener != null) return "host";
-        if (host != null && !host.Closed) return playing ? "play" : choices.Count > 0 || hostName != null ? "choose" : "connecting";
+        if (listener != null) return lobby != null || starting ? "lobby" : "host";
+        if (host != null && !host.Closed) return playing ? "play" : readyAs != null ? "ready" : choices.Count > 0 || hostName != null ? "choose" : "connecting";
         return "idle";
     }
 
@@ -78,8 +81,14 @@ public sealed partial class Coop
         switch (builtFor)
         {
             case "idle":
-                if (World.Player != null) button("Host this game...", AskAndHost);
                 button("Join a game...", AskJoin);
+                break;
+            case "lobby":
+                button("Start", () => { var r = StartGame(); if (r != "starting") Notify.Log("Co-op: " + r, Say); });
+                button("Stop hosting", () => StopHosting());
+                break;
+            case "ready":
+                button("Leave", Leave);
                 break;
             case "host":
                 button("Revive", () => { var p = World.Player; var r = p == null ? "" : ReviveNear(p); if (!string.IsNullOrEmpty(r)) Notify.Log("Co-op: " + r, Grey); });
@@ -149,7 +158,7 @@ public sealed partial class Coop
         switch (builtFor)
         {
             case "idle":
-                Ui.SetText(statusLabel, "Play together: host this game, or join someone's.");
+                Ui.SetText(statusLabel, World.Player == null ? "Play together: Host New Game or Host Saved Game here, or join someone's lobby." : "Players join before a game starts: host from the main menu (Host New Game / Host Saved Game).");
                 items.AddRange(messages.Skip(Math.Max(0, messages.Count - 30))); colours.AddRange(items.Select(_ => Normal));
                 break;
             case "host":
@@ -163,7 +172,7 @@ public sealed partial class Coop
                 if (items.Count == 0) { items.Add("Nobody has joined yet."); colours.Add(Grey); }
                 items.Add(""); colours.Add(Grey);
                 items.Add("Others join with one of these addresses:"); colours.Add(Grey);
-                foreach (var a in Addresses()) { items.Add("   " + a + (listener.Port == DefaultPort ? "" : ":" + listener.Port)); colours.Add(Mine_); }
+                foreach (var a in Addresses()) { items.Add("   " + WithPort(a, listener.Port)); colours.Add(Mine_); }
                 items.Add("(over the internet: your router's address, with port " + listener.Port + " forwarded)"); colours.Add(Grey);
                 {
                     // What joiners need: the same mods, same versions, except those that only change one player's screen.
@@ -177,11 +186,32 @@ public sealed partial class Coop
             case "connecting":
                 Ui.SetText(statusLabel, "Connecting...");
                 break;
+            case "lobby":
+            {
+                int free = slots.Count(sl => sl.Seat == null);
+                Ui.SetText(statusLabel, starting ? "Starting the game..." : free == 0 ? "Everyone is here: Start." : "Waiting for " + free + " player" + (free == 1 ? "" : "s") + " (port " + listener.Port + ")");
+                items.Add((World.Player != null ? World.Player.Name : "You") + "  (the host)"); colours.Add(Grey);
+                foreach (var sl in slots)
+                {
+                    var what = sl.New ? "a new character" : sl.Saved.Name;
+                    items.Add(sl.Seat == null ? what + "  (free)" : what + "  -  " + sl.Seat.Peer.Name + (sl.New ? " plays " + sl.Seat.Record.Name : ""));
+                    colours.Add(sl.Seat == null ? Normal : Mine_);
+                }
+                foreach (var s in seats.Values.Where(x => !slots.Any(sl => sl.Seat == x))) { items.Add(s.Peer.Name + "  (choosing)"); colours.Add(Grey); }
+                items.Add(""); colours.Add(Grey);
+                items.Add("Others join with Join a Game and one of these addresses:"); colours.Add(Grey);
+                foreach (var a in Addresses()) { items.Add("   " + WithPort(a, listener.Port)); colours.Add(Mine_); }
+                items.Add("(over the internet: your router's address, with port " + listener.Port + " forwarded)"); colours.Add(Grey);
+                break;
+            }
+            case "ready":
+                Ui.SetText(statusLabel, "You'll play " + readyAs + " in " + (hostName ?? "the host") + "'s game. Waiting for the host to start...");
+                items.AddRange(messages.Skip(Math.Max(0, messages.Count - 30))); colours.AddRange(items.Select(_ => Normal));
+                break;
             case "choose":
-                Ui.SetText(statusLabel, "Choose your character in " + (hostName ?? "the host") + "'s game" + (selected > 0 && selected <= choices.Count ? ": " + choices[selected - 1].Key : ""));
+                Ui.SetText(statusLabel, "Take a place in " + (hostName ?? "the host") + "'s game" + (selected > 0 && selected <= choices.Count ? ": " + choices[selected - 1].Key : "") + ". A \"new character\" place: New character...");
                 items.Add((hostName ?? "?") + "  (the host)"); colours.Add(Grey);
                 foreach (var c in choices) { items.Add(c.Key + (c.Value ? "  (taken)" : "")); colours.Add(c.Value ? Grey : Normal); }
-                if (choices.Count == 0) { items.Add("No co-op characters yet: make a new one."); colours.Add(Grey); }
                 break;
             case "play":
                 Ui.SetText(statusLabel, StateText());
@@ -236,10 +266,18 @@ public sealed partial class Coop
     void Leave()
     {
         if (host == null) return;
-        host.Send("BYE"); host.Close(); host = null; playing = false; state = null; choices.Clear(); hostName = null;
+        host.Send("BYE"); host.Close(); host = null; playing = false; readyAs = null; state = null; choices.Clear(); hostName = null;
         LeftWorld();
         Tell("you left");
         Changed();
+    }
+
+    // "1.2.3.4" or "127.0.0.1 (on this computer)" with the port after the address, unless it's the default.
+    static string WithPort(string a, int port)
+    {
+        if (port == DefaultPort) return a;
+        int note = a.IndexOf(" (");
+        return note < 0 ? a + ":" + port : a.Substring(0, note) + ":" + port + a.Substring(note);
     }
 
     // This computer's IPv4 addresses for others to join with (the LAN ones; over the internet, the router's).

@@ -1,6 +1,7 @@
 // Co-op's options when hosting, and Co-op's API for other mods.
-// Host this game... opens the Host window: Co-op's own option (Shared XP, 0-100 %, default 100) and any other mod's,
-// then Host. Values are remembered (the mod's settings) for next time.
+// Host New Game / Host Saved Game (main menu) open the Host window: how many players, Co-op's own option (what happens
+// when a player's health runs out) and any other mod's, then the lobby (CoopLobby.cs). Values are remembered (the
+// mod's settings) for next time. Everyone gets all the XP anyone earns (Co-op 0.0.1: not an option).
 // The API (Mods.Api<CoopApi>("Coop"), or Mods.Call("Coop", ...)): who's playing, hosting or joined, events when players
 // come and go, options on the Host window, and a mod's own messages between the host and the joiners (so a mod can
 // add to co-op without its own networking: separate fights, separate zones, a campaign's conversations...).
@@ -28,8 +29,8 @@ public sealed class CoopApi
     internal void RaiseJoined(string name, Character c) { var h = PlayerJoined; if (h != null) try { h(name, c); } catch (Exception ex) { coop.Log.Error("PlayerJoined: " + ex.Message); } }
     internal void RaiseLeft(string name) { var h = PlayerLeft; if (h != null) try { h(name); } catch (Exception ex) { coop.Log.Error("PlayerLeft: " + ex.Message); } }
 
-    // The Shared XP percentage this game is hosted with.
-    public int XpShare { get { return coop.xpShare; } }
+    // The Shared XP percentage: 100 (everyone gets all the XP anyone earns; not an option in this version).
+    public int XpShare { get { return Coop.xpShare; } }
 
     // --- Co-op's own rules, each one switchable by a mod that does it its own way --------------------------------
     // The group travels together (every player within 10 tiles of whoever takes an exit). Off: Co-op doesn't stop
@@ -97,20 +98,31 @@ public sealed partial class Coop
     {
         Api = new CoopApi(this);
         Mods.Provide(this, Api);
-        AddOption(new HostOption { Mod = Id, Key = "xpshare", Label = "Shared XP (% of what anyone earns that the others get)", Min = 0, Max = 100, Step = 10, Value = xpShare });
     }
 
     UiWindow hostWindow;
-    void AskAndHost()
+    // kind "new": how many players (you included); "saved": save's co-op characters, and how many new players to add.
+    void AskHost(string kind, string save)
     {
         if (hostWindow != null && hostWindow.IsOpen) return;
-        int pad = Ui.S(10), w = Ui.S(520), rowH = Ui.LineHeight * 2 + Ui.S(10);
-        hostWindow = Ui.Window(this, "host", "Host this game", w, Ui.S(70) + options.Count * rowH + Ui.S(50));
+        var saved = kind == "saved" ? SavedCharacters(save) : new List<Record>();
+        int pad = Ui.S(10), w = Ui.S(560), rowH = Ui.LineHeight * 2 + Ui.S(10);
+        hostWindow = Ui.Window(this, "host", kind == "saved" ? "Host " + save : "Host a new game", w, Ui.S(90) + (options.Count + 1) * rowH + Ui.S(50));
         if (hostWindow == null) return;
         hostWindow.Closed += () => hostWindow = null;
         w = hostWindow.Width;
         int y = hostWindow.Top + Ui.S(6);
         var apply = new List<Action>();
+        Ui.Add(hostWindow, Ui.Label(kind == "saved"
+            ? (saved.Count == 0 ? "No co-op characters in this save: add new players." : "Its players: " + string.Join(", ", saved.Select(r => r.Name).ToArray()) + ". Each must be taken before it loads.")
+            : "Everyone makes a character; the game starts when all have.", w - 2 * pad), pad, y);
+        y += Ui.LineHeight + Ui.S(8);
+        int min = kind == "saved" ? 0 : 2, max = kind == "saved" ? Math.Max(0, MaxPlayers - 1 - saved.Count) : MaxPlayers;
+        Ui.Add(hostWindow, Ui.Label(kind == "saved" ? "New players to add (they make a new character)" : "Players, you included", w - 2 * pad), pad, y);
+        var count = Ui.Slider(w - 2 * pad, min, Math.Max(min, max), kind == "saved" ? (saved.Count == 0 ? Math.Min(1, max) : 0) : 2);
+        count.Step = 1;
+        Ui.Add(hostWindow, count.View, pad, y + Ui.LineHeight + Ui.S(6));
+        y += rowH;
         foreach (var o in options)
         {
             var opt = o;
@@ -123,22 +135,23 @@ public sealed partial class Coop
             }
             else
             {
-                var s = Ui.Slider(w - 2 * pad, o.Min, o.Max, o.Value);
-                s.Step = o.Step;
-                Ui.Add(hostWindow, s.View, pad, y + Ui.LineHeight + Ui.S(6));
-                apply.Add(() => opt.Value = (int)Math.Round(s.Value));
+                var sl = Ui.Slider(w - 2 * pad, o.Min, o.Max, o.Value);
+                sl.Step = o.Step;
+                Ui.Add(hostWindow, sl.View, pad, y + Ui.LineHeight + Ui.S(6));
+                apply.Add(() => opt.Value = (int)Math.Round(sl.Value));
             }
             y += rowH;
         }
-        var go = Ui.Button("Host", () =>
+        var go = Ui.Button("Open lobby", () =>
         {
             foreach (var a in apply) a();
             foreach (var o in options) Settings.Set("option." + o.Mod + "." + o.Key, o.Value.ToString());
-            xpShare = Option(Id, "xpshare").Value;
             deathRule = Option(Id, "death").Value; Settings.Set("death.rule", deathRule.ToString());
-            Settings.Set("xp.share", xpShare.ToString());
+            int n = (int)Math.Round(count.Value);
             if (hostWindow != null) hostWindow.Close();
-            Commands.Print("co-op: " + Host(new string[0]));
+            var r = OpenLobby(kind, save, kind == "saved" ? n : n - 1, DefaultPort);
+            Commands.Print("co-op: " + r);
+            Notify.Log("Co-op: " + r, Say);
         });
         var cancel = Ui.Button("Cancel", () => { if (hostWindow != null) hostWindow.Close(); });
         int by = hostWindow.Height - pad - go.Height;

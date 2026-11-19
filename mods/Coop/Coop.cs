@@ -1,17 +1,20 @@
-// Co-op: an UnderRailWorks mod (in development; design, results and open questions: docs/Multiplayer.md in the Works repo).
-// The host's game is the only real one. A joiner connects (Join a Game on the main menu, or the Co-op window), gets the
-// host's character list (the host's own first, not choosable, then the co-op characters saved with this game), picks
-// one or makes a new one in the game's own creation, and that character appears in the host's game (where it left off
-// in this zone, else next to the host's character), driven by the joiner instead of an AI (Works' CharacterControl).
+// Co-op: an UnderRailWorks mod (design, results and open questions: docs/Multiplayer.md in the Works repo).
+// The host's game is the only real one. Players gather in the host's lobby before the game starts (CoopLobby.cs: Host
+// New Game / Host Saved Game on the main menu; nobody joins a game under way). Each joiner takes a place: a co-op
+// character saved with that game, or a new one made in the game's own creation. When every place is taken the host
+// starts, and each character appears in the host's game (where it was saved, else next to the host's character),
+// driven by its player instead of an AI (Works' CharacterControl).
 // The joiner's game loads the host's save and mirrors it (Mirror.cs); their clicks become commands here; conversations
-// (CoopTalk.cs) and looting (CoopLoot.cs) are relayed.
-// The Co-op button on the HUD opens the Co-op window (CoopUi.cs) for all of this; the console commands do the same.
-// Host (console, ` key):   coop.host [port]   coop.who   coop.stop
-// Joiner:                  coop.join <address[:port]> [your name]   then coop.pick <number> or coop.new <name>
+// (CoopTalk.cs) and looting (CoopLoot.cs) are relayed. The group travels together (every player near the exit), and
+// everyone gets all the XP anyone earns (CoopXp.cs).
+// The Co-op button on the HUD opens the Co-op window (CoopUi.cs); the console commands do the same.
+// Host (console, ` key, main menu):   coop.hostnew <players> [port]   coop.hostsave <save> [new players] [port]
+//                                     coop.start   coop.who   coop.stop
+// Joiner (main menu):      coop.join <address[:port]> [your name]   then coop.pick <number> or coop.new <name>
 // Playing (joiner):        coop.go x y   coop.attack <name>   coop.end   coop.status   coop.leave
-// Without a connection the same commands drive a local test partner (coop.spawn), as in step 1.
+// Without a connection the same commands drive a local test partner (coop.spawn).
 // Co-op characters are kept in the mod's save data next to the save (never in the game's save): name, blueprint,
-// zone and tile. They follow the host's character to other zones (spawned again next to it).
+// zone, tile and sheet. They follow the host's character to other zones (spawned again next to it).
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,18 +40,7 @@ public sealed partial class Coop : WorksMod
     sealed class Record { public string Name, Blueprint, Zone, Sheet; public int X, Y; }     // Sheet: the character's .char (base64), made in the game's creation
     List<Record> records = new List<Record>();
 
-    void ReadRecords()
-    {
-        records = new List<Record>();
-        var list = SaveData.Of(this).Get("characters") as List<object>;
-        if (list == null) return;
-        foreach (var o in list.OfType<Dictionary<string, object>>())
-        {
-            Func<string, string> s = k => { object v; return o.TryGetValue(k, out v) && v != null ? Convert.ToString(v, System.Globalization.CultureInfo.InvariantCulture) : null; };
-            Func<string, int> n = k => { double d; return double.TryParse(s(k), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out d) ? (int)d : 0; };
-            records.Add(new Record { Name = s("name"), Blueprint = s("blueprint") ?? DefaultBlueprint, Zone = s("zone"), X = n("x"), Y = n("y"), Sheet = s("sheet") });
-        }
-    }
+    void ReadRecords() { records = ParseRecords(SaveData.Of(this).Get("characters")); }
 
     void WriteRecords()
     {
@@ -78,7 +70,7 @@ public sealed partial class Coop : WorksMod
     string WriteSheet(string name, string base64) { var path = SheetPath(name); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); System.IO.File.WriteAllBytes(path, Convert.FromBase64String(base64)); return path; }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld, Announced; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
     Listener listener;
     static float Dist(Character a, Character b) { return Vector2.Distance(new Vector2(a.Position.X, a.Position.Y), new Vector2(b.Position.X, b.Position.Y)); }
     static bool Sees(Character who, Character other) { return who.CanSee(other) && Dist(who, other) <= who.SightRange; }
@@ -87,21 +79,17 @@ public sealed partial class Coop : WorksMod
     readonly List<Seat> orphans = new List<Seat>();     // joiners who left: their character stays, passing its turns
     bool reloaded;     // a game was loaded while hosting: place players from its records
 
-    string Host(string[] args)
+    // Listening for players (the lobby, CoopLobby.cs). Null, or why not.
+    string Listen(int port)
     {
-        if (World.Player == null) return "load a game first";
         if (listener != null) return "already hosting on port " + listener.Port;
-        int port = DefaultPort;
-        if (args.Length > 0 && !int.TryParse(args[0], out port)) return "coop.host [port]";
         try { listener = new Listener(port, tcp => new Peer(tcp, inbox.Add, p => inbox.Add(p, new[] { "_closed" }))); }
         catch (Exception ex) { listener = null; return "can't host on port " + port + ": " + ex.Message; }
-        ReadRecords();
         // The group travels together: an exit is taken only with every player near the one taking it (Works' Party).
         ApplyTravelRule();
         Log.Info("hosting on port " + port);
-        Changed();
-        Notify.Log("Co-op: hosting on port " + port + ". Others join with coop.join <your address>" + (port == DefaultPort ? "" : ":" + port), Say);
-        return "hosting on port " + port;
+        Notify.Log("Co-op: hosting on port " + port + ". Others join with Join a Game and your address" + (port == DefaultPort ? "" : ":" + port), Say);
+        return null;
     }
 
     void StopHosting()
@@ -111,6 +99,7 @@ public sealed partial class Coop : WorksMod
         foreach (var p in seats.Keys.ToList()) { p.Send("BYE", "the host stopped"); p.Close(); }
         foreach (var s in seats.Values.Concat(orphans)) if (s.Character != null) CharacterControl.Release(s.Character);
         seats.Clear(); orphans.Clear();
+        slots.Clear(); lobby = null; starting = false;
         listener.Stop(); listener = null;
         Party.DontNeedTogether(this, PartyNeed.EnterZone, null);
         Log.Info("stopped hosting");
@@ -127,6 +116,7 @@ public sealed partial class Coop : WorksMod
                 if (seat == null) return;
                 if (talking == seat) { TalkAs.Close(); talking = null; }     // left mid-conversation: it ends
                 seats.Remove(p);
+                if (seat.Character == null) LeftLobby(seat);
                 if (Api != null) Api.RaiseLeft(p.Name);
                 CheckGameOver();
                 if (seat.Character != null) { Remember(seat); seat.Peer = null; orphans.Add(seat); }
@@ -138,6 +128,13 @@ public sealed partial class Coop : WorksMod
                 p.Name = w.Length > 2 && w[2].Trim().Length > 0 ? w[2].Trim() : "Player " + p.Id;
                 if (w.Length < 2 || w[1] != Handshake) { p.Send("BYE", "the host has Co-op " + Handshake + ", you have " + (w.Length > 1 ? w[1] : "?") + " (both need the same)"); p.Close(); return; }
                 {
+                    var refused = RefuseJoin();
+                    if (refused != null)
+                    {
+                        Log.Info(p.Name + " refused: " + refused);
+                        Notify.Log("Co-op: " + p.Name + " can't join: " + refused, Say);
+                        p.Send("BYE", refused); p.Close(); return;
+                    }
                     // Everyone needs the same mods (those whose mod.json doesn't say "multiplayer": "client"), same versions.
                     var theirs = w.Length > 3 ? w[3].Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries) : new string[0];
                     var diff = Mods.Differences(theirs, Mods.Running(true), "you have", "the host has");
@@ -152,7 +149,7 @@ public sealed partial class Coop : WorksMod
                 Log.Info(p.Name + " connected from " + p.Address);
                 Changed(false);
                 Notify.Log("Co-op: " + p.Name + " is choosing a character", Say);
-                SendList(p);
+                SendLobbyList(p);
                 return;
             case "BYE": p.Close(); return;
         }
@@ -163,39 +160,11 @@ public sealed partial class Coop : WorksMod
         if (w[0] == "POPUPANS") { PopupAnswered(w); return; }
         if (w[0] == "KEY") { KeyFrom(seat, w); return; }
         if (w[0] == "BUTTON") { ButtonFrom(seat, w); return; }
-        switch (w[0])
+        if (w[0] == "PICK" || w[0] == "NEW")
         {
-            case "PICK":
-            {
-                int i;
-                if (seat.Character != null) { p.Send("SAID", "you're already playing " + seat.Character.Name); return; }
-                if (w.Length < 2 || !int.TryParse(w[1], out i)) { p.Send("SAID", "pick a number from the list"); return; }
-                if (i == 0) { p.Send("SAID", "that's the host's character"); SendList(p); return; }
-                if (i < 1 || i > records.Count) { p.Send("SAID", "no character " + i); SendList(p); return; }
-                var r = records[i - 1];
-                if (Taken(r)) { p.Send("SAID", r.Name + " is taken"); SendList(p); return; }
-                Enter(seat, r, true);
-                return;
-            }
-            case "NEW":
-            {
-                var name = w.Length > 1 ? w[1].Trim() : "";
-                if (seat.Character != null) { p.Send("SAID", "you're already playing " + seat.Character.Name); return; }
-                if (name.Length == 0) { p.Send("SAID", "coop.new <name>"); return; }
-                Func<string, bool> used = n => records.Any(r => r.Name.Equals(n, StringComparison.OrdinalIgnoreCase)) || (World.Player != null && n.Equals(World.Player.Name, StringComparison.OrdinalIgnoreCase));
-                if (used(name))
-                {
-                    // A character made elsewhere (an import keeps its name): numbered rather than refused.
-                    if (w.Length < 3) { p.Send("SAID", "there is already a " + name); return; }
-                    int n = 2; while (used(name + " " + n)) n++;
-                    p.Send("SAID", "there's already a " + name + " here: yours is " + name + " " + n);
-                    name = name + " " + n;
-                }
-                var rec = new Record { Name = name, Blueprint = DefaultBlueprint, Sheet = w.Length > 2 && w[2].Length > 0 ? w[2] : null };
-                records.Add(rec);
-                Enter(seat, rec, false);
-                return;
-            }
+            if (lobby != null) LobbyChoice(seat, w);
+            else p.Send("SAID", seat.Character != null ? "you're already playing " + seat.Character.Name : "the game has started: characters are chosen in the lobby");
+            return;
         }
         if (seat.Character == null || seat.Character.IsDead || seat.Character.Area == null) { p.Send("SAID", seat.Character != null && seat.Character.IsDead ? "your character is dead" : "pick a character first"); return; }
         if (downed.Contains(seat.Character) && w[0] != "STATUS" && w[0] != "DLGPICK") { p.Send("SAID", "you're down"); return; }
@@ -205,40 +174,6 @@ public sealed partial class Coop : WorksMod
 
     // The host's key for a character in this (joiner's) copy: a mirror's key, else the game's id (kept in the save).
     string KeyHere(Character c) { return spawned.Where(kv => kv.Value == c).Select(kv => kv.Key).FirstOrDefault() ?? c.EntityId; }
-
-    bool Taken(Record r) { return seats.Values.Any(s => s.Record == r); }
-
-    void SendList(Peer p)
-    {
-        p.Send("LIST", World.Player == null ? "?" : World.Player.Name);
-        for (int i = 0; i < records.Count; i++) p.Send("CHAR", i + 1, records[i].Name, Taken(records[i]) ? "taken" : "free");
-        p.Send("LISTEND");
-    }
-
-    // The joiner's character enters the host's world: where it left (this zone, a free floor tile), else beside the host.
-    void Enter(Seat seat, Record r, bool saved)
-    {
-        // A character left behind by its last player: taken over as it stands.
-        var old = orphans.FirstOrDefault(o => o.Record == r);
-        if (old != null) orphans.Remove(old);
-        if (old != null && old.Character != null && !old.Character.IsDead && old.Character.Area != null) { seat.Record = r; seat.Character = old.Character; }
-        else
-        {
-            var c = SpawnFor(r, saved);
-            if (c == null) { seat.Peer.Send("SAID", "couldn't place " + r.Name + " here (no room?)"); return; }
-            seat.Record = r; seat.Character = c;
-        }
-        CharacterControl.Take(this, seat.Character);
-        Party.Add(this, seat.Character);
-        seat.LastSign = SignOf(seat.Character);     // what the joiner has: changes from here are sent     // other mods' "everyone" (Works' Party) includes it
-        var at = seat.Character.Position;
-        Log.Info(seat.Peer.Name + " plays " + r.Name + " at " + (int)at.X + "," + (int)at.Y);
-        Notify.Log("Co-op: " + seat.Peer.Name + " plays " + r.Name, Say);
-        Changed(false);
-        seat.Peer.Send("PLAYING", r.Name, (int)at.X, (int)at.Y);
-        if (Api != null) Api.RaiseJoined(seat.Peer.Name, seat.Character);
-        SendWorld(seat);
-    }
 
     Character SpawnFor(Record r, bool saved)
     {
@@ -273,6 +208,7 @@ public sealed partial class Coop : WorksMod
     Peer host;
     bool playing;
     string hostName;
+    string readyAs;     // the lobby gave us this character: waiting for the host to start
     readonly List<KeyValuePair<string, bool>> choices = new List<KeyValuePair<string, bool>>();     // name, taken
     readonly List<string> messages = new List<string>();
     string[] state;     // the host's last STATE for our character
@@ -294,7 +230,7 @@ public sealed partial class Coop : WorksMod
             host = new Peer(tcp, inbox.Add, p => inbox.Add(p, new[] { "_closed" }));
         }
         catch (Exception ex) { host = null; return "can't reach " + args[0] + ": " + ex.Message; }
-        playing = false; state = null; choices.Clear();
+        playing = false; readyAs = null; state = null; choices.Clear();
         host.Send("HELLO", Handshake, name, string.Join(",", Mods.Running(true)));
         Log.Info("connected to " + args[0] + " as " + name);
         return "connected to " + args[0] + ", waiting for the character list";
@@ -304,7 +240,7 @@ public sealed partial class Coop : WorksMod
     {
         switch (w[0])
         {
-            case "_closed": Tell("disconnected from the host"); host = null; playing = false; state = null; LeftWorld(); Changed(); return;
+            case "_closed": Tell("disconnected from the host"); host = null; playing = false; readyAs = null; state = null; LeftWorld(); Changed(); return;
             case "BYE": Tell("the host closed the connection: " + (w.Length > 1 ? w[1] : "")); return;
             case "LIST": hostName = w.Length > 1 ? w[1] : "?"; choices.Clear(); return;
             case "CHAR": choices.Add(new KeyValuePair<string, bool>(w[2], w.Length > 3 && w[3] == "taken")); return;
@@ -312,7 +248,8 @@ public sealed partial class Coop : WorksMod
                 Log.Info("characters: " + hostName + " (host), " + string.Join(", ", choices.Select((c, i) => (i + 1) + ". " + c.Key + (c.Value ? " (taken)" : "")).ToArray()));
                 Commands.Print("co-op: characters: " + hostName + " (host), " + string.Join(", ", choices.Select((c, i) => (i + 1) + ". " + c.Key + (c.Value ? " (taken)" : "")).ToArray()) + ". coop.pick <number> or coop.new <name>");
                 Changed(); return;
-            case "PLAYING": playing = true; Tell("You play " + w[1] + " (at " + w[2] + "," + w[3] + ")"); Changed(); return;
+            case "READY": readyAs = w.Length > 1 ? w[1] : "?"; Tell("You'll play " + readyAs + ". Waiting for the host to start the game."); Changed(); return;
+            case "PLAYING": playing = true; readyAs = null; Tell("You play " + w[1] + " (at " + w[2] + "," + w[3] + ")"); Changed(); return;
             case "STATE": state = w; Changed(false); return;
             case "TURN":
                 Tell("Your turn (AP " + w[1] + ", MP " + w[2] + ")");
@@ -472,7 +409,8 @@ public sealed partial class Coop : WorksMod
 
     public override void Load()
     {
-        Commands.Add(this, "coop.host", "coop.host [port]: let others join this game", Host);
+        Commands.Add(this, "coop.host", "coop.host: (hosting starts on the main menu: coop.hostnew / coop.hostsave)", a => "players join before the game starts: on the main menu, Host New Game or Host Saved Game (coop.hostnew <players> / coop.hostsave <save>)");
+        LoadLobby();
         LoadXp();
         LoadHost();
         LoadListening();
@@ -509,7 +447,6 @@ public sealed partial class Coop : WorksMod
             var t = string.Join(" | ", lines); Log.Info("threats: " + t); return t;
         });
         Commands.Add(this, "coop.trade", "coop.trade <name>: trade with that merchant (testing)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 200).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0 && x.IsMerchant); return t == null ? "no merchant called that" : Mine("TRADEWITH", KeyHere(t)); });
-        Commands.Add(this, "coop.xpshare", "coop.xpshare <0-100>: the Shared XP percentage (Host this game... asks)", a => { int v; if (a.Length > 0 && int.TryParse(a[0], out v)) xpShare = Math.Max(0, Math.Min(100, v)); return "shared XP: " + xpShare + "%"; });
         Commands.Add(this, "coop.exit", "coop.exit x y: your character takes the exit on that tile", a => a.Length < 2 ? "coop.exit x y" : Mine("EXIT", a[0], a[1]));
         Commands.Add(this, "coop.deathrule", "coop.deathrule <0 get up after the fight|1 others revive|2 dead for good>", a => { int v; if (a.Length > 0 && int.TryParse(a[0], out v) && v >= 0 && v <= 2) deathRule = v; return "death: " + DeathRules[deathRule]; });
         Commands.Add(this, "coop.revive", "coop.revive: revive a downed player next to you", a => listener != null && World.Player != null ? (ReviveNear(World.Player).Length == 0 ? "revived" : ReviveNear(World.Player)) : Mine("REVIVE"));
@@ -607,9 +544,12 @@ public sealed partial class Coop : WorksMod
                     if (r != null) { s.Record = r; saved = true; } else records.Add(s.Record);
                 }
                 var c = SpawnFor(s.Record, saved);
-                if (c == null) continue;
+                if (c == null) { Log.Warn("couldn't place " + s.Record.Name + " for " + s.Peer.Name); continue; }
                 s.Character = c; CharacterControl.Take(this, c); Party.Add(this, c);
+                s.LastSign = SignOf(c);
+                Log.Info(s.Peer.Name + " plays " + s.Record.Name + " at " + (int)c.Position.X + "," + (int)c.Position.Y);
                 s.Peer.Send("PLAYING", s.Record.Name, (int)c.Position.X, (int)c.Position.Y);
+                if (!s.Announced) { s.Announced = true; Notify.Log("Co-op: " + s.Peer.Name + " plays " + s.Record.Name, Say); if (Api != null) Api.RaiseJoined(s.Peer.Name, c); }
             }
             foreach (var s in seats.Values.Where(s => s.Character != null)) SendWorld(s);     // the joiners follow into the new zone
             orphans.RemoveAll(o => o.Character == null || o.Character.Area == null);
@@ -620,6 +560,14 @@ public sealed partial class Coop : WorksMod
         {
             ReadRecords();
             if (listener == null) return;
+            if (!SameGame())
+            {
+                Log.Info("another game was loaded while hosting (not these players' characters): the session ends");
+                foreach (var s in seats.Values) s.Peer.Send("BYE", "the host loaded another game");
+                Notify.Log("Co-op: you loaded a game without these players' characters: the co-op session ended", Say);
+                StopHosting();
+                return;
+            }
             reloaded = true; downed.Clear(); ending = false;
             if (talking != null) talking = null;
             foreach (var s in seats.Values) { s.Character = null; s.InWorld = false; s.Sent.Clear(); s.Walks.Clear(); s.Doors.Clear(); s.LastSign = null; s.Peer.Send("SAID", (World.Player == null ? "the host" : World.Player.Name) + " loaded a game: you'll be back in a moment"); }

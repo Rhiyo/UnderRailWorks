@@ -294,7 +294,24 @@ namespace UnderRailWorks.Internal
             }
         }
 
-        // What a save on disk says about its mods: the mods running when it was saved (null: saved before Works kept that
+        // One mod's section of a save on disk (null: none).
+    internal static object Section(string save, string key)
+    {
+        var dir = Folder(save);
+        var file = dir == null ? null : Path.Combine(dir, FileName);
+        if (file == null || !File.Exists(file)) return null;
+        try
+        {
+            var d = Json.Parse(File.ReadAllText(file)) as Dictionary<string, object>;
+            object mods, v;
+            if (d == null || !d.TryGetValue("mods", out mods) || !(mods is Dictionary<string, object>)) return null;
+            foreach (var kv in (Dictionary<string, object>)mods) if (string.Equals(kv.Key, key, StringComparison.OrdinalIgnoreCase)) return kv.Value;
+            return null;
+        }
+        catch (Exception ex) { Log.Write("saves: " + file + ": " + ex.Message); return null; }
+    }
+
+    // What a save on disk says about its mods: the mods running when it was saved (null: saved before Works kept that
     // list, or not with Works), and the mods that left data in it (section key -> version).
     internal sealed class SaveMods { internal List<string> Running; internal Dictionary<string, string> WithData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); }
     internal static SaveMods Read(string save)

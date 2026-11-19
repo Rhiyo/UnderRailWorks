@@ -1,8 +1,8 @@
-// Co-op deaths. The host picks the rule when hosting (Host this game...):
+// Co-op deaths. The host picks the rule when opening the lobby (Host New Game / Host Saved Game):
 //   Get up after the fight   a player at 0 health is downed (incapacitated, 1 health) and gets up at a third of their
 //                            health when the fight ends (at once if there's no fight)
 //   Others revive them       downed until another player standing next to them revives them (Revive, Co-op window)
-//   Dead for good            they die, as in single player; a joined player picks or makes another character
+//   Dead for good            they die, as in single player; a joined player then watches (no new character mid-game)
 // The host's character follows the same rule. Game over (the game's own) only when every player is down or dead, or
 // when the host is down or dead and nobody else is playing (the last one leaving ends it).
 // Works: GameEvents.Dying (cancel: left at 1 health), GameEvents.GameOver (cancel: the game goes on), World.EndGame.
@@ -34,16 +34,16 @@ public sealed partial class Coop
         }, HookOrder.First);
         GameEvents.CharacterDying.Add(this, (dead, killer) =>
         {
-            // Dead for good: a joined player's character is gone; they choose again.
+            // Dead for good: a joined player's character is gone. No new character mid-game (players only join in the
+            // lobby): they stay connected and see the game, or leave.
             if (listener == null || deathRule != 2 || dead == null) return;
             var seat = seats.Values.FirstOrDefault(s => s.Character == dead);
             if (seat == null) return;
             if (seat.Record != null) { records.Remove(seat.Record); }
             CharacterControl.Release(dead); Party.Remove(dead);
             seat.Character = null; seat.Record = null; seat.InWorld = false;
-            seat.Peer.Send("SAID", dead.Name + " is dead. Choose or make another character.");
+            seat.Peer.Send("SAID", dead.Name + " is dead. You can watch the others, or leave.");
             seat.Peer.Send("DIED");
-            SendList(seat.Peer);
             CheckGameOver();
         });
         // The game's game over (a death in the player's faction): only when nobody's left playing.
