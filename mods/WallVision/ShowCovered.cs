@@ -920,14 +920,11 @@ static class Keyhole
             {
                 if (d.Kind == 0 || d.Kind == 1 || !d.Pixels.Intersects(circle)) continue;     // floor: on the screen
                 bool after = d.Index > t.Last;
-                bool front = d.Kind == 2 && d.Layer.Owner != t.Owner && (after || InFront(d.Layer, d.Pixels, circle, at));
-                // Cut only what lies over the target's visible pixels: by map square or draw order alone, a railing along
-                // the wall behind it (its own row, drawn after it) was cut whenever anything else opened the hole, and
-                // pieces popped in and out of the cut while walking. Only what's drawn after the target opens a hole: a
-                // piece on its own row beside it (InFront) overlaps its sprite while walking along the front of a wall.
-                int over = front && d.Placed.Intersects(t.Body) ? OverBody(t, d.Layer) : -1;
-                bool c = over >= MinOverlap;
-                if (c) { cover.Add(d.Layer); if (after) covered = true; }
+                bool c = d.Kind == 2 && d.Layer.Owner != t.Owner && (after || InFront(d.Layer, d.Pixels, circle, at));
+                // Only what's drawn after the target opens a hole: a piece on its own row beside it (InFront) overlaps its
+                // sprite while walking along the front of a wall, and opened a hole there.
+                int over = c && after && d.Placed.Intersects(t.Body) ? OverBody(t, d.Layer) : -1;
+                if (c) { cover.Add(d.Layer); if (over >= MinOverlap) covered = true; }
                 else rest.Add(d);
                 if (debugNow)
                 {
