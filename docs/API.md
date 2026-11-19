@@ -902,6 +902,17 @@ One sprite layer of the world pass (a2f): a creature's body, a wall piece, a flo
 
 Values: `Other = 0, Floor, Scenery, Body, Shadow, Marker, Shield, Outline`
 
+## LayerRoute  _(class, LayerRoute.cs)_
+
+- `Layer Layer` — The layer (IsNull for tile extras).
+- `MapTile Tile` — The tile whose extras these are (IsNull for a layer).
+- `PassPicture Current` — The picture the world is being drawn into now (a split's after one).
+- `bool Hidden` — Some mod asked for it not to go into the current picture.
+- `void Hide()` — Not drawn into the current picture (copies still are). Any mod's Hide hides it.
+- `void AlsoInto(PassPicture picture)` — Drawn into picture as well (alpha-blended), with every mod's look and tint: picture can be a mod's own (WorldDraw.Picture), the current one, or one below a split.
+- `void AlsoInto(PassPicture picture, BlendState blend)` — ... with blend (e.g. one that only erases what's under the layer).
+- `PassPicture SplitHere()` — From this layer on, the world goes into a new picture of your mod's (cleared, screen-sized); the picture before it is its Below. After WorldDone's handlers (change your picture there, e.g. cut holes into it) Works draws it onto Below. Once per mod per frame: a second call returns the same picture. Null in the save screenshot's pass. Splits of several mods nest (each goes onto the one before), so they all show.
+
 ## LayerSet  _(struct, DrawApi.cs)_
 
 An entity's layers for one frame (bym: new every frame).
@@ -1323,6 +1334,14 @@ A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
 ## PartyNeed  _(enum, Party.cs)_
 
 Values: `EnterZone, Talk, Use`
+
+## PassPicture  _(class, LayerRoute.cs)_
+
+- `RenderTarget2D Target` — Its render target; null for the world's own picture (which may be the back buffer).
+- `PassPicture Below` — A split's: the picture the world went into before it (Works puts the split's picture onto it after WorldDone). Null for the world's own picture and for mods' pictures.
+- `string Owner` — The mod that split the world into it, or that owns it; null for the world's own picture.
+- `bool IsSplit`
+- `bool DrawnThisFrame` — Something was drawn into it this frame (a mod's picture is cleared at its first drawing in a frame).
 
 ## Placement  _(class, Characters.cs)_
 

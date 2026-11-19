@@ -1,6 +1,6 @@
 // UnderRailWorks: works.drawtrace [frames]: the next frames of the world, step by step, into drawtrace.txt in the game
 // folder: the pass's start, every layer in drawing order (its kind, what it belongs to, map position, place on screen,
-// tint, and which mod coloured, routed or drew it), tile extras and marks, WorldDone, the post-processing effects and
+// tint, and which mod coloured, hid, copied, split or drew it), tile extras and marks, WorldDone, the post-processing effects and
 // the outline pass. The way to see the real order in your own area with your own mods (docs/Drawing.md).
 using System;
 using System.Collections.Generic;
@@ -39,10 +39,6 @@ static class DrawTrace
         text.AppendLine("## frame " + frame);
     }
     internal static void Line(string s) { if (On) text.AppendLine(s); }
-    // Lines from inside a router (a look it ran), written after the router's own line.
-    static readonly List<string> held = new List<string>();
-    internal static void Hold(string s) { if (On) held.Add(s); }
-    internal static void Release() { if (!On) { held.Clear(); return; } foreach (var h in held) text.AppendLine(h); held.Clear(); }
 
     internal static void Layer(a2f l, bool shaderPass, string colouredBy)
     {

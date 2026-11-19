@@ -123,7 +123,7 @@ public sealed class TileMarks
                 if (m.style == TileMarkStyle.Outline) t = outline != null && !outline.IsDisposed ? outline : (outline = Make(device, false, hw, hh));
                 else t = fill != null && !fill.IsDisposed ? fill : (fill = Make(device, true, hw, hh));
                 context.b().w7(t, at, null, c, 0f, Vector2.Zero, zoom, SpriteEffects.None, 0f);
-                WorldDraw.MarksDrawn++; if (WorldDrawHooks.tileRouting > 0) WorldDraw.MarksRouted++;
+                WorldDraw.MarksDrawn++; if (Passes.InModPicture) WorldDraw.MarksInPicture++;
             }
         }
         catch (Exception ex) { broken = true; Log.Always("tile marks: " + ex.GetType().Name + ": " + ex.Message + " (off until restart)"); }

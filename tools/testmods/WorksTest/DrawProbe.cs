@@ -1,12 +1,15 @@
 // WorksTest: the drawing API under test (tools/smoketest/drawing.sh).
 //   wt.drawprobe [frames]: for that many frames (default 120) every drawing event is handled and every member of every
-//     handle it gets is read; every 7th plain floor layer and every 5th tile's extras are drawn by the probe the game's
-//     way (DrawLayer / DrawTileExtras taken over). Then one line: "drawprobe: ..." with counts and errors.
+//     handle it gets is read; every 7th plain floor layer is drawn by the probe the game's way (DrawLayer taken over)
+//     and every 5th tile's extras also copied into the probe's own picture (RouteTileExtras). Then one line:
+//     "drawprobe: ..." with counts and errors.
 //   wt.drawthrow: the next DrawLayer handler call throws: Works must stop WorksTest's drawing and the game go on.
 //   wt.drawcompose [frames]: the composing drawing parts alongside Wall Vision's keyhole: characters tinted
 //     (LayerColour), tiles around the player marked (TileMarks, both styles), every 3rd standing plain sprite drawn by
 //     WorksTest's look (DrawLayer, into whatever is set), World.ToScreen/TileBounds checked against the player's
-//     ScreenBounds. Then "drawcompose: ...". works.drawstats shows whether Wall Vision routed those looks and marks.
+//     ScreenBounds; characters' bodies copied into WorksTest's own picture and their shadows hidden (RouteLayer), also
+//     while Wall Vision's keyhole has split the world. Then "drawcompose: ..." with the copies and the lit pixels of
+//     that picture. works.drawstats shows whether the looks and marks reached Wall Vision's split picture.
 //   wt.drawbadlook: a DrawLayer look that switches the render target: Works must stop it (and WorksTest's drawing).
 using System;
 using System.Collections.Generic;
@@ -25,7 +28,7 @@ public sealed partial class WorksTest
 
     void ProbeError(string where, Exception ex) { probeErrors++; if (probeFirstError == null) probeFirstError = where + ": " + ex.GetType().Name + ": " + ex.Message; }
 
-    int composeLeft, composeTinted, composeLooks, composeErrors; string composeError; bool badLook;
+    int composeLeft, composeTinted, composeLooks, composeErrors, composeCopies, composeCopiesInSplit, composeHidden, composeLit; string composeError; bool badLook;
     TileMarks composeFill, composeEdge; RenderTarget2D badTarget;
 
     void DrawProbe()
@@ -34,7 +37,7 @@ public sealed partial class WorksTest
         Commands.Add(this, "wt.drawcompose", "wt.drawcompose [frames]: tints, tile marks and a layer look alongside Wall Vision, then log a summary", a =>
         {
             composeLeft = a.Length > 0 ? int.Parse(a[0]) : 120;
-            composeTinted = composeLooks = composeErrors = 0; composeError = null;
+            composeTinted = composeLooks = composeErrors = composeCopies = composeCopiesInSplit = composeHidden = composeLit = 0; composeError = null;
             var at = World.Player.Position;
             int px = (int)Math.Floor(at.X), py = (int)Math.Floor(at.Y);
             var ring = new List<Point>(); var edge = new List<Point>();
@@ -71,6 +74,15 @@ public sealed partial class WorksTest
             colour = new Color(colour.R, (byte)(colour.G * 0.55f), (byte)(colour.B * 0.55f), colour.A);
             composeTinted++;
         });
+        WorldDraw.RouteLayer.Add(this, (layer, route) =>
+        {
+            if (composeLeft <= 0 || !layer.Drawable || layer.Entity.Character == null) return;
+            if (layer.Id == "SHD") { route.Hide(); composeHidden++; return; }
+            if (layer.Id == "marker" || layer.ShaderName != null) return;
+            route.AlsoInto(WorldDraw.Picture(this, "glow"));
+            composeCopies++;
+            if (route.Current.IsSplit) composeCopiesInSplit++;
+        });
         int standingSeen = 0;
         WorldDraw.DrawLayer.Add(this, (layer, context, view) =>
         {
@@ -96,7 +108,19 @@ public sealed partial class WorksTest
             catch (Exception ex) { composeErrors++; if (composeError == null) composeError = ex.Message; }
             if (--composeLeft > 0) return;
             composeFill.Clear(); composeEdge.Clear();
-            Log.Info("drawcompose: tinted " + composeTinted + ", looks " + composeLooks + ", errors " + composeErrors + (composeError == null ? "" : " (first: " + composeError + ")"));
+            try
+            {
+                var glow = WorldDraw.Picture(this, "glow");
+                if (glow.DrawnThisFrame && glow.Target != null)
+                {
+                    var px = new Color[glow.Target.Width * glow.Target.Height];
+                    glow.Target.GetData(px);
+                    for (int i = 0; i < px.Length; i += 7) if (px[i].A > 0) composeLit++;
+                }
+            }
+            catch (Exception ex) { composeErrors++; if (composeError == null) composeError = "glow: " + ex.Message; }
+            Log.Info("drawcompose: tinted " + composeTinted + ", looks " + composeLooks + ", copies " + composeCopies + " (during a split " + composeCopiesInSplit + "), shadows hidden " + composeHidden
+                + ", glow pixels " + composeLit + ", errors " + composeErrors + (composeError == null ? "" : " (first: " + composeError + ")"));
         });
         Commands.Add(this, "wt.drawprobe", "wt.drawprobe [frames]: exercise the drawing API for that many frames, then log a summary", a =>
         {
@@ -160,14 +184,14 @@ public sealed partial class WorksTest
             probeReplaced++;
             return true;
         });
-        WorldDraw.DrawTileExtras.Add(this, (view, context, tile) =>
+        WorldDraw.RouteTileExtras.Add(this, (tile, route) =>
         {
-            if (!probeOn) return false;
+            if (!probeOn) return;
             probeTiles++;
-            if ((++tileSeen % 5) != 0) return false;
-            WorldDraw.TileExtrasStep(view, context, tile);
+            if (tile.IsNull || !route.Layer.IsNull) throw new InvalidOperationException("tile route: tile " + tile.IsNull + ", layer " + route.Layer.IsNull);
+            if ((++tileSeen % 5) != 0) return;
+            route.AlsoInto(WorldDraw.Picture(this, "tiles"));
             probeTilesOwn++;
-            return true;
         });
         WorldDraw.ShaderPassStarting.Add(this, view =>
         {

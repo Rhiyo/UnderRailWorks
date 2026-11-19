@@ -57,32 +57,34 @@ public static class WorldDrawHooks
         return by ?? "?";
     }
 
-    // a7m.a's a2f.f3 call: a router (RouteLayer) may take the layer; else its look.
-    [ThreadStatic] static int routing;
+    // a7m.a's a2f.f3 call: every mod's route requests (RouteLayer), then the layer into each picture they ask for.
+    static readonly LayerRoute route = new LayerRoute();
+    static a2f lookLayer; static cp9 lookContext; static bkx lookView; static a7m extrasView; static ak1 extrasTile;
+    static readonly Action LookNow = () => Look(lookLayer, lookContext, lookView);
+    static readonly Action ExtrasNow = () => { WorldDraw.GameTileExtras(extrasView, lookContext, extrasTile); TileMarks.DrawOn(extrasView, lookContext, extrasTile); };
+    static readonly Action<string> TraceLine = DrawTrace.Line;
     public static void DrawLayer(a2f layer, cp9 context, bkx view)
     {
         try
         {
             var hook = WorldDraw.RouteLayer;
-            if (hook.Any)
+            if (!hook.Any) { Look(layer, context, view); return; }
+            route.Reset(); route.Layer = new Layer(layer); route.Tile = default(MapTile);
+            var l = route.Layer;
+            var list = hook.Snapshot;
+            for (int i = 0; i < list.Length; i++)
             {
-                var l = new Layer(layer); var c = new DrawContext(context); var v = new LayerView(view);
-                var list = hook.Snapshot;
-                for (int i = list.Length - 1; i >= 0; i--)
-                {
-                    long t = hook.Starting();
-                    routing++;
-                    try { if (list[i](l, c, v)) { WorldDraw.Routed++; Count(WorldDraw.RoutedBy, hook.OwnerAt(list, i)); if (DrawTrace.On) { DrawTrace.Line("      routed by " + hook.OwnerAt(list, i)); DrawTrace.Release(); } return; } }
-                    catch (Exception ex) { hook.Failed(list, i, ex); }
-                    finally { routing--; hook.Done(i, t); }
-                }
+                long t = hook.Starting();
+                route.mod = hook.OwnerAt(list, i);
+                try { list[i](l, route); }
+                catch (Exception ex) { hook.Failed(list, i, ex); }
+                finally { hook.Done(i, t); }
             }
-            Look(layer, context, view);
+            lookLayer = layer; lookContext = context; lookView = view;
+            Passes.Carry(route, LookNow, DrawTrace.On ? TraceLine : null);
         }
-        finally { Untint(); if (DrawTrace.On) DrawTrace.Release(); }
+        finally { lookLayer = null; lookView = null; Untint(); }
     }
-    static void Count(Dictionary<string, long> d, string mod) { if (mod == null) return; long n; d.TryGetValue(mod, out n); d[mod] = n + 1; }
-
     // How a layer looks: a mod's DrawLayer, else the game's a2f.f3. A look that changed the render target is stopped.
     static readonly Microsoft.Xna.Framework.Graphics.RenderTargetBinding[] targetsBefore = new Microsoft.Xna.Framework.Graphics.RenderTargetBinding[4], targetsAfter = new Microsoft.Xna.Framework.Graphics.RenderTargetBinding[4];
     internal static void Look(a2f layer, cp9 context, bkx view)
@@ -108,9 +110,9 @@ public static class WorldDrawHooks
                         if (before == 0) device.SetRenderTarget(null); else device.SetRenderTargets(Copy(targetsBefore, before));
                         throw new InvalidOperationException("its DrawLayer handler changed the render target (draw with context.Batch into whatever is set; see WorldDraw.DrawLayer)");
                     }
-                    WorldDraw.Looked++; if (routing > 0) WorldDraw.LookedRouted++;
-                    Count(WorldDraw.LookedBy, hook.OwnerAt(list, i));
-                    if (DrawTrace.On) { var line = "      drawn by " + hook.OwnerAt(list, i) + "'s look" + (routing > 0 ? " (inside the route)" : ""); if (routing > 0) DrawTrace.Hold(line); else DrawTrace.Line(line); }
+                    WorldDraw.Looked++; if (Passes.InModPicture) WorldDraw.LookedInPicture++;
+                    Passes.Count(WorldDraw.LookedBy, hook.OwnerAt(list, i));
+                    if (DrawTrace.On) DrawTrace.Line("      drawn by " + hook.OwnerAt(list, i) + "'s look" + (Passes.InModPicture ? " (into a mod's picture)" : ""));
                     return;
                 }
                 catch (Exception ex) { hook.Failed(list, i, ex); }
@@ -124,25 +126,28 @@ public static class WorldDrawHooks
         var r = new Microsoft.Xna.Framework.Graphics.RenderTargetBinding[n]; Array.Copy(a, r, n); return r;
     }
 
-    [ThreadStatic] internal static int tileRouting;
     public static void TileExtras(a7m view, cp9 context, ak1 tile)
     {
-        var hook = WorldDraw.DrawTileExtras;
-        if (hook.Any)
+        if (DrawTrace.On) DrawTrace.Line("    tile " + tile.Location.X + "," + tile.Location.Y + " extras");
+        var hook = WorldDraw.RouteTileExtras;
+        if (!hook.Any) { WorldDraw.GameTileExtras(view, context, tile); TileMarks.DrawOn(view, context, tile); return; }
+        try
         {
-            var v = new WorldView(view); var c = new DrawContext(context); var mt = new MapTile(tile);
+            route.Reset(); route.Layer = default(Layer); route.Tile = new MapTile(tile);
+            var mt = route.Tile;
             var list = hook.Snapshot;
-            for (int i = list.Length - 1; i >= 0; i--)
+            for (int i = 0; i < list.Length; i++)
             {
                 long t = hook.Starting();
-                tileRouting++;
-                try { if (list[i](v, c, mt)) { if (DrawTrace.On) DrawTrace.Line("    tile " + tile.Location.X + "," + tile.Location.Y + " extras, routed by " + hook.OwnerAt(list, i)); return; } }
-                catch (Exception ex) { hook.Failed(list, i, ex); } finally { tileRouting--; hook.Done(i, t); }
+                route.mod = hook.OwnerAt(list, i);
+                try { list[i](mt, route); }
+                catch (Exception ex) { hook.Failed(list, i, ex); }
+                finally { hook.Done(i, t); }
             }
+            extrasView = view; extrasTile = tile; lookContext = context;
+            Passes.Carry(route, ExtrasNow, DrawTrace.On ? TraceLine : null);
         }
-        if (DrawTrace.On) DrawTrace.Line("    tile " + tile.Location.X + "," + tile.Location.Y + " extras");
-        WorldDraw.GameTileExtras(view, context, tile);
-        TileMarks.DrawOn(view, context, tile);
+        finally { extrasView = null; extrasTile = null; lookContext = null; }
     }
 
     // The world pass's start (after its first cp9.a(), no batch begun).
@@ -152,6 +157,7 @@ public static class WorldDrawHooks
         Lights.Frame();
         DrawTrace.FrameStarting();
         PostProcess.Starting(view, context);
+        Passes.Starting(view, context);
         if (DrawTrace.On) DrawTrace.Line("world pass starts" + (WorldDraw.PostProcess.Any ? " (into Works' picture for post-processing)" : ""));
     }
 
@@ -161,6 +167,7 @@ public static class WorldDrawHooks
         World.WorldDone();
         if (DrawTrace.On) DrawTrace.Line("world done: " + Owners(WorldDraw.WorldDone) + "; game lighting at " + Lights.GameStrength.ToString("0.##"));
         if (WorldDraw.WorldDone.Any) { var v = new WorldView(view); var c = new DrawContext(context); WorldDraw.WorldDone.Run(h => h(v, c)); }
+        Passes.Done();
         if (DrawTrace.On && WorldDraw.PostProcess.Any) DrawTrace.Line("post-processing: " + Owners(WorldDraw.PostProcess) + ", in this order");
         PostProcess.Done(view, context);
     }

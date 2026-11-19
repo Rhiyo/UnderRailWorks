@@ -79,33 +79,27 @@ static class ShowCovered
         state.Drawn.Add(layer);
         if (!anyKeyhole || OutlinesOff()) return;
         try { Keyhole.Layer(layer); keyholeLayer = true; }
-        catch (Exception ex) { Failed("keyhole", ex); Keyhole.Abort(true); }
+        catch (Exception ex) { Failed("keyhole", ex); Keyhole.Abort(); }
     }
 
-    // WorldDraw.RouteLayer: where a layer goes. The keyhole takes every layer after its split and draws it into its own
-    // picture (and floor near a hole onto the screen too) with WorldDraw.LayerStep, so other mods' looks (DrawLayer)
-    // and colours (LayerColour) still show. True: the keyhole drew it.
-    internal static bool DrawLayer(Layer layer, DrawContext context, LayerView view)
+    // WorldDraw.RouteLayer: where a layer goes. The keyhole splits the world into its own picture (Works' split) and asks
+    // for floor near a hole to go onto the picture below too; other mods' requests, looks and tints combine with these.
+    internal static void Route(Layer layer, LayerRoute route)
     {
-        if (keyholeLayer)
-        {
-            keyholeLayer = false;
-            try { if (Keyhole.Draw(layer, context, view)) return true; }
-            catch (Exception ex) { Failed("keyhole", ex); Keyhole.Abort(true); }
-        }
-        return false;
+        if (!keyholeLayer) return;
+        keyholeLayer = false;
+        try { Keyhole.Draw(layer, route); }
+        catch (Exception ex) { Failed("keyhole", ex); Keyhole.Abort(); }
     }
 
-    // WorldView.b(DrawContext, MapTile): what WorldView draws over a tile right after its floor, not as layers (the tile grid when that option is
-    // on, the cgr tile renderers such as the red of transition tiles). The keyhole sends it where it sent that floor.
-    internal static bool TileExtras(WorldView view, DrawContext context, MapTile tile)
+    // WorldView.b(DrawContext, MapTile): what WorldView draws over a tile right after its floor, not as layers (the tile
+    // grid when that option is on, the cgr tile renderers such as the red of transition tiles). The keyhole sends it where
+    // it sent that floor (WorldDraw.RouteTileExtras).
+    internal static void TileRoute(MapTile tile, LayerRoute route)
     {
-        if (On && anyKeyhole)
-        {
-            try { if (Keyhole.Tile(view, context, tile)) return true; }
-            catch (Exception ex) { Failed("keyhole", ex); Keyhole.Abort(true); }
-        }
-        return false;
+        if (!On || !anyKeyhole) return;
+        try { Keyhole.Tile(route); }
+        catch (Exception ex) { Failed("keyhole", ex); Keyhole.Abort(); }
     }
 
     // WorldView's world pass, after its loop, right before it sets the screen as the target again.
@@ -472,15 +466,12 @@ static class ShowCovered
 //   fading) cost nothing more.
 // - Split: from the first layer after such a target, or earlier, from the first standing layer in front of last frame's
 //   hole (InFront: a walking character is drawn on the tile it walks to, after the wall piece on the square it's leaving),
-//   the world pass continues into a front picture instead of the screen (the game's world batch, restarted there with
-//   WorldView.iu as by8 does, so lighting and shaders are unchanged). One screen-sized render target (kept as a list
-//   of "tiles" from when Microsoft XNA's 2048 limit needed several; now always one): each layer goes into every tile it reaches (ShowCovered.DrawLayer, and TileExtras for WorldView's per-tile extras), the first
-//   time by the game's call, again from its sprite as drawn (chf.avw without avv: a character's composite, by8, isn't
-//   rebuilt). UiScaleFix maps the drawing into the bound target (Into).
-// - Floor drawn after the split near last frame's holes goes onto the screen as the game draws it (AlsoOnScreen), with
-//   its tile's extras; in the front picture it only clears what's under it (EraseInFront, Cut blend), so a partly
-//   see-through floor isn't counted twice. A hole then shows the game's own floor from the screen. Floor is never
-//   redrawn later.
+//   the world pass continues into a front picture: Works' split (LayerRoute.SplitHere), which switches the target and
+//   restarts the world batch, so lighting, shaders and other mods' requests are unchanged.
+// - Floor drawn after the split near last frame's holes goes into the picture below the split as the game draws it,
+//   with its tile's extras (route.AlsoInto(front.Below)); in the front picture it only clears what's under it (Cut
+//   blend), so a partly see-through floor isn't counted twice. A hole then shows the game's own floor from below.
+//   Floor is never redrawn later.
 // - At the end of the pass (WorldDone), for each covered target, in drawing order:
 //   * cover: the standing scenery in its circle drawn after it, or before it but in front of it (InFront, by map
 //     position); only scenery drawn after it opens the hole;
@@ -488,7 +479,7 @@ static class ShowCovered
 //     in order with the tint it was drawn with; under it, the screen (what came before the split, and the floor);
 //   * mask: the cover's silhouettes x the hole's shape (KeyholeTransparency at the centre, fading out) x its fade-in;
 //   * the front picture becomes front x (1 - mask) + behind x mask.
-//   Then the front picture goes onto the screen. Behind and mask are circle-sized.
+//   Works then puts the front picture onto the one below. Behind and mask are circle-sized.
 // KeyholeSize scales the circle (100 % = 0.85 x the character's height as radius). The circles cut are kept in Holes so
 // ShowCovered.Draw erases the other effects there.
 static class Keyhole
@@ -496,7 +487,6 @@ static class Keyhole
     sealed class Target { public LayerSet Owner; public Rectangle Body; public bool HasBody; public int Last; public readonly List<Layer> Bodies = new List<Layer>(); }
     // A layer drawn after the split. Kind: 0 not drawn, 1 floor or ground, 2 standing scenery, 3 anything else.
     sealed class Drawn { public Layer Layer; public Rectangle Placed, Pixels; public byte Kind; public int Index; public Color? Tint; }
-    sealed class Front { public Rectangle Area; public RenderTarget2D Target; }
     // Last frame's hole, for the early split: its circle and the target's map depth.
     struct LastHole { public Rectangle Circle; public Vector2 Map; }
 
@@ -505,14 +495,11 @@ static class Keyhole
     static readonly List<Target> Targets = new List<Target>();
     static Target open;                        // the target whose layers are being drawn
     static int index;                          // layers seen this pass
-    static bool split, splitNext, capturePass;
+    static bool split, splitNext, splitNow, capturePass;
     static readonly List<Drawn> After = new List<Drawn>();
     static bool floorJustDrawn;                // a floor near a hole was drawn: its tile's extras (TileExtras) follow
-    // The front picture, and the screen it stands in for.
-    static readonly List<Front> Tiles = new List<Front>();
-    static Front bound;                        // the tile the world pass draws into now
+    static PassPicture front;                  // the split's picture (Works'), its Below the world before it
     static RenderTarget2D intoTarget; static Vector2 intoAt;     // the target UiScaleFix maps into, and its place on screen
-    static RenderTargetBinding[] screen; static Viewport screenViewport; static Rectangle screenScissor;
     // Across frames, keyed by entity (a creature's LayerSet is new every frame).
     static HashSet<object> covered = new HashSet<object>(), coveredNow = new HashSet<object>();
     static Dictionary<object, float> strength = new Dictionary<object, float>(), strengthNow = new Dictionary<object, float>();
@@ -527,7 +514,6 @@ static class Keyhole
     static Texture2D hole, erase;
     static int holeStrength = -1;
     const int MaxRadius = 1024;     // the hole's snapshot and mask targets: a circle at most this big
-    static int loggedTiles;
     static readonly RasterizerState Clipped = new RasterizerState { ScissorTestEnable = true, CullMode = CullMode.None };
     // Colour and alpha the same: dest x source alpha, and dest x (1 - source alpha).
     static readonly BlendState Multiply = new BlendState
@@ -617,7 +603,7 @@ static class Keyhole
         capturePass = Interface.CapturingSaveScreenshot(G);
         Targets.Clear(); After.Clear(); Holes.Clear();
         if (!capturePass) coveredNow.Clear();
-        open = null; index = 0; split = false; splitNext = false; bound = null; intoTarget = null;
+        open = null; index = 0; split = false; splitNext = false; splitNow = false; front = null; intoTarget = null;
         floorJustDrawn = false;
     }
 
@@ -641,7 +627,7 @@ static class Keyhole
         }
         if (split || (!splitNext && !InFrontOfLastHole(layer))) return;
         if (Interface.CapturingSaveScreenshot(G)) return;     // the save picture: no keyhole (its mapping is the picture's)
-        Split();
+        splitNow = true;     // asked for in this layer's route (Draw)
     }
 
     static bool InFrontOfLastHole(Layer layer)
@@ -662,82 +648,13 @@ static class Keyhole
         t.HasBody = true;
     }
 
-    // From here on the world pass draws into the front picture.
-    static void Split()
-    {
-        var g = G;
-        var s = ScreenRect;
-        const int nx = 1, ny = 1;     // one screen-sized picture
-        int tw = (s.Width + nx - 1) / nx, th = (s.Height + ny - 1) / ny;
-        if (nx * ny != loggedTiles)
-        {
-            loggedTiles = nx * ny;
-            WallVisionMod.Note($"keyhole: front picture {tw}x{th}");
-        }
-        int n = 0;
-        for (int y = 0; y < ny; y++)
-            for (int x = 0; x < nx; x++, n++)
-            {
-                var area = Rectangle.Intersect(new Rectangle(x * tw, y * th, tw, th), s);
-                if (n == Tiles.Count) Tiles.Add(new Front());
-                Tiles[n].Area = area;
-                Tiles[n].Target = Sized(g, Tiles[n].Target, area.Width, area.Height, false);
-            }
-        while (Tiles.Count > n) { Tiles[Tiles.Count - 1].Target?.Dispose(); Tiles.RemoveAt(Tiles.Count - 1); }
-        passContext.EndBatch();
-        screen = g.GetRenderTargets(); screenViewport = g.Viewport; screenScissor = g.ScissorRectangle;
-        split = true;     // from here Abort puts the screen back and begins the world batch again, also if the next lines fail
-        foreach (var t in Tiles) { g.Textures[0] = null; g.SetRenderTarget(t.Target); g.Clear(Color.Transparent); }
-        BindTile(Tiles[0], false);
-        WorldBatch(DepthStencilState.Default);
-    }
-
-    static void BindTile(Front t, bool restart)
-    {
-        var g = G;
-        if (restart) passContext.EndBatch();
-        g.Textures[0] = null;     // XNA refuses a target still bound as a texture
-        g.SetRenderTarget(t.Target);
-        var clip = new Rectangle(screenScissor.X - t.Area.X, screenScissor.Y - t.Area.Y, screenScissor.Width, screenScissor.Height);
-        g.ScissorRectangle = Rectangle.Intersect(clip, new Rectangle(0, 0, t.Area.Width, t.Area.Height));
-        bound = t; intoTarget = t.Target; intoAt = new Vector2(t.Area.X, t.Area.Y);
-        if (restart) WorldBatch(DepthStencilState.Default);
-    }
-
-    static void ToScreen()
-    {
-        var g = G;
-        g.Textures[0] = null;
-        if (screen == null || screen.Length == 0) g.SetRenderTarget(null); else g.SetRenderTargets(screen);
-        g.Viewport = screenViewport;
-        g.ScissorRectangle = screenScissor;
-        bound = null; intoTarget = null;
-    }
-
     static void WorldBatch(DepthStencilState depth) { WorldBatch(depth, BlendState.AlphaBlend); }
     static void WorldBatch(DepthStencilState depth, BlendState blend)
     {
         pass.BeginWorldBatch(passContext, SpriteSortMode.Deferred, blend, SamplerState.PointClamp, depth, Clipped);
     }
 
-    // Draws into every front tile the area reaches with the Cut blend (the drawing's alpha clears the front), then the world
-    // batch goes back to normal. draw(first): first = by the game's call, else again from the sprite.
-    static void EraseInFront(Rectangle pixels, Action<bool> draw)
-    {
-        bool first = true;
-        foreach (var t in Tiles)
-        {
-            if (Tiles.Count > 1 && !t.Area.Intersects(pixels)) continue;
-            passContext.EndBatch();
-            if (bound != t) BindTile(t, false);
-            WorldBatch(DepthStencilState.Default, Cut);
-            try { draw(first); first = false; }
-            finally { passContext.EndBatch(); WorldBatch(DepthStencilState.Default); }
-        }
-        if (first) draw(true);     // reaches no tile: as the game would
-    }
-
-    // Only floor near a hole needs the screen copy (each copy costs a target switch and two batch restarts). Last frame's
+    // Only floor near a hole needs the copy below (each copy costs a target switch and two batch restarts). Last frame's
     // holes, a floor tile's size around them: a new hole fades in from 0, so its first frame doesn't need one.
     static bool NearHole(Rectangle pixels)
     {
@@ -750,21 +667,9 @@ static class Keyhole
         return false;
     }
 
-    // Draws onto the screen, then back into the front tile that was bound. No depth test: the screen's depth buffer holds
-    // what the game drew before the split.
-    static void AlsoOnScreen(Action draw)
-    {
-        var was = bound;
-        passContext.EndBatch();
-        ToScreen();
-        WorldBatch(DepthStencilState.None);
-        try { draw(); }
-        finally { passContext.EndBatch(); BindTile(was ?? Tiles[0], false); WorldBatch(DepthStencilState.Default); }
-    }
-
-    // ShowCovered.DrawLayer: notes covered targets; after the split, draws the layer into every front tile it reaches
-    // (true: drawn here).
-    internal static bool Draw(Layer layer, DrawContext context, LayerView view)
+    // ShowCovered.Route: notes covered targets; splits the world into the front picture when Layer asked for it; floor
+    // near a hole also into the picture below.
+    internal static void Draw(Layer layer, LayerRoute route)
     {
         bool drawable = layer.Drawable;
         var placed = drawable ? layer.Bounds : Rectangle.Empty;
@@ -779,39 +684,31 @@ static class Keyhole
                 if (OverBody(t, layer) >= MinOverlap) coveredNow.Add(Who(t.Owner));
             }
         }
-        if (!split) return false;
+        if (splitNow)
+        {
+            splitNow = false;
+            front = route.SplitHere();
+            split = front != null;
+            if (split && loggedSplit++ == 0) WallVisionMod.Note("keyhole: front picture " + ScreenRect.Width + "x" + ScreenRect.Height);
+        }
+        if (!split) return;
 
         var pixels = Interface.ToPixels(placed);
         pixels.Inflate(2, 2);
         bool floor = drawable && ShowCovered.Flat(layer);
         byte kind = !drawable ? (byte)0 : floor ? (byte)1 : Standing(layer) ? (byte)2 : (byte)3;
         After.Add(new Drawn { Layer = layer, Placed = placed, Pixels = pixels, Kind = kind, Index = index - 1, Tint = drawable ? layer.Tint : null });
-        if (floor)
+        floorJustDrawn = floor && layer.ShaderName == null && NearHole(pixels);
+        if (floorJustDrawn)
         {
-            floorJustDrawn = layer.ShaderName == null && NearHole(pixels);
-            if (floorJustDrawn)
-            {
-                // Onto the screen as drawn; in the front picture it only clears what's under it (Cut: front x (1 - its
-                // alpha)). Drawn normally there too, a partly see-through floor counted twice once the front went over
-                // the screen.
-                AlsoOnScreen(() => WorldDraw.LayerStep(layer, context, view));
-                EraseInFront(pixels, byGame => { if (byGame) WorldDraw.LayerStep(layer, context, view); else Again(layer, context); });
-                return true;
-            }
+            // Into the picture below as drawn; in the front picture it only clears what's under it (Cut: front x (1 - its
+            // alpha)). Drawn normally there too, a partly see-through floor counted twice once the front went over it.
+            route.Hide();
+            route.AlsoInto(front.Below);
+            route.AlsoInto(front, Cut);
         }
-
-        if (!drawable || Tiles.Count == 1) { WorldDraw.LayerStep(layer, context, view); return true; }
-        bool first = true;
-        foreach (var t in Tiles)
-        {
-            if (!t.Area.Intersects(pixels)) continue;
-            if (bound != t) BindTile(t, true);
-            if (first) { WorldDraw.LayerStep(layer, context, view); first = false; }
-            else Again(layer, context);
-        }
-        if (first) WorldDraw.LayerStep(layer, context, view);
-        return true;
     }
+    static int loggedSplit;
 
     // A layer drawn again, from its sprite as drawn: chf.avw without avv.
     static void Again(Layer layer, DrawContext context)
@@ -819,30 +716,14 @@ static class Keyhole
         layer.Draw(context, layer.Tint ?? Color.White);
     }
 
-    // ShowCovered.TileExtras: what WorldView draws over a tile right after its floor goes where that floor went (true: drawn here).
-    internal static bool Tile(WorldView view, DrawContext context, MapTile tile)
+    // ShowCovered.TileRoute: after a floor that went below the split, its tile's extras go only there (also into the front,
+    // a see-through overlay such as transition red counted twice).
+    internal static void Tile(LayerRoute route)
     {
-        if (!split) return false;
-        // After a floor that went onto the screen: only there (its front copy is an eraser; drawn into the front as well,
-        // a see-through overlay such as transition red counted twice).
-        if (floorJustDrawn)
-        {
-            floorJustDrawn = false;
-            AlsoOnScreen(() => WorldDraw.TileExtrasStep(view, context, tile));
-            return true;
-        }
-        var area = Rectangle.Empty;
-        if (Tiles.Count == 1) { WorldDraw.TileExtrasStep(view, context, tile); return true; }
-        bool any = false;
-        foreach (var t in Tiles)
-        {
-            if (!area.IsEmpty && !t.Area.Intersects(area)) continue;
-            if (bound != t) BindTile(t, true);
-            WorldDraw.TileExtrasStep(view, context, tile);
-            any = true;
-        }
-        if (!any) WorldDraw.TileExtrasStep(view, context, tile);
-        return true;
+        if (!split || !floorJustDrawn) return;
+        floorJustDrawn = false;
+        route.Hide();
+        route.AlsoInto(front.Below);
     }
 
     // WorldView's world pass, after its loop (the world batch has been ended), right before it sets the screen again.
@@ -860,11 +741,10 @@ static class Keyhole
         }
         catch
         {
-            // The game ends its world batch and sets the screen next: put the screen back, close our own batch and the
-            // world batch if a cut had begun it again (the game's next Begin would throw on a begun batch).
+            // Close our own batch and the world batch if a cut had begun it again (Works and the game go on from here).
             try { batch?.End(); } catch { }
             try { passContext.EndBatch(); } catch { }
-            try { ToScreen(); } catch { }
+            intoTarget = null;
             throw;
         }
         finally
@@ -903,7 +783,7 @@ static class Keyhole
         debugNow = CoveredSettings.KeyholeDebug && DebugClock.ElapsedMilliseconds - debugLast > 5000;
         if (debugNow) debugLast = DebugClock.ElapsedMilliseconds;
         bool dump = DumpNow && Targets.Count > 0;
-        if (dump) for (int i = 0; i < Tiles.Count; i++) Dump("1-front-before-tile" + i, Tiles[i].Target);
+        if (dump) Dump("1-front-before", front.Target);
         var g = G;
         if (batch == null || batch.GraphicsDevice != g) batch = new SpriteBatch(g);
         Targets.Sort((a, b) => a.Last.CompareTo(b.Last));
@@ -948,42 +828,33 @@ static class Keyhole
             {
                 Dump("2-mask", mask, new Rectangle(0, 0, circle.Width, circle.Height));
                 Dump("3-behind", behind, new Rectangle(0, 0, circle.Width, circle.Height));
-                foreach (var tile in Tiles) { var part = Rectangle.Intersect(tile.Area, circle); if (part.Width > 0) Dump("4-front-after", tile.Target, new Rectangle(part.X - tile.Area.X, part.Y - tile.Area.Y, part.Width, part.Height)); }
+                Dump("4-front-after", front.Target, circle);
                 WallVisionMod.Note("dumped keyhole pictures, circle " + circle);
                 dumped = true;
             }
             Holes.Add(round);
         }
-        // The front picture onto the screen.
-        ToScreen();
-        batch.Begin(SpriteSortMode.Immediate, BlendState.AlphaBlend, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone);
-        foreach (var tile in Tiles) batch.Draw(tile.Target, tile.Area, Color.White);
-        batch.End();
+        intoTarget = null;     // Works puts the front picture onto the one below
     }
 
     internal static void Release(bool all)
     {
         if (split) return;     // never in the middle of a pass (Tidy and Unload run between frames)
-        foreach (var t in Tiles) t.Target?.Dispose();
-        Tiles.Clear();
         behind?.Dispose(); behind = null; mask?.Dispose(); mask = null;
         if (all) { batch?.Dispose(); batch = null; hole?.Dispose(); hole = null; holeStrength = -1; erase?.Dispose(); erase = null; covered.Clear(); strength.Clear(); lastHoles.Clear(); }
     }
 
     static void Reset()
     {
-        split = false; bound = null; intoTarget = null; open = null; Targets.Clear(); After.Clear();
+        split = false; splitNow = false; front = null; intoTarget = null; open = null; Targets.Clear(); After.Clear();
         pass = default(WorldView); passContext = default(DrawContext);     // the last map's view isn't kept alive (main menu)
     }
 
-    // After an error in the middle of the world pass: the screen back as the target and the world batch begun again there,
-    // as the game expects (it goes on drawing; an un-begun batch would throw in the game's own Draw).
-    internal static void Abort(bool midPass)
+    // After an error: forget this pass (Works keeps the targets and batches right; the split's picture still goes onto
+    // the one below, so the frame looks as without holes).
+    internal static void Abort()
     {
-        if (!split) { Reset(); return; }
-        try { passContext.EndBatch(); } catch { }
-        try { ToScreen(); } catch { }
-        if (midPass) { try { WorldBatch(DepthStencilState.Default); } catch { } }
+        intoTarget = null;
         Reset();
     }
 
@@ -1050,23 +921,16 @@ static class Keyhole
         batch.Begin(SpriteSortMode.Immediate, ByAlpha, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone);
         batch.Draw(mask, size, size, Color.White);
         batch.End();
-        foreach (var tile in Tiles)
-        {
-            var part = Rectangle.Intersect(tile.Area, circle);
-            if (part.Width <= 0 || part.Height <= 0) continue;
-            var dest = new Rectangle(part.X - tile.Area.X, part.Y - tile.Area.Y, part.Width, part.Height);
-            var src = new Rectangle(part.X - circle.X, part.Y - circle.Y, part.Width, part.Height);
-            g.Textures[0] = null;
-            g.SetRenderTarget(tile.Target);
-            g.ScissorRectangle = new Rectangle(0, 0, tile.Area.Width, tile.Area.Height);
-            batch.Begin(SpriteSortMode.Immediate, Cut, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone);
-            batch.Draw(mask, dest, src, Color.White);
-            batch.End();
-            batch.Begin(SpriteSortMode.Immediate, BlendState.Additive, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone);
-            batch.Draw(behind, dest, src, Color.White);
-            batch.End();
-        }
-        ToScreen();
+        g.Textures[0] = null;
+        g.SetRenderTarget(front.Target);
+        g.ScissorRectangle = new Rectangle(0, 0, front.Target.Width, front.Target.Height);
+        intoTarget = null;
+        batch.Begin(SpriteSortMode.Immediate, Cut, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone);
+        batch.Draw(mask, circle, size, Color.White);
+        batch.End();
+        batch.Begin(SpriteSortMode.Immediate, BlendState.Additive, SamplerState.PointClamp, DepthStencilState.None, RasterizerState.CullNone);
+        batch.Draw(behind, circle, size, Color.White);
+        batch.End();
     }
 
     // PreserveContents: these are switched away from and back to, and FNA clears DiscardContents targets then.

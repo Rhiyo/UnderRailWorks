@@ -24,8 +24,9 @@ public static class WorldDraw
     //   1. the world pass starts (into Works' picture while a mod has a PostProcess effect)
     //   2. tiles from the back of the view to the front; on each, its things' layers (floors, walls, props, creatures:
     //      a floor tile next to a character is often drawn after it), each through LayerColour -> LayerStarting ->
-    //      RouteLayer -> DrawLayer (its look); after each tile's floor, its extras (the grid, transition tiles, TileMarks)
-    //   3. WorldDone (Wall Vision puts its keyhole picture back here), then PostProcess effects, in load order
+    //      RouteLayer (hide, copy, split) -> DrawLayer (its look); after each tile's floor, its extras (the grid,
+    //      transition tiles, TileMarks) through RouteTileExtras
+    //   3. WorldDone (Wall Vision cuts its keyholes here), splits onto the pictures below them, then PostProcess effects
     //   4. the shader pass: Tab outlines (ShaderPassStarting / ShaderPassDone), over the processed world
     //   5. the interface (Ui, Hud, Ui.Overlay)
     // Two levels (docs/Drawing.md):
@@ -41,7 +42,7 @@ public static class WorldDraw
     {
         foreach (var h in All) h.SetOnFailure(StopDrawing);
     }
-    static HookOwner[] All { get { return new HookOwner[] { LayerColour, PostProcess, LayerStarting, RouteLayer, DrawLayer, DrawTileExtras, WorldDone, ShaderPassStarting, ShaderPassDone, InterfaceOffset }; } }
+    static HookOwner[] All { get { return new HookOwner[] { LayerColour, PostProcess, LayerStarting, RouteLayer, DrawLayer, RouteTileExtras, WorldDone, ShaderPassStarting, ShaderPassDone, InterfaceOffset }; } }
     static readonly HashSet<string> stopped = new HashSet<string>();
     internal static void StopDrawing(string mod)
     {
@@ -50,6 +51,7 @@ public static class WorldDraw
         foreach (var h in All) ((IModOwned)h).RemoveOwner(mod);
         Outlines.Forget(mod);
         TileMarks.Forget(mod);
+        Passes.Forget(mod);
         Log.Always("mods: " + mod + ": an error while drawing; its drawing is off until the game restarts");
         lock (stopped) stopped.Remove(mod);     // a reloaded copy may add handlers again
     }
@@ -69,25 +71,31 @@ public static class WorldDraw
     // Watch only: don't draw or change render targets here.
     [Preview("the world pass, built for Wall Vision")]
     public static readonly Hook<Action<WorldView, DrawContext, Layer, bool>> LayerStarting = new Hook<Action<WorldView, DrawContext, Layer, bool>>("LayerStarting");
-    // Step 2, after LayerStarting: where a layer goes. The world batch is begun, the target is the world's. Return true to take it and draw it somewhere else (another render target, several, or not at
-    // all), drawing it with LayerStep wherever it should appear, so other mods' DrawLayer looks still show. One mod
-    // takes a layer (asked from the lowest mod in the load order up): Wall Vision's keyhole takes every layer after its
-    // split, so two mods that both route layers don't combine; `works.drawstats` names the mods that took layers.
-    // Leave the screen and the world batch as they were when you return.
+    // Step 2, after LayerStarting: where a layer goes, asked by every mod (docs/Drawing.md, "Where layers go"). Add
+    // requests to route: Hide (not into the current picture), AlsoInto (copied into a picture: your own from Picture, the
+    // current one, or one below a split, with an optional blend), SplitHere (from this layer on the world goes into a
+    // picture of your mod's, put onto the one before after WorldDone). Every mod's requests combine; Works switches the
+    // render targets and batches and draws each copy with every mod's look (DrawLayer) and tint. Don't draw or change
+    // render targets here.
     [Preview("the world pass, built for Wall Vision")]
-    public static readonly ReplaceHook<Func<Layer, DrawContext, LayerView, bool>> RouteLayer = new ReplaceHook<Func<Layer, DrawContext, LayerView, bool>>("RouteLayer");
-    // Step 2, when the layer is drawn (by the game, or by a router through LayerStep): how it looks. Return true to
+    public static readonly Hook<Action<Layer, LayerRoute>> RouteLayer = new Hook<Action<Layer, LayerRoute>>("RouteLayer");
+    // Step 2, when the layer is drawn (into each picture its route sends it to, or by a mod through LayerStep): how it looks. Return true to
     // draw it yourself instead of the game. Draw with context.Batch (the world batch,
-    // begun) into whatever is set: Wall Vision may be drawing this layer into its own picture. Don't end or begin batches
+    // begun) into whatever is set: the layer may be going into a split's or a mod's picture. Don't end or begin batches
     // or change render targets here; a handler that does is stopped like one that throws. One mod draws a layer (asked
     // from the lowest mod in the load order up); for tints and fades use LayerColour, which composes.
     [Preview("the world pass, built for Wall Vision")]
     public static readonly ReplaceHook<Func<Layer, DrawContext, LayerView, bool>> DrawLayer = new ReplaceHook<Func<Layer, DrawContext, LayerView, bool>>("DrawLayer");
-    // Step 2, after each tile's floor: where its extras go (a7m.b(cp9, ak1): the tile grid, transition tiles, Works' tile marks): return true to
-    // take them, drawing them with TileExtrasStep wherever they should appear. The same rules as RouteLayer.
+    // Step 2, after each tile's floor: where its extras go (a7m.b(cp9, ak1): the tile grid, transition tiles, Works' tile
+    // marks), as RouteLayer (route.Tile is the tile, route.Layer is null).
     [Preview("the world pass, built for Wall Vision")]
-    public static readonly ReplaceHook<Func<WorldView, DrawContext, MapTile, bool>> DrawTileExtras = new ReplaceHook<Func<WorldView, DrawContext, MapTile, bool>>("DrawTileExtras");
-    // Step 3: the world pass is done (world batch ended), before PostProcess and before the screen is set again.
+    public static readonly Hook<Action<MapTile, LayerRoute>> RouteTileExtras = new Hook<Action<MapTile, LayerRoute>>("RouteTileExtras");
+    // A screen-sized picture of your mod's for RouteLayer's AlsoInto (e.g. characters copied for a glow), kept between
+    // frames and cleared at its first drawing in each frame (DrawnThisFrame). Read it from WorldDone or PostProcess.
+    [Preview("the world pass, built for Wall Vision")]
+    public static PassPicture Picture(WorksMod mod, string name) { if (mod == null) throw new ArgumentNullException("mod"); return Passes.Picture(mod.Id, name); }
+    // Step 3: the world pass is done (world batch ended; the current picture, a split's if any, still set), before
+    // splits are put onto the pictures below them, before PostProcess and before the screen is set again.
     [Preview("the world pass, built for Wall Vision")]
     public static readonly Hook<Action<WorldView, DrawContext>> WorldDone = new Hook<Action<WorldView, DrawContext>>("WorldDone");
     // Step 4: start / end of the pass for layers with their own shader (a7m.b(cp9): outlines), on the screen. Outline layers are in
@@ -104,14 +112,14 @@ public static class WorldDraw
     // The game's own tile-extras step.
     internal static readonly Action<a7m, cp9, ak1> GameTileExtras = (Action<a7m, cp9, ak1>)Delegate.CreateDelegate(typeof(Action<a7m, cp9, ak1>),
         typeof(a7m).GetMethod("b", BindingFlags.Instance | BindingFlags.NonPublic, null, new[] { typeof(cp9), typeof(ak1) }, null));
-    // A tile's extras as they'd be drawn with no RouteLayer-style taker: the game's, then mods' tile marks.
+    // A tile's extras drawn into whatever is set: the game's, then mods' tile marks.
     [Preview("the world pass, built for Wall Vision")]
     public static void TileExtrasStep(WorldView view, DrawContext context, MapTile tile)
     {
         GameTileExtras(view.Game, context.Game, tile.Game);
         TileMarks.DrawOn(view.Game, context.Game, tile.Game);
     }
-    // A layer drawn as it would be with no router: by the mod whose DrawLayer takes it, else the game's way.
+    // A layer drawn into whatever is set, with its look: the mod's whose DrawLayer takes it, else the game's way.
     [Preview("the world pass, built for Wall Vision")]
     public static void LayerStep(Layer layer, DrawContext context, LayerView view) { WorldDrawHooks.Look(layer.Game, context.Game, view.Game); }
 
@@ -123,17 +131,19 @@ public static class WorldDraw
         return set;
     }
 
-    // works.drawstats: what the composing parts and the routers did since the last call.
-    internal static long Coloured, Routed, Looked, LookedRouted, MarksDrawn, MarksRouted;
-    internal static readonly Dictionary<string, long> RoutedBy = new Dictionary<string, long>(), LookedBy = new Dictionary<string, long>();
+    // works.drawstats: what the composing parts and the routes did since the last call.
+    internal static long Coloured, Looked, LookedInPicture, MarksDrawn, MarksInPicture;
+    internal static readonly Dictionary<string, long> LookedBy = new Dictionary<string, long>();
     internal static string Stats()
     {
         Func<Dictionary<string, long>, string> who = d => d.Count == 0 ? "" : " (" + string.Join(", ", System.Linq.Enumerable.Select(d, kv => kv.Key + " " + kv.Value)) + ")";
-        var s = "drawstats: layers coloured " + Coloured + ", routed " + Routed + who(RoutedBy) + ", drawn by a mod's look " + Looked + who(LookedBy)
-            + " (inside a route " + LookedRouted + "), tile marks drawn " + MarksDrawn + " (inside a route " + MarksRouted + ")"
+        var s = "drawstats: layers coloured " + Coloured + ", hidden " + Passes.Hidden + who(Passes.HiddenBy) + ", copied " + Passes.Copies + who(Passes.CopiedBy)
+            + ", splits " + Passes.Splits + who(Passes.SplitBy) + ", drawn by a mod's look " + Looked + who(LookedBy)
+            + " (into a mod's picture " + LookedInPicture + "), tile marks drawn " + MarksDrawn + " (into a mod's picture " + MarksInPicture + ")"
             + ", post-processed frames " + UnderRailWorks.PostProcess.Frames + " (effects drawn " + UnderRailWorks.PostProcess.Effects + ")";
         UnderRailWorks.PostProcess.Frames = UnderRailWorks.PostProcess.Effects = 0;
-        Coloured = Routed = Looked = LookedRouted = MarksDrawn = MarksRouted = 0; RoutedBy.Clear(); LookedBy.Clear();
+        Coloured = Looked = LookedInPicture = MarksDrawn = MarksInPicture = 0; LookedBy.Clear();
+        Passes.Hidden = Passes.Copies = Passes.Splits = 0; Passes.HiddenBy.Clear(); Passes.CopiedBy.Clear(); Passes.SplitBy.Clear();
         return s;
     }
 }

@@ -7,7 +7,8 @@
 # stop that mod's drawing and the game go on. Screenshots go to $WORK/shots (world drawn = not black). Exit 0 when
 # every check passed.   tools/smoketest/drawing.sh   (after ./build.sh)
 # Also the composing parts (wt.drawcompose: LayerColour, TileMarks, a DrawLayer look, World.ToScreen) with the keyhole
-# on, checked with works.drawstats: Wall Vision must route layers through WorksTest's look and carry its tile marks; and a
+# on, checked with works.drawstats: Wall Vision's split picture must get WorksTest's look and its tile marks; WorksTest's
+# own route requests (characters copied into its picture, shadows hidden) must combine with Wall Vision's split; and a
 # look that switches the render target (wt.drawbadlook) must be stopped.
 #   SIZE="1920 1080" (default; also "3840 2160" with UISCALE=200, a percentage). Headless at 2560x720 the world stayed black in
 #   Nov 2026 (the game's area fade-in, also with older builds): use sizes that show it.
@@ -48,7 +49,7 @@ sleep 10; step "works.drawstats"; sleep 3
 # and the low-level example (Hologram's DrawLayer look on the player) with the keyhole on, traced for one frame.
 step "works.config Lantern On true" "works.config Hologram On true" "wait 2" "works.drawstats"; sleep 6
 "$SKILL/shot.sh" "$SHOTS/lantern.png" >/dev/null 2>&1
-step "works.drawtrace" "wait 2" "works.drawstats" "works.config Lantern On false" "works.config Hologram On false"; sleep 6
+step "works.drawtrace 5" "wait 3" "works.drawstats" "works.config Lantern On false" "works.config Hologram On false"; sleep 6
 for fx in Lines Dither Fill Outline; do
     step "works.config WallVision ShowCoveredOther $fx" "wt.drawprobe 60"; sleep 6
     "$SKILL/shot.sh" "$SHOTS/$(echo $fx | tr A-Z a-z).png" >/dev/null 2>&1
@@ -79,17 +80,18 @@ check "probe: shader passes"                  "drawprobe: frames 120/120.*shader
 never "probe: no errors reading the API"      "drawprobe: .*errors [1-9]"
 check "keyhole made"                          "WallVision: keyhole (circle|layer|: front picture)"
 never "occluded characters never failed"      "occluded characters: .* failed"
-check "compose: tints, looks, ToScreen (no errors)"  "drawcompose: tinted [1-9][0-9]*, looks [1-9][0-9]*, errors 0"
-check "compose: Wall Vision routed layers through WorksTest's look, and tile marks" \
-    "drawstats: layers coloured [1-9][0-9]*, routed [1-9][0-9]* \(WallVision [1-9][0-9]*\), drawn by a mod's look [1-9][0-9]* \(WorksTest [1-9][0-9]*\) \(inside a route [1-9][0-9]*\), tile marks drawn [1-9][0-9]* \(inside a route [1-9]"
-check "lighting: Lantern coloured, Wall Vision routed, Hologram's look, Lantern's effect drawn each frame" \
-    "drawstats: layers coloured [1-9][0-9]*, routed [1-9][0-9]* \(WallVision [1-9][0-9]*\), drawn by a mod's look [1-9][0-9]* \(Hologram [1-9][0-9]*\).*post-processed frames [1-9][0-9]* \(effects drawn [1-9]"
+check "compose: tints, looks, copies during the keyhole's split, hidden shadows, a lit picture (no errors)" \
+    "drawcompose: tinted [1-9][0-9]*, looks [1-9][0-9]*, copies [1-9][0-9]* \(during a split [1-9][0-9]*\), shadows hidden [1-9][0-9]*, glow pixels [1-9][0-9]*, errors 0"
+check "compose: Wall Vision's split got WorksTest's look and tile marks; both mods' requests counted" \
+    "drawstats: layers coloured [1-9][0-9]*, hidden [1-9][0-9]* \(.*WorksTest [1-9][0-9]*.*\), copied [1-9][0-9]* \(.*WorksTest [1-9][0-9]*.*\), splits [1-9][0-9]* \(WallVision [1-9][0-9]*\), drawn by a mod's look [1-9][0-9]* \(WorksTest [1-9][0-9]*\) \(into a mod's picture [1-9][0-9]*\), tile marks drawn [1-9][0-9]* \(into a mod's picture [1-9]"
+check "lighting: Lantern coloured, Wall Vision split, Hologram's look, Lantern's effect drawn each frame" \
+    "drawstats: layers coloured [1-9][0-9]*, .*splits [1-9][0-9]* \(WallVision [1-9][0-9]*\), drawn by a mod's look [1-9][0-9]* \(Hologram [1-9][0-9]*\).*post-processed frames [1-9][0-9]* \(effects drawn [1-9]"
 TRACE="$TEST_GAME/drawtrace.txt"
 tr() { if grep -qE "$2" "$TRACE" 2>/dev/null; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: $1 (expected in drawtrace.txt: $2)"; fi; }
-check "drawtrace written"                     "drawtrace: 1 frame\(s\) written to"
+check "drawtrace written"                     "drawtrace: 5 frame\(s\) written to"
 tr "trace: the pass starts into Works' picture" "world pass starts \(into Works' picture"
 tr "trace: layers coloured by Lantern"        "coloured by Lantern"
-tr "trace: layers routed by Wall Vision"      "routed by WallVision"
+tr "trace: the world split by Wall Vision"    "split by WallVision"
 tr "trace: Hologram's look"                   "drawn by Hologram's look"
 tr "trace: game lighting off"                 "game lighting at 0"
 tr "trace: Lantern's effect after WorldDone"  "post-processing: Lantern"

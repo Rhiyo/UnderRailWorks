@@ -14,9 +14,10 @@ its tint, and which mod coloured, routed or drew it. `works.drawstats` counts th
 1. world pass starts ............ into Works' picture while any mod has a PostProcess effect
 2. tiles, back of the view to the front
      each thing on the tile, each of its layers:
-        LayerColour  ->  LayerStarting  ->  RouteLayer  ->  DrawLayer (its look)  ->  drawn
-     after a tile's floor: its extras (the grid, transition tiles, TileMarks)
-3. WorldDone .................... Wall Vision puts its keyhole picture back here
+        LayerColour  ->  LayerStarting  ->  RouteLayer (hide, copy, split)  ->  DrawLayer (its look)  ->  drawn
+     after a tile's floor: its extras (the grid, transition tiles, TileMarks), through RouteTileExtras
+3. WorldDone .................... Wall Vision cuts its keyholes into its split picture here
+   splits ....................... each split's picture onto the one below it (Works)
    PostProcess effects .......... in load order, each on the one before's result
 4. outline pass ................. Tab outlines (ShaderPassStarting / ShaderPassDone), not processed
 5. interface .................... Hud, Ui windows, Ui.Overlay
@@ -50,18 +51,40 @@ Wall Vision's keyhole.
 | An effect over the finished world (lighting, colour grade, fog, blur) | `WorldDraw.PostProcess` |
 | The game's lighting read, turned down or off | `Lights` (`GameLighting`, `At`, `Ambient`, `Sources`) |
 
-**The world pass itself ([Preview]): built for Wall Vision.** `LayerStarting`, `RouteLayer`, `DrawLayer`,
-`DrawTileExtras`, `WorldDone`, the shader-pass hooks, `Outlines` and the batch handles. They may change in any
-release. Their rules:
+**The world pass itself ([Preview]): built for Wall Vision.** `LayerStarting`, `RouteLayer`, `RouteTileExtras`,
+`DrawLayer`, `WorldDone`, `WorldDraw.Picture`, the shader-pass hooks, `Outlines` and the batch handles. They may change
+in any release. Their rules:
 
-- **A look (`DrawLayer`)** draws the layer itself with `context.Batch` (already begun) into whatever is set. Wall
-  Vision may be drawing that very layer into its keyhole picture, so never begin or end batches or switch render
-  targets in a look: Works stops a look that does. Only one mod draws a given layer.
-- **A router (`RouteLayer`, `DrawTileExtras`)** decides where a layer goes (another render target, several, none) and
-  draws it with `WorldDraw.LayerStep` / `TileExtrasStep`, so other mods' looks and tile marks still show. Only one mod
-  routes a given layer: Wall Vision's keyhole routes everything after its split, so a second router doesn't combine
-  with it.
+- **Where a layer goes (`RouteLayer`, `RouteTileExtras`) is asked, never taken.** Every mod's handler gets the same
+  `LayerRoute` and adds requests; Works carries them all out (see below), so they combine.
+- **A look (`DrawLayer`)** draws the layer itself with `context.Batch` (already begun) into whatever is set. The layer
+  may be going into a split's or a mod's picture, so never begin or end batches or switch render targets in a look:
+  Works stops a look that does. Only one mod draws a given layer; for tints use `LayerColour`, which composes.
 - A handler that throws switches off all of that mod's drawing until the game restarts; the game's drawing goes on.
+
+## Where layers go
+
+A `RouteLayer` handler (or `RouteTileExtras`, for a tile's extras) asks for any of these on the route it's given:
+
+| Request | Does | With other mods |
+|---|---|---|
+| `route.Hide()` | not drawn into the current picture | any mod's Hide hides it; copies are still drawn |
+| `route.AlsoInto(picture)` / `AlsoInto(picture, blend)` | also drawn into `picture`: your own (`WorldDraw.Picture(this, "name")`, screen-sized, cleared at its first drawing each frame), the current one, or one below a split | every mod gets its copy |
+| `route.SplitHere()` | from this layer on, the world goes into a picture of your mod's; after `WorldDone` Works puts it onto the one before (`picture.Below`) | splits of several mods nest, each onto the one before, so all show |
+
+Works carries them out after every handler has asked: a split first, then the copies in the order asked, then the
+layer into the current picture unless hidden. Each copy goes through every mod's look and tint, as the layer itself.
+During the save screenshot's pass only `Hide` applies.
+
+Wall Vision's keyhole is built from these: when a character is covered, it splits the world into its picture just
+before what stands in front; floor near a hole is hidden from that picture and copied into the one below (and into
+its own with a blend that only erases), so the hole shows the game's floor; at `WorldDone` it cuts the holes into its
+picture, and Works puts it onto the world. A mod that copies characters into its own picture for a glow keeps getting
+them while a keyhole is open (`tools/smoketest/drawing.sh` checks exactly that).
+
+The cost: a route with no requests costs nothing extra; each copy ends the world batch, switches the render target
+and begins the batch twice; a split is one more screen-sized picture per frame. `works.drawstats` counts hidden
+layers, copies and splits by mod, and `works.drawtrace` shows each request on the layer it was made for.
 
 ## Lighting and post-processing
 
@@ -84,6 +107,8 @@ and the interface come after and aren't processed.
 
 ## Tested
 
-`tools/smoketest/drawing.sh` runs Wall Vision's keyhole with a test mod's tints, tile marks and looks, then with
-Lantern and Hologram, and checks from `works.drawstats` and a `works.drawtrace` that Wall Vision routed layers through
-the other mods' looks, that their tints and marks reached its picture, and that Lantern's effect ran after it.
+`tools/smoketest/drawing.sh` runs Wall Vision's keyhole with a test mod's tints, tile marks, looks and route requests
+(characters copied into its own picture, shadows hidden), then with Lantern and Hologram, and checks from
+`works.drawstats` and a `works.drawtrace` that the other mods' looks, tints and marks reached Wall Vision's split
+picture, that the test mod's copies kept coming during the split and its picture has the characters in it, and that
+Lantern's effect ran after it.

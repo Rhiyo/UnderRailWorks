@@ -1143,7 +1143,7 @@ That stays coherent because every area follows the same framework rules, taken f
 **Each area is a slice**: its patch points, its events (the model above), readable names for its objects, one real
 mod that uses them, and a short doc page. Slices are independent once the foundations hold.
 
-**Done: drawing (experimental)**: `WorldDraw` events (LayerStarting, DrawLayer, DrawTileExtras, WorldDone,
+**Done: drawing (experimental)**: `WorldDraw` events (LayerStarting, RouteLayer, DrawLayer, RouteTileExtras, WorldDone,
 ShaderPassStarting/Done, InterfaceOffset), `Outlines` (mods request outlines for every creature Tab would outline;
 the extra ones are hidden from the game's pass for the mod to draw), names for layers, entities, the world view and
 the draw context. The real mod: UnderRailFixes (Occluded characters), now with no reflection of its own. The name
@@ -1914,10 +1914,21 @@ layer hid it from the keyhole (holes, scenery that never faded).
   (every handler changes the colour in turn; Works sets the layer's tint before LayerStarting and puts it back after
   the layer is drawn: scenery layers persist between frames), `World.ToScreen(Vector3)` / `World.TileBounds(Point)`
   (a7m.vq; the tile size is a7m.as, an esj, read by reflection), `Stealth.NoticesAt(observer, tile)`.
-- **Routing vs looks:** `RouteLayer` (where a layer goes; Wall Vision) and `DrawLayer` (how it looks) are separate.
-  A router draws with `WorldDraw.LayerStep`, which runs the looks, so a mod's look shows inside the keyhole's picture;
-  `TileExtrasStep` includes tile marks. A look that changes the render target is stopped (checked with FNA's
-  GetRenderTargetsNoAllocEXT, only when looks exist). Two routers still don't combine (documented).
+- **Routing vs looks:** `RouteLayer` / `RouteTileExtras` (where a layer goes) and `DrawLayer` (how it looks) are
+  separate. A look that changes the render target is stopped (checked with FNA's GetRenderTargetsNoAllocEXT, only
+  when looks exist).
+- **Routes are requests (Nov 20 2026, before 0.0.1):** RouteLayer was a ReplaceHook: one mod took a layer and drew it
+  where it liked with `LayerStep`, so a second router never combined with Wall Vision's keyhole. Now every mod's
+  handler adds requests to one `LayerRoute` (Hide, AlsoInto(picture[, blend]), SplitHere) and Works carries them out
+  (LayerRoute.cs, `Passes`): the split first, the copies in the order asked (each with every mod's look and tint), then
+  the layer into the current picture unless hidden. Works owns the render-target and batch switching (the world batch
+  restarted as a7m begins it: Deferred, AlphaBlend, PointClamp, depth Default in the current picture and None
+  elsewhere, a scissor rasterizer), and after WorldDone's handlers puts each split's picture onto its Below, the
+  last first, so several mods' splits nest. Mods' own pictures: `WorldDraw.Picture(mod, name)`. Wall Vision's
+  keyhole was ported onto it (split; floor near a hole hidden, copied below and copied into its own picture with the
+  Cut blend) and lost its own target switching (BindTile, AlsoOnScreen, EraseInFront, the old tile list). Checked by
+  pixel-comparing the keyhole on the same save before and after, and by drawing.sh (WorksTest copying characters into
+  its own picture and hiding shadows during Wall Vision's split).
 - **Preview again:** every world-pass hook, `Outlines`, `DrawContext`, `GameBatch`, `LayerShader`, `LayerView`, and
   the drawing/tint members of `Layer`, `WorldView`. Read-only handle members stay stable (LayerColour hands out Layer).
 - **Second user:** Stealth Lens marks the floor where each enemy in view would notice the player (setting, on).
@@ -1938,8 +1949,8 @@ layer hid it from the keyhole (holes, scenery that never faded).
   (only for things in sight: the fog of war's remembered colour is left). `Lights.Sources` groups stamps by source Guid
   (the game keeps no other position for a light): light-weighted centre, reach, brightest colour; cached 0.5 s/area.
 - **Helpers:** `Layer.Kind` (LayerKind), `Layer.IsInFrontOf(character)` / `Covers` (Wall Vision's measured rule).
-- **`works.drawtrace [frames]`:** drawtrace.txt in the game folder; looks run inside a router are held and written
-  after the router's line.
+- **`works.drawtrace [frames]`:** drawtrace.txt in the game folder; each layer's requests (hidden by, copied into,
+  split by) follow its line.
 - **Examples:** `examples/Lantern` (game lighting off, per-tile light with Bresenham wall shadows through LayerColour,
   glow through PostProcess) and `examples/Hologram` (a DrawLayer look). drawing.sh runs both with the keyhole and
   checks drawstats and the trace (39 checks). Every hook comment names its step of the frame (WorldDraw.cs).

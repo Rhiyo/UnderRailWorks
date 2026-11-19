@@ -40,7 +40,7 @@ test at Small and at Huge.
 **Drawing in the world: compose, don't take over.** Read [Drawing.md](Drawing.md): how a frame is drawn, and which
 parts combine with every other mod's drawing and Wall Vision's keyhole: `TileMarks`, `WorldDraw.LayerColour`,
 `WorldDraw.PostProcess` (effects over the finished world), `Lights`, and `World.ToScreen`/`TileBounds` with
-`Ui.Overlay`. The world pass itself (`RouteLayer`, `DrawLayer`, `Outlines`...) is **[Preview]**, with rules on each
+`Ui.Overlay`. The world pass itself (`RouteLayer`'s hide/copy/split requests, which combine across mods, `DrawLayer`, `Outlines`...) is **[Preview]**, with rules on each
 member. `works.drawtrace` writes one frame step by step into drawtrace.txt; `examples/Lantern` is a lighting mod.
 
 **Handlers never throw into the game.** Works catches and reports a failing handler (log, the mod's card in the Mods
