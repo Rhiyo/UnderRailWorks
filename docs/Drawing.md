@@ -29,7 +29,9 @@ Three things about the order surprise everyone, and the API answers each so you 
 
 - **Draw order isn't depth.** A floor tile next to a character is often drawn *after* it, and a walking character is
   drawn after the wall piece on the square it's leaving. Don't decide "in front" by "drawn later": use
-  `Layer.IsInFrontOf(character)` and `Layer.Covers(character)`.
+  `Layer.IsInFrontOf(character)` and `Layer.Covers(character)`. Rectangles aren't sprites either: a railing along the
+  wall behind a character overlaps its rectangle, not its body. `Layer.SolidOverlap(other)` counts where both sprites
+  actually show (Wall Vision opens a keyhole only when a piece drawn after a character overlaps its body that way).
 - **A creature's layers are new every frame.** Don't keep a `Layer` or `LayerSet` between frames; key what you
   remember by the character (`layer.Entity.Character`).
 - **Lighting is a tint.** The game multiplies each layer's colour by the light on its tiles just before drawing it.

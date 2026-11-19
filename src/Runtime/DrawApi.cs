@@ -164,6 +164,12 @@ public struct Layer : IEquatable<Layer>
         var b = character.ScreenBounds;
         return b != null && Bounds.Intersects(b.Value);
     }
+    // Whether its sprite shows at a point (layout units, as Bounds), not just inside its rectangle: the game's sprite
+    // masks (8-pixel cells, as mouse picking uses them) or the texture's pixels; a character's body and its overlays.
+    public bool IsSolidAt(Point at) { return SpriteMasks.Solid(Game, at.X, at.Y); }
+    // How much of the two sprites lie over each other: points solid in both, sampled every `step` layout units where
+    // their rectangles meet (0: their visible parts don't touch, e.g. a railing beside a character, not over it).
+    public int SolidOverlap(Layer other, int step = 2) { return SpriteMasks.Overlap(Game, other.Game, step); }
     // A plain sprite (e4m), not a character's composite (by8, which rebuilds its cached picture when drawn).
     public bool IsPlainSprite { get { return Game.d is e4m; } }
     // The sprite source's kind, for logs.

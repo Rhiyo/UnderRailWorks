@@ -888,6 +888,8 @@ One sprite layer of the world pass (a2f): a creature's body, a wall piece, a flo
 - `LayerKind Kind` — What it is: Floor (floor and ground, flat), Scenery (walls, props, doors: standing), Body (a character's own sprite), Shadow, Marker (selection marks under characters), Shield, Outline (the shader pass's, step 4).
 - `bool IsInFrontOf(Character character)` — Standing scenery that is in front of the character: on its square or nearer the camera on both map axes (Wall Vision's rule, measured). Draw order can't tell: a walking character is drawn after the wall piece on the square it's leaving, and floor beside it is drawn after it.
 - `bool Covers(Character character)` — In front of the character and over where it was drawn last frame: this layer hides part of it.
+- `bool IsSolidAt(Point at)` — Whether its sprite shows at a point (layout units, as Bounds), not just inside its rectangle: the game's sprite masks (8-pixel cells, as mouse picking uses them) or the texture's pixels; a character's body and its overlays.
+- `int SolidOverlap(Layer other, int step = 2)` — How much of the two sprites lie over each other: points solid in both, sampled every `step` layout units where their rectangles meet (0: their visible parts don't touch, e.g. a railing beside a character, not over it).
 - `bool IsPlainSprite` — A plain sprite (e4m), not a character's composite (by8, which rebuilds its cached picture when drawn).
 - `string SpriteKind` — The sprite source's kind, for logs.
 - `bool Equals(Layer o)`

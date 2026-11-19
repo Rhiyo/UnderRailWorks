@@ -493,7 +493,7 @@ static class ShowCovered
 // ShowCovered.Draw erases the other effects there.
 static class Keyhole
 {
-    sealed class Target { public LayerSet Owner; public Rectangle Body; public bool HasBody; public int Last; }
+    sealed class Target { public LayerSet Owner; public Rectangle Body; public bool HasBody; public int Last; public readonly List<Layer> Bodies = new List<Layer>(); }
     // A layer drawn after the split. Kind: 0 not drawn, 1 floor or ground, 2 standing scenery, 3 anything else.
     sealed class Drawn { public Layer Layer; public Rectangle Placed, Pixels; public byte Kind; public int Index; public Color? Tint; }
     sealed class Front { public Rectangle Area; public RenderTarget2D Target; }
@@ -548,6 +548,17 @@ static class Keyhole
     static object Who(LayerSet owner) { return owner.Entity.Key ?? owner.Key; }
     static float Strength(LayerSet owner) { float v; return strength.TryGetValue(Who(owner), out v) ? v : 0f; }
     static bool IsTarget(LayerSet owner) { return !owner.IsNull && ShowCovered.HasOutline(owner) && ShowCovered.EffectFor(owner) == CoveredEffect.Keyhole; }
+
+    // A piece covers a target only where its visible pixels lie over the target's (Layer.SolidOverlap, the game's sprite
+    // masks), not wherever their rectangles meet: a railing along the wall behind a character, on its own row and drawn
+    // after it, overlaps its rectangle but not its body, and opened a hole that cut the railing away.
+    const int MinOverlap = 1;
+    static int OverBody(Target t, Layer piece)
+    {
+        int n = 0;
+        foreach (var b in t.Bodies) n += piece.SolidOverlap(b);
+        return n;
+    }
 
     // Standing in front of others: not flat, not a character, not a shadow or marker.
     static bool Standing(Layer layer)
@@ -646,6 +657,7 @@ static class Keyhole
         t.Last = i;
         if (ShowCovered.NotBody(layer.Id)) return;     // the body only: not the shadow or markers
         var r = layer.Bounds;
+        t.Bodies.Add(layer);
         t.Body = t.HasBody ? Rectangle.Union(t.Body, r) : r;
         t.HasBody = true;
     }
@@ -764,7 +776,7 @@ static class Keyhole
                 if (t == open || !t.HasBody || !t.Body.Intersects(placed)) continue;
                 if (!checkedStanding) { standing = Standing(layer); checkedStanding = true; }
                 if (!standing) break;
-                coveredNow.Add(Who(t.Owner));
+                if (OverBody(t, layer) >= MinOverlap) coveredNow.Add(Who(t.Owner));
             }
         }
         if (!split) return false;
@@ -911,7 +923,8 @@ static class Keyhole
                 bool c = d.Kind == 2 && d.Layer.Owner != t.Owner && (after || InFront(d.Layer, d.Pixels, circle, at));
                 // Only what's drawn after the target opens a hole: a piece on its own row beside it (InFront) overlaps its
                 // sprite while walking along the front of a wall, and opened a hole there.
-                if (c) { cover.Add(d.Layer); if (after && d.Placed.Intersects(t.Body)) covered = true; }
+                int over = c && after && d.Placed.Intersects(t.Body) ? OverBody(t, d.Layer) : -1;
+                if (c) { cover.Add(d.Layer); if (over >= MinOverlap) covered = true; }
                 else rest.Add(d);
                 if (debugNow)
                 {
@@ -920,7 +933,7 @@ static class Keyhole
                     WallVisionMod.Note("keyhole layer " + d.Index + " (target last " + t.Last + ") kind " + d.Kind + " " + (c ? "CUT" : "kept")
                         + " map " + own.X.ToString("0.##") + "," + own.Y.ToString("0.##") + " (target " + at.X.ToString("0.##") + "," + at.Y.ToString("0.##") + ")"
                         + " id " + (d.Layer.Id ?? "-") + " tex " + tex + " px " + d.Pixels + " entity " + (d.Layer.Entity.IsNull ? "-" : d.Layer.Entity.Key.GetType().Name)
-                        + (d.Layer.Owner == t.Owner ? " (target's own)" : ""));
+                        + (d.Layer.Owner == t.Owner ? " (target's own)" : "") + (over >= 0 ? " over body " + over : ""));
                 }
             }
             if (debugNow) WallVisionMod.Note("keyhole circle " + circle + " cover " + cover.Count + " rest " + rest.Count);
