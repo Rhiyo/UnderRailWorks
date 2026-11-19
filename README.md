@@ -1,91 +1,127 @@
 # UnderRailWorks
 
 An engine upgrade and mod framework for [UnderRail](https://store.steampowered.com/app/250520/UnderRail/) (Styg).
+Install it once; then add the mods you want, each one a folder in the game's `Mods` folder.
 
-- **Engine upgrade:** the game runs 64-bit on modern .NET (.NET 10) and FNA, on Windows and under Proton, with display
-  fixes (any resolution, interface scale, zoom, frame rate).
-- **Mod framework:** mods are .NET DLLs in the game's `Mods` folder. They hook the game through UnderRailWorks' API
-  (events, readable names for the game's scrambled classes, settings, a Mods screen on the main menu) or patch it with
-  [Harmony](https://github.com/pardeike/Harmony). Dependencies and load order work like
-  [tModLoader](https://github.com/tModLoader/tModLoader)'s.
-- **Mods that ship with it** (in `mods/`, each can be switched on or off from the main menu's Mods button):
-  - Wall Vision: see and select characters behind walls and scenery (keyhole, fills, outlines).
-  - Minimap: the area around you, exits, and the characters you can see in their Tab outline colours.
-  - Quest Tracker: your active quests on the HUD.
-  - Word Gets Around: nearby characters comment on what you've done.
-  - Difficulty Dial: damage taken and dealt, hit chance and AP as settings.
-  - After-Action Report: a summary after each fight, and career totals.
-  - Contract Board: a contractor at South Gate Station with generated bounties and deliveries.
-  - HUD Layout: press F12 and drag the game's HUD parts where you want them.
-  - Vendor Directory: F6 lists the zone's merchants with a Trade button (optionally from anywhere in the zone).
-  - Fair Trade: what merchants charge and pay, as settings.
-  - Loadouts: three gear sets per game; save what you wear, put a set back on in one click or key.
-  - Pacing: XP a level costs, XP earned, extra skill/feat/ability points per level.
-  - Watchful Eyes: opening someone else's container tells you who would see you steal (or that no one is).
-  - The Pit: a pit master at South Gate Station runs waves of beasts that fight only you; each wave pays out.
-  - Scanner: point at a creature for its level, health, attitude, resistances per damage type and detection.
-  - Field Medic: after a fight, if you're hurt, uses a bandage (or a health hypo when too hurt) from your bag.
-  - Merchant Ledger: every merchant's stock and prices written down when you trade; L searches them all.
-  - Movable Windows: drag the inventory, notes, crafting, map... by their title bar; click a window to bring it to the front. A window you moved stays open when another opens on its side.
-  - Status Board: health, status effects by name with turns left, and AP/MP in combat, on the HUD.
-  - Neural Reallocation: a neurotechnician at South Gate Station resets your skills or abilities for charons.
+> **Version 0.0.1: the first release.** Tested mainly on Linux (Steam / Proton). Windows and the GOG version haven't
+> been tried on real systems yet. Saves always stay loadable by the unmodded game (checked before every release), so
+> you can uninstall at any time.
 
-No game code or game files are shipped: the patcher changes the player's own copy, and mods patch it at runtime.
-Every file the game writes (saves, config.dat) stays readable by the stock game.
+## What it does
 
-## Status
+### The engine
 
-**In development, not released yet.** [UnderRailFixes 1.x](https://github.com/Rhiyo/UnderRailFixes) is the released,
-stable version of the fixes. Works is a separate product (starting at 1.0) that grew out of UnderRailFixes 1.0.8: installs, files
-and the API are not compatible with 1.x.
+- **64-bit on modern .NET.** The game runs as a 64-bit program on .NET 10 (bundled: nothing to install) with
+  [FNA](https://fna-xna.github.io/) instead of the 32-bit .NET Framework and XNA it was built for. Music, Steam and
+  saving go through Works' replacements for the 32-bit parts.
+- **Your own game files.** Nothing of the game is shipped: the patcher changes your own copy, keeps the original
+  (`underrail.exe.backup`) and can put it back.
 
-Working today (tested under Proton): the game on .NET 10, the mod loader and Mods screen, mod dependencies, the drawing
-API and the Wall Vision mod, save compatibility with the stock game (`tools/savecheck`). See `TODO.md` for what's
-left and `UnderRailWorks.md` for the design.
+### Engine fixes
 
-## Installing (once released)
+All switchable in game (**Options -> Works**) or in `UnderRailWorks.ini`; with a group off the game behaves as stock.
 
-1. Close the game, extract the release zip and copy its contents into the UnderRail folder.
-2. Windows: run `UnderRailWorks-Patcher.exe`. Linux / Steam Deck: run `./underrailworks-patcher`.
-3. Start the game from Steam as usual. Mods: the main menu's **Mods** button (on/off, order, profiles); their settings: **Options -> Works**; mods go in `Mods`.
+- **Any resolution:** the resolution list comes from what your monitor supports (ultrawide, 1440p, 4K, 8K, portrait),
+  long lists scroll, and the resolution is kept in Works' own settings, so `config.dat` stays as the stock game wrote it.
+- **Zoom that looks the same on every screen:** the world is shown at the size a 1080p screen would show it, with the
+  game's own zoom numbers; wider zoom limits (further out than the game allowed) and a choice of starting zoom.
+- **Interface scale:** the whole interface scaled up for big screens (crisp whole-number steps chosen automatically,
+  or your own percentage).
+- **Insets:** keep the HUD and menus in a centred area of a very wide screen while the world still fills it.
+- **Menu backgrounds:** shown whole instead of cropped, if you like.
+- **Save screenshots on big screens:** the game crops them to the top-left 2048 pixels; Works makes them show what a
+  1080p screen would.
+- **Frame rate:** no 60 FPS cap, or your own cap (off by default: not tested thoroughly yet).
+- **High-DPI screens on Windows:** Windows' display scaling no longer stretches the game.
+- **Window icon** under Proton (Wayland), where the window otherwise has none.
 
-The patcher backs up `underrail.exe` as `underrail.exe.backup`, writes the patched game as `UnderRail.Game.exe` and
-puts a small .NET 10 launcher in `underrail.exe`'s place (the runtime is in `dotnet`, nothing to install). It replaces
-an UnderRailFixes 1.x install and takes over its settings. After a game update, run the patcher again.
+### The mod framework
 
-**Uninstall:** run the patcher with `--uninstall` (or Steam's "Verify integrity of game files"), then delete
+- **Mods are folders** in the game's `Mods` folder: a `mod.json` and a .NET DLL, a JSON content pack, or both.
+- **A Mods screen** on the main menu: switch mods on and off, set their order, see their errors.
+- **Mod settings** in **Options -> Works**, one section per mod, kept in the mod's own `settings.ini`.
+- **Dependencies and load order** as in [tModLoader](https://github.com/tModLoader/tModLoader): a mod can need or work
+  with another, and Works sorts them and says what's missing.
+- **One API with readable names** for the game's scrambled ones: characters, items, quests, dialogs, stores, combat,
+  the interface, drawing, saves and more, all in the `UnderRailWorks` namespace. Works checks each mod against what it
+  actually uses before loading it, so a mod that doesn't fit is refused by name instead of crashing the game.
+- **Mods' data in saves** without changing the save: a save made with mods still loads in the unmodded game.
+- **Harmony** ([pardeike/Harmony](https://github.com/pardeike/Harmony)) is bundled for mods that need something the
+  API doesn't have yet.
+
+## Mods
+
+Works comes with **no mods installed**. Each mod is its own download on the
+[Releases page](https://github.com/Rhiyo/UnderRailWorks/releases):
+
+| Mod | What it does |
+|---|---|
+| **Wall Vision** | See and select characters behind walls and scenery: a keyhole, lines, dots, a fill or an outline where they're hidden, set per kind of character (you, hostiles, others). |
+| **Co-op** | Play together: one player hosts, the others join with their own characters in the host's world (walking, fighting, looting, trading, conversations, travelling as a group). Direct connection (LAN, port forwarding or a VPN). |
+| **HUD Layout** | Drag the game's HUD parts and mods' panels where you want them; saved per HUD size. |
+| **Movable Windows** | Drag the game's windows (inventory, notes, crafting, map...) by their title bar; a window you moved stays open when another opens beside it. |
+
+More mods live in [`examples/`](examples) as code to learn from (a minimap, a quest tracker, difficulty and pacing
+settings, a merchants' ledger, a respec NPC, an arena...). They aren't released and may not be finished.
+
+## Install
+
+1. Close the game. Extract `UnderRailWorks-X.Y.Z.zip` from the
+   [Releases page](https://github.com/Rhiyo/UnderRailWorks/releases) and copy what's inside its folder into the
+   UnderRail folder (Steam: right-click UnderRail -> Manage -> Browse local files).
+2. Run the patcher: **Windows** `UnderRailWorks-Patcher.exe`; **Linux / Steam Deck** `./underrailworks-patcher`.
+3. Start the game from Steam as usual. The main menu has a **Mods** button, and **Options -> Works** shows Works' version.
+
+**Adding a mod:** extract its zip into the game's `Mods` folder (you get `Mods/<Mod name>/`), then switch it on from
+the main menu's Mods button if it isn't. Updating a mod the same way keeps its settings.
+
+**After a game update** (Steam puts the original `underrail.exe` back): run the patcher again. If the game's code moved
+in a way Works doesn't know, the patcher says so and changes nothing.
+
+**Coming from UnderRailFixes 1.x:** install Works over it; it replaces the 1.x patch and takes over its settings.
+
+**Uninstall:** run the patcher with `--uninstall` (or Steam's "Verify integrity of game files"). Then delete
 `UnderRailWorks*`, `underrailworks-patcher`, `UnderRailLauncher*`, `FNA.dll`, `NVorbis.dll`, `0Harmony.dll`,
 `System.Runtime.Serialization.Formatters.dll`, `UnderrailSteamHost.exe`, `Mono.Cecil.dll`, `README.md`, `LICENSE.txt`,
-`THIRD-PARTY-NOTICES.txt`, `linux`, `x64` and, if you don't want them any more, `Mods` and `UnderRailWorks.ini`.
+`THIRD-PARTY-NOTICES.txt`, `linux`, `x64`, `dotnet` and, if you don't want them any more, `Mods` and
+`UnderRailWorks.ini`. Your saves are untouched and load in the unmodded game.
+
+<details><summary>What the patcher changes</summary>
+
+It backs up `underrail.exe` as `underrail.exe.backup`, writes the patched game as `UnderRail.Game.exe` and puts a small
+.NET 10 launcher in `underrail.exe`'s place, so Steam starts it as usual (the runtime is in `dotnet`). The two
+`sfmlnet-*.dll` files get their 32-bit flag cleared (backed up too). Every place it changes is checked first; on an
+unknown game version it stops before writing anything.
+</details>
 
 ## Reporting a problem
 
 1. Set `Log=1` in `UnderRailWorks.ini` (in the game folder) and play until it happens again.
 2. In the game, open the console (the ` key) and type `works.health`: it lists the versions, any part of Works that
    didn't start, and mods with problems.
-3. Send `UnderRailWorks.log` (in the game folder) with what you did. Mods' own problems go to their authors; the
-   Mods screen (the main menu's Mods button) shows which mod had errors.
-
-After a game update, the main menu says if parts of Works don't fit the new version; mods using them may not work
-until Works is updated. Saves stay loadable by the unmodded game either way (checked before every release).
+3. [Open an issue](https://github.com/Rhiyo/UnderRailWorks/issues) with `UnderRailWorks.log` (in the game folder) and
+   what you did. The Mods screen shows which mod had errors; problems in someone else's mod go to its author.
 
 ## For modders
 
-Start with `docs/ModdingGuide.md` (setup, the rules, what to do when Works lacks something, making an API mod other mods build on), then `docs/Cookbook.md` (an example per API area, compiled on every build); drawing in the world (how a frame is drawn, lighting, effects) is `docs/Drawing.md`. The API reference is `docs/API.md` (generated from the code's comments on every build); the guide with how each part
-works in the game is UnderRailWorks.md. The quickest start: `sdk/template` (copy it, rename MyMod, `dotnet build`: the mod is built and copied into the
-game's Mods folder; `dotnet build -t:PackMod` makes a release zip). It needs the .NET SDK and UnderRailWorks
-installed in the game (`UnderRailPath` if it isn't Steam's default folder).
+The guides and the API reference are in [`docs/`](docs) (also built as a website, see `mkdocs.yml`):
 
-A mod is a folder in `Mods\` with a `mod.json` and a DLL whose main class derives from `WorksMod`:
+- [Modding guide](docs/ModdingGuide.md): setup, the rules, what to do when Works lacks something, making an API mod.
+- [Cookbook](docs/Cookbook.md): an example per API area, compiled on every build.
+- [Drawing](docs/Drawing.md): how a frame of the world is drawn, lighting, effects, and how drawing mods combine.
+- [Multiplayer](docs/Multiplayer.md), [Versions and API stability](docs/Versioning.md), [UI rules](UI.md).
+- [API reference](docs/API.md): every public type and member, generated from the code.
+
+The quickest start is `sdk/template`: copy it, rename `MyMod`, `dotnet build` (the mod is built and copied into the
+game's `Mods` folder; `dotnet build -t:PackMod` makes a release zip). It needs the .NET SDK and Works installed in the
+game.
+
+A mod is a folder in `Mods` with a `mod.json` and a DLL whose main class derives from `WorksMod`:
 
 ```json
-{ "id": "MyMod", "name": "My Mod", "version": "1.0.0", "author": "me", "works": "0.9",
-  "description": "What it does.", "requires": ["WallVision@1.0"] }
+{ "id": "MyMod", "name": "My Mod", "version": "0.1.0", "author": "me", "works": "0.9",
+  "description": "What it does.", "requires": ["WallVision@0.0.1"] }
 ```
-
-The API is in the `UnderRailWorks` namespace and is a **preview (0.9)**: a mod declares the API version it was built
-for, and until 1.0 a new minor version may change what mods use. Works checks every mod against what it actually uses when it loads: a mod built for another version loads if everything it uses is still there, and is refused by name otherwise. `UnderRailWorks.Internal` is
-Works' own plumbing, not API: don't use it.
 
 ```csharp
 using UnderRailWorks;
@@ -102,13 +138,13 @@ public sealed class MyMod : WorksMod
     public override void Load()
     {
         var config = GetConfig<MyConfig>();
-        WorldDraw.LayerStarting.Add(this, (view, context, layer, shaderPass) => { /* every world layer, in order */ });
         UiEvents.HudCreated.Add(this, hud => Ui.Add(hud, Ui.Button("Hello", () => Log.Info("clicked")), 20, 200));
+        GameEvents.ZoneLoaded.Add(this, (zone, firstVisit) => { if (firstVisit) Notify.OverPlayer("Welcome to " + zone); });
     }
 }
 ```
 
-A character, a conversation and a quest (the whole of `examples/TheStranger`, built without the game):
+A character, a conversation and a quest (the whole of `examples/TheStranger`):
 
 ```csharp
 Quests.Add(this, "stranger_debt", "South Gate Station", "A stranger says I owe him 10 charons.", xp: 75);
@@ -124,20 +160,24 @@ World.Place(new Placement { Id = "stranger", Zone = "LU-SouthGateStation-N", Are
     X = 14, Y = 21, Blueprint = "creatures\\generichumans\\foundryworker", Name = "Stranger", Dialog = "stranger/talk" });
 ```
 
-Pictures and sounds: `Assets.Texture` / `Sound`, replacing any game texture (`Assets.Replace`, or with no code a
-`textures/` folder mirroring the game's names: portraits, character sprites, icons, GUI), `Icons.SetItemIcon`,
-`MainMenu.SetBackground`; `Assets.Export` writes a game texture to PNG to start from.
+**The API is a preview (0.9).** A mod says which API version it was built for; until 1.0 a new version may still
+change what mods use, and parts marked **[Preview]** may change in any release. Works checks each mod against what it
+actually uses, so a mod keeps loading as long as everything it uses is still there. `UnderRailWorks.Internal` is
+Works' own plumbing, not API.
 
-Saves stay loadable by the stock game: placed characters are never saved, mod quests and mod state are kept in plain
-variables. `examples/` has small mods; `mods/WallVision` is a full one. Docs and a mod template are on the TODO list.
-
-## Building
+## Building and releasing
 
 Linux, with Mono (`mcs`, `mkbundle`), Mono.Cecil 0.11, the .NET 10 SDK (`DOTNET`, default `~/.dotnet10/dotnet`), a
-Steam copy of UnderRail and any Proton. `./build.sh` builds `dist/UnderRailWorks` (fetching FNA, Harmony and the Windows
-.NET runtime with pinned hashes); `tools/check-release.sh` checks the patchers and `tools/savecheck/check-saves.sh
---play` save compatibility with the stock game; `./release.sh X.Y.Z` does all of it and publishes. See `AGENTS.md`.
+Steam copy of UnderRail and any Proton. See `AGENTS.md` for the details.
+
+- `./build.sh` builds Works into `dist/UnderRailWorks`, the released mods (`mods/`) into `dist/mods/<name>`, and the
+  examples and test mods into `build/Mods`. `./build.sh install` also installs Works and the released mods into the
+  Steam copy.
+- `./release.sh X.Y.Z -F notes.md` releases Works (tests, packages, tags `vX.Y.Z`, publishes).
+- `./release-mod.sh <Mod> [X.Y.Z] -F notes.md` releases one mod from `mods/<Mod>` (its own tests, tag
+  `<Mod>-vX.Y.Z`, its own release). `DRY_RUN=1` builds the zip and shows the notes without publishing.
 
 ## Licence
 
-MIT (`LICENSE`). Third-party notices for what the release bundles are in `src/Release`.
+MIT (`LICENSE`). Third-party notices for what the release bundles are in `src/Release` and in each release's
+`THIRD-PARTY-NOTICES.txt`.

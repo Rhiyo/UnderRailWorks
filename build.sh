@@ -3,7 +3,7 @@
 #   UnderRailWorks.dll             the runtime (engine fixes, mod loader, API), loaded by the patched game
 #   UnderRailLauncher.*, dotnet/   the .NET 10 launcher (installed as underrail.exe) and the Windows .NET 10 runtime
 #   FNA.dll, x64/, NVorbis.dll, UnderrailSteamHost.exe, 0Harmony.dll   the 64-bit game's libraries
-#   Mods/WallVision/               the Wall Vision mod (characters behind scenery)
+#   (no Mods: each released mod is built into dist/mods/<name>/ and released on its own, release-mod.sh)
 #   UnderRailWorks-Patcher.exe     Windows patcher (.NET Framework 4) + Mono.Cecil.dll
 #   underrailworks-patcher         Linux patcher (single binary with the Mono runtime bundled)
 # ./build.sh install   also patches the local Steam copy.
@@ -93,11 +93,19 @@ mcs -nologo -optimize+ -platform:x86 -nostdlib -r:"$API/mscorlib.dll" -r:"$API/S
 cp "$FNA" "$OUT64/"
 cp "$HERE"/lib/fna/x64/*.dll "$OUT64/x64/"
 
-# The shipped mods, into dist's Mods/.
-for m in WallVision Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard HudLayout VendorDirectory FairTrade NeuralReallocation MovableWindows MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic BountyHunter Beastmaster Hunger Ambushes Scavenger CharacterBuilder HousePets PackMule WorkbenchPlanner ShotBreakdown StealthLens SurveyPins Gauntlet Grudges CollectorsChecklist Coop; do mod "$m" "$OUT/Mods" "$HERE/mods/$m"; done
-cp "$HERE/mods/FieldMedic/treat.wav" "$OUT/Mods/FieldMedic/"
+# Works ships without mods (players add the ones they want). The released mods (mods/*: each its own GitHub release,
+# release-mod.sh) into dist/mods/<name>/, the folder a player drops into the game's Mods folder.
+MODS_OUT="$HERE/dist/mods"
+rm -rf "$OUT/Mods" "$MODS_OUT"; mkdir -p "$MODS_OUT"
+RELEASED=(); for d in "$HERE"/mods/*/; do RELEASED+=("$(basename "$d")"); done
+for m in "${RELEASED[@]}"; do mod "$m" "$MODS_OUT" "$HERE/mods/$m"; done
+# Example mods (examples/: full mods kept as examples, not released): into build/Mods for testing and the test games
+# (tools/smoketest/gamecopy.sh installs the ones listed in build/example-mods.txt).
+EXAMPLE_MODS=(Minimap QuestTracker WordGetsAround DifficultyDial AfterActionReport ContractBoard VendorDirectory FairTrade NeuralReallocation MerchantLedger StatusBoard Loadouts Pacing WatchfulEyes ThePit Scanner FieldMedic BountyHunter Beastmaster Hunger Ambushes Scavenger CharacterBuilder HousePets PackMule WorkbenchPlanner ShotBreakdown StealthLens SurveyPins Gauntlet Grudges CollectorsChecklist)
+for m in "${EXAMPLE_MODS[@]}"; do mod "$m" "$HERE/build/Mods" "$HERE/examples/$m"; done
 # Content packs (JSON only, no code).
-for m in CampfireCooking; do rm -rf "$OUT/Mods/$m"; cp -r "$HERE/mods/$m" "$OUT/Mods/$m"; done
+for m in CampfireCooking; do rm -rf "$HERE/build/Mods/$m"; cp -r "$HERE/examples/$m" "$HERE/build/Mods/$m"; EXAMPLE_MODS+=("$m"); done
+printf '%s\n' "${EXAMPLE_MODS[@]}" > "$HERE/build/example-mods.txt"
 # HelloUI (the UI toolkit and ModConfig example): built like Wall Vision, into build/Mods for testing.
 mod HelloUI "$HERE/build/Mods" "$HERE/examples/HelloUI"
 # HelloQuest (quests, dialogs, variables): built without the game, into build/Mods for testing.
@@ -207,7 +215,7 @@ MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/ApiSurface.exe" "$WORKS" "$HER
 # (docs/Versioning.md "Behaviour"): build/api-coverage.txt.
 mcs -nologo -out:"$HERE/build/ApiUse.exe" -r:"$CECIL" "$HERE/tools/apicheck/ApiUse.cs" || { echo "ApiUse didn't build" >&2; exit 1; }
 TESTED=(); for t in WorksTest HalfBroken OldButFine GameText GameTextUser Lantern Hologram; do TESTED+=("$HERE/build/Mods/$t/$t.dll"); done
-MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/ApiUse.exe" "$WORKS" "$HERE/build/api-coverage.txt" --tested "${TESTED[@]}" --shipped "$OUT"/Mods/*/*.dll || echo "build/api-coverage.txt not written" >&2
+MONO_PATH="$(dirname "$CECIL")" mono "$HERE/build/ApiUse.exe" "$WORKS" "$HERE/build/api-coverage.txt" --tested "${TESTED[@]}" --shipped "$MODS_OUT"/*/*.dll "$HERE"/build/Mods/{Minimap,QuestTracker,WordGetsAround,DifficultyDial,AfterActionReport,ContractBoard,VendorDirectory,FairTrade,NeuralReallocation,MerchantLedger,StatusBoard,Loadouts,Pacing,WatchfulEyes,ThePit,Scanner,FieldMedic,BountyHunter,Beastmaster,Hunger,Ambushes,Scavenger,CharacterBuilder,HousePets,PackMule,WorkbenchPlanner,ShotBreakdown,StealthLens,SurveyPins,Gauntlet,Grudges,CollectorsChecklist}/*.dll || echo "build/api-coverage.txt not written" >&2
 python3 "$HERE/tools/apidoc/apidoc.py" >/dev/null || echo "docs/API.md not written" >&2
 patchers "$OUT" UnderRailWorks-Patcher.exe underrailworks-patcher
 echo "Built $OUT"
@@ -215,4 +223,6 @@ echo "Built $OUT"
 if [ "${1:-}" = install ]; then
     if pgrep -ix 'underrail.exe' >/dev/null; then echo "Close Underrail first." >&2; exit 1; fi
     "$OUT/underrailworks-patcher" "$GAME"
+    # The released mods too (your settings.ini files are kept: builds never contain them).
+    mkdir -p "$GAME/Mods"; cp -r "$MODS_OUT"/. "$GAME/Mods/"; echo "Mods updated in $GAME/Mods: ${RELEASED[*]}"
 fi

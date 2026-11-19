@@ -14,7 +14,7 @@ game is in UnderRailWorks.md.
 
 Set `UnderRailPath` if the game isn't in Steam's default folder. No code at all? A **content pack** is a mod with only
 `mod.json` and `content/*.json` (items, recipes, dialogs, quests, placements, triggers, stores, loot...): see
-`mods/CampfireCooking` and the "Content packs" section of UnderRailWorks.md.
+`examples/CampfireCooking` and the "Content packs" section of UnderRailWorks.md.
 
 ## 2. The rules
 

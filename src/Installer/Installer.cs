@@ -110,7 +110,7 @@ static class Patcher
         Path.Combine("x64", "FNA3D.dll"), Path.Combine("x64", "FAudio.dll"), Path.Combine("x64", "SDL3.dll"),
         LauncherExe, "UnderRailLauncher.dll", "UnderRailLauncher.runtimeconfig.json", "UnderRailLauncher.deps.json",
         "System.Runtime.Serialization.Formatters.dll" };
-    static readonly string[] Folders = { "dotnet", "Mods" };     // copied whole (Mods: the mods that ship with Works)
+    static readonly string[] Folders = { "dotnet", "Mods" };     // copied whole (Mods: only if a download brings one; Works itself ships none)
 
     static int Install(string dir)
     {

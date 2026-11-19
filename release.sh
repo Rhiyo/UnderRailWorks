@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Makes a GitHub release of UnderRailWorks from this machine, the same way every time:
+# Makes a GitHub release of UnderRailWorks itself (the engine: loader, API, engine fixes; no mods: each mod is
+# released on its own with release-mod.sh) from this machine, the same way every time:
 #   ./release.sh 1.0.0 "What changed, in a sentence or a paragraph."
 #   ./release.sh 1.0.0 -F notes.md          (description from a file)
 #   ./release.sh 1.0.0-preview.1 -F notes.md   (a version with a "-" is published as a pre-release)
@@ -135,7 +136,8 @@ $API_CHANGES
 ### Install
 1. Close the game, extract \`$NAME.zip\` and copy the contents of \`$NAME\` into the UnderRail folder.
 2. Windows: run \`UnderRailWorks-Patcher.exe\`. Linux / Steam Deck: run \`./underrailworks-patcher\`.
-3. Start the game from Steam as usual. Mods: the main menu's **Mods** button; settings: **Options -> Works** and \`UnderRailWorks.ini\`; mods go in the \`Mods\` folder.
+3. Start the game from Steam as usual. Settings: **Options -> Works** and \`UnderRailWorks.ini\`.
+4. Mods: Works comes without any. Each mod is its own release on the [Releases page](https://github.com/$REPO/releases) (e.g. Wall Vision, Co-op): extract its zip into the game's \`Mods\` folder. The main menu's **Mods** button lists them and switches them on or off.
 
 The game then runs 64-bit on .NET 10 (included, in \`dotnet\`) and FNA. It replaces an UnderRailFixes 1.x install and takes over its settings. Saves stay compatible with the unmodded game. After a game update, run the patcher again. To uninstall, run it with \`--uninstall\` (or Steam's "Verify integrity of game files"). Details in the [README](https://github.com/$REPO#readme).
 
@@ -151,5 +153,6 @@ committed=1
 git tag -a "v$VERSION" -m "UnderRailWorks $VERSION (UnderRail $GAME_VERSION)"
 git push -q origin "$BRANCH" "v$VERSION"
 PRE=""; case "$VERSION" in *-*) PRE=--prerelease;; esac
-gh release create "v$VERSION" "$ZIP" --repo "$REPO" --title "UnderRailWorks $VERSION" --notes-file "$NOTES" $PRE
+LATEST=--latest; [ -n "$PRE" ] && LATEST=""     # Works is the repo's "latest release", never a mod
+gh release create "v$VERSION" "$ZIP" --repo "$REPO" --title "UnderRailWorks $VERSION" --notes-file "$NOTES" $PRE $LATEST
 echo "Released v$VERSION: https://github.com/$REPO/releases/tag/v$VERSION"

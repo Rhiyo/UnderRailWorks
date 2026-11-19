@@ -13,7 +13,7 @@ GAME="${GAME:-$HOME/.local/share/Steam/steamapps/common/Underrail}"
 WORK="${WORK:-$HOME/.cache/underrail-test/coop}"; SAVE="${SAVE:-dgg}"
 PORT=27659     # not Co-op's default (27650): a real co-op game on this machine is never joined by a test
 HOST="$WORK/host" JOIN="$WORK/join" ODD="$WORK/odd"
-[ -d "$DIST/Mods/Coop" ] && [ -d "$MODS/WorksTest" ] || { echo "run ./build.sh first" >&2; exit 1; }
+[ -d "$DIST/../mods/Coop" ] && [ -d "$MODS/WorksTest" ] || { echo "run ./build.sh first" >&2; exit 1; }
 . "$HERE/gamecopy.sh"
 h() { TEST_GAME="$HOST" RUN=cooph "$@"; }
 j() { TEST_GAME="$JOIN" RUN=coopj "$@"; }

@@ -110,7 +110,7 @@ Two separate systems, as tModLoader's ModConfig and its UI toolkit:
    setting changed in the Mods tab applying at once. Not yet: keys in the game's own key-binding screen (the mod's
    config holds its key for now), dragging panels, tooltips, windows that take keyboard focus.
 
-## The Minimap mod (`mods/Minimap`)
+## The Minimap mod (`examples/Minimap`)
 
 A larger test of the API: a HUD panel (UI toolkit) with a ModConfig (size, tiles across, corner, opacity, characters,
 exits, toggle key), drawn from the game's own data through Works' world API (`World`, `Area`, `Character`,
@@ -772,7 +772,7 @@ Tested: 500 to a rathound -> 499 ("evades 1"), died, CharacterDied fired; 10 ele
 
 ## Bounty Hunter, and what it (and a review) found (Nov 2026)
 
-Bounty Hunter (mods/BountyHunter) uses an ability with a character target, a mod status with stat penalties on an
+Bounty Hunter (examples/BountyHunter) uses an ability with a character target, a mod status with stat penalties on an
 NPC, a feat with requirements and a bonus, death events, money, a window with a list, translations and a decimal
 setting. Tested: mark a rathound (B), kill it, 12 charons paid, ledger (Y) with the translated texts. Found and fixed:
 - **Statuses are gone at CharacterDied** (measured: none left; the game clears them while the character dies). New
@@ -810,7 +810,7 @@ An independent review of the day's code found, all fixed:
   starts unbound (logged; a key the player set is kept and reported) and the game's whole table is logged once. It
   caught G (Crafting), B (Recharge Shield), Y (quick slot 6), F9 (Quick Load) in my own mods. Mods should use
   `Keybinds.Add`; keys read with `Input.Pressed` can't be checked.
-- Beastmaster (mods/Beastmaster): Call Companion (J) summons an allied rathound for N turns, follows, HUD part with its
+- Beastmaster (examples/Beastmaster): Call Companion (J) summons an allied rathound for N turns, follows, HUD part with its
   health and time left; one at a time; the cooldown is in the save data. Tested: called, HUD part, quicksave with it
   present -> stock loader OK, quickload: companion not in the save, cooldown kept.
 - WorksTest's autorun.txt takes `wait <seconds>` lines (whole test sequences without typing in the console).
@@ -832,7 +832,7 @@ crafting passes the stock loader.
 
 - `Item.Uses`: the names of the game's capabilities on the item's definition (`Definition.a2()`: "Food" for food,
   the capability `b0p`...), so mods can tell food from medicine.
-- Hunger (mods/Hunger): satiety drops with GameTimeAdvanced, food (ItemUsed + Uses "Food") refills it, Hungry /
+- Hunger (examples/Hunger): satiety drops with GameTimeAdvanced, food (ItemUsed + Uses "Food") refills it, Hungry /
   Starving mod statuses with StatBonus penalties, a HUD meter, per-save state written in `Saving`, `hunger.set`.
   Tested: 25 % hungry, 5 % starving (icon, red meter), eating canned fish -> 45 %, status gone; quicksave at 20 %,
   changed to 90 %, quickload -> 20 % and one Hungry status; the save passes the stock loader, the state is only in
@@ -869,7 +869,7 @@ teleported (16,1) -> (16,5) and walked back to (16,1).
 
 ## Ambushes (Nov 2026)
 
-mods/Ambushes (startsOff): on returning to a zone, a chance of a pack (World.Spawn PlayerOnly, 5-8 tiles away,
+examples/Ambushes (startsOff): on returning to a zone, a chance of a pack (World.Spawn PlayerOnly, 5-8 tiles away,
 gathered round one tile); clearing it gives experience; an `ambush` console command. Tested: 3 rathounds sprang, the
 station's guards stayed out, killing all three gave 100 XP ("You gain 100 XP for clearing an ambush").
 
@@ -989,7 +989,7 @@ in `iw.c()`, not `e()`.
 
 ## Scavenger (Nov 2026)
 
-mods/Scavenger (startsOff): a mod skill, Scavenging (Perception 1, Intelligence 0.5), on the Other tab; its value sets
+examples/Scavenger (startsOff): a mod skill, Scavenging (Perception 1, Intelligence 0.5), on the Other tab; its value sets
 the chance of extra salvage in loot (new `Loot.Add` overload with a chance worked out per roll), and from 40 it gives
 +10 Mechanics (Stats.Modify; CustomStats.Changed -> Stats.Refresh). Loot rules now log what they add. Tested:
 Scavenging 80 [86 with the abilities], Mechanics 16 -> 26, rathounds dropping repair kits, scraps and a fusion cell from
@@ -997,7 +997,7 @@ its rules.
 
 ## Character Builder (Nov 2026)
 
-mods/CharacterBuilder (startsOff): every CharacterRules number as a Mods-tab setting, defaulting to the game's own.
+examples/CharacterBuilder (startsOff): every CharacterRules number as a Mods-tab setting, defaulting to the game's own.
 Tested: AbilityPoints=10 -> 10 points on the creation screen.
 
 ## Followers across zones (Nov 2026)
@@ -1358,7 +1358,7 @@ fight instead). The `]` key and the ammo bar didn't reload in a headless run.
   now goes on the line(s) that show the options.
 - `Ui.Ask(mod, id, title, question, initial, onAnswer)`: a small window with a text box that has the keyboard; OK or
   Enter answers. `UiTextBox.Focus()`. `Container.Name`, `Container.Area`.
-- **House Pets** (mods/HousePets): a "pet" option in Jyles' ground-floor room list (cat 200, dog 350; most 4 pets);
+- **House Pets** (examples/HousePets): a "pet" option in Jyles' ground-floor room list (cat 200, dog 350; most 4 pets);
   pets are kept in the mod's save data and placed in the living room on each visit once the ground floor is
   renovated; talking to one: pet it, name it (Ui.Ask), rename. Tested in game: buying both through the dialog (money
   taken, stock rooms and exits intact), delivery, wandering (the game's idle AI: within the living room and the
@@ -1412,7 +1412,7 @@ fight instead). The `]` key and the ammo bar didn't reload in a headless run.
 
 ## Campfire Cooking (Nov 2026)
 
-`mods/CampfireCooking`: a content pack (JSON only): Cave Hopper Meat -> Cave Hopper Steak, Siphoner Tongue -> Fried
+`examples/CampfireCooking`: a content pack (JSON only): Cave Hopper Meat -> Cave Hopper Steak, Siphoner Tongue -> Fried
 Siphoner Tongue, known from the start, in the crafting window's Processing tab. The game's own description of the
 meat says it "should not be consumed raw. It's much tastier in the form of a cooked meal", but the base game has no
 recipe for it. Tested: the recipe lists under Processing, the meat goes in its slot, Create makes one steak from one
@@ -1469,7 +1469,7 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   a button on), `Trade.WillBuy(item)` (the game's own test, `b6o.aeg`: what it doesn't cross out), `Trade.Offer(item,
   stacks)`: from the player's bag into their offer, as the game's Auto button does (bag `z5`, offer grid `b6o.g.l().z3`,
   then `b6o.g()` recounts). The game's Trade button still makes the deal.
-- **Pack Mule** (mods/PackMule): hover an item, press Delete (rebindable) to mark that kind of item as junk (per save;
+- **Pack Mule** (examples/PackMule): hover an item, press Delete (rebindable) to mark that kind of item as junk (per save;
   "Junk (Pack Mule)" in its tooltip); "Offer junk" at the barter window's top right offers all junk the merchant buys.
   Tested: marking from the inventory during barter, the tooltip line, offering (a merchant who only buys plants: the
   Cave Ears went in, the meat stayed in the bag, "1 item offered (1 not wanted here)"), Auto + Trade sold them.
@@ -1483,7 +1483,7 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   required slots nothing in the bag fills (`Missing`), the skills the picked components need (`Needs`, from the
   blueprint's own private `a(components)`, the numbers the crafting window shows) and those the character lacks
   (`Lacks`). Components are picked first-fit; nothing is crafted or moved. `UiList.ItemColors`: a colour per row.
-- **Workbench Planner** (mods/WorkbenchPlanner, key D): a window with every known recipe, ready ones first (green), the
+- **Workbench Planner** (examples/WorkbenchPlanner, key D): a window with every known recipe, ready ones first (green), the
   rest with what they still need ("Fried Siphoner Tongue: needs Siphoner Tongue", "Throwing Net: needs Tailoring 25");
   selecting one shows its category and the skills its parts need. Tested with mod recipes and a game blueprint, with
   Tailoring 40 (ready) and 10 (needs 25).
@@ -1494,7 +1494,7 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   tgt, min(distance, weapon range), target light (c5x.l, averaged), darkvision, ammo, burst, 1.0, awq.a(...))`;
   melee: `euf.a(att, tgt, awq.b(...), 1.0)`. `Combat.ShotBreakdown(target)` repeats the plain-attack call, and again
   from 3 tiles and at a fully lit target, so the differences are the game's own (no formula copied).
-- **Shot Breakdown** (mods/ShotBreakdown): while the mouse is on a hostile, a note under the game's "xx%":
+- **Shot Breakdown** (examples/ShotBreakdown): while the mouse is on a hostile, a note under the game's "xx%":
   "Range -18% (40% from close)", "Darkness -8% (30% if lit)" (tested: an Ironhead gunner 7 tiles away in the player's
   house, Beretta 99; the game showed 22%). Nothing shows when neither costs anything, or for melee weapons.
 
@@ -1506,7 +1506,7 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
   Works samples the distance (0.1 tiles) for where the rate turns positive (`Within`).
 - `Character.ScreenBounds` (where it was drawn last frame, interface units; from World's layer tracking, shadows and
   markers left out), `Ui.Overlay(draw)` (a full-HUD canvas that never takes the mouse: `iz` refuses it).
-- **Stealth Lens** (mods/StealthLens): while sneaking, a label over each hostile in view: "notices within 7.4"
+- **Stealth Lens** (examples/StealthLens): while sneaking, a label over each hostile in view: "notices within 7.4"
   (amber within 2 tiles of it, green beyond), "noticing you" (red), "can't notice you". Tested in the player's house
   against an Ironhead gunner (Detection 60 vs Stealth 29, light 0.39): 7.4 tiles; at 8 tiles nothing happened, at
   4.5 the label turned red and the gunner detected the player within about 20 s (combat).
@@ -1515,7 +1515,7 @@ clicking walks there and travels. So a new dungeon is reachable from the game's 
 
 - `World.HoveredTile`: the map tile under the mouse (the world view's `dnn.an1()` -> `ak1.Location`), null over the
   interface.
-- **Survey Pins** (mods/SurveyPins): Insert on a spot -> `Ui.Ask` for a note -> a marker (light blue); Insert on a pin
+- **Survey Pins** (examples/SurveyPins): Insert on a spot -> `Ui.Ask` for a note -> a marker (light blue); Insert on a pin
   -> `Ui.Confirm` to remove it. Locked containers on discovered tiles get an orange pin "Locked Locker (30)" (name,
   difficulty) until opened (setting). **Minimap 1.1**: a marker's label shows while the mouse rests on its diamond.
   Tested in South Gate Station: the pin "Stash", the locker pins, the hover labels, removing the pin.
@@ -1580,13 +1580,13 @@ Vendors, Planner). Rules: UI.md, "Sizes".
   player's `e3q.m_h`: oddity code -> times studied, what the Oddities window counts), `Character.Blueprint`: entities
   don't keep their blueprint, so a best guess: the creature blueprint whose file name is the character's name in
   lower case without spaces ("Praetorian Bomber" -> ...\praetorianbomber; "Praetorian Enforcer" matches none).
-- **Gauntlet** (mods/Gauntlet): opt-in challenges in Options -> Mods (damage taken/dealt %, fewer AP, prices %, XP %),
+- **Gauntlet** (examples/Gauntlet): opt-in challenges in Options -> Mods (damage taken/dealt %, fewer AP, prices %, XP %),
   a HUD note while any is on. Tested: damage taken 200% (10 -> 20), the note.
-- **Grudges** (mods/Grudges): hostiles alive and hurt when a fight ends are remembered (name, guessed blueprint, zone);
+- **Grudges** (examples/Grudges): hostiles alive and hurt when a fight ends are remembered (name, guessed blueprint, zone);
   entering another zone, with a chance, one is spawned hostile 5+ tiles away with a warning. API for other mods:
   `Mods.Call("Grudges", "Hold", character)`. Tested through the API (a Praetorian Bomber returned hostile in the
   player's house); the fight-ending path itself wasn't played through.
-- **Collector's Checklist** (mods/CollectorsChecklist, Home): every oddity, studied ones green with counts, ones in
+- **Collector's Checklist** (examples/CollectorsChecklist, Home): every oddity, studied ones green with counts, ones in
   the bag amber, "N of 125 studied". F4 first: Works found it was Bounty Hunter's and left it unbound (logged), so Home.
 - Save check after all of this: 61 of 61 files load in the stock game.
 

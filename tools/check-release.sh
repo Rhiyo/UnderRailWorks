@@ -100,7 +100,7 @@ layout() {     # <folder> <what>: an installed folder looks right
     [ "$(md5 "$1/underrail.exe")" = "$LAUNCHER" ] || fail "$2: underrail.exe is not the launcher"
     [ "$(md5 "$1/underrail.exe.backup")" = "$STOCK" ] || fail "$2: the backup is not the original exe"
     [ -f "$1/UnderRail.Game.exe" ] && [ -f "$1/dotnet/dotnet.exe" ] && [ -d "$1/dotnet/shared/Microsoft.WindowsDesktop.App" ] || fail "$2: game or runtime missing"
-    [ -f "$1/Mods/WallVision/WallVision.dll" ] || fail "$2: the Wall Vision mod is missing"
+    [ ! -e "$1/Mods/WallVision" ] || fail "$2: Works installed a mod (mods are released on their own)"
 }
 uninstalled() {     # <folder> <what>
     [ "$(md5 "$1/underrail.exe")" = "$STOCK" ] || fail "$2: uninstall didn't restore the original exe"

@@ -120,7 +120,7 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 
 ## Mods
 
-- [x] Minimap (`mods/Minimap`): HUD panel, isometric, walls/props/doors/exits, the player and visible characters in
+- [x] Minimap (`examples/Minimap`): HUD panel, isometric, walls/props/doors/exits, the player and visible characters in
   their Tab colours; ModConfig settings.
 - [ ] Wrap the drawing API (WorldDraw passes a7m/cp9/a2f) in Works types, so UnderRailFixes can be built without the
   game too, like Minimap and HelloUI.
@@ -141,14 +141,14 @@ that, but so far only against the player's 8 saves (Nov 2026: all pass). Types t
 ## More test mods (ranked from research: what popular mods do, what UnderRail players ask for)
 
 - [x] Quest Tracker, Word Gets Around, Difficulty Dial, After-Action Report, Contract Board.
-- [x] Shot Breakdown: hit chance and damage parts in the tooltip (needs the hit chance's components, not just the total). (done Nov 2026: range and darkness, by the game's formula; mods/ShotBreakdown)
+- [x] Shot Breakdown: hit chance and damage parts in the tooltip (needs the hit chance's components, not just the total). (done Nov 2026: range and darkness, by the game's formula; examples/ShotBreakdown)
 - [x] Vendor Directory (the zone's merchants, trade from the list) and Fair Trade (price settings).
 - [x] Merchant Ledger: vendor stock and prices remembered across zones, searchable (Ui.TextBox).
-- [x] Pack Mule: sell tagged junk in one click (needs selling through the barter screen's own transaction). (done Nov 2026: mark with Delete, "Offer junk" in barter; mods/PackMule)
-- [x] Stealth Lens: show where enemies would notice you (needs detection rules: research). (done Nov 2026: notice distance per enemy while sneaking; mods/StealthLens)
-- [x] Survey Pins: the Minimap marks merchants; still: pins with notes, workbenches, locked containers. (done Nov 2026: notes with Insert, locked containers; mods/SurveyPins)
+- [x] Pack Mule: sell tagged junk in one click (needs selling through the barter screen's own transaction). (done Nov 2026: mark with Delete, "Offer junk" in barter; examples/PackMule)
+- [x] Stealth Lens: show where enemies would notice you (needs detection rules: research). (done Nov 2026: notice distance per enemy while sneaking; examples/StealthLens)
+- [x] Survey Pins: the Minimap marks merchants; still: pins with notes, workbenches, locked containers. (done Nov 2026: notes with Insert, locked containers; examples/SurveyPins)
 - [x] Neural Reallocation: a respec NPC (points refunded to the game's own unspent points).
-- [x] Workbench Planner: recipes, what can be crafted now (mods can now add recipes: Crafting.AddRecipe). (done Nov 2026: key D; mods/WorkbenchPlanner)
+- [x] Workbench Planner: recipes, what can be crafted now (mods can now add recipes: Crafting.AddRecipe). (done Nov 2026: key D; examples/WorkbenchPlanner)
 - [x] Gauntlet: opt-in challenge modifiers; Grudges: enemies who return; Collector's Checklist. (done Nov 2026)
 - [x] HUD Layout: drag the game's HUD parts around, kept relative to an anchor (survives resolution changes) (Works: Input.Mouse, UiElement.X/Y).
 

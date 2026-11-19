@@ -1,7 +1,7 @@
 {
   "id": "WallVision",
   "name": "Wall Vision",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "author": "Rhiyo",
   "works": "0.9", "multiplayer": "client",
   "description": "See and select characters behind walls and other scenery: a keyhole, lines, dots, a fill or an outline where they're hidden, set per kind of character (you, hostiles, others)."

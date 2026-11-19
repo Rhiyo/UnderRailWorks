@@ -1,5 +1,5 @@
 # gamecopy.sh <folder>: a game copy for test runs (sourced by smoke.sh and coop.sh): the player's original exe and
-# DLLs (not ReShade or other injected DLLs: the run tests Works, not the player's overlays), data linked, then this build (dist/) installed with the test mods (build/Mods). Log=1.
+# DLLs (not ReShade or other injected DLLs: the run tests Works, not the player's overlays), data linked, then this build (dist/) installed with the released mods (dist/mods), the example mods and the test mods (build/Mods). Log=1.
 gamecopy() {
     local dir="$1" f
     local orig="$GAME/underrail.exe"; [ -f "$GAME/underrail.exe.backup" ] && orig="$GAME/underrail.exe.backup"
@@ -9,6 +9,9 @@ gamecopy() {
     ln -s "$GAME/data" "$dir/data"
     cp -r "$DIST"/. "$dir/"
     "$dir/underrailworks-patcher" "$dir" >/dev/null || { echo "patcher failed in $dir" >&2; return 1; }
+    # The released mods (dist/mods), the example mods (as players had them before they moved to examples/) and the test mods.
+    mkdir -p "$dir/Mods"; cp -r "$DIST/../mods"/. "$dir/Mods/"
+    while read -r f; do [ -n "$f" ] && { rm -rf "$dir/Mods/$f"; cp -r "$MODS/$f" "$dir/Mods/"; }; done < "$MODS/../example-mods.txt"
     for f in WorksTest HalfBroken NeedsNewer OldButFine GoneOverride HelloWorks GameText GameTextUser; do rm -rf "$dir/Mods/$f"; cp -r "$MODS/$f" "$dir/Mods/"; done
     printf '[UnderRailWorks]\nSettingsVersion=3\nLog=1\n' > "$dir/UnderRailWorks.ini"
 }
