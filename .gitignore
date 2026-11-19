@@ -16,3 +16,6 @@ bin/
 obj/
 # Debug pictures from KeyholeDebug=2.
 keyhole-*.png
+# The documentation site (mkdocs build).
+/site/
+__pycache__/
