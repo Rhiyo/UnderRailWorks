@@ -338,6 +338,8 @@ static class ModManager
         return MainMenu.HasButtons(m.Id) || AssetStore.Replaces(m.Id) || UiEvents.MainMenuCreated.HasOwner(m.Id) || ModScope.LeftBy(m.Id).Contains("music");
     }
     static bool rebuildMenu;
+    // Mods were switched from elsewhere (Mods.Match): the main menu is built again (their buttons).
+    internal static void MenuChanged() { rebuildMenu = true; }
     // Every update: the main menu built again once the window closed (not from inside a click on it).
     internal static void Tick()
     {

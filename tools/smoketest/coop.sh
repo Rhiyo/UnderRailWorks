@@ -25,6 +25,7 @@ o() { TEST_GAME="$ODD" RUN=coopo "$@"; }
 o timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 gamecopy "$HOST" || exit 1; gamecopy "$JOIN" || exit 1; gamecopy "$ODD" || exit 1
 rm -rf "$JOIN/Mods/HudLayout"     # "multiplayer": "client": players needn't match
+echo "Grudges=0" >> "$JOIN/Mods/mods.ini"     # installed but off: refused, then Match host switches it on
 rm -rf "$ODD/Mods/Grudges"; sed -i 's/"version": "[^"]*"/"version": "9.9.9"/' "$ODD/Mods/FairTrade/mod.json"
 OL="$ODD/UnderRailWorks.log"
 HL="$HOST/UnderRailWorks.log" JL="$JOIN/UnderRailWorks.log"
@@ -43,14 +44,14 @@ printf 'wait 3\nworks.var wt_god true\n' > "$HA"
 h timeout 100 "$SKILL/launch.sh" --save "$SAVE" 1280 720 >/dev/null 2>&1
 sleep 30
 # A joiner with other mods: refused.
-printf 'wait 8\ncoop.join 127.0.0.1:%s odd\n' "$PORT" > "$ODD/Mods/WorksTest/menurun.txt"
+printf 'wait 8\ncoop.join 127.0.0.1:%s odd\nwait 6\ncoop.match\nwait 3\ncoop.restore\n' "$PORT" > "$ODD/Mods/WorksTest/menurun.txt"
 o timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1
 sleep 40; o timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 cp "$OL" "$WORK/odd-first.log"     # the same copy joins again later (a new log)
 # Joiner: from the main menu, join, then play the exported character as "Mira".
-printf 'wait 8\ncoop.join 127.0.0.1:%s tester\nwait 15\ncoop.newfrom %s Mira\n' "$PORT" "$(win "$HOST/Mods/WorksTest/clone.char")" > "$JOIN/Mods/WorksTest/menurun.txt"
+printf 'wait 8\ncoop.join 127.0.0.1:%s tester\nwait 6\ncoop.match\nwait 15\ncoop.newfrom %s Mira\n' "$PORT" "$(win "$HOST/Mods/WorksTest/clone.char")" > "$JOIN/Mods/WorksTest/menurun.txt"
 j timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1
-sleep 45
+sleep 60
 # Every place taken: the host starts (the save loads), Mira enters it.
 printf 'coop.start\n' > "$HOST/Mods/WorksTest/menurun.txt"
 sleep 60
@@ -75,6 +76,11 @@ never() { if grep -qE "$3" "$2"; then fail=$((fail+1)); echo "FAIL: $1 (found in
 check "host hosts"                          "$HL" "Coop: hosting on port $PORT"
 check "the lobby has the save and a place"  "$HL" "Coop: lobby: saved game $SAVE, 1 places \\(new\\) on port $PORT"
 check "Start refused while a place is free" "$HL" "coop.start -> waiting for 1 more player"
+check "the joiner, with Grudges off, refused" "$HL" "Coop: tester refused: different mods: only the host has: Grudges"
+check "Match host switches Grudges on"      "$JL" "Coop: switched on Grudges"
+if awk '/Coop: tester refused: different mods/ { f=1 } f && /Coop: tester connected from/ { ok=1 } END { exit !ok }' "$HL"; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: ... and joins again by itself (no connection after the refusal)"; fi
+check "the odd joiner is told what's missing" "$WORK/odd-first.log" "still missing: .*(Fair Trade 1\\.0\\.0.*Grudges 1\\.0\\.0|Grudges 1\\.0\\.0.*Fair Trade 1\\.0\\.0)"
+check "... and gets its own mods back"      "$WORK/odd-first.log" "your own mods are back"
 check "the joiner takes the place"          "$HL" "Coop: tester will play Mira"
 check "the host starts the saved game"      "$HL" "Coop: starting the saved game $SAVE with tester as Mira"
 check "a late joiner is refused"            "$HL" "Coop: late refused: the game has already started"
@@ -82,7 +88,7 @@ check "... and told why"                    "$OL" "the game has already started"
 check "everyone gets all the XP"            "$HL" "Coop: XP 200 \\(test\\) earned by asd, 200 to each other player \\(100%\\)"
 check "other mods: refused, named (joiner)" "$WORK/odd-first.log" "your mods differ from the host's: only the host has: Grudges 1.0.0; other versions: Fair Trade 9.9.9 / 1.0.0"
 check "other mods: the host is told"        "$HL" "odd refused: different mods"
-never "a client mod doesn't count"          "$HL" "tester refused"
+never "a client mod doesn't count"          "$HL" "tester refused.*HUD Layout"
 check "the character file is exported"      "$WORK/host-first.log" "exported [0-9]+ bytes"
 check "Mira enters the host's world"        "$HL" "Coop: tester plays Mira at"
 check "the joiner plays Mira"               "$JL" "the player is now Mira"

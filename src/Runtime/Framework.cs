@@ -237,6 +237,92 @@ namespace UnderRailWorks
             if (other.Count > 0) lines.Add("other versions: " + string.Join(", ", other.Select(k => name(k) + " " + a[k] + " / " + b[k]).ToArray()));
             return lines.ToArray();
         }
+
+        // On the main menu: this game's mods made like another player's (co-op's "Match host"). theirs: Running(true)'s
+        // form ("id@version", the mods that must match). Each of them switched on when it's here at that version; each
+        // mod running here that isn't in theirs (by id) and isn't "multiplayer": "client" switched off; "client" mods
+        // stay as they are. A mod here at another version is left as it is and listed as missing. Before anything
+        // changes, the current set is saved as the profile backupProfile unless that profile already exists (so matching
+        // twice keeps the player's own set); RestoreProfile switches back to it.
+        [Preview("multiplayer: built for Co-op so far")]
+        public static ModMatch Match(IEnumerable<string> theirs, string backupProfile)
+        {
+            var r = new ModMatch();
+            if (Hud.Exists) { r.failed.Add("mods are switched on and off from the main menu"); return r; }
+            var want = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var x in theirs ?? new string[0])
+            {
+                if (string.IsNullOrEmpty(x)) continue;
+                int at = x.LastIndexOf('@');
+                want[at < 0 ? x : x.Substring(0, at)] = at < 0 ? "" : x.Substring(at + 1);
+            }
+            if (backupProfile != null && !ModLoader.Profiles().Contains(ModLoader.ProfileName(backupProfile) ?? "", StringComparer.OrdinalIgnoreCase))
+                ModLoader.SaveProfile(backupProfile, ModLoader.Mods.Select(m => new KeyValuePair<string, bool>(m.Id, m.Loaded)), ModLoader.Mods.Where(m => m.Loaded).OrderBy(m => m.LoadIndex).Select(m => m.Id).ToList());
+            foreach (var m in ModLoader.Mods.Where(m => m.Loaded && !m.ClientOnly && !want.ContainsKey(m.Id)).ToList())
+            {
+                if (!m.Loaded) continue;     // went with a mod switched off before it
+                var e = ModReloader.SwitchOff(m);
+                if (e != null) r.failed.Add(m.Name + ": " + e); else r.off.Add(m.Name);
+            }
+            foreach (var kv in want)
+            {
+                var m = ModLoader.Find(kv.Key);
+                if (m == null || (kv.Value.Length > 0 && !LoadWarning.SameVersion(m.VersionText, kv.Value))) { r.missing.Add(kv.Key + "@" + kv.Value); continue; }
+                if (m.Loaded) continue;
+                var e = ModReloader.SwitchOn(m);
+                if (e != null) r.failed.Add(m.Name + ": " + e); else r.on.Add(m.Name);
+            }
+            if (r.on.Count + r.off.Count > 0) ModManager.MenuChanged();
+            Log.Write("mods: matched another player's mods: on " + string.Join(", ", r.on.ToArray()) + "; off " + string.Join(", ", r.off.ToArray()) + "; missing " + string.Join(", ", r.missing.ToArray()) + (r.failed.Count > 0 ? "; failed " + string.Join("; ", r.failed.ToArray()) : ""));
+            return r;
+        }
+
+        // On the main menu: the mods switched to that profile now (each mod it names on or off as it says, then its
+        // order), and the profile deleted: going back after Match. False: no such profile, or a mod couldn't switch.
+        [Preview("multiplayer: built for Co-op so far")]
+        public static bool RestoreProfile(string name)
+        {
+            if (Hud.Exists) return false;
+            var p = ModLoader.ReadProfile(name);
+            if (p == null) return false;
+            bool ok = true, changed = false;
+            foreach (var kv in p.Value.Key.Where(kv => !kv.Value))
+            {
+                var m = ModLoader.Find(kv.Key);
+                if (m == null || !m.Loaded) continue;
+                if (ModReloader.SwitchOff(m) != null) ok = false; else changed = true;
+            }
+            var order = p.Value.Value;
+            foreach (var kv in p.Value.Key.Where(kv => kv.Value).OrderBy(kv => { int i = order.IndexOf(kv.Key); return i < 0 ? int.MaxValue : i; }))
+            {
+                var m = ModLoader.Find(kv.Key);
+                if (m == null || m.Loaded) continue;
+                if (ModReloader.SwitchOn(m) != null) ok = false; else changed = true;
+            }
+            ModLoader.SetPlayerOrder(order.Count > 0 ? order : null);
+            if (changed) ModManager.MenuChanged();
+            if (ok) ModLoader.DeleteProfile(name);
+            Log.Write("mods: profile " + name + " restored" + (ok ? "" : " (some mods couldn't switch)"));
+            return ok;
+        }
+
+        // A saved profile of that name exists (Mods screen -> Profiles).
+        [Preview("multiplayer: built for Co-op so far")]
+        public static bool HasProfile(string name) { return ModLoader.Profiles().Contains(ModLoader.ProfileName(name) ?? "", StringComparer.OrdinalIgnoreCase); }
+    }
+
+    // What Mods.Match did: mods switched on and off (names), mods missing here ("id@version": not installed, or another
+    // version), and mods that couldn't switch ("Name: why"). Matched: nothing missing or failed.
+    [Preview("multiplayer: built for Co-op so far")]
+    public sealed class ModMatch
+    {
+        internal ModMatch() { }
+        internal readonly List<string> on = new List<string>(), off = new List<string>(), missing = new List<string>(), failed = new List<string>();
+        public IList<string> SwitchedOn { get { return on.AsReadOnly(); } }
+        public IList<string> SwitchedOff { get { return off.AsReadOnly(); } }
+        public IList<string> Missing { get { return missing.AsReadOnly(); } }
+        public IList<string> Failed { get { return failed.AsReadOnly(); } }
+        public bool Matched { get { return missing.Count == 0 && failed.Count == 0; } }
     }
 
     public abstract partial class WorksMod

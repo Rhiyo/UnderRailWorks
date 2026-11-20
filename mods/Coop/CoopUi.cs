@@ -1,6 +1,7 @@
 // Co-op's interface: a "Co-op" button on the HUD (top right, with the other mod buttons) opens the Co-op window, the
 // game's titled window. What it shows follows the state:
-//   not connected   Join a game... (the address asked with the game's text popup); hosting starts on the main menu
+//   not connected   Join a game... (the address asked with the game's text popup); hosting starts on the main menu.
+//                   After a refusal for different mods: what differs, Match host (CoopMatch.cs); Restore my mods.
 //   lobby (host)    the places and who took them, the addresses others join with, Start (every place taken) / Stop
 //   hosting         who is playing what, Stop hosting
 //   choosing        the lobby's places (saved characters, "new character" places; taken ones greyed), Play selected /
@@ -81,7 +82,9 @@ public sealed partial class Coop
         switch (builtFor)
         {
             case "idle":
+                if (hostMods != null) button("Match host", () => MatchHost());
                 button("Join a game...", AskJoin);
+                if (Mods.HasProfile(BackupProfile)) button("Restore my mods", () => RestoreMine());
                 break;
             case "lobby":
                 button("Start", () => { var r = StartGame(); if (r != "starting") Notify.Log("Co-op: " + r, Say); });
@@ -158,6 +161,13 @@ public sealed partial class Coop
         switch (builtFor)
         {
             case "idle":
+                if (hostMods != null)
+                {
+                    Ui.SetText(statusLabel, "Your mods differ from the host's. Match host switches yours to the host's set.");
+                    foreach (var l in MismatchLines()) { items.Add(l); colours.Add(Bad); }
+                    items.Add(""); colours.Add(Grey);
+                    break;
+                }
                 Ui.SetText(statusLabel, World.Player == null ? "Play together: Host New Game or Host Saved Game here, or join someone's lobby." : "Players join before a game starts: host from the main menu (Host New Game / Host Saved Game).");
                 items.AddRange(messages.Skip(Math.Max(0, messages.Count - 30))); colours.AddRange(items.Select(_ => Normal));
                 break;

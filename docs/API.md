@@ -1153,6 +1153,14 @@ A map tile (ak1), as the world pass hands it to the tile-extras step.
 - `void Warn(string line)`
 - `void Error(string line)`
 
+## ModMatch  _(class, Framework.cs)_
+
+- `IList<string> SwitchedOn`
+- `IList<string> SwitchedOff`
+- `IList<string> Missing`
+- `IList<string> Failed`
+- `bool Matched`
+
 ## ModOptions  _(class, ModOptions.cs)_
 
 - `List<KeyValuePair<string, ModPage>> Pages = new List<KeyValuePair<string, ModPage>>()`

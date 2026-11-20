@@ -28,6 +28,12 @@ character arriving mid-fight), so for the first release players join only in a l
   defeat, an earlier save of this game); any other ends the session.
 - Fixed rules in 0.0.1: the group travels together (every player near the exit, 10 tiles), and everyone gets all the XP
   anyone earns (no Shared XP option).
+- **Different mods:** a joiner whose mods (those not "multiplayer": "client") differ is refused, and gets the host's
+  list with each mod's homepage. **Match host** (Co-op window, `coop.match`) switches their installed mods to the
+  host's set at once (Works' `Mods.Match`; "client" mods untouched; their own set kept as the profile "Before co-op")
+  and joins again; what's missing is listed with where to get it. Mods are never sent between players (another
+  player's code). **Restore my mods** (`coop.restore`, `Mods.RestoreProfile`) goes back. Not yet compared: the Works
+  version, the game version and DLC.
 - Later, to make it more dynamic: rejoining your own character after a disconnect, joining between zones.
 - Console (tests): `coop.hostnew <players> [port]`, `coop.hostsave <save> [new players] [port]`, `coop.start`;
   Works: `SaveGames.Names`, `SaveGames.ModData` (a save's co-op characters without loading it).

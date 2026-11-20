@@ -142,6 +142,8 @@ public sealed partial class Coop : WorksMod
                     {
                         Log.Info(p.Name + " refused: different mods: " + string.Join("; ", diff));
                         Notify.Log("Co-op: " + p.Name + " can't join: their mods differ (" + string.Join("; ", diff) + ")", Say);
+                        // The host's mods that must match, each with its name and homepage: the joiner can match them (CoopMatch.cs).
+                        p.Send(new object[] { "HOSTMODS" }.Concat(Mods.Running(true).Select(x => { int at = x.LastIndexOf('@'); var m = ModLoader.Find(x.Substring(0, at)); return (object)(x + "|" + (m == null ? x.Substring(0, at) : m.Name) + "|" + (m == null ? "" : m.Homepage ?? "")); })).ToArray());
                         p.Send("BYE", "your mods differ from the host's: " + string.Join("; ", diff) + ". Mods marked \"client\" may differ."); p.Close(); return;
                     }
                 }
@@ -230,7 +232,8 @@ public sealed partial class Coop : WorksMod
             host = new Peer(tcp, inbox.Add, p => inbox.Add(p, new[] { "_closed" }));
         }
         catch (Exception ex) { host = null; return "can't reach " + args[0] + ": " + ex.Message; }
-        playing = false; readyAs = null; state = null; choices.Clear();
+        playing = false; readyAs = null; state = null; choices.Clear(); hostMods = null;
+        lastJoin = args;
         host.Send("HELLO", Handshake, name, string.Join(",", Mods.Running(true)));
         Log.Info("connected to " + args[0] + " as " + name);
         return "connected to " + args[0] + ", waiting for the character list";
@@ -241,7 +244,8 @@ public sealed partial class Coop : WorksMod
         switch (w[0])
         {
             case "_closed": Tell("disconnected from the host"); host = null; playing = false; readyAs = null; state = null; LeftWorld(); Changed(); return;
-            case "BYE": Tell("the host closed the connection: " + (w.Length > 1 ? w[1] : "")); return;
+            case "BYE": Tell("the host closed the connection: " + (w.Length > 1 ? w[1] : "")); if (hostMods != null) Changed(); return;
+            case "HOSTMODS": HostModsArrived(w); return;
             case "LIST": hostName = w.Length > 1 ? w[1] : "?"; choices.Clear(); return;
             case "CHAR": choices.Add(new KeyValuePair<string, bool>(w[2], w.Length > 3 && w[3] == "taken")); return;
             case "LISTEND":
@@ -411,6 +415,7 @@ public sealed partial class Coop : WorksMod
     {
         Commands.Add(this, "coop.host", "coop.host: (hosting starts on the main menu: coop.hostnew / coop.hostsave)", a => "players join before the game starts: on the main menu, Host New Game or Host Saved Game (coop.hostnew <players> / coop.hostsave <save>)");
         LoadLobby();
+        LoadMatch();
         LoadXp();
         LoadHost();
         LoadListening();
