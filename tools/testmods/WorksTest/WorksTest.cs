@@ -509,6 +509,16 @@ public sealed partial class WorksTest : WorksMod
             Log.Info("gear: " + string.Join(", ", p.Equipment.All.Select(kv => kv.Key + "=" + kv.Value.Name)) + " | bag: " + string.Join(", ", p.Inventory.Items.Select(i => i.Name + " x" + i.Stacks)));
             return "gear";
         });
+        Commands.Add(this, "wt.tomenu", "wt.tomenu: World.QuitToMainMenu", args => World.QuitToMainMenu() ? "quitting" : "not in a game");
+        Commands.Add(this, "wt.bagof", "wt.bagof <name>: that character's bag and equipment (item codes)", args =>
+        {
+            var c = World.Characters.FirstOrDefault(x => x.Name == string.Join(" ", args));
+            if (c == null) return "none";
+            var bag = c.Inventory.Items.Select(i => i.Code + " x" + i.Stacks).OrderBy(x => x).ToList();
+            var worn = c.Equipment.All.Select(kv => kv.Key + "=" + (kv.Value == null ? "-" : kv.Value.Code)).OrderBy(x => x).ToList();
+            Log.Info("bagof " + c.Name + ": " + bag.Count + " items, money " + c.Inventory.Money + "; worn " + string.Join(", ", worn.ToArray()) + "; bag " + string.Join(", ", bag.ToArray()));
+            return bag.Count + " items";
+        });
         Commands.Add(this, "wt.bag", "wt.bag: the bag's item codes", args => { var t = string.Join(", ", World.Player.Inventory.Items.Select(i => i.Code + " x" + i.Stacks)); Log.Info("bag: " + t); return t; });
         Commands.Add(this, "wt.hold", "wt.hold: NPCs other than rathounds end their turns; spawns a rathound", args =>
         {

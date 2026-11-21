@@ -168,7 +168,7 @@ public sealed partial class Coop
     }
 
     // --- Joiner -------------------------------------------------------------------------------------------------
-    bool receiving, loading, inWorld, creating;
+    bool receiving, loading, inWorld, creating, quitToMenu;
     string myKey;
     readonly Dictionary<string, Character> spawned = new Dictionary<string, Character>();
     readonly Dictionary<string, string[]> spawnInfo = new Dictionary<string, string[]>();
@@ -383,6 +383,15 @@ public sealed partial class Coop
             if (sheet == null) { Tell("couldn't export your character"); return; }
             host.Send("NEW", World.Player.Name, sheet);
             Tell("sending " + World.Player.Name + " to the host...");
+            // Not this new game: back to the main menu to wait (the host's world comes when they start). Next frame, not
+            // from inside the zone's loading.
+            quitToMenu = true;
+        });
+        GameEvents.Update.Add(this, dt =>
+        {
+            if (!quitToMenu || World.Player == null) return;
+            quitToMenu = false;
+            if (World.QuitToMainMenu()) Tell("back on the main menu: you'll enter " + (hostName ?? "the host") + "'s game when they start it");
         });
         GameEvents.ZoneLoaded.Add(this, (zone, first) => { if (loading && host != null) Simulation.Apply(Arrived); });
         // The joiner's orders go to the host: walking and attacking for now.

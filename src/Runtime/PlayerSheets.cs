@@ -118,6 +118,16 @@ namespace UnderRailWorks
             return true;
         }
 
+        // In a game: back to the main menu as the in-game menu's Main Menu does (the game's QuitGameFromLocale workflow,
+        // without saving). False: not in a game.
+        [Preview("multiplayer: built for Co-op so far")] public static bool QuitToMainMenu()
+        {
+            if (Player == null) return false;
+            bpo.GetServiceOrThrow<d4m>().avp(dla.a(TimelapseVertigo.Common.TimelapseWorkflows.QuitGameFromLocale));
+            Log.Write("world: quitting to the main menu");
+            return true;
+        }
+
         static void SetPlayerFlag(c5x e, bool on)
         {
             if (Flags == null) return;
