@@ -28,7 +28,7 @@ public sealed partial class Coop : WorksMod
     // What host and joiner compare when connecting: the release version and the message protocol. The protocol goes up
     // whenever the messages change, also between releases (dev builds with different protocols can't play together;
     // the release version itself only changes at a GitHub release).
-    const int Protocol = 13;
+    const int Protocol = 14;
     string Handshake { get { return Info.VersionText + "/" + Protocol; } }
 
     const int DefaultPort = 27650;
@@ -70,7 +70,7 @@ public sealed partial class Coop : WorksMod
     string WriteSheet(string name, string base64) { var path = SheetPath(name); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); System.IO.File.WriteAllBytes(path, Convert.FromBase64String(base64)); return path; }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld, Announced; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld, Announced; public string[] Owns; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
     Listener listener;
     static float Dist(Character a, Character b) { return Vector2.Distance(new Vector2(a.Position.X, a.Position.Y), new Vector2(b.Position.X, b.Position.Y)); }
     static bool Sees(Character who, Character other) { return who.CanSee(other) && Dist(who, other) <= who.SightRange; }
@@ -128,7 +128,8 @@ public sealed partial class Coop : WorksMod
                 p.Name = w.Length > 2 && w[2].Trim().Length > 0 ? w[2].Trim() : "Player " + p.Id;
                 if (w.Length < 2 || w[1] != Handshake) { p.Send("BYE", "the host has Co-op " + Handshake + ", you have " + (w.Length > 1 ? w[1] : "?") + " (both need the same)"); p.Close(); return; }
                 {
-                    var refused = RefuseJoin();
+                    var owns = ParseExpansions(w.Length > 4 ? w[4] : "");
+                    var refused = RefuseJoin() ?? RefuseForExpansions(owns);
                     if (refused != null)
                     {
                         Log.Info(p.Name + " refused: " + refused);
@@ -147,11 +148,12 @@ public sealed partial class Coop : WorksMod
                         p.Send("BYE", "your mods differ from the host's: " + string.Join("; ", diff) + ". Mods marked \"client\" may differ."); p.Close(); return;
                     }
                 }
-                seats[p] = new Seat { Peer = p };
+                seats[p] = new Seat { Peer = p, Owns = ParseExpansions(w.Length > 4 ? w[4] : "") };
                 Log.Info(p.Name + " connected from " + p.Address);
                 Changed(false);
-                Notify.Log("Co-op: " + p.Name + " is choosing a character", Say);
-                SendLobbyList(p);
+                Log.Info(p.Name + " is choosing a character; expansions they have: " + Names(seats[p].Owns));
+                Notify.Log("Co-op: " + p.Name + " is choosing a character" + (lobby == "new" ? "; expansions they have: " + Names(seats[p].Owns) : ""), Say);
+                LobbyChanged();     // everyone: the places, and the expansions the game can use now
                 return;
             case "BYE": p.Close(); return;
         }
@@ -234,7 +236,7 @@ public sealed partial class Coop : WorksMod
         catch (Exception ex) { host = null; return "can't reach " + args[0] + ": " + ex.Message; }
         playing = false; readyAs = null; state = null; choices.Clear(); hostMods = null;
         lastJoin = args;
-        host.Send("HELLO", Handshake, name, string.Join(",", Mods.Running(true)));
+        host.Send("HELLO", Handshake, name, string.Join(",", Mods.Running(true)), string.Join(",", Expansions.Installed));
         Log.Info("connected to " + args[0] + " as " + name);
         return "connected to " + args[0] + ", waiting for the character list";
     }
@@ -246,6 +248,7 @@ public sealed partial class Coop : WorksMod
             case "_closed": Tell("disconnected from the host"); host = null; playing = false; readyAs = null; state = null; LeftWorld(); Changed(); return;
             case "BYE": Tell("the host closed the connection: " + (w.Length > 1 ? w[1] : "")); if (hostMods != null) Changed(); return;
             case "HOSTMODS": HostModsArrived(w); return;
+            case "EXPANSIONS": ExpansionsArrived(w); return;
             case "LIST": hostName = w.Length > 1 ? w[1] : "?"; choices.Clear(); return;
             case "CHAR": choices.Add(new KeyValuePair<string, bool>(w[2], w.Length > 3 && w[3] == "taken")); return;
             case "LISTEND":
@@ -416,6 +419,7 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.host", "coop.host: (hosting starts on the main menu: coop.hostnew / coop.hostsave)", a => "players join before the game starts: on the main menu, Host New Game or Host Saved Game (coop.hostnew <players> / coop.hostsave <save>)");
         LoadLobby();
         LoadMatch();
+        LoadExpansions();
         LoadXp();
         LoadHost();
         LoadListening();

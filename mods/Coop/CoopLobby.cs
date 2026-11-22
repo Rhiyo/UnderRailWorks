@@ -60,7 +60,8 @@ public sealed partial class Coop
         var failed = Listen(port);
         if (failed != null) return failed;
         lobby = kind; lobbySave = save;
-        Log.Info("lobby: " + (kind == "saved" ? "saved game " + save + ", " : "new game, ") + slots.Count + " places (" + string.Join(", ", slots.Select(s => s.New ? "new" : s.Saved.Name).ToArray()) + ") on port " + port);
+        unticked.Clear();
+        Log.Info("lobby: " + (kind == "saved" ? "saved game " + save + " (expansions: " + Names(SaveGames.ExpansionsOf(save) ?? new List<string>()) + "), " : "new game, ") + slots.Count + " places (" + string.Join(", ", slots.Select(s => s.New ? "new" : s.Saved.Name).ToArray()) + ") on port " + port);
         Changed();
         if (window == null || !window.IsOpen) Build();
         return "waiting for " + slots.Count + " player" + (slots.Count == 1 ? "" : "s") + " on port " + port;
@@ -75,8 +76,13 @@ public sealed partial class Coop
         int missing = FreePlaces();
         if (missing > 0) return "waiting for " + missing + " more player" + (missing == 1 ? "" : "s") + ": every place must be taken first";
         foreach (var s in seats.Values.Where(x => !slots.Any(sl => sl.Seat == x)).ToList()) { s.Peer.Send("BYE", "the game is full"); s.Peer.Close(); }
+        var needed = LobbyExpansions();
+        var notHere = needed.Where(id => !Expansions.Installed.Contains(id)).ToList();
+        if (notHere.Count > 0) return "this save uses " + Names(notHere) + ", which you don't have";
         records = slots.Select(s => s.Seat.Record).ToList();
         var kind = lobby;
+        UseOnly(needed);     // the others off here; the players did the same when the set arrived
+        foreach (var s in seats.Values) SendExpansions(s.Peer);
         lobby = null; starting = true;     // from here nobody joins
         foreach (var s in seats.Values) s.Peer.Send("SAID", kind == "saved" ? "the host is loading the game" : "the host is making their character; the game starts after that");
         bool ok = kind == "saved" ? SaveGames.Load(lobbySave) : World.StartNewGame();
@@ -101,6 +107,7 @@ public sealed partial class Coop
         for (int i = 0; i < slots.Count; i++)
             p.Send("CHAR", i + 1, slots[i].New ? "(new character)" : slots[i].Saved.Name, slots[i].Seat != null ? "taken" : "free");
         p.Send("LISTEND");
+        SendExpansions(p);
     }
     void LobbyChanged() { foreach (var s in seats.Values) if (s.Peer != null && !s.Peer.Closed) SendLobbyList(s.Peer); Changed(false); }
 

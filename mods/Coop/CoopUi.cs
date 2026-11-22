@@ -147,6 +147,7 @@ public sealed partial class Coop
         }
 
         int listTop = window.Top + line + Ui.S(8);
+        if (builtFor == "lobby") listTop += AddExpansionRow(window, pad, listTop, w - 2 * pad);
         int listBottom = h - pad - rowsOf.Count * (bh + gap);
         list = Ui.List(w - 2 * pad, Math.Max(line * 2, listBottom - listTop));
         list.Selected += i => { selected = i; Refresh(); };
@@ -199,6 +200,8 @@ public sealed partial class Coop
             case "lobby":
             {
                 int free = slots.Count(sl => sl.Seat == null);
+                RefreshExpansionRow();
+                if (lobby == "saved") { items.Add("Expansions (the save's: players need them): " + Names(LobbyExpansions())); colours.Add(Grey); }
                 Ui.SetText(statusLabel, starting ? "Starting the game..." : free == 0 ? "Everyone is here: Start." : "Waiting for " + free + " player" + (free == 1 ? "" : "s") + " (port " + listener.Port + ")");
                 items.Add((World.Player != null ? World.Player.Name : "You") + "  (the host)"); colours.Add(Grey);
                 foreach (var sl in slots)
@@ -215,6 +218,7 @@ public sealed partial class Coop
                 break;
             }
             case "ready":
+                if (sessionExpansions != null) { items.Add("Expansions in this game: " + Names(sessionExpansions)); colours.Add(Grey); }
                 Ui.SetText(statusLabel, "You'll play " + readyAs + " in " + (hostName ?? "the host") + "'s game. Waiting for the host to start...");
                 items.AddRange(messages.Skip(Math.Max(0, messages.Count - 30))); colours.AddRange(items.Select(_ => Normal));
                 break;
@@ -222,6 +226,7 @@ public sealed partial class Coop
                 Ui.SetText(statusLabel, "Take a place in " + (hostName ?? "the host") + "'s game" + (selected > 0 && selected <= choices.Count ? ": " + choices[selected - 1].Key : "") + ". A \"new character\" place: New character...");
                 items.Add((hostName ?? "?") + "  (the host)"); colours.Add(Grey);
                 foreach (var c in choices) { items.Add(c.Key + (c.Value ? "  (taken)" : "")); colours.Add(c.Value ? Grey : Normal); }
+                if (sessionExpansions != null) { items.Add(""); colours.Add(Grey); items.Add("Expansions in this game: " + Names(sessionExpansions)); colours.Add(Grey); }
                 break;
             case "play":
                 Ui.SetText(statusLabel, StateText());

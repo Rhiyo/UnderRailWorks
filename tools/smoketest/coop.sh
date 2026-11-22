@@ -74,7 +74,7 @@ check() { if grep -qE "$3" "$2"; then pass=$((pass+1)); else fail=$((fail+1)); e
 afterward() { if awk -v m="$3" -v p="$4" 'f && $0 ~ p { bad=1 } $0 ~ m { f=1 } END { exit !bad }' "$2"; then fail=$((fail+1)); echo "FAIL: $1 ($4 after $3)"; else pass=$((pass+1)); fi; }
 never() { if grep -qE "$3" "$2"; then fail=$((fail+1)); echo "FAIL: $1 (found in $(basename "$(dirname "$2")"): $(grep -m1 -E "$3" "$2" | cut -c1-160))"; else pass=$((pass+1)); fi; }
 check "host hosts"                          "$HL" "Coop: hosting on port $PORT"
-check "the lobby has the save and a place"  "$HL" "Coop: lobby: saved game $SAVE, 1 places \\(new\\) on port $PORT"
+check "the lobby has the save and a place"  "$HL" "Coop: lobby: saved game $SAVE \\(expansions: none\\), 1 places \\(new\\) on port $PORT"
 check "Start refused while a place is free" "$HL" "coop.start -> waiting for 1 more player"
 check "the joiner, with Grudges off, refused" "$HL" "Coop: tester refused: different mods: only the host has: Grudges"
 check "Match host switches Grudges on"      "$JL" "Coop: switched on Grudges"

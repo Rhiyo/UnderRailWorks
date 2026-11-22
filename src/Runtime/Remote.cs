@@ -273,6 +273,14 @@ namespace UnderRailWorks
                 return g.arm().Where(s => !string.IsNullOrEmpty(s.FolderName)).OrderByDescending(s => s.SaveTime).Select(s => s.FolderName).ToList();
             }
         }
+        // The expansions a save was made with (ids, as Expansions names them): the game loads it only with all of them.
+        // Null: no such save.
+        public static IList<string> ExpansionsOf(string name)
+        {
+            var g = Game;
+            var save = g == null ? null : g.arm().FirstOrDefault(s => s.FolderName == name);
+            return save == null ? null : (save.DLCs ?? new List<string>()).Select(x => x.ToLowerInvariant()).ToList();
+        }
         // A mod's saved value (SaveData.Of(mod).Get(key)) from a save on disk, without loading it: e.g. a lobby showing
         // the characters a save has. Null: no such save, value, or data.
         public static object ModData(WorksMod mod, string save, string key)

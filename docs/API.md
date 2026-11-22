@@ -517,6 +517,16 @@ Zone exits (the tiles World.ExitTiles lists) switched off and on. An exit that's
 - `static void Enable(string zone, int x, int y)`
 - `static bool IsEnabled(string zone, int x, int y)`
 
+## Expansions  _(class, Expansions.cs)_
+
+- `static IList<string> Known` — Every expansion the game knows: "xpbl" (Expedition), "xphw" (Heavy Duty).
+- `static string Name(string id)` — Its name as the game shows it ("Expedition").
+- `static IList<string> Installed` — Installed on this computer, whether switched off or not.
+- `static IList<string> Active` — What the game uses now: installed and not switched off.
+- `static IList<string> Off` — Switched off now.
+- `static bool SwitchOff(IEnumerable<string> ids)` — These switched off (ids not installed are ignored), every other installed one on. On the main menu only: a game under way keeps what it started with. False: in a game, or the game's caches weren't found.
+- `static bool AllOn()` — Every installed expansion on again.
+
 ## FeatRequirements  _(class, Feats.cs)_
 
 - `Dictionary<string, int> Abilities`
@@ -1516,6 +1526,7 @@ The first handler that returns true replaces the game's step.
 - `static bool Delete(string name)` — Deletes that save as the Load Game window's Delete does (cnk.arn). False: no such save, or it couldn't be deleted.
 - `static string Folder(string name)` — The save's folder on disk (it may not exist).
 - `static IList<string> Names` — The saves the Load Game window lists, newest first (folder names, as Load takes them).
+- `static IList<string> ExpansionsOf(string name)` — The expansions a save was made with (ids, as Expansions names them): the game loads it only with all of them. Null: no such save.
 - `static object ModData(WorksMod mod, string save, string key)` — A mod's saved value (SaveData.Of(mod).Get(key)) from a save on disk, without loading it: e.g. a lobby showing the characters a save has. Null: no such save, value, or data.
 - `static bool Load(string name)` — Loads that save (from the main menu or in game). False: there's no such save, or this game can't load it (another major version, or DLC it doesn't have). The load happens over the next frames.
 

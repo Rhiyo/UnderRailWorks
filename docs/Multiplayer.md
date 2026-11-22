@@ -34,6 +34,13 @@ character arriving mid-fight), so for the first release players join only in a l
   and joins again; what's missing is listed with where to get it. Mods are never sent between players (another
   player's code). **Restore my mods** (`coop.restore`, `Mods.RestoreProfile`) goes back. Not yet compared: the Works
   version, the game version and DLC.
+- **Expansions:** a hosted game uses only expansions every player has. Host New Game: each expansion the host has
+  is ticked in the lobby and can be unticked; one the host or a player in the lobby lacks is greyed out and off.
+  Host Saved Game: the save's expansions (the game loads a save only with them); a player without one is refused.
+  Players send their expansions with HELLO; the lobby's set goes to everyone (EXPANSIONS) and both sides switch
+  the rest off (Works' `Expansions.SwitchOff`: the game's "installed" caches answer no) before the game is made or
+  loaded, the joiner before making its character. Back on the main menu with no session, all installed ones are on
+  again. Tested with marker files only (`tools/smoketest/coop-expansions.sh`); not with the real expansions.
 - Later, to make it more dynamic: rejoining your own character after a disconnect, joining between zones.
 - Console (tests): `coop.hostnew <players> [port]`, `coop.hostsave <save> [new players] [port]`, `coop.start`;
   Works: `SaveGames.Names`, `SaveGames.ModData` (a save's co-op characters without loading it).
