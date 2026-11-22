@@ -47,7 +47,9 @@ h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; j timeout 60 "$SKILL/stop.sh" >/d
 printf 'wait 8\nwt.load %s\n' "$SAVE" > "$HM"
 printf 'wait 3\nwt.save dlcsave\nwait 3\nwt.tomenu\n' > "$HOST/Mods/WorksTest/autorun.txt"
 h timeout 100 "$SKILL/launch.sh" --save "$SAVE" 1280 720 >/dev/null 2>&1; sleep 50
-printf 'wait 3\ncoop.hostsave dlcsave 1 %s\n' "$PORT" > "$HM"; sleep 10
+SAVES="${CACHE:-$HOME/.cache/underrail-test}/runs/cooph/prefix/pfx/drive_c/users/steamuser/Documents/My Games/Underrail/Saves"
+python3 "$HERE/coopsave.py" "$SAVES/dlcsave" Mira >/dev/null     # a co-op game's save (only those are hosted)
+printf 'wait 3\ncoop.hostsave dlcsave %s\n' "$PORT" > "$HM"; sleep 10
 printf 'wait 8\ncoop.join 127.0.0.1:%s bare\n' "$PORT" > "$BARE/Mods/WorksTest/menurun.txt"
 b timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1; sleep 35
 h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; b timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
@@ -60,7 +62,7 @@ check "the joiner sees the game's set"             "$JL" "Coop: expansions for t
 check "Start: both off on the host"                "$H1" "Coop: expansions for this game: none \(off: Expedition, Heavy Duty\)"
 check "Works switched them off (host)"             "$H1" "expansions: switched off (xpbl, xphw|xphw, xpbl)"
 check "the joiner's Expedition on again after"     "$JL" "Coop: expansions: all installed ones on again \(Expedition\)"
-check "the save records both expansions"           "$HL" "Coop: lobby: saved game dlcsave \(expansions: Expedition, Heavy Duty\)"
+check "the save records both expansions"           "$HL" "Coop: lobby: saved game dlcsave \(expansions: Expedition, Heavy Duty\), 1 places \(Mira\)"
 check "a player without them is refused (host)"    "$HL" "Coop: bare refused: this game uses Expedition, Heavy Duty, which you don't have"
 check "... and told why"                           "$BL" "this game uses Expedition, Heavy Duty, which you don't have"
 [ "${WITH_STEAM:-0}" = 1 ] || for l in "$H1" "$HL" "$JL"; do if grep -q "helper: InitSteam -> 1" "$l"; then fail=$((fail+1)); echo "FAIL: connected to Steam ($l)"; else pass=$((pass+1)); fi; done

@@ -101,22 +101,34 @@ public sealed partial class Coop
         });
     }
 
-    // The lobby window's expansion row (a new game): a tick per expansion, greyed with the reason when unavailable.
+    // The lobby window's "Game settings": a new game's expansions, one tick per row (greyed with the reason when
+    // unavailable), and the settings chosen in the Host window; a saved game's, as text (they don't change).
     int AddExpansionRow(UiWindow w, int x, int y, int width)
     {
         expansionTicks.Clear(); expansionLabels.Clear();
-        if (lobby != "new") return 0;
-        Ui.Add(w, Ui.Label("Expansions:", Ui.S(110)), x, y + Ui.S(4));
-        int cx = x + Ui.S(116), h = 0;
+        int top = y, line = Ui.LineHeight;
+        var heading = Ui.Label(lobby == "saved" ? "Game settings (the save's)" : "Game settings", width);
+        Ui.SetColor(heading, Mine_);
+        Ui.Add(w, heading, x, y);
+        y += line + Ui.S(4);
+        var death = "When a player's health runs out: " + DeathRules[Math.Max(0, Math.Min(DeathRules.Length - 1, deathRule))];
+        if (lobby != "new")
+        {
+            Ui.Add(w, Ui.Label("Expansions: " + Names(LobbyExpansions()), width), x + Ui.S(10), y); y += line + Ui.S(2);
+            Ui.Add(w, Ui.Label(death, width), x + Ui.S(10), y); y += line + Ui.S(6);
+            return y - top;
+        }
         foreach (var id in Expansions.Known)
         {
             var tick = Ui.TickBox(Unavailable(id) == null && !unticked.Contains(id));
-            var label = Ui.Label(Expansions.Name(id), Ui.S(220));
-            Ui.Add(w, tick, cx, y); Ui.Add(w, label, cx + tick.Width + Ui.S(4), y + Ui.S(4));
+            var label = Ui.Label(Expansions.Name(id), width - tick.Width - Ui.S(20));
+            Ui.Add(w, tick, x + Ui.S(10), y);
+            Ui.Add(w, label, x + Ui.S(16) + tick.Width, y + Math.Max(0, (tick.Height - line) / 2));
             expansionTicks[id] = tick; expansionLabels[id] = label;
-            cx += tick.Width + Ui.S(130); h = Math.Max(h, tick.Height);
+            y += Math.Max(tick.Height, line) + Ui.S(4);
         }
-        return h + Ui.S(6);
+        Ui.Add(w, Ui.Label(death, width), x + Ui.S(10), y); y += line + Ui.S(6);
+        return y - top;
     }
 
     void RefreshExpansionRow()

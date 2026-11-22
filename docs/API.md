@@ -443,7 +443,7 @@ The defense values the character sheet's Defense tab shows (what StatBonus.Dodge
 - `static void Add(WorksMod mod, string name, Action<DialogBuilder> build)` — A conversation, by name (prefix it with the mod's id). The builder runs each time it is opened, so it may read game state (but conditions are the cleaner way).
 - `static bool Exists(string name)`
 - `static void Override(Character npc, string name)` — Talking to this character opens the named conversation (Works' or the game's). Kept in memory only: the character's own dialog stays as saved.
-- `static bool Start(Character npc, string name)` — Opens a conversation between the player and npc now (false if the game refuses: combat, hostile, one is open).
+- `static bool Start(Character npc, string name)`
 
 ## DialogStart  _(class, Cancellable.cs)_
 
@@ -750,6 +750,7 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 ## Inventory  _(class, Characters.cs)_
 
 - `void Put(Item item)` — Puts an item that exists (taken out of a container or another bag: its condition, ammo and stacks kept) into the bag.
+- `bool Remove(Item item)` — Takes this very item (its whole stack) out of the bag, e.g. to Put it into another character's bag: its condition, ammo and stacks kept. False: it isn't in this bag (equipped items aren't).
 - `IList<Item> Items` — Items in the bag (not equipped ones).
 - `int Count(string code, bool includeGear = false)` — How many of an item (by code, e.g. "currency.sc") the character has, bag and (optionally) gear.
 - `bool Has(string code, int stacks = 1, bool includeGear = false)`
@@ -769,6 +770,7 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 - `static bool operator ==(Item a, Item b)`
 - `static bool operator !=(Item a, Item b)`
 - `string Code`
+- `bool IsQuestItem` **(preview)** — A quest ("plot") item: its definition's category is the one the game's own scripts keep safe (bk3.bi() == a0.c: never stolen from the player's house, moved off corpses to safety, never deleted), or its code starts "plot.".
 - `string Name`
 - `int Stacks`
 - `int Value` — Base value of one item and of the stack (the game's ItemValue; merchants multiply it by their markup).
@@ -1342,6 +1344,8 @@ A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
 - `static Character Acting` — The party member whose action is running (Party.As): World.Player is that character meanwhile, so mods written for one player do for whoever acted what they'd do for the player. Null: the player's own.
 - `static void As(Character who, Action a)` — Runs a with who as the acting player (World.Player), back after (nests).
 - `static void LeveledUp(Character who, int level)` **(preview)** — A multiplayer mod: who reached a level on another machine; GameEvents.LeveledUp runs here with them as the player.
+- `static bool TriggersCountMembers` **(preview)** — The map's player-only triggers also fire for the party's other members: story and quest triggers, trigger barks, dialog and music areas, the scripted triggers marked player-only (the game's ya triggers on stepping in, out and around). For that moment the member counts as the player (its IsPlayer flag and player aspect set, then put back); what the trigger then does to "the player" itself (a dialog job, a cutscene) is the player's. NPCs' own reactions to the player (walking up to talk, guards, attacking on sight) still see only the player.
+- `static bool FactionArmorCountsAnyMember` **(preview)** — The game's faction-armour conditions (map data: "wearing CAU armor", "wearing Tchortist armor", "not wearing the Gray Army uniform"; they read the player's gear) count the whole party: "wearing" if any member wears it, "not wearing" only if none does. One disguised member is enough for the group (and members can split factions).
 - `static void Add(WorksMod mod, Character c)`
 - `static void Remove(Character c)`
 - `static bool Contains(Character c)`
@@ -1654,6 +1658,9 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 - `static bool IsOpen`
 - `static bool Choose(int index)` — Answers with choice index (as listed in the last line), or -1 to go on / end when it has none.
 - `static void Close()` — Ends the conversation now.
+- `delegate string AnswerLabel(int index, string text)` — The player's own conversation window: each answer's text as shown (index from 0, the text as the dialog has it), changed by every handler in turn, e.g. a mark after an answer others would pick. The answer itself and what TalkLine reports are unchanged. RefreshAnswers() shows changed marks at once.
+- `static readonly Hook<AnswerLabel> AnswerText = new Hook<AnswerLabel>("TalkAs.AnswerText")`
+- `static bool RefreshAnswers()` — The open conversation window's answers built again (AnswerText asked again). False: no window open.
 
 ## TalkChoice  _(class, TalkAs.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
 

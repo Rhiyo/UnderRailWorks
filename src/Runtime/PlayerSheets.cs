@@ -128,7 +128,7 @@ namespace UnderRailWorks
             return true;
         }
 
-        static void SetPlayerFlag(c5x e, bool on)
+        internal static void SetPlayerFlag(c5x e, bool on)
         {
             if (Flags == null) return;
             var f = (e2b)Flags.GetValue(e);

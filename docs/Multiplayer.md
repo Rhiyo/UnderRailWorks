@@ -23,7 +23,12 @@ character arriving mid-fight), so for the first release players join only in a l
   (the host can add new places for joiners who make a new character). The save loads only when every place is taken:
   a saved character never goes missing from the game it belongs to.
 - After the start nobody joins (refused: "the game has already started"). A player who leaves leaves their character,
-  passing its turns. With "dead for good", a dead player's player watches (no new character mid-game).
+  passing its turns.
+- **Death (0.0.1):** one rule, not an option: a player whose health runs out is downed (1 health, incapacitated,
+  left alone by enemies, turns passed) and gets up with a third of their health when the fight ends (a few seconds
+  later outside a fight). Game over only when every player is down at once, or the host is down with nobody else
+  playing. Healing items work only on their user, as in the game (its healing code takes a target, but nothing in the
+  game aims one at another character). The code for "Others revive them" and "Dead for good" is kept, not offered.
 - The host loading another game while hosting: only one with exactly the players' co-op characters (reloading after a
   defeat, an earlier save of this game); any other ends the session.
 - Fixed rules in 0.0.1: the group travels together (every player near the exit, 10 tiles), and everyone gets all the XP
@@ -41,6 +46,42 @@ character arriving mid-fight), so for the first release players join only in a l
   the rest off (Works' `Expansions.SwitchOff`: the game's "installed" caches answer no) before the game is made or
   loaded, the joiner before making its character. Back on the main menu with no session, all installed ones are on
   again. Tested with marker files only (`tools/smoketest/coop-expansions.sh`); not with the real expansions.
+- **Conversations are the host's (Nov 23):** a joiner clicking an NPC opens that NPC's conversation with the host's
+  character, at once and from where everyone stands (Works' `Dialogs.StartOwn`); the host answers in the game's own
+  window, and the game's checks (skills, items, quests) see the host only, so the story has one protagonist as written.
+  Joiners follow it in their Conversation window and can suggest an answer (click; again to take it back): the host's
+  window shows `[Mira]` after it (Works' `TalkAs.AnswerText` / `RefreshAnswers`), every player's window too. Checking
+  every player's stats was rejected (too easy), and the starter's (cheats, odd side effects).
+- **Map triggers count any player (Nov 23):** the game's player-only triggers (story, quest-state, trigger barks,
+  dialog and music areas, scripted player-only triggers: `ya` subclasses with an IsPlayer / player-aspect test) fire for
+  any player stepping in: Works' `Party.TriggersCountMembers` sets the member's IsPlayer flag and player aspect for the
+  trigger's call (ya.e/f/g/h) and puts them back. What a trigger then does to "the player" (dialog jobs, ~290 cutscenes
+  built around `aqu().v().b()`) happens with the host, and its conversation is the host's.
+- **Faction armour (Nov 23):** the game's three faction-armour conditions (map data: "wearing CAU armor", "wearing
+  Tchortist armor", "not wearing the Gray Army uniform") count the party: met if any player wears it (Works'
+  `Party.FactionArmorCountsAnyMember`; checked per member's sheet). One disguised player is enough; players could split
+  factions between them: a known leniency that can't block anything (with every player judged alone, a faction with one
+  armour set could make content impossible).
+- **Inventory (Nov 23):** what takes items or money (dialog takes RIFPA / T13 / T132, the take job RIFPJ, payments,
+  scripts) uses only the host's bag, as in single player. The game's takes never refuse or roll back (they take what's
+  there: a check that counted every bag followed by a take from the host's would take part of it), so checks aren't
+  widened either: map triggers check items through the dialog conditions (SADC -> PHIC), mostly paired with takes, and
+  the only check-only cases outside conversations are quest items. Instead: **quest items always go to the host**
+  (Works' `Item.IsQuestItem`: the item category the game's own scripts keep safe, bk3.bi() == a0.c, or a "plot." code;
+  Co-op moves them from a joiner's bag every second), and **players give each other** items (whole stacks, condition
+  kept: Works' `Inventory.Remove` / `Put`) and charons (any amount): the Co-op window's Give..., `coop.give`. Money is
+  an item (currency\StygianCoin). The survey of every check and take is in the session notes of Nov 23.
+- **Designed, not built yet:**
+  - NPC reactions to any player: NPCs' own behaviour (walking up to talk, guards' warnings and attack on sight,
+    stealth flares, bark dialogs) asks `cnk.aqu().v().b()` in AI node conditions (`b64.acj`) and actions (`byh.aci`).
+    Plan: re-ask a reaction node per player with the host's sheet's body link (`au2.m_b`, a plain field) pointed at that
+    player's body for the call: NPCs react to any player's position, stats stay the host's. Open: which nodes to
+    re-ask without changing how often random ones fire (barks), and keeping the action on the same player as its
+    condition (a node that keeps "the player" past the call would act on the host).
+  - A shared shop: a shop the host's conversation opens opens for every player; every deal goes through the host (to
+    the real merchant), which sends everyone the merchant's new stock and cash; open windows update (the game builds
+    the barter window once: rebuild or reopen it); two players after one item: the first deal wins. The game ends the
+    conversation when trading starts (to confirm), so nobody waits for the others.
 - Later, to make it more dynamic: rejoining your own character after a disconnect, joining between zones.
 - Console (tests): `coop.hostnew <players> [port]`, `coop.hostsave <save> [new players] [port]`, `coop.start`;
   Works: `SaveGames.Names`, `SaveGames.ModData` (a save's co-op characters without loading it).

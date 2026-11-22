@@ -46,6 +46,7 @@ public sealed partial class Coop : WorksMod
     {
         foreach (var seat in seats.Values) Remember(seat);
         foreach (var o in orphans) Remember(o);
+        if (listener != null) SaveData.Of(this).Set("options", OptionsToSave());
         SaveData.Of(this).Set("characters", records.Select(r => (object)new Dictionary<string, object> { { "name", r.Name }, { "blueprint", r.Blueprint }, { "zone", r.Zone }, { "x", r.X }, { "y", r.Y }, { "sheet", r.Sheet } }).ToList());
     }
 
@@ -87,6 +88,10 @@ public sealed partial class Coop : WorksMod
         catch (Exception ex) { listener = null; return "can't host on port " + port + ": " + ex.Message; }
         // The group travels together: an exit is taken only with every player near the one taking it (Works' Party).
         ApplyTravelRule();
+        // The map's player-only triggers (story, quests, barks, dialog areas) fire for any player stepping in.
+        Party.TriggersCountMembers = true;
+        // The faction-armour conditions: met if any player wears it.
+        Party.FactionArmorCountsAnyMember = true;
         Log.Info("hosting on port " + port);
         Notify.Log("Co-op: hosting on port " + port + ". Others join with Join a Game and your address" + (port == DefaultPort ? "" : ":" + port), Say);
         return null;
@@ -102,6 +107,8 @@ public sealed partial class Coop : WorksMod
         slots.Clear(); lobby = null; starting = false;
         listener.Stop(); listener = null;
         Party.DontNeedTogether(this, PartyNeed.EnterZone, null);
+        Party.TriggersCountMembers = false;
+        Party.FactionArmorCountsAnyMember = false;
         Log.Info("stopped hosting");
         Changed();
     }
@@ -171,7 +178,7 @@ public sealed partial class Coop : WorksMod
             return;
         }
         if (seat.Character == null || seat.Character.IsDead || seat.Character.Area == null) { p.Send("SAID", seat.Character != null && seat.Character.IsDead ? "your character is dead" : "pick a character first"); return; }
-        if (downed.Contains(seat.Character) && w[0] != "STATUS" && w[0] != "DLGPICK") { p.Send("SAID", "you're down"); return; }
+        if (downed.Contains(seat.Character) && w[0] != "STATUS" && w[0] != "DLGSUGGEST") { p.Send("SAID", "you're down"); return; }
         var said = Act(seat.Character, w);
         if (!string.IsNullOrEmpty(said)) p.Send("SAID", said);
     }
@@ -381,8 +388,8 @@ public sealed partial class Coop : WorksMod
             case "RELOAD": return c.Reload() ? "" : "can't reload now";
             case "REVIVE": return ReviveNear(c);
             case "TALK": return w.Length > 1 ? Talk(c, w[1]) : "talk to whom?";
-            case "DLGPICK": return w.Length > 1 ? Pick(c, w[1]) : "";
-            case "DLGCLOSE": if (talking != null && talking.Character == c) { TalkAs.Close(); talking = null; } return "";
+            case "DLGSUGGEST": return w.Length > 1 ? Suggest(c, w[1]) : "";
+            case "GIVE": case "GIVEMONEY": return GiveFrom(c, w);
             case "STATUS":
             {
                 var cur = Combat.Current;
@@ -420,6 +427,7 @@ public sealed partial class Coop : WorksMod
         LoadLobby();
         LoadMatch();
         LoadExpansions();
+        LoadGive();
         LoadXp();
         LoadHost();
         LoadListening();
@@ -447,6 +455,12 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.end", "coop.end: ends your character's combat turn", a => Mine("END"));
         Commands.Add(this, "coop.door", "coop.door <id start>: your character uses that door (wt.doors lists them)", a => { var d = a.Length == 0 ? null : World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return d == null ? "no such door" : Mine("USE", d.EntityId); });
         Commands.Add(this, "coop.newfrom", "coop.newfrom <file.char> <name>: join with a character exported earlier (as finishing creation does)", a => { if (host == null || a.Length < 2) return "coop.newfrom <file.char> <name>"; host.Send("NEW", a[1], Convert.ToBase64String(System.IO.File.ReadAllBytes(a[0]))); return "sent"; });
+        Commands.Add(this, "coop.suggest", "coop.suggest <answer number>: in the host's conversation, suggest that answer (again: take it back)", a =>
+        {
+            int n; if (a.Length < 1 || !int.TryParse(a[0], out n) || n < 1 || n > talkChoices.Count) return "coop.suggest <answer number, 1-" + talkChoices.Count + ">";
+            SuggestAnswer(talkChoices[n - 1].Key);
+            return "suggested " + n;
+        });
         Commands.Add(this, "coop.talk", "coop.talk <name>: your character talks to that character (nearest of that name)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 80).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0); return t == null ? "nobody called that" : Mine("TALK", KeyHere(t)); });
         Commands.Add(this, "coop.lootnear", "coop.lootnear: open the nearest container here (as a click on it)", a => { var me = World.Player; var b = me == null ? null : World.Containers.OrderBy(x => Math.Abs(x.Position.X - me.Position.X) + Math.Abs(x.Position.Y - me.Position.Y)).FirstOrDefault(); if (b == null) return "none"; host.Send("USE", b.EntityId, (int)Math.Round(b.Position.X), (int)Math.Round(b.Position.Y)); return "opening " + b.Name; });
         Commands.Add(this, "coop.box", "coop.box <id start>: your character opens that container", a => { var b = a.Length == 0 ? null : World.Containers.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return b == null ? "no such container" : Mine("USE", b.EntityId); });
@@ -457,8 +471,6 @@ public sealed partial class Coop : WorksMod
         });
         Commands.Add(this, "coop.trade", "coop.trade <name>: trade with that merchant (testing)", a => { var t = a.Length == 0 || World.Player == null ? null : World.CharactersNear(World.Player.Position, 200).FirstOrDefault(x => x.Name != null && x.Name.IndexOf(a[0], StringComparison.OrdinalIgnoreCase) >= 0 && x.IsMerchant); return t == null ? "no merchant called that" : Mine("TRADEWITH", KeyHere(t)); });
         Commands.Add(this, "coop.exit", "coop.exit x y: your character takes the exit on that tile", a => a.Length < 2 ? "coop.exit x y" : Mine("EXIT", a[0], a[1]));
-        Commands.Add(this, "coop.deathrule", "coop.deathrule <0 get up after the fight|1 others revive|2 dead for good>", a => { int v; if (a.Length > 0 && int.TryParse(a[0], out v) && v >= 0 && v <= 2) deathRule = v; return "death: " + DeathRules[deathRule]; });
-        Commands.Add(this, "coop.revive", "coop.revive: revive a downed player next to you", a => listener != null && World.Player != null ? (ReviveNear(World.Player).Length == 0 ? "revived" : ReviveNear(World.Player)) : Mine("REVIVE"));
         Commands.Add(this, "coop.status", "coop.status: your character's state", a => Mine("STATUS"));
         Commands.Add(this, "coop.spawn", "coop.spawn [blueprint]: a local test partner next to you (no network)", a =>
         {
@@ -577,6 +589,9 @@ public sealed partial class Coop : WorksMod
                 StopHosting();
                 return;
             }
+            // A loaded game plays with the settings it was saved with (a new game: the lobby's).
+            var savedOptions = SaveData.Of(this).Get("options");
+            if (savedOptions != null) RestoreOptions(savedOptions);
             reloaded = true; downed.Clear(); ending = false;
             if (talking != null) talking = null;
             foreach (var s in seats.Values) { s.Character = null; s.InWorld = false; s.Sent.Clear(); s.Walks.Clear(); s.Doors.Clear(); s.LastSign = null; s.Peer.Send("SAID", (World.Player == null ? "the host" : World.Player.Name) + " loaded a game: you'll be back in a moment"); }

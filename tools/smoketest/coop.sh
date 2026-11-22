@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Co-op smoke test: two game copies on this machine (a host and a joiner, headless, without Steam), the current build
 # with the released Co-op mod and the test mods. The host first exports its character from a copy of a save (SAVE,
-# default dgg) for the joiner to play, then opens a lobby for that save on the main menu with one place for a new
-# player (Host Saved Game). Start is refused while the place is free; a joiner with other mods (another Fair Trade
-# version, no Grudges) is refused, naming them; the joiner takes the place with the exported character as "Mira"
-# (it lacks HUD Layout, a "client" mod, which mustn't matter); the host starts, Mira enters the loaded game, walks, and
-# a fight follows (all the kill's XP to each player). A player trying to join after the start is refused. The logs of
-# both are checked. Exit 0 when every check passed.
+# default dgg) for the joiner to play. On the main menu, hosting that single-player save is refused; the test then makes
+# the host run's copy of it a co-op save with the exported character "Mira" (coopsave.py, as Co-op records one) and
+# hosts it (Host Saved Game). Start is refused while Mira's place is free; a joiner with other mods (another Fair Trade
+# version, no Grudges) is refused, naming them, and told what's missing; the real joiner, with Grudges switched off, is
+# refused, matches the host's mods and joins again, then takes Mira's place (it lacks HUD Layout, a "client" mod, which
+# mustn't matter); the host starts, Mira enters the loaded game, walks, gets all the XP the host earns, and a fight
+# follows. A player trying to join after the start is refused. The logs of both are checked. Exit 0 when all passed.
 #   tools/smoketest/coop.sh            (after ./build.sh)
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; REPO="$(cd "$HERE/../.." && pwd)"
@@ -38,18 +39,23 @@ h timeout 100 "$SKILL/launch.sh" --save "$SAVE" 1280 720 >/dev/null 2>&1
 sleep 50
 h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 cp "$HL" "$WORK/host-first.log"     # each launch starts its log afresh
-# Host, second run: on the main menu, a lobby for the save with one new player; Start while the place is free.
-printf 'wait 8\ncoop.deathrule 0\ncoop.hostsave %s 1 %s\nwait 2\ncoop.start\n' "$SAVE" "$PORT" > "$HOST/Mods/WorksTest/menurun.txt"
+# Host, second run: on the main menu the single-player save is refused; made a co-op save with Mira, it's hosted;
+# Start while Mira's place is free.
+SAVES="${CACHE:-$HOME/.cache/underrail-test}/runs/cooph/prefix/pfx/drive_c/users/steamuser/Documents/My Games/Underrail/Saves"     # the host run's copies
+printf 'wait 8\ncoop.hostsave %s %s\n' "$SAVE" "$PORT" > "$HOST/Mods/WorksTest/menurun.txt"
 printf 'wait 3\nworks.var wt_god true\n' > "$HA"
 h timeout 100 "$SKILL/launch.sh" --save "$SAVE" 1280 720 >/dev/null 2>&1
-sleep 30
+sleep 25
+python3 "$HERE/coopsave.py" "$SAVES/$SAVE" Mira "$HOST/Mods/WorksTest/clone.char" >/dev/null
+printf 'coop.hostsave %s %s\nwait 2\ncoop.start\n' "$SAVE" "$PORT" > "$HOST/Mods/WorksTest/menurun.txt"
+sleep 8
 # A joiner with other mods: refused.
 printf 'wait 8\ncoop.join 127.0.0.1:%s odd\nwait 6\ncoop.match\nwait 3\ncoop.restore\n' "$PORT" > "$ODD/Mods/WorksTest/menurun.txt"
 o timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1
 sleep 40; o timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 cp "$OL" "$WORK/odd-first.log"     # the same copy joins again later (a new log)
-# Joiner: from the main menu, join, then play the exported character as "Mira".
-printf 'wait 8\ncoop.join 127.0.0.1:%s tester\nwait 6\ncoop.match\nwait 15\ncoop.newfrom %s Mira\n' "$PORT" "$(win "$HOST/Mods/WorksTest/clone.char")" > "$JOIN/Mods/WorksTest/menurun.txt"
+# Joiner: from the main menu, join, then take Mira's place.
+printf 'wait 8\ncoop.join 127.0.0.1:%s tester\nwait 6\ncoop.match\nwait 15\ncoop.pick 1\n' "$PORT" > "$JOIN/Mods/WorksTest/menurun.txt"
 j timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1
 sleep 60
 # Every place taken: the host starts (the save loads), Mira enters it.
@@ -63,9 +69,24 @@ sleep 35; o timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 printf 'coop.go 32 23\n' > "$JA"; sleep 10
 # XP the host's character earns: all of it to Mira as well.
 printf 'wt.xpto Mira\nwt.xpto asd 200\nwait 1\nwt.xpto Mira\n' > "$HA"; sleep 6
+# Faction armour: Mira in a Tchortist robe counts for the party ("wearing Tchortist armor"), not the host alone.
+printf 'works.armorcheck\nwt.wear Mira armor\\tchortistnoblerobe tchnob\nwait 1\nworks.armorcheck\n' > "$HA"; sleep 6
+# Quest items go to the host: a Faceless Medallion put into Mira's bag moves to the host's by itself. Giving: the host
+# gives Mira 20 charons, Mira gives the host her 2 bandages.
+printf 'wt.giveto Mira plot\\facelessmedallion 1\nwt.giveto Mira consumables\\medicine\\bandage 2\nwt.giveto asd currency\\StygianCoin 50\nwait 3\ncoop.give Mira charons 20\nwait 2\nwt.bagof asd\nwt.bagof Mira\n' > "$HA"; sleep 10
+printf 'coop.give asd med.bandage\n' > "$JA"; sleep 6
+printf 'wt.bagof asd\nwt.bagof Mira\n' > "$HA"; sleep 4
 printf 'wt.spawnat 33 22 creatures\\rathoundalpha\nwait 4\nworks.memory Rathound Alpha\nwt.hurt Mira 999\n' > "$HA"; sleep 10
 for i in 1 2 3 4; do h timeout 20 "$SKILL/inp.sh" focus key 0x20 >/dev/null 2>&1; sleep 6; done
 printf 'wt.slay\nwait 4\nworks.health\n' > "$HA"; sleep 12
+# A conversation the joiner starts: the host's, from where everyone stands; the joiner suggests answer 1, the host's
+# window marks it (screenshot).
+# (After the kill the host ends their turns until the fight is over: Mira, downed in it, is up again.)
+for i in 1 2 3; do h timeout 20 "$SKILL/inp.sh" focus key 0x20 >/dev/null 2>&1; sleep 5; done
+sleep 20     # a bleeding wound from the fight can down Mira once more after it (she's up again a few seconds later)
+printf 'wt.choices Waylon\n' > "$HA"; sleep 3     # a conversation with answers to suggest
+printf 'coop.talk Waylon\nwait 6\ncoop.suggest 1\n' > "$JA"; sleep 14
+h "$SKILL/shot.sh" "$WORK/host-conversation.png" >/dev/null 2>&1
 h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; j timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 
 pass=0; fail=0
@@ -74,7 +95,8 @@ check() { if grep -qE "$3" "$2"; then pass=$((pass+1)); else fail=$((fail+1)); e
 afterward() { if awk -v m="$3" -v p="$4" 'f && $0 ~ p { bad=1 } $0 ~ m { f=1 } END { exit !bad }' "$2"; then fail=$((fail+1)); echo "FAIL: $1 ($4 after $3)"; else pass=$((pass+1)); fi; }
 never() { if grep -qE "$3" "$2"; then fail=$((fail+1)); echo "FAIL: $1 (found in $(basename "$(dirname "$2")"): $(grep -m1 -E "$3" "$2" | cut -c1-160))"; else pass=$((pass+1)); fi; }
 check "host hosts"                          "$HL" "Coop: hosting on port $PORT"
-check "the lobby has the save and a place"  "$HL" "Coop: lobby: saved game $SAVE \\(expansions: none\\), 1 places \\(new\\) on port $PORT"
+check "a single-player save isn't hosted"   "$HL" "coop.hostsave $SAVE $PORT -> $SAVE isn't a co-op game"
+check "the lobby has the save and its player" "$HL" "Coop: lobby: saved game $SAVE \\(expansions: none\\), 1 places \\(Mira\\) on port $PORT"
 check "Start refused while a place is free" "$HL" "coop.start -> waiting for 1 more player"
 check "the joiner, with Grudges off, refused" "$HL" "Coop: tester refused: different mods: only the host has: Grudges"
 check "Match host switches Grudges on"      "$JL" "Coop: switched on Grudges"
@@ -85,6 +107,13 @@ check "the joiner takes the place"          "$HL" "Coop: tester will play Mira"
 check "the host starts the saved game"      "$HL" "Coop: starting the saved game $SAVE with tester as Mira"
 check "a late joiner is refused"            "$HL" "Coop: late refused: the game has already started"
 check "... and told why"                    "$OL" "the game has already started"
+check "faction armour: nobody wears it"     "$HL" "armor: CAU False \\(player alone False\\), Tchortist False \\(player alone False\\), not Gray Army True \\(player alone True\\); party rule on"
+check "... Mira's robe counts for the party"  "$HL" "armor: CAU False \\(player alone False\\), Tchortist True \\(player alone False\\), not Gray Army True \\(player alone True\\); party rule on"
+check "a quest item moves to the host"      "$HL" "Coop: quest item facelessMedallion moved from Mira to asd"
+check "... the host's bag has it, as a quest item" "$HL" "bagof asd: .*facelessMedallion x1 \\(quest\\)"
+check "the host gives charons"              "$HL" "Coop: asd gave 20 charons to Mira"
+check "a joiner gives an item"              "$HL" "Coop: Mira gave Field Bandage x2 to asd"
+check "... the bandages are in the host's bag, not a quest item" "$HL" "bagof asd: .*med.bandage x2([^0-9]|$)"
 check "everyone gets all the XP"            "$HL" "Coop: XP 200 \\(test\\) earned by asd, 200 to each other player \\(100%\\)"
 check "other mods: refused, named (joiner)" "$WORK/odd-first.log" "your mods differ from the host's: only the host has: Grudges 1.0.0; other versions: Fair Trade 9.9.9 / 1.0.0"
 check "other mods: the host is told"        "$HL" "odd refused: different mods"
@@ -99,6 +128,10 @@ check "Mira goes down, not dead"            "$JL" "you're down"
 check "the Rathound turns on the host"      "$HL" "incoming to asd from Rathound Alpha"
 afterward "nothing attacks a downed player" "$HL" "hurt Mira: .* -> 1" "uses .* on Mira"
 check "the fight ends with the kill"        "$HL" "dying: Rathound Alpha killed by"
+check "a joiner's click opens the host's conversation" "$HL" "Coop: tester started a conversation with Waylon \\(the host answers\\)"
+check "... the joiner is told the host answers"     "$JL" "Coop: Waylon talks with asd: the host answers"
+check "... the joiner sees the line and its answers" "$JL" "Coop: conversation: Waylon: Pick one. \\(2 answers\\)"
+check "... and suggests an answer"                  "$HL" "Coop: tester suggests answer 1"
 check "nothing failed to start (host)"      "$HL" "parts that didn't start: none"
 never "no patch failed (host)"              "$HL" "UnderRailWorks: patch .* failed"
 never "no patch failed (joiner)"            "$JL" "UnderRailWorks: patch .* failed"

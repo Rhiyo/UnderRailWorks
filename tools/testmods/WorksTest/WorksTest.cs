@@ -509,12 +509,30 @@ public sealed partial class WorksTest : WorksMod
             Log.Info("gear: " + string.Join(", ", p.Equipment.All.Select(kv => kv.Key + "=" + kv.Value.Name)) + " | bag: " + string.Join(", ", p.Inventory.Items.Select(i => i.Name + " x" + i.Stacks)));
             return "gear";
         });
+        Commands.Add(this, "wt.wear", "wt.wear <name> <item path> [code]: that character puts it on (into its bag first)", args =>
+        {
+            var c = World.Characters.FirstOrDefault(x => x.Name == args[0]);
+            if (c == null || !c.Inventory.Add(args[1], 1)) return "none";
+            var code = args.Length > 2 ? args[2] : null;     // the item code, if known (else the last item in the bag)
+            var it = (code == null ? null : c.Inventory.Items.FirstOrDefault(i => i.Code == code)) ?? c.Inventory.Items.LastOrDefault();
+            var ok = it != null && c.Equipment.Equip(it);
+            Log.Info("wear " + c.Name + " " + args[1] + ": " + ok);
+            return "wear " + ok;
+        });
+        Dialogs.Add(this, "WorksTest/choices", d => d.Line("start", "Pick one.").Option("First answer.", Dialog.End).Option("Second answer.", Dialog.End));
+        Commands.Add(this, "wt.choices", "wt.choices <name>: talking to that character opens a test conversation with two answers", args =>
+        {
+            var c = World.Characters.FirstOrDefault(x => x.Name == string.Join(" ", args));
+            if (c == null) return "none";
+            Dialogs.Override(c, "WorksTest/choices");
+            return "choices for " + c.Name;
+        });
         Commands.Add(this, "wt.tomenu", "wt.tomenu: World.QuitToMainMenu", args => World.QuitToMainMenu() ? "quitting" : "not in a game");
         Commands.Add(this, "wt.bagof", "wt.bagof <name>: that character's bag and equipment (item codes)", args =>
         {
             var c = World.Characters.FirstOrDefault(x => x.Name == string.Join(" ", args));
             if (c == null) return "none";
-            var bag = c.Inventory.Items.Select(i => i.Code + " x" + i.Stacks).OrderBy(x => x).ToList();
+            var bag = c.Inventory.Items.Select(i => i.Code + " x" + i.Stacks + (i.IsQuestItem ? " (quest)" : "")).OrderBy(x => x).ToList();
             var worn = c.Equipment.All.Select(kv => kv.Key + "=" + (kv.Value == null ? "-" : kv.Value.Code)).OrderBy(x => x).ToList();
             Log.Info("bagof " + c.Name + ": " + bag.Count + " items, money " + c.Inventory.Money + "; worn " + string.Join(", ", worn.ToArray()) + "; bag " + string.Join(", ", bag.ToArray()));
             return bag.Count + " items";

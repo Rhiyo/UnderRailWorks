@@ -57,6 +57,18 @@ namespace UnderRailWorks
         // A multiplayer mod: who reached a level on another machine; GameEvents.LeveledUp runs here with them as the player.
         [Preview("multiplayer: built for Co-op so far")] public static void LeveledUp(Character who, int level) { if (GameEvents.LeveledUp.Any) As(who, () => GameEvents.LeveledUp.Run(h => h(level))); }
 
+        // The map's player-only triggers also fire for the party's other members: story and quest triggers, trigger barks,
+        // dialog and music areas, the scripted triggers marked player-only (the game's ya triggers on stepping in, out and
+        // around). For that moment the member counts as the player (its IsPlayer flag and player aspect set, then put
+        // back); what the trigger then does to "the player" itself (a dialog job, a cutscene) is the player's. NPCs' own
+        // reactions to the player (walking up to talk, guards, attacking on sight) still see only the player.
+        [Preview("multiplayer: built for Co-op so far")] public static bool TriggersCountMembers { get; set; }
+
+        // The game's faction-armour conditions (map data: "wearing CAU armor", "wearing Tchortist armor", "not wearing the
+        // Gray Army uniform"; they read the player's gear) count the whole party: "wearing" if any member wears it, "not
+        // wearing" only if none does. One disguised member is enough for the group (and members can split factions).
+        [Preview("multiplayer: built for Co-op so far")] public static bool FactionArmorCountsAnyMember { get; set; }
+
         public static void Add(WorksMod mod, Character c) { if (c != null) lock (others) others[c] = mod.Id; }
         public static void Remove(Character c) { if (c != null) lock (others) others.Remove(c); }
         public static bool Contains(Character c) { if (c == null) return false; if (c.IsPlayer) return true; lock (others) return others.ContainsKey(c); }
@@ -154,8 +166,106 @@ namespace UnderRailWorks.Internal
             return true;
         }
 
+        // ya.e/f/g/h(entity): a trigger's enter / leave / move / step for an entity. A party member counts as the player
+        // for the call (Party.TriggersCountMembers).
+        sealed class AsPlayerState { public c5x Body; public amc Aspect; public bool WasPlayer, WasAspect; }
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ya, object> logged = new System.Runtime.CompilerServices.ConditionalWeakTable<ya, object>();
+        static void TriggerStarting(ya __instance, b0b __0, out AsPlayerState __state)
+        {
+            __state = null;
+            try
+            {
+                var body = __0 as c5x;
+                if (!Party.TriggersCountMembers || body == null || body.IsPlayer) return;
+                var c = Character.Of(body);
+                if (c == null || !Party.Contains(c)) return;
+                var aspect = body.GetAspect<amc>();
+                __state = new AsPlayerState { Body = body, Aspect = aspect, WasPlayer = false, WasAspect = aspect != null && aspect.@as() };
+                World.SetPlayerFlag(body, true);
+                if (aspect != null) aspect.h(true);
+                object seen;
+                if (!logged.TryGetValue(__instance, out seen)) { logged.Add(__instance, c); Log.Write("party: " + c.Name + " counts as the player for a trigger (" + __instance.GetType().Name + ")"); }
+            }
+            catch (Exception ex) { Log.Write("party: trigger: " + ex.Message); }
+        }
+        static Exception TriggerDone(Exception __exception, AsPlayerState __state)
+        {
+            if (__state != null)
+            {
+                try { World.SetPlayerFlag(__state.Body, __state.WasPlayer); if (__state.Aspect != null) __state.Aspect.h(__state.WasAspect); }
+                catch (Exception ex) { Log.Write("party: trigger restore: " + ex.Message); }
+            }
+            return __exception;
+        }
+
+        // cb2 / enj ("wearing CAU / Tchortist armor") and e7c ("not wearing the Gray Army uniform"): each member's sheet in
+        // turn as the player's (the swap TalkAs uses), the answers combined.
+        [ThreadStatic] static bool inArmor;
+        static bool ArmorCheck(object __instance, object __0, ref bool __result)
+        {
+            if (inArmor || !Party.FactionArmorCountsAnyMember) return true;
+            try
+            {
+                var state = bpo.GetService<cnk>() == null ? null : bpo.GetService<cnk>().aqu();
+                var saved = state == null ? null : state.v();
+                if (saved == null) return true;
+                var sheets = new List<au2>();
+                foreach (var m in Party.Members)
+                {
+                    var body = m.Entity as c5x; var aspect = body == null ? null : body.GetAspect<amc>();
+                    var sheet = aspect == null ? null : aspect.aa() as au2;
+                    if (sheet != null && !sheets.Contains(sheet)) sheets.Add(sheet);
+                }
+                if (!sheets.Contains(saved)) sheets.Insert(0, saved);
+                if (sheets.Count < 2) return true;
+                bool wearing = !(__instance is e7c);     // e7c is the "not wearing" one: all must pass
+                bool result = !wearing;
+                inArmor = true;
+                try
+                {
+                    foreach (var sheet in sheets)
+                    {
+                        state.a(sheet);
+                        bool r = ((dth)__instance).jh(__0);
+                        result = wearing ? result || r : result && r;
+                    }
+                }
+                finally { state.a(saved); inArmor = false; }
+                __result = result;
+                return false;
+            }
+            catch (Exception ex) { Log.Write("party: armor check: " + ex.Message); inArmor = false; return true; }
+        }
+
+        // works.armorcheck: each condition as the game asks it (party rule included), then for the player alone.
+        internal static string ArmorReport()
+        {
+            Func<dth, string> both = d =>
+            {
+                bool party = d.jh(null);
+                bool was = Party.FactionArmorCountsAnyMember; Party.FactionArmorCountsAnyMember = false;
+                bool alone; try { alone = d.jh(null); } finally { Party.FactionArmorCountsAnyMember = was; }
+                return party + " (player alone " + alone + ")";
+            };
+            var r = "armor: CAU " + both(new cb2()) + ", Tchortist " + both(new enj()) + ", not Gray Army " + both(new e7c()) + "; party rule " + (Party.FactionArmorCountsAnyMember ? "on" : "off");
+            Log.Write(r);
+            return r;
+        }
+
         internal static void Install(HarmonyLib.Harmony harmony)
         {
+            foreach (var t in new[] { typeof(cb2), typeof(enj), typeof(e7c) })
+            {
+                var check = t.GetMethod("jh", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public, null, new[] { typeof(object) }, null);
+                if (check != null) harmony.Patch(check, prefix: new HarmonyLib.HarmonyMethod(typeof(PartyHooks).GetMethod("ArmorCheck", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
+                else Log.Write("party: " + t.Name + ".jh not found: its armor check counts only the player");
+            }
+            foreach (var name in new[] { "e", "f", "g", "h" })
+            {
+                var t = typeof(ya).GetMethod(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public, null, new[] { typeof(b0b) }, null);
+                if (t != null) harmony.Patch(t, prefix: new HarmonyLib.HarmonyMethod(typeof(PartyHooks).GetMethod("TriggerStarting", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)),
+                    finalizer: new HarmonyLib.HarmonyMethod(typeof(PartyHooks).GetMethod("TriggerDone", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
+            }
             var end = typeof(crp).GetMethod("ahs", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public, null, new[] { typeof(bool), typeof(bool) }, null);
             if (end != null) harmony.Patch(end, prefix: new HarmonyLib.HarmonyMethod(typeof(PartyHooks).GetMethod("MayEnd", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
             var walk = typeof(ale).GetMethod("a", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public, null, new[] { typeof(ak1), typeof(ya) }, null);

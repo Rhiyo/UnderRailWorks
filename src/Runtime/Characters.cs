@@ -31,6 +31,9 @@ public sealed class Inventory
 
     // Puts an item that exists (taken out of a container or another bag: its condition, ammo and stacks kept) into the bag.
     public void Put(Item item) { if (item != null && !Simulation.Refuses("Inventory.Put")) Owner.Bag.z3(item.Game, true); }
+    // Takes this very item (its whole stack) out of the bag, e.g. to Put it into another character's bag: its condition,
+    // ammo and stacks kept. False: it isn't in this bag (equipped items aren't).
+    public bool Remove(Item item) { if (item == null || Simulation.Refuses("Inventory.Remove")) return false; return Owner.Bag.z5(item.Game); }
 
     // Items in the bag (not equipped ones).
     public IList<Item> Items { get { return Owner.Bag.z2().Select(i => new Item(i)).ToList(); } }
@@ -106,6 +109,9 @@ public sealed partial class Item
     public static bool operator !=(Item a, Item b) { return !(a == b); }
     internal Item(coh item) { Game = item; }
     public string Code { get { return Game.Definition == null ? "" : Game.Definition.a5(); } }
+    // A quest ("plot") item: its definition's category is the one the game's own scripts keep safe (bk3.bi() == a0.c:
+    // never stolen from the player's house, moved off corpses to safety, never deleted), or its code starts "plot.".
+    [Preview("multiplayer: built for Co-op so far")] public bool IsQuestItem { get { var d = Game.Definition; return d != null && (d.bi() == a0.c || (d.a5() ?? "").StartsWith("plot.", StringComparison.OrdinalIgnoreCase)); } }
     public string Name { get { return Game.Definition == null ? "" : Game.Definition.az(); } }
     public int Stacks { get { return Game.Stacks; } set { Game.Stacks = Math.Max(1, value); } }     // at least 1: take an item away with Inventory.Take / Remove
     // Base value of one item and of the stack (the game's ItemValue; merchants multiply it by their markup).

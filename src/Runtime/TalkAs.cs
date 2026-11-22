@@ -69,6 +69,14 @@ namespace UnderRailWorks
         public static bool Choose(int index) { return TalkHooks.Choose(index); }
         // Ends the conversation now.
         public static void Close() { var a = TalkHooks.Active; if (a != null && a.Controller != null) a.Controller.ad(); }
+
+        // The player's own conversation window: each answer's text as shown (index from 0, the text as the dialog has
+        // it), changed by every handler in turn, e.g. a mark after an answer others would pick. The answer itself and
+        // what TalkLine reports are unchanged. RefreshAnswers() shows changed marks at once.
+        public delegate string AnswerLabel(int index, string text);
+        public static readonly Hook<AnswerLabel> AnswerText = new Hook<AnswerLabel>("TalkAs.AnswerText");
+        // The open conversation window's answers built again (AnswerText asked again). False: no window open.
+        public static bool RefreshAnswers() { return TalkHooks.Refresh(); }
     }
 }
 
@@ -176,6 +184,7 @@ namespace UnderRailWorks.Internal
         // zq.nz: a conversation's line shown (any conversation: the player's, or one held through TalkAs).
         static void Shown(zq __instance)
         {
+            shownBy = __instance;
             if (!GameEvents.ConversationLine.Any) return;
             try { var line = LineOf(__instance); if (line != null) GameEvents.ConversationLine.Run(h => h(line)); }
             catch (Exception ex) { Log.Write("talk: conversation line: " + ex.Message); }
@@ -192,7 +201,8 @@ namespace UnderRailWorks.Internal
     }
 
         static void Closed(zq __instance)
-        { try {
+        {
+            if (shownBy == __instance) shownBy = null; try {
             var a = Active;
             if (a == null || a.Controller != __instance) return;
             Active = null;
@@ -202,6 +212,31 @@ namespace UnderRailWorks.Internal
 
         static void End(Run a) { try { if (a.OnEnd != null) a.OnEnd(); } catch (Exception ex) { Log.Write("talk: an end handler failed: " + ex.Message); } }
 
+        // The open window's controller (zq.nz runs for every line shown).
+        static zq shownBy;
+        static readonly MethodInfo Rebuild = typeof(d49).GetMethod("a", Any, null, Type.EmptyTypes, null);
+        internal static bool Refresh()
+        {
+            var w = shownBy == null ? null : shownBy.h() as d49;
+            if (w == null || Rebuild == null) return false;
+            try { Rebuild.Invoke(w, null); return true; } catch (Exception ex) { Log.Write("talk: refreshing answers: " + ex.Message); return false; }
+        }
+        // ejl(number, text, ...): one answer row of the conversation window (only d49 makes them); "::Continue.::"
+        // rows have no index of their own and keep their text.
+        static void AnswerRow(int __0, ref string __1)
+        {
+            var hook = TalkAs.AnswerText;
+            if (!hook.Any || __1 == null || __1.StartsWith("::")) return;
+            var list = hook.Snapshot;
+            for (int i = 0; i < list.Length; i++)
+            {
+                long t = hook.Starting();
+                try { var r = list[i](__0 - 1, __1); if (r != null) __1 = r; }
+                catch (Exception ex) { hook.Failed(list, i, ex); }
+                finally { hook.Done(i, t); }
+            }
+        }
+
         internal static void Install(HarmonyLib.Harmony harmony)
         {
             Func<string, HarmonyLib.HarmonyMethod> m = n => new HarmonyLib.HarmonyMethod(typeof(TalkHooks).GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
@@ -210,6 +245,8 @@ namespace UnderRailWorks.Internal
             harmony.Patch(open, prefix: m("Opening"), postfix: m("Opened"));
             harmony.Patch(close, prefix: m("Closing"), postfix: m("Closed"));
             harmony.Patch(typeof(zq).GetMethod("nz", Any, null, Type.EmptyTypes, null), postfix: m("Shown"));
+            var row = typeof(ejl).GetConstructor(Any, null, new[] { typeof(int), typeof(string), typeof(int), typeof(bool), typeof(object) }, null);
+            if (row != null) harmony.Patch(row, prefix: m("AnswerRow")); else Log.Write("talk: the answer row's constructor wasn't found: no answer marks");
             Log.Write("talk: hooks in place (answer " + (Answer != null) + ", model " + (Model != null) + ")");
         }
     }

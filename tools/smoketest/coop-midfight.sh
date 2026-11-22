@@ -28,13 +28,16 @@ printf 'wait 3\nwt.clone\nwait 2\nwt.unclone\n' > "$HA"
 h timeout 100 "$SKILL/launch.sh" --save "$SAVE" 1280 720 >/dev/null 2>&1
 sleep 50
 h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
-# Host, second run: a lobby for the save with one new place.
-printf 'wait 8\ncoop.deathrule 0\ncoop.hostsave %s 1 %s\n' "$SAVE" "$PORT" > "$HOST/Mods/WorksTest/menurun.txt"
+# Host, second run: the run's copy of the save made a co-op save with Mira (coopsave.py), and its lobby.
+SAVES="${CACHE:-$HOME/.cache/underrail-test}/runs/cooph/prefix/pfx/drive_c/users/steamuser/Documents/My Games/Underrail/Saves"     # the host run's copies
+printf 'wait 8\n' > "$HOST/Mods/WorksTest/menurun.txt"
 printf 'wait 3\nworks.var wt_god true\n' > "$HA"
 h timeout 100 "$SKILL/launch.sh" --save "$SAVE" 1280 720 >/dev/null 2>&1
-sleep 25
-# Joiner: from the main menu, join, then take the place with the exported character as "Mira"; the host starts.
-printf 'wait 8\ncoop.join 127.0.0.1:%s tester\nwait 15\ncoop.newfrom %s Mira\n' "$PORT" "$(win "$HOST/Mods/WorksTest/clone.char")" > "$JOIN/Mods/WorksTest/menurun.txt"
+sleep 20
+python3 "$HERE/coopsave.py" "$SAVES/$SAVE" Mira "$HOST/Mods/WorksTest/clone.char" >/dev/null
+printf 'coop.hostsave %s %s\n' "$SAVE" "$PORT" > "$HOST/Mods/WorksTest/menurun.txt"; sleep 5
+# Joiner: from the main menu, join, then take Mira's place; the host starts.
+printf 'wait 8\ncoop.join 127.0.0.1:%s tester\nwait 15\ncoop.pick 1\n' "$PORT" > "$JOIN/Mods/WorksTest/menurun.txt"
 j timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1
 sleep 45
 printf 'coop.start\n' > "$HOST/Mods/WorksTest/menurun.txt"

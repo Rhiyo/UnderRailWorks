@@ -141,6 +141,7 @@ namespace UnderRailWorks
                 var line = c.Name + ": footprint " + (z == null ? "none" : z.ToString()) + ", size " + e.Size + ", sheet " + c.HasPlayerSheet + ", state " + typeof(b0b).GetField("j").GetValue(e) + ", in combat " + c.IsInCombat + ", sight " + c.SightRange + ", XP " + c.Experience + ", level " + c.Level;
                 Log.Write(line); return line;
             });
+            Add("UnderRailWorks", "works.armorcheck", "works.armorcheck: the game's faction-armour conditions (CAU, Tchortist, not Gray Army) as they answer now, and for the player alone", a => PartyHooks.ArmorReport());
             Add("UnderRailWorks", "works.export", "works.export: export the player character (for a new game's Import)", a => World.ExportPlayer() ? "exported" : "[error]no game");
             Add("UnderRailWorks", "works.perf", "works.perf [seconds]: time each mod's handlers for a while (default 10 s), then list the busiest (also in the log)", a =>
             {

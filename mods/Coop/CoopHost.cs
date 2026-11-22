@@ -68,7 +68,7 @@ public sealed class CoopApi
 
 public sealed partial class Coop
 {
-    internal sealed class HostOption { public string Mod, Key, Label; public int Min, Max, Step, Value; public string[] Names; }
+    internal sealed class HostOption { public string Mod, Key, Label; public int Min, Max, Step, Value; public string[] Names; public bool NotRemembered; }
     readonly List<HostOption> options = new List<HostOption>();
     internal readonly Dictionary<string, Action<string, string[]>> Handlers = new Dictionary<string, Action<string, string[]>>();
     internal CoopApi Api;
@@ -88,7 +88,7 @@ public sealed partial class Coop
 
     internal void AddOption(HostOption o)
     {
-        int v; if (int.TryParse(Settings.Get("option." + o.Mod + "." + o.Key), out v)) o.Value = v;     // as last time
+        int v; if (!o.NotRemembered && int.TryParse(Settings.Get("option." + o.Mod + "." + o.Key), out v)) o.Value = v;     // as last time
         options.RemoveAll(x => x.Mod == o.Mod && x.Key == o.Key);
         options.Add(o);
     }
@@ -101,55 +101,68 @@ public sealed partial class Coop
     }
 
     UiWindow hostWindow;
-    // kind "new": how many players (you included); "saved": save's co-op characters, and how many new players to add.
+    // The Host window, under "Game settings": a new game's players, Co-op's and other mods' options (changeable); a saved
+    // game's, as the save has them (shown, not changeable: a co-op game keeps the settings it started with).
     void AskHost(string kind, string save)
     {
         if (hostWindow != null && hostWindow.IsOpen) return;
-        var saved = kind == "saved" ? SavedCharacters(save) : new List<Record>();
-        int pad = Ui.S(10), w = Ui.S(560), rowH = Ui.LineHeight * 2 + Ui.S(10);
-        hostWindow = Ui.Window(this, "host", kind == "saved" ? "Host " + save : "Host a new game", w, Ui.S(90) + (options.Count + 1) * rowH + Ui.S(50));
+        bool saved = kind == "saved";
+        var players = saved ? SavedCharacters(save) : new List<Record>();
+        if (saved) RestoreOptions(SaveGames.ModData(this, save, "options"));
+        int pad = Ui.S(10), w = Ui.S(560), line = Ui.LineHeight, rowH = line * 2 + Ui.S(10);
+        int rows = saved ? 2 + options.Count : 1 + options.Count;
+        hostWindow = Ui.Window(this, "host", saved ? "Host " + save : "Host a new game", w, Ui.S(110) + rows * (saved ? line + Ui.S(6) : rowH) + Ui.S(50));
         if (hostWindow == null) return;
         hostWindow.Closed += () => hostWindow = null;
         w = hostWindow.Width;
         int y = hostWindow.Top + Ui.S(6);
         var apply = new List<Action>();
-        Ui.Add(hostWindow, Ui.Label(kind == "saved"
-            ? (saved.Count == 0 ? "No co-op characters in this save: add new players." : "Its players: " + string.Join(", ", saved.Select(r => r.Name).ToArray()) + ". Each must be taken before it loads.")
-            : "Everyone makes a character; the game starts when all have.", w - 2 * pad), pad, y);
-        y += Ui.LineHeight + Ui.S(8);
-        int min = kind == "saved" ? 0 : 2, max = kind == "saved" ? Math.Max(0, MaxPlayers - 1 - saved.Count) : MaxPlayers;
-        Ui.Add(hostWindow, Ui.Label(kind == "saved" ? "New players to add (they make a new character)" : "Players, you included", w - 2 * pad), pad, y);
-        var count = Ui.Slider(w - 2 * pad, min, Math.Max(min, max), kind == "saved" ? (saved.Count == 0 ? Math.Min(1, max) : 0) : 2);
-        count.Step = 1;
-        Ui.Add(hostWindow, count.View, pad, y + Ui.LineHeight + Ui.S(6));
-        y += rowH;
-        foreach (var o in options)
+        var heading = Ui.Label(saved ? "Game settings (this game's: they don't change)" : "Game settings", w - 2 * pad);
+        Ui.SetColor(heading, Mine_);
+        Ui.Add(hostWindow, heading, pad, y);
+        y += line + Ui.S(8);
+        UiSlider count = null;
+        if (saved)
         {
-            var opt = o;
-            Ui.Add(hostWindow, Ui.Label(o.Label, w - 2 * pad), pad, y);
-            if (o.Names != null)
-            {
-                var c = Ui.Choice(w - 2 * pad, o.Names, Math.Max(0, Math.Min(o.Names.Length - 1, o.Value)));
-                Ui.Add(hostWindow, c.View, pad, y + Ui.LineHeight + Ui.S(2));
-                apply.Add(() => opt.Value = c.Index);
-            }
-            else
-            {
-                var sl = Ui.Slider(w - 2 * pad, o.Min, o.Max, o.Value);
-                sl.Step = o.Step;
-                Ui.Add(hostWindow, sl.View, pad, y + Ui.LineHeight + Ui.S(6));
-                apply.Add(() => opt.Value = (int)Math.Round(sl.Value));
-            }
+            Action<string> show = text => { Ui.Add(hostWindow, Ui.Label(text, w - 2 * pad), pad, y); y += line + Ui.S(6); };
+            show("Players: you and " + string.Join(", ", players.Select(r => r.Name).ToArray()) + " (each place must be taken before it loads)");
+            show("Expansions: " + Names(SaveGames.ExpansionsOf(save) ?? new List<string>()));
+            foreach (var o in options) show(o.Label + ": " + (o.Names != null ? o.Names[Math.Max(0, Math.Min(o.Names.Length - 1, o.Value))] : o.Value.ToString()));
+        }
+        else
+        {
+            Ui.Add(hostWindow, Ui.Label("Players, you included (everyone makes a character; the game starts when all have)", w - 2 * pad), pad, y);
+            count = Ui.Slider(w - 2 * pad, 2, MaxPlayers, 2);
+            count.Step = 1;
+            Ui.Add(hostWindow, count.View, pad, y + line + Ui.S(6));
             y += rowH;
+            foreach (var o in options)
+            {
+                var opt = o;
+                Ui.Add(hostWindow, Ui.Label(o.Label, w - 2 * pad), pad, y);
+                if (o.Names != null)
+                {
+                    var c = Ui.Choice(w - 2 * pad, o.Names, Math.Max(0, Math.Min(o.Names.Length - 1, o.Value)));
+                    Ui.Add(hostWindow, c.View, pad, y + line + Ui.S(2));
+                    apply.Add(() => opt.Value = c.Index);
+                }
+                else
+                {
+                    var sl = Ui.Slider(w - 2 * pad, o.Min, o.Max, o.Value);
+                    sl.Step = o.Step;
+                    Ui.Add(hostWindow, sl.View, pad, y + line + Ui.S(6));
+                    apply.Add(() => opt.Value = (int)Math.Round(sl.Value));
+                }
+                y += rowH;
+            }
         }
         var go = Ui.Button("Open lobby", () =>
         {
             foreach (var a in apply) a();
-            foreach (var o in options) Settings.Set("option." + o.Mod + "." + o.Key, o.Value.ToString());
-            deathRule = Option(Id, "death").Value; Settings.Set("death.rule", deathRule.ToString());
-            int n = (int)Math.Round(count.Value);
+            if (!saved) foreach (var o in options.Where(o => !o.NotRemembered)) Settings.Set("option." + o.Mod + "." + o.Key, o.Value.ToString());
+            int n = count == null ? 0 : (int)Math.Round(count.Value);
             if (hostWindow != null) hostWindow.Close();
-            var r = OpenLobby(kind, save, kind == "saved" ? n : n - 1, DefaultPort);
+            var r = OpenLobby(kind, save, saved ? 0 : n - 1, DefaultPort);
             Commands.Print("co-op: " + r);
             Notify.Log("Co-op: " + r, Say);
         });
@@ -157,6 +170,23 @@ public sealed partial class Coop
         int by = hostWindow.Height - pad - go.Height;
         Ui.Add(hostWindow, go, pad, by);
         Ui.Add(hostWindow, cancel, pad + go.Width + Ui.S(6), by);
+    }
+
+    // The game's settings, kept with its saves ("options": "<mod>/<key>" -> value; Co-op's death rule among them), so a
+    // loaded co-op game plays as it started. Missing (older saves): the defaults.
+    Dictionary<string, object> OptionsToSave()
+    {
+        var d = options.ToDictionary(o => o.Mod + "/" + o.Key, o => (object)o.Value);
+        return d;
+    }
+    void RestoreOptions(object data)
+    {
+        var d = data as Dictionary<string, object>;
+        foreach (var o in options)
+        {
+            object v; double n;
+            if (d != null && d.TryGetValue(o.Mod + "/" + o.Key, out v) && v != null && double.TryParse(Convert.ToString(v, System.Globalization.CultureInfo.InvariantCulture), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out n)) o.Value = (int)n;
+        }
     }
 
     // MOD <mod> <kind> <words...>, both ways. Host: player null = to the host itself, "*" = everyone.

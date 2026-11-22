@@ -1,7 +1,7 @@
-// Co-op deaths. The host picks the rule when opening the lobby (Host New Game / Host Saved Game):
-//   Get up after the fight   a player at 0 health is downed (incapacitated, 1 health) and gets up at a third of their
-//                            health when the fight ends (at once if there's no fight)
-//   Others revive them       downed until another player standing next to them revives them (Revive, Co-op window)
+// Co-op deaths. Co-op 0.0.1 has one rule, "Get up after the fight": a player at 0 health is downed (incapacitated,
+// 1 health; enemies leave them alone, their turns pass) and gets up at a third of their health when the fight ends (a
+// few seconds later if there's no fight). The code for two more rules is kept for a later version, not offered:
+//   Others revive them       downed until another player standing next to them revives them
 //   Dead for good            they die, as in single player; a joined player then watches (no new character mid-game)
 // The host's character follows the same rule. Game over (the game's own) only when every player is down or dead, or
 // when the host is down or dead and nobody else is playing (the last one leaving ends it).
@@ -22,8 +22,7 @@ public sealed partial class Coop
 
     void LoadDeath()
     {
-        int v; deathRule = int.TryParse(Settings.Get("death.rule"), out v) && v >= 0 && v <= 2 ? v : 0;
-        AddOption(new HostOption { Mod = Id, Key = "death", Label = "When a player's health runs out", Names = DeathRules, Value = deathRule });
+        deathRule = 0;     // the only rule offered for now (not a host option; saves' "options" can't change it)
 
         GameEvents.Dying.Add(this, d =>
         {

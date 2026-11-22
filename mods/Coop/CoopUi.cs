@@ -65,7 +65,7 @@ public sealed partial class Coop
 
     void Build()
     {
-        int w = Ui.S(600), h = Ui.S(380), line = Ui.LineHeight, pad = Ui.S(10);
+        int w = Ui.S(600), h = Ui.S(Mode() == "lobby" ? 520 : 380), line = Ui.LineHeight, pad = Ui.S(10);
         window = Ui.Window(this, "coop", "Co-op", w, h);
         if (window == null) return;
         window.Closed += () => { window = null; builtFor = null; };
@@ -94,7 +94,7 @@ public sealed partial class Coop
                 button("Leave", Leave);
                 break;
             case "host":
-                button("Revive", () => { var p = World.Player; var r = p == null ? "" : ReviveNear(p); if (!string.IsNullOrEmpty(r)) Notify.Log("Co-op: " + r, Grey); });
+                if (World.Player != null) button("Give...", OpenGive);
                 button("Stop hosting", () => StopHosting());
                 break;
             case "connecting":
@@ -118,9 +118,9 @@ public sealed partial class Coop
                 break;
             case "play":
                 button("End turn", () => Run("END"));
+                button("Give...", OpenGive);
                 button("Attack nearest", () => Run("ATTACK"));
                 button("Follow host", () => Run("FOLLOW"));
-                button("Revive", () => Run("REVIVE"));
                 button("Walk to...", () => Ui.Ask(this, "Walk to tile (x y)", "", text =>
                 {
                     var p = (text ?? "").Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
@@ -201,7 +201,6 @@ public sealed partial class Coop
             {
                 int free = slots.Count(sl => sl.Seat == null);
                 RefreshExpansionRow();
-                if (lobby == "saved") { items.Add("Expansions (the save's: players need them): " + Names(LobbyExpansions())); colours.Add(Grey); }
                 Ui.SetText(statusLabel, starting ? "Starting the game..." : free == 0 ? "Everyone is here: Start." : "Waiting for " + free + " player" + (free == 1 ? "" : "s") + " (port " + listener.Port + ")");
                 items.Add((World.Player != null ? World.Player.Name : "You") + "  (the host)"); colours.Add(Grey);
                 foreach (var sl in slots)

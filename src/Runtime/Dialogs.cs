@@ -169,6 +169,18 @@ public static partial class Dialogs
     }
 
     // Opens a conversation between the player and npc now (false if the game refuses: combat, hostile, one is open).
+    // The character's own conversation with the player, now and from where they stand (no walking over first, unlike a
+    // click): its dialog as the game's Talk action takes it (j7.fd()), Works' overrides included. False: it has none, or
+    // the game refuses (combat, hostile, one already open).
+    [Preview("multiplayer: built for Co-op so far")]
+    public static bool StartOwn(Character npc)
+    {
+        var e = npc == null ? null : npc.Entity as c5x;
+        var talker = e == null ? null : e.GetAspect<j7>();
+        var name = talker == null ? null : talker.fd();
+        return !string.IsNullOrEmpty(name) && Start(npc, name);
+    }
+
     public static bool Start(Character npc, string name)
     {
         var player = World.Player;

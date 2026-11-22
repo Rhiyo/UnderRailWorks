@@ -2,8 +2,8 @@
 // meets a world that already moved on: fights, conversations, zones). The host opens the lobby from the main menu:
 //   Host New Game     how many players (you included); each joiner makes a character in the game's own creation. When
 //                     every place is taken, Start: the host makes their own character, and everyone starts together.
-//   Host Saved Game   a save: its co-op characters are the places, each joiner takes one (plus new places, if the
-//                     host adds some, for joiners who make a new character). The game loads only when every place is
+//   Host Saved Game   a co-op game's save: its co-op characters are the places, each joiner takes one (no places
+//                     added or left out; single-player saves aren't offered). The game loads only when every place is
 //                     taken: a saved character never goes missing from the game it belongs to.
 // After the start nobody else joins (refused with the reason). A player who leaves leaves their character in the game,
 // passing its turns. The host loading another game while hosting: only one with the same co-op characters as the
@@ -51,11 +51,18 @@ public sealed partial class Coop
         {
             if (string.IsNullOrEmpty(save) || !SaveGames.Names.Contains(save)) return "no save called " + save;
             records = SavedCharacters(save);
+            // Only a co-op game's save, with exactly its players: no places added or left out (a saved character never
+            // goes missing from its game). A single-player game becomes co-op only from the start: Host New Game.
+            if (records.Count == 0) return save + " isn't a co-op game (no co-op characters): co-op games start with Host New Game";
             foreach (var r in records) slots.Add(new Slot { Saved = r });
+            RestoreOptions(SaveGames.ModData(this, save, "options"));     // the game's own settings (the console's way in too)
         }
-        else records = new List<Record>();
-        for (int i = 0; i < newPlayers; i++) slots.Add(new Slot());
-        if (slots.Count == 0) return kind == "saved" ? "this save has no co-op characters: add new players" : "at least one other player";
+        else
+        {
+            records = new List<Record>();
+            for (int i = 0; i < newPlayers; i++) slots.Add(new Slot());
+        }
+        if (slots.Count == 0) return "at least one other player";
         if (slots.Count > MaxPlayers - 1) return "at most " + MaxPlayers + " players (you and " + (MaxPlayers - 1) + " others); this would be " + (slots.Count + 1);
         var failed = Listen(port);
         if (failed != null) return failed;
@@ -165,11 +172,11 @@ public sealed partial class Coop
             if (a.Length < 1 || !int.TryParse(a[0], out n) || (a.Length > 1 && !int.TryParse(a[1], out port))) return "coop.hostnew <players> [port]";
             return OpenLobby("new", null, n - 1, port);
         });
-        Commands.Add(this, "coop.hostsave", "coop.hostsave <save> [new players] [port]: on the main menu, a lobby for that save's co-op characters", a =>
+        Commands.Add(this, "coop.hostsave", "coop.hostsave <save> [port]: on the main menu, a lobby for that co-op save's players", a =>
         {
-            int extra = 0, port = DefaultPort;
-            if (a.Length < 1 || (a.Length > 1 && !int.TryParse(a[1], out extra)) || (a.Length > 2 && !int.TryParse(a[2], out port))) return "coop.hostsave <save> [new players] [port]";
-            return OpenLobby("saved", a[0], extra, port);
+            int port = DefaultPort;
+            if (a.Length < 1 || (a.Length > 1 && !int.TryParse(a[1], out port))) return "coop.hostsave <save> [port]";
+            return OpenLobby("saved", a[0], 0, port);
         });
         Commands.Add(this, "coop.start", "coop.start: start the lobby's game (every place taken)", a => StartGame());
         MainMenu.AddButton(this, "Host New Game", () => AskHost("new", null));
@@ -181,15 +188,16 @@ public sealed partial class Coop
     void PickSave()
     {
         if (saveWindow != null && saveWindow.IsOpen) return;
-        var names = SaveGames.Names;
+        // Only co-op games' saves (with co-op characters): single-player games become co-op with Host New Game.
+        var names = SaveGames.Names.Where(n => SavedCharacters(n).Count > 0).ToList();
         int pad = Ui.S(10), w = Ui.S(620), h = Ui.S(420);
         saveWindow = Ui.Window(this, "hostsave", "Host a saved game", w, h);
         if (saveWindow == null) return;
         saveWindow.Closed += () => saveWindow = null;
         w = saveWindow.Width; h = saveWindow.Height;
         int chosen = -1;
-        var items = names.Select(n => { var c = SavedCharacters(n); return n + (c.Count == 0 ? "   (no co-op characters)" : "   (" + string.Join(", ", c.Select(r => r.Name).ToArray()) + ")"); }).ToList();
-        Ui.Add(saveWindow, Ui.Label("Its co-op characters are the places others take; you can add new players next.", w - 2 * pad), pad, saveWindow.Top + Ui.S(2));
+        var items = names.Select(n => n + "   (" + string.Join(", ", SavedCharacters(n).Select(r => r.Name).ToArray()) + ")").ToList();
+        Ui.Add(saveWindow, Ui.Label("Co-op games' saves: their players take their characters again.", w - 2 * pad), pad, saveWindow.Top + Ui.S(2));
         var next = Ui.Button("Next...", () =>
         {
             if (chosen < 0 || chosen >= names.Count) { Notify.Log("Co-op: select a save first", Grey); return; }
@@ -200,7 +208,7 @@ public sealed partial class Coop
         var cancel = Ui.Button("Cancel", () => saveWindow.Close());
         int by = h - pad - next.Height;
         var list = Ui.List(w - 2 * pad, by - Ui.S(8) - (saveWindow.Top + Ui.LineHeight + Ui.S(8)));
-        list.Items = items.Count == 0 ? new List<string> { "No saves yet." } : items;
+        list.Items = items.Count == 0 ? new List<string> { "No co-op saves yet: start one with Host New Game." } : items;
         list.Selected += i => chosen = i;
         Ui.Add(saveWindow, list.View, pad, saveWindow.Top + Ui.LineHeight + Ui.S(8));
         Ui.Add(saveWindow, next, pad, by);
