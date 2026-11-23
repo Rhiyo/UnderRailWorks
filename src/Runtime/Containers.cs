@@ -35,6 +35,17 @@ public sealed class Container
     // Adds a stock item by path (it is saved with the container: stock items only).
     public bool Add(string path, int stacks = 1) { if (Simulation.Refuses("Container.Add")) return false; return Containers.AddTo(Items_, path, stacks); }
     public bool Remove(Item item) { if (Simulation.Refuses("Container.Remove")) return false; return item != null && Items_ != null && Items_.z5(item.Game); }
+    // Takes an item out for who, as the game's loot window does for the player: the container's own "taken" handler
+    // runs with who as the taker (an owned container's theft check: witnesses, the owner's reaction). Then Put it into
+    // who's bag. False: it isn't in the container.
+    [Preview("multiplayer: built for Co-op so far")] public bool TakeAs(Character who, Item item)
+    {
+        if (Simulation.Refuses("Container.TakeAs") || item == null || Items_ == null || !Items_.z5(item.Game)) return false;
+        var body = who == null ? null : who.Entity as c5x;
+        var taker = body == null ? null : body.GetAspect<amc>();
+        if (taker != null) try { ((csy)Game).kl(Items_, item.Game, taker); } catch (Exception ex) { Log.Write("containers: taking for " + who.Name + ": " + ex.Message); }
+        return true;
+    }
     public Microsoft.Xna.Framework.Vector3 Position { get { return Entities.MapPosition(Game.a8()); } }
     // Its shown name (the hover label, e.g. "Locker").
     public string Name { get { return Entities.Name(Game.a8()); } }

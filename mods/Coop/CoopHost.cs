@@ -98,6 +98,26 @@ public sealed partial class Coop
     {
         Api = new CoopApi(this);
         Mods.Provide(this, Api);
+        // A joined player's turn in a fight: at most this long (0: no limit), then it passes (saved with the game, as
+        // every host option).
+        AddOption(new HostOption { Mod = Id, Key = "turntime", Label = "Seconds a joined player's turn may take (0: no limit)", Min = 0, Max = 180, Step = 15, Value = 0 });
+        Character turnOf = null; double turnSince = 0; bool warned = false;
+        Combat.TurnStarted.Add(this, c => { turnOf = c != null && seats.Values.Any(s => s.Character == c) ? c : null; turnSince = clock; warned = false; });
+        GameEvents.Update.Add(this, dt =>
+        {
+            if (listener == null || turnOf == null) return;
+            var o = Option(Id, "turntime"); int limit = o == null ? 0 : o.Value;
+            if (limit <= 0 || !Combat.InCombat || Combat.Current != turnOf) { if (!Combat.InCombat || (Combat.Current != null && Combat.Current != turnOf)) turnOf = null; return; }
+            var seat = seats.Values.FirstOrDefault(s => s.Character == turnOf);
+            double used = clock - turnSince;
+            if (!warned && used >= limit - 10 && limit > 10) { warned = true; if (seat != null) seat.Peer.Send("SAID", "10 seconds left in your turn"); }
+            if (used < limit) return;
+            Log.Info(turnOf.Name + "'s turn passed: the " + limit + " s limit");
+            if (seat != null) seat.Peer.Send("SAID", "your turn passed (the " + limit + " second limit)");
+            Notify.Log("Co-op: " + turnOf.Name + "'s turn passed (time limit)", Say);
+            var c2 = turnOf; turnOf = null;
+            c2.EndTurn();
+        });
     }
 
     UiWindow hostWindow;

@@ -81,11 +81,10 @@ public sealed partial class Coop
             var sign = SignOf(c);
             if (seat.LastSign == null) { seat.LastSign = sign; continue; }
             if (sign == seat.LastSign) continue;
-            seat.LastSign = sign;
             var sheet = SheetOf(c);
-            if (sheet == null) continue;
-            seat.Record.Sheet = sheet;
-            foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null)) s.Peer.Send("SHEET", "c:" + seat.Record.Name, sheet);
+            if (sheet == null) continue;     // not sent: still a change a joiner's sheet must not cross (Stale)
+            seat.LastSign = sign;
+            SendSheet(seat, sheet, null);
         }
     }
     readonly Dictionary<string, Character> known = new Dictionary<string, Character>();     // what each key was, to tell dead from gone
@@ -152,7 +151,7 @@ public sealed partial class Coop
                 var text = string.Join(" ", l.Value.Skip(2).Select(o => Convert.ToString(o, CultureInfo.InvariantCulture)).ToArray());
                 string old;
                 if (s.Sent.TryGetValue(l.Key, out old) && old == text) continue;
-                if (old == null && l.Key.StartsWith("c:")) { var r = records.FirstOrDefault(x => x.Name == l.Key.Substring(2)); if (r != null && r.Sheet != null) s.Peer.Send("SHEET", l.Key, r.Sheet); }
+                if (old == null && l.Key.StartsWith("c:")) { var r = records.FirstOrDefault(x => x.Name == l.Key.Substring(2)); if (r != null && r.Sheet != null) { var owner = seats.Values.FirstOrDefault(x => x.Record == r); s.Peer.Send("SHEET", l.Key, r.Sheet, owner == null ? 0 : owner.SheetVersion); } }
                 if (old == null) { var c = who[l.Key]; s.Peer.Send("SPAWN", l.Key, l.Key.StartsWith("c:") ? BlueprintOf(c.Name) : c.Blueprint ?? "", c.IsHostile ? 1 : 0, c.Name, c.StoreName ?? ""); }
                 s.Sent[l.Key] = text;
                 s.Peer.Send(l.Value);
@@ -247,6 +246,10 @@ public sealed partial class Coop
             {
                 if (w.Length < 3) return;
                 sheets[w[1]] = w[2];
+                int v; if (w[1] == myKey && w.Length > 3 && int.TryParse(w[3], out v)) mySheetVersion = v;
+                // Our own, while our shop window is open: kept until it closes (a new body under an open barter window
+                // leaves the window holding the old one). The version counts now.
+                if (w[1] == myKey) OwnSheetDuringShop();
                 Character old;
                 if (!inWorld || !spawned.TryGetValue(w[1], out old) || old.Area == null) return;
                 // A new sheet (XP, items...): swapped in place (the same body), else a new body where the old one stands.

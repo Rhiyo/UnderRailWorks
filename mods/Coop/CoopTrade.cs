@@ -1,10 +1,8 @@
-// Co-op trading, and the joiner's own changes to their character. A conversation on the host that opens the barter
-// screen for a joined character: the host cancels it, sends the merchant's stock (packed with the game's own
-// serializer: every item detail kept) and TRADE; the joiner's game opens its barter screen with its own character and
-// its copy of the merchant. When it closes, the merchant's new stock (TRADED) and the character's sheet (MYSHEET) go to
-// the host, which takes them. MYSHEET also goes whenever the joiner changes their character themselves (equipping,
-// using, dropping: its level, XP, bag or gear changed since the host's last sheet), checked every 3 s.
-// Messages, host to joiner: STOCK <key> <items>, TRADE <key>. Joiner to host: TRADED <key> <items>, MYSHEET <sheet>.
+// The joiner's own changes to their character, and merchants' stock on the joiner's side (the shared shop itself:
+// CoopShop.cs). MYSHEET goes whenever the joiner changes their character themselves (equipping, using, dropping: its
+// level, XP, bag or gear changed since the host's last sheet), checked every 3 s; the host takes it.
+// Messages, host to joiner: STOCK <key> <items> (packed with the game's own serializer: every item detail kept).
+// Joiner to host: MYSHEET <sheet>.
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,25 +22,8 @@ public sealed partial class Coop
     // --- Host ---------------------------------------------------------------------------------------------------
     void LoadTrade()
     {
-        GameEvents.TradeOpening.Add(this, e =>
-        {
-            if (listener == null || talking == null || talking.Peer == null || e.Merchant == null) return;
-            e.Cancel = true;
-            var key = KeyOf(e.Merchant);
-            talking.Peer.Send("STOCK", key, Convert.ToBase64String(Item.Pack(e.Merchant.Stock)));
-            talking.Peer.Send("TRADE", key);
-            Log.Info(talking.Character.Name + " trades with " + e.Merchant.Name + " (on " + talking.Peer.Name + "'s machine)");
-            TalkAs.Close();
-        }, HookOrder.First);
+        LoadShop();
         GameEvents.Update.Add(this, dt => { if (host != null && inWorld) Simulation.Apply(() => JoinerTick(dt)); });
-    }
-
-    void Traded(Seat seat, string key, string items)
-    {
-        var merchant = Resolve(key);
-        if (merchant == null || !merchant.IsMerchant) return;
-        try { merchant.SetStock(Item.Unpack(Convert.FromBase64String(items))); Log.Info(merchant.Name + "'s stock from " + seat.Peer.Name + "'s trade"); }
-        catch (Exception ex) { Log.Error("trade: " + ex.Message); }
     }
 
     // The joiner's own sheet: their character is built again from it where it stands (its health kept: the host's).
@@ -56,10 +37,10 @@ public sealed partial class Coop
         try { swapped = old.ReplaceSheet(WriteSheet(seat.Record.Name, sheet)); } catch (Exception ex) { Log.Warn("sheet in place: " + ex.Message); }
         if (swapped)
         {
-            seat.Record.Sheet = sheet; seat.LastSign = SignOf(old);
+            seat.LastSign = SignOf(old);
             Log.Info(seat.Record.Name + ": sheet from " + seat.Peer.Name + " (in place)");
             if (old.Level > before) Party.LeveledUp(old, old.Level);
-            foreach (var s in seats.Values.Where(x => x != seat && x.InWorld && x.Peer != null)) s.Peer.Send("SHEET", "c:" + seat.Record.Name, sheet);
+            SendSheet(seat, sheet, seat);
             return;
         }
         Character c = null;
@@ -75,17 +56,40 @@ public sealed partial class Coop
         Party.Add(this, c);
         if (fighting) Combat.Join(c);
         seat.Character = c;
-        seat.Record.Sheet = sheet;
         seat.LastSign = SignOf(c);
         World.Despawn(old);
         Log.Info(seat.Record.Name + ": sheet from " + seat.Peer.Name);
         if (c.Level > levelBefore) Party.LeveledUp(c, c.Level);     // levelled up on their machine: mods here hear it
-        foreach (var s in seats.Values.Where(x => x != seat && x.InWorld && x.Peer != null)) s.Peer.Send("SHEET", "c:" + seat.Record.Name, sheet);
+        SendSheet(seat, sheet, seat);
     }
 
     // --- Joiner -------------------------------------------------------------------------------------------------
-    string tradingWith; bool tradeSeen;
     string lastSign;     // my character as the host last sent it (or as I last sent it)
+    int mySheetVersion;  // the version of my character's sheet my changes start from (the host's numbering)
+
+    // --- Sheet versions (both sides) --------------------------------------------------------------------------------
+    // Both machines change a joined character: the host (items given, quest items moved, deals, its game's own effects)
+    // and its player (equipping, using). Each host-side copy has a version, raised with every sheet the host sends or
+    // takes; a joiner's sheet (MYSHEET, DEALT) says the version it was made from. One made from an older version than
+    // the host's has crossed a change on the host: it isn't taken (the host's copy is sent back), so a change can be
+    // undone on the joiner's side but nothing is lost or doubled. Host to joiner: SHEET <key> <sheet> <version>,
+    // SHEETVER <version> (a sheet of theirs taken).
+    // Also stale: the host's copy changed since it was last sent or taken (a change on the host not sent yet: the host
+    // notices its own changes every few seconds, a joiner's sheet can arrive first).
+    bool Stale(Seat seat, string version)
+    {
+        int v;
+        if (!int.TryParse(version, out v) || v != seat.SheetVersion) return true;
+        return seat.Character != null && seat.LastSign != null && SignOf(seat.Character) != seat.LastSign;
+    }
+    // A new version of seat's character to everyone; except: the one whose sheet it is (it has it: only the version).
+    void SendSheet(Seat seat, string sheet, Seat except)
+    {
+        seat.SheetVersion++;
+        seat.Record.Sheet = sheet;
+        foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null))
+            if (s == except) s.Peer.Send("SHEETVER", seat.SheetVersion); else s.Peer.Send("SHEET", "c:" + seat.Record.Name, sheet, seat.SheetVersion);
+    }
     double signTimer;
     readonly Dictionary<string, string> stocks = new Dictionary<string, string>();
 
@@ -94,15 +98,19 @@ public sealed partial class Coop
         switch (w[0])
         {
             case "STOCK":
-                if (w.Length > 2) { stocks[w[1]] = w[2]; ApplyStock(w[1]); }
+                if (w.Length > 2)
+                {
+                    // The open shop: closed first (the offers go back where they came from, as the game's Close does),
+                    // so nothing offered from the old stock outlives it; reopened by the SHOP that follows.
+                    // The open shop's new stock: the merchant's side of the offer goes (it was picked from the old stock;
+                    // left there, it could be bought twice). This player's own offer stays.
+                    if (w[1] == shopOpen && World.IsTrading) Trade.ClearMerchantOffer();
+                    stocks[w[1]] = w[2]; ApplyStock(w[1]);
+                }
                 return true;
-            case "TRADE":
-            {
-                var m = w.Length > 1 ? Local(w[1]) : null;
-                if (m == null || !World.OpenTrade(m)) { Tell("can't open the trade here"); return true; }
-                tradingWith = w[1]; tradeSeen = false;
-                return true;
-            }
+            case "SHOP": case "TRADE": if (w.Length > 1) ShopArrived(w[1]); return true;
+            case "SHEETVER": { int v; if (w.Length > 1 && int.TryParse(w[1], out v)) mySheetVersion = v; return true; }
+            case "SHOPEND": if (shopOpen != null && World.IsTrading) Trade.Close(); shopOpen = null; return true;
         }
         return false;
     }
@@ -118,16 +126,7 @@ public sealed partial class Coop
 
     void JoinerTick(double dt)
     {
-        if (tradingWith != null)
-        {
-            if (World.IsTrading) { tradeSeen = true; return; }
-            if (!tradeSeen) return;
-            var m = Local(tradingWith);
-            if (m != null) host.Send("TRADED", tradingWith, Convert.ToBase64String(Item.Pack(m.Stock)));
-            tradingWith = null;
-            SendMySheet();
-            return;
-        }
+        if (shopOpen != null) { JoinerShopTick(); return; }
         if ((signTimer -= dt) > 0) return;
         signTimer = 3;
         var me = World.Player;
@@ -141,6 +140,6 @@ public sealed partial class Coop
         var sheet = SheetOf(me);
         if (sheet == null) return;
         lastSign = SignOf(me);
-        host.Send("MYSHEET", sheet);
+        host.Send("MYSHEET", sheet, mySheetVersion);
     }
 }

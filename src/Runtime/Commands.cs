@@ -141,6 +141,24 @@ namespace UnderRailWorks
                 var line = c.Name + ": footprint " + (z == null ? "none" : z.ToString()) + ", size " + e.Size + ", sheet " + c.HasPlayerSheet + ", state " + typeof(b0b).GetField("j").GetValue(e) + ", in combat " + c.IsInCombat + ", sight " + c.SightRange + ", XP " + c.Experience + ", level " + c.Level;
                 Log.Write(line); return line;
             });
+            // Trading from the console, for tests: buy puts the merchant's item into its offer; accept presses Trade without
+            // the game's check that the offers balance.
+            Add("UnderRailWorks", "works.tradebuy", "works.tradebuy <item code> [stacks]: in the open barter window, the merchant's item into its offer (tests)", a => a.Length < 1 ? "works.tradebuy <item code> [stacks]" : Trade.TestBuy(a[0], a.Length > 1 ? int.Parse(a[1]) : 0));
+            Add("UnderRailWorks", "works.tradeoffer", "works.tradeoffer <item code> [stacks]: your item into your offer (tests)", a =>
+            {
+                var p = World.Player; var it = p == null || a.Length < 1 ? null : p.Inventory.Items.FirstOrDefault(i => i.Code == a[0]);
+                try { return it != null && Trade.Offer(it, a.Length > 1 ? int.Parse(a[1]) : 0) ? "offered " + a[0] : "can't offer that"; }
+                catch (Exception ex) { Log.Write("tradeoffer: " + (ex.InnerException ?? ex)); return "failed"; }
+            });
+            Add("UnderRailWorks", "works.tradeaccept", "works.tradeaccept: presses Trade in the open barter window, without the balance check (tests)", a => Trade.TestAccept());
+            Add("UnderRailWorks", "works.charcheck", "works.charcheck <file.char> [expansion ids...]: what that character has that a game with only those expansions doesn't", a =>
+            {
+                if (a.Length < 1) return "works.charcheck <file.char> [xpbl xphw]";
+                var p = World.CharacterFileProblems(a[0], a.Skip(1));
+                var r = "charcheck " + System.IO.Path.GetFileName(a[0]) + ": " + (p.Count == 0 ? "fits" : string.Join("; ", p.ToArray()));
+                Log.Write(r); return r;
+            });
+            Add("UnderRailWorks", "works.reactions", "works.reactions: NPC AI steps that look at the player, and how often they reacted to another party member", a => PartyHooks.ReactionReport());
             Add("UnderRailWorks", "works.armorcheck", "works.armorcheck: the game's faction-armour conditions (CAU, Tchortist, not Gray Army) as they answer now, and for the player alone", a => PartyHooks.ArmorReport());
             Add("UnderRailWorks", "works.export", "works.export: export the player character (for a new game's Import)", a => World.ExportPlayer() ? "exported" : "[error]no game");
             Add("UnderRailWorks", "works.perf", "works.perf [seconds]: time each mod's handlers for a while (default 10 s), then list the busiest (also in the log)", a =>

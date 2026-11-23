@@ -41,7 +41,8 @@ public sealed partial class Coop
         if (Math.Abs(at.X - c.Position.X) + Math.Abs(at.Y - c.Position.Y) > 3.5f) return "you're too far from it";
         var items = box.Items;
         var take = index == null ? items : items.Where((x, i) => i.ToString() == index).ToList();
-        foreach (var item in take) if (box.Remove(item)) c.Inventory.Put(item);
+        // As the game's loot window does for the player: the container's theft check, with this character as the taker.
+        foreach (var item in take) if (box.TakeAs(c, item)) c.Inventory.Put(item);
         Log.Info(c.Name + " took " + string.Join(", ", take.Select(x => x.ToString()).ToArray()) + " from " + box.Name);
         SendLoot(seat, box);
         return take.Count == 0 ? "" : "took " + string.Join(", ", take.Select(x => x.ToString()).ToArray());

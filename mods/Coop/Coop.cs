@@ -28,7 +28,7 @@ public sealed partial class Coop : WorksMod
     // What host and joiner compare when connecting: the release version and the message protocol. The protocol goes up
     // whenever the messages change, also between releases (dev builds with different protocols can't play together;
     // the release version itself only changes at a GitHub release).
-    const int Protocol = 14;
+    const int Protocol = 15;
     string Handshake { get { return Info.VersionText + "/" + Protocol; } }
 
     const int DefaultPort = 27650;
@@ -65,13 +65,13 @@ public sealed partial class Coop : WorksMod
         if (c == null || !c.HasPlayerSheet) return null;
         var path = SheetPath("export");
         try { return c.ExportTo(path, new DateTime(2026, 1, 1)) ? Convert.ToBase64String(System.IO.File.ReadAllBytes(path)) : null; }
-        catch (Exception ex) { Log.Warn("can't export " + c.Name + ": " + ex.Message); return null; }
+        catch (Exception ex) { Log.Warn("can't export " + c.Name + ": " + ex); return null; }
     }
     string SheetPath(string name) { return System.IO.Path.Combine(Info.Folder, "sheets", new string(name.Where(char.IsLetterOrDigit).ToArray()) + ".char"); }
     string WriteSheet(string name, string base64) { var path = SheetPath(name); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); System.IO.File.WriteAllBytes(path, Convert.FromBase64String(base64)); return path; }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld, Announced; public string[] Owns; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld, Announced; public string[] Owns; public int SheetVersion; public string PlayerName; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
     Listener listener;
     static float Dist(Character a, Character b) { return Vector2.Distance(new Vector2(a.Position.X, a.Position.Y), new Vector2(b.Position.X, b.Position.Y)); }
     static bool Sees(Character who, Character other) { return who.CanSee(other) && Dist(who, other) <= who.SightRange; }
@@ -92,6 +92,11 @@ public sealed partial class Coop : WorksMod
         Party.TriggersCountMembers = true;
         // The faction-armour conditions: met if any player wears it.
         Party.FactionArmorCountsAnyMember = true;
+        // NPCs react to any player's position (stats stay the host's).
+        Party.ReactionsCountMembers = true;
+        // Traps work for every player; the game's scripts and windows that only know one player don't hurt the others.
+        Party.TrapsCountMembers = true;
+        Party.Safeguards = true;
         Log.Info("hosting on port " + port);
         Notify.Log("Co-op: hosting on port " + port + ". Others join with Join a Game and your address" + (port == DefaultPort ? "" : ":" + port), Say);
         return null;
@@ -109,6 +114,9 @@ public sealed partial class Coop : WorksMod
         Party.DontNeedTogether(this, PartyNeed.EnterZone, null);
         Party.TriggersCountMembers = false;
         Party.FactionArmorCountsAnyMember = false;
+        Party.ReactionsCountMembers = false;
+        Party.TrapsCountMembers = false;
+        Party.Safeguards = false;
         Log.Info("stopped hosting");
         Changed();
     }
@@ -136,7 +144,10 @@ public sealed partial class Coop : WorksMod
                 if (w.Length < 2 || w[1] != Handshake) { p.Send("BYE", "the host has Co-op " + Handshake + ", you have " + (w.Length > 1 ? w[1] : "?") + " (both need the same)"); p.Close(); return; }
                 {
                     var owns = ParseExpansions(w.Length > 4 ? w[4] : "");
-                    var refused = RefuseJoin() ?? RefuseForExpansions(owns);
+                    // After the start only a player coming back to their own character (left behind, still alive).
+                    var back = lobby == null ? orphans.FirstOrDefault(o => o.PlayerName != null && o.PlayerName.Equals(p.Name, StringComparison.OrdinalIgnoreCase) && o.Character != null && !o.Character.IsDead && o.Character.Area != null) : null;
+                    var missingExp = Expansions.Active.Where(x => !owns.Contains(x)).ToList();
+                    var refused = back != null ? (missingExp.Count > 0 ? "this game uses " + Names(missingExp) + ", which you don't have" : null) : RefuseJoin() ?? RefuseForExpansions(owns);
                     if (refused != null)
                     {
                         Log.Info(p.Name + " refused: " + refused);
@@ -155,7 +166,11 @@ public sealed partial class Coop : WorksMod
                         p.Send("BYE", "your mods differ from the host's: " + string.Join("; ", diff) + ". Mods marked \"client\" may differ."); p.Close(); return;
                     }
                 }
-                seats[p] = new Seat { Peer = p, Owns = ParseExpansions(w.Length > 4 ? w[4] : "") };
+                {
+                    var back = lobby == null ? orphans.FirstOrDefault(o => o.PlayerName != null && o.PlayerName.Equals(p.Name, StringComparison.OrdinalIgnoreCase) && o.Character != null && !o.Character.IsDead && o.Character.Area != null) : null;
+                    if (back != null) { Rejoin(p, back); return; }
+                }
+                seats[p] = new Seat { Peer = p, PlayerName = p.Name, Owns = ParseExpansions(w.Length > 4 ? w[4] : "") };
                 Log.Info(p.Name + " connected from " + p.Address);
                 Changed(false);
                 Log.Info(p.Name + " is choosing a character; expansions they have: " + Names(seats[p].Owns));
@@ -262,6 +277,7 @@ public sealed partial class Coop : WorksMod
                 Log.Info("characters: " + hostName + " (host), " + string.Join(", ", choices.Select((c, i) => (i + 1) + ". " + c.Key + (c.Value ? " (taken)" : "")).ToArray()));
                 Commands.Print("co-op: characters: " + hostName + " (host), " + string.Join(", ", choices.Select((c, i) => (i + 1) + ". " + c.Key + (c.Value ? " (taken)" : "")).ToArray()) + ". coop.pick <number> or coop.new <name>");
                 Changed(); return;
+            case "REJOIN": readyAs = w.Length > 1 ? w[1] : "?"; Tell("You're back as " + readyAs + ": the host's world is on its way."); Changed(); return;
             case "READY": readyAs = w.Length > 1 ? w[1] : "?"; Tell("You'll play " + readyAs + ". Waiting for the host to start the game."); Changed(); return;
             case "PLAYING": playing = true; readyAs = null; Tell("You play " + w[1] + " (at " + w[2] + "," + w[3] + ")"); Changed(); return;
             case "STATE": state = w; Changed(false); return;
@@ -364,14 +380,24 @@ public sealed partial class Coop : WorksMod
             }
             case "TAKE": return w.Length > 2 ? Take(c, w[1], w[2]) : "";
             case "TAKEALL": return w.Length > 1 ? Take(c, w[1], null) : "";
-            case "TRADED": if (w.Length > 2) { var seat = seats.Values.FirstOrDefault(s => s.Character == c); if (seat != null) Traded(seat, w[1], w[2]); } return "";
-            case "MYSHEET": if (w.Length > 1) { var seat = seats.Values.FirstOrDefault(s => s.Character == c); if (seat != null) TakeSheet(seat, w[1]); } return "";
+            case "DEAL": if (w.Length > 4) { var seat = seats.Values.FirstOrDefault(s => s.Character == c); if (seat != null) Deal(seat, w[1], w[2], w[3], w[4]); } return "";
+            case "SHOPCLOSED": { var seat = seats.Values.FirstOrDefault(s => s.Character == c); if (seat != null) { shopSeen.Remove(seat); Log.Info(seat.Peer.Name + " closed the shop"); } return ""; }
+            case "MYSHEET":
+            {
+                var seat = seats.Values.FirstOrDefault(s => s.Character == c);
+                if (seat == null || w.Length < 2) return "";
+                // Made from an older sheet than the host's (a change on the host crossed it): the host's stands.
+                if (Stale(seat, w.Length > 2 ? w[2] : null)) { PushSheet(seat); return "your change crossed one made on the host: your character is as the host has it now"; }
+                TakeSheet(seat, w[1]);
+                return "";
+            }
             case "TRADEWITH":
             {
                 // A trade without a conversation (testing; a mod's own "trade" button): as the conversation's would.
                 var seat = seats.Values.FirstOrDefault(s => s.Character == c); var m = w.Length > 1 ? Resolve(w[1]) : null;
                 if (seat == null || m == null || !m.IsMerchant) return "not a merchant";
-                seat.Peer.Send("STOCK", KeyOf(m), Convert.ToBase64String(Item.Pack(m.Stock))); seat.Peer.Send("TRADE", KeyOf(m));
+                shopKey = KeyOf(m); shopSign = StockSign(m.Stock);
+                OpenShopFor(seat, m);
                 return "";
             }
             case "ABILITY":
@@ -455,6 +481,12 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.end", "coop.end: ends your character's combat turn", a => Mine("END"));
         Commands.Add(this, "coop.door", "coop.door <id start>: your character uses that door (wt.doors lists them)", a => { var d = a.Length == 0 ? null : World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return d == null ? "no such door" : Mine("USE", d.EntityId); });
         Commands.Add(this, "coop.newfrom", "coop.newfrom <file.char> <name>: join with a character exported earlier (as finishing creation does)", a => { if (host == null || a.Length < 2) return "coop.newfrom <file.char> <name>"; host.Send("NEW", a[1], Convert.ToBase64String(System.IO.File.ReadAllBytes(a[0]))); return "sent"; });
+        Commands.Add(this, "coop.turntime", "coop.turntime <seconds>: how long a joined player's turn may take (0: no limit)", a =>
+        {
+            int n; var o = Option(Id, "turntime");
+            if (o == null || a.Length < 1 || !int.TryParse(a[0], out n) || n < 0) return "coop.turntime <seconds>";
+            o.Value = n; return "turn time: " + (n == 0 ? "no limit" : n + " s");
+        });
         Commands.Add(this, "coop.suggest", "coop.suggest <answer number>: in the host's conversation, suggest that answer (again: take it back)", a =>
         {
             int n; if (a.Length < 1 || !int.TryParse(a[0], out n) || n < 1 || n > talkChoices.Count) return "coop.suggest <answer number, 1-" + talkChoices.Count + ">";

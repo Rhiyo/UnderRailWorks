@@ -44,6 +44,10 @@ printf 'coop.start\n' > "$HOST/Mods/WorksTest/menurun.txt"
 sleep 60
 # The fight, with Mira in the game.
 printf 'wt.goto 19 3\nwait 2\nwt.anger Waylon\n' > "$HA"; sleep 15
+# A 15 s turn limit: Mira does nothing; her turn passes by itself.
+printf 'coop.turntime 15\n' > "$HA"; sleep 2
+for i in 1 2; do h timeout 20 "$SKILL/inp.sh" focus key 0x20 >/dev/null 2>&1; sleep 12; done
+printf 'coop.turntime 0\n' > "$HA"; sleep 2
 for i in 1 2; do printf 'coop.end\n' > "$JA"; h timeout 20 "$SKILL/inp.sh" focus key 0x20 >/dev/null 2>&1; sleep 7; done
 printf 'wt.save midfight\n' > "$HA"; sleep 5
 R="$HOME/.cache/underrail-test/runs"; SAVES="$R/cooph, $R/coopj: Documents/My Games/Underrail/Saves"
@@ -63,6 +67,7 @@ afterward() { if awk -v m="$2" -v p="$3" 'f && $0 ~ p { bad=1 } $0 ~ m { f=1 } E
 inorder "Mira joined before the fight"        "Coop: tester plays Mira" "combat started"
 check   "the joiner got the world"            "$HL" "Coop: tester is in the world"
 inorder "Mira gets turns in that fight"       "combat started" "turn: Mira AP"
+check   "an idle player's turn passes at the limit" "$HL" "Coop: Mira's turn passed: the 15 s limit"
 check   "the mid-fight save loads"            "$HL" "saves: loading midfight"
 check   "co-op's save deleted once sent"      "$HL" "Coop: sending the world to tester"
 never() { if grep -qE "$3" "$2"; then fail=$((fail+1)); echo "FAIL: $1 (found: $(grep -m1 -E "$3" "$2" | cut -c1-160))"; else pass=$((pass+1)); fi; }

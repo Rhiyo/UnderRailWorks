@@ -99,6 +99,23 @@ public sealed partial class Coop
         return "starting";
     }
 
+    // A player who left comes back to their own character (as it was left: in the world, passing its turns meanwhile).
+    void Rejoin(Peer p, Seat seat)
+    {
+        orphans.Remove(seat);
+        seat.Peer = p; seat.InWorld = false; seat.WorldPending = false;
+        seat.Sent.Clear(); seat.Walks.Clear(); seat.Doors.Clear(); seat.Statuses.Clear();
+        seats[p] = seat;
+        var c = seat.Character;
+        Log.Info(p.Name + " is back, playing " + c.Name);
+        Notify.Log("Co-op: " + p.Name + " is back, playing " + c.Name, Say);
+        p.Send("REJOIN", c.Name);
+        p.Send("PLAYING", c.Name, (int)c.Position.X, (int)c.Position.Y);
+        if (Api != null) Api.RaiseJoined(p.Name, c);
+        SendWorld(seat);
+        Changed(false);
+    }
+
     // HELLO from someone new: only into an open lobby with a free place.
     string RefuseJoin()
     {
@@ -148,7 +165,19 @@ public sealed partial class Coop
         if (name.Length == 0) { p.Send("SAID", "coop.new <name>"); return; }
         Func<string, bool> used = n => slots.Any(s => (s.Saved != null && s.Saved.Name.Equals(n, StringComparison.OrdinalIgnoreCase)) || (s.Seat != null && s.Seat.Record != null && s.Seat.Record.Name.Equals(n, StringComparison.OrdinalIgnoreCase)));
         if (used(name)) { int n2 = 2; while (used(name + " " + n2)) n2++; p.Send("SAID", "there's already a " + name + " in this game: yours is " + name + " " + n2); name = name + " " + n2; }
-        TakeSlot(seat, free, new Record { Name = name, Blueprint = DefaultBlueprint, Sheet = w.Length > 2 && w[2].Length > 0 ? w[2] : null });
+        // A character made or imported on the joiner's machine: only what this game has (its expansions, items, levels).
+        var sheet = w.Length > 2 && w[2].Length > 0 ? w[2] : null;
+        if (sheet != null)
+        {
+            var problems = World.CharacterFileProblems(WriteSheet(name + "-check", sheet), LobbyExpansions());
+            if (problems.Count > 0)
+            {
+                Log.Info(p.Name + "'s character " + name + " refused: " + string.Join("; ", problems.ToArray()));
+                p.Send("SAID", name + " can't join this game: " + string.Join("; ", problems.ToArray()) + ". Make or import another character.");
+                return;
+            }
+        }
+        TakeSlot(seat, free, new Record { Name = name, Blueprint = DefaultBlueprint, Sheet = sheet });
     }
 
     // A joiner left the lobby: their place is free again.

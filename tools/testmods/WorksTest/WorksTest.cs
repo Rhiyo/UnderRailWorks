@@ -527,6 +527,24 @@ public sealed partial class WorksTest : WorksMod
             Dialogs.Override(c, "WorksTest/choices");
             return "choices for " + c.Name;
         });
+        Commands.Add(this, "wt.opentrade", "wt.opentrade <name>: the player trades with that merchant (Trade.Open)", args =>
+        {
+            var c = World.Characters.FirstOrDefault(x => x.Name == string.Join(" ", args));
+            return c != null && Trade.Open(c) ? "trading with " + c.Name : "can't trade";
+        });
+        Commands.Add(this, "wt.unwear", "wt.unwear <name> <slot>: that character takes off what's in the slot (Armor, Helmet...)", args =>
+        {
+            var c = World.Characters.FirstOrDefault(x => x.Name == args[0]); EquipSlot slot;
+            if (c == null || args.Length < 2 || !Enum.TryParse(args[1], out slot)) return "wt.unwear <name> <slot>";
+            var it = c.Equipment.Unequip(slot);
+            Log.Info("unwear " + c.Name + " " + slot + ": " + (it == null ? "nothing" : it.Code));
+            return it == null ? "nothing" : "off: " + it.Code;
+        });
+        Commands.Add(this, "wt.closetrade", "wt.closetrade: closes the barter window (Trade.Close)", args =>
+        {
+            try { return Trade.Close() ? "closed" : "none open"; }
+            catch (Exception ex) { Log.Info("closetrade: " + ex); return "failed"; }
+        });
         Commands.Add(this, "wt.tomenu", "wt.tomenu: World.QuitToMainMenu", args => World.QuitToMainMenu() ? "quitting" : "not in a game");
         Commands.Add(this, "wt.bagof", "wt.bagof <name>: that character's bag and equipment (item codes)", args =>
         {

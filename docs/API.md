@@ -163,6 +163,8 @@ What a merchant charges: Markup is the multiplier so far (the game's: about 1.15
 - `bool TakeExitAt(int x, int y)` **(preview)** — Walks to the zone exit on tile x, y and takes it (as the player's click on an exit). The game then changes zone: for everyone, as when the player leaves. False: no exit there.
 - `bool PlaceAt(Vector3 at, int facing = -1)` **(preview)** — Puts it exactly there (map tiles, fractional allowed) at once, facing that way (-1: as it is).
 - `bool SetStock(IEnumerable<Item> items)` **(preview)** — Replaces a merchant's stock with these items.
+- `bool RemoveFromStock(Item item)` **(preview)** — One item out of / into a merchant's stock, as a deal does (an open barter window follows: SetStock, which replaces everything, leaves one showing items that are gone).
+- `bool AddToStock(Item item)` **(preview)**
 - `bool IsPlayer`
 - `bool IsHostile` — Hostile or unfriendly to the player, not passive (red and orange outlines).
 - `Vector3 Position` — Map position (tiles; fractional while moving).
@@ -296,6 +298,7 @@ A condition on game state, for options, branches and lines.
 - `IList<Item> Items`
 - `bool Add(string path, int stacks = 1)` — Adds a stock item by path (it is saved with the container: stock items only).
 - `bool Remove(Item item)`
+- `bool TakeAs(Character who, Item item)` **(preview)** — Takes an item out for who, as the game's loot window does for the player: the container's own "taken" handler runs with who as the taker (an owned container's theft check: witnesses, the owner's reaction). Then Put it into who's bag. False: it isn't in the container.
 - `Microsoft.Xna.Framework.Vector3 Position`
 - `string Name` — Its shown name (the hover label, e.g. "Locker").
 - `Area Area` — The area it's in (null if not placed).
@@ -770,6 +773,7 @@ A HUD part showing lines of text (a status readout, a tracker): create it once i
 - `static bool operator ==(Item a, Item b)`
 - `static bool operator !=(Item a, Item b)`
 - `string Code`
+- `Item Split(int stacks)` **(preview)** — Splits stacks off into a new item (the game's own copy, coh.fy(): same condition and details, a new id); this one keeps the rest. Null if stacks isn't less than this item's stacks (take the whole item instead).
 - `bool IsQuestItem` **(preview)** — A quest ("plot") item: its definition's category is the one the game's own scripts keep safe (bk3.bi() == a0.c: never stolen from the player's house, moved off corpses to safety, never deleted), or its code starts "plot.".
 - `string Name`
 - `int Stacks`
@@ -1346,6 +1350,9 @@ A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
 - `static void LeveledUp(Character who, int level)` **(preview)** — A multiplayer mod: who reached a level on another machine; GameEvents.LeveledUp runs here with them as the player.
 - `static bool TriggersCountMembers` **(preview)** — The map's player-only triggers also fire for the party's other members: story and quest triggers, trigger barks, dialog and music areas, the scripted triggers marked player-only (the game's ya triggers on stepping in, out and around). For that moment the member counts as the player (its IsPlayer flag and player aspect set, then put back); what the trigger then does to "the player" itself (a dialog job, a cutscene) is the player's. NPCs' own reactions to the player (walking up to talk, guards, attacking on sight) still see only the player.
 - `static bool FactionArmorCountsAnyMember` **(preview)** — The game's faction-armour conditions (map data: "wearing CAU armor", "wearing Tchortist armor", "not wearing the Gray Army uniform"; they read the player's gear) count the whole party: "wearing" if any member wears it, "not wearing" only if none does. One disguised member is enough for the group (and members can split factions).
+- `static bool ReactionsCountMembers` **(preview)** — NPCs' own reactions to the player (walking up to talk, guards warning trespassers, attacking on sight, noticing a sneaking player, idle comments: the AI steps whose code asks for the player's sheet) also react to the party's other members: such a step is asked again with the player's body taken to be the member's (the sheet, so stats and gear, stays the player's), and its action then runs for the member it passed for. Random steps that also look at the player are asked once per member, so they come up a little more often.
+- `static bool TrapsCountMembers` **(preview)** — Spotting and disarming traps work for the party's other members as for the player: a trap a member spots is revealed (the game's reveal and "Trap detected!" are the player's), and disarming one gives them its XP. For the scan or the disarm the member counts as the player (as for triggers).
+- `static bool Safeguards` **(preview)** — Safeguards for members the game doesn't expect: scripts that remove every non-player character in a place (the lift cutscenes kill whoever rides along) spare them, and a member's pickpocketing is refused (the game's window for it opens for the player, with the player's bag).
 - `static void Add(WorksMod mod, Character c)`
 - `static void Remove(Character c)`
 - `static bool Contains(Character c)`
@@ -1732,9 +1739,21 @@ Values: `Fill = 0, Outline = 1`
 
 - `static bool Open(Character merchant)` — Opens barter between the player and a merchant (a character with a store); false otherwise.
 - `static bool IsOpen` — The barter window is open.
+- `static readonly Hook<Action<TradeDeal>> Dealing = new Hook<Action<TradeDeal>>("Trade.Dealing")` **(preview)** — The barter window's Trade button, before the deal: what the merchant offers (Buying) and what the player offers (Selling); Cancel = the deal doesn't happen here (the offers stay as they are).
+- `static readonly Hook<Action> Dealt = new Hook<Action>("Trade.Dealt")` **(preview)** — A deal was made in the barter window (its Trade button: both offers moved). The window stays open. The merchant: Trade.Merchant.
+- `static Character Merchant` **(preview)**
+- `static bool ClearMerchantOffer()` **(preview)** — Empties the merchant's side of the offer (its items back to nowhere: for a stock replaced from elsewhere, where they came from no longer exists). False: no window.
+- `static bool Close()` **(preview)** — Closes the barter window as its Close button does (offers go back where they came from). False: none open.
 - `static UiElement Window` — The barter window (to put a mod's button on it), or null.
 - `static bool WillBuy(Item item)` — The merchant in the open barter window buys this item (the game's own test: b6o.aeg; it crosses out the rest).
 - `static bool Offer(Item item, int stacks = 0)` — Moves stacks of an item from the player's bag into their offer (all of them: stacks <= 0). False if the barter window isn't open or the item isn't in the bag. The game's Trade button then decides as usual.
+
+## TradeDeal  _(class, TradeOffer.cs)_
+
+- `Character Merchant`
+- `IList<Item> Buying`
+- `IList<Item> Selling`
+- `bool Cancel`
 
 ## TradeStart  _(class, Cancellable.cs)_
 
@@ -2039,6 +2058,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static Character SpawnFromCharacterFile(string path, int x, int y)` **(preview)** — A character built from a .char file as the game builds the player (its look, sheet, inventory), standing at tile x, y of the player's area, facing south. Not the player: its sheet is its own, and its AI runs unless a mod takes it (CharacterControl). Like Spawn it's never saved (taken out around saves) and stays in this zone. Null: no such file, not a player sheet, or no room there.
 - `static bool MakePlayer(Character c)` **(preview)** — This machine's player becomes c (its HUD, inventory and character windows, quick bar, camera, fog of war); the old player's body stays as a character with its own sheet. For a game shown from elsewhere (co-op): saving it here afterwards would save c as the player.
 - `static bool StartNewGame()` **(preview)** — On the main menu: the game's New Game (its rules screen, then character creation, then the first zone), as the menu's button. False: not on the main menu.
+- `static IList<string> CharacterFileProblems(string path, IEnumerable<string> expansions)` **(preview)** — What a character file (.char) has that a game using only these expansions wouldn't: feats and skills of another expansion (their DLC), a level above 25 or specializations without Expedition (the game's veteran levels), items this game's data doesn't have, a newer game version. Read from the file; nothing is built. Empty: it fits. Lines for a player, e.g. "the feat Last Stand (Expedition)".
 - `static bool QuitToMainMenu()` **(preview)** — In a game: back to the main menu as the in-game menu's Main Menu does (the game's QuitGameFromLocale workflow, without saving). False: not in a game.
 - `static IList<Point> ExitTiles` **(preview)** — The tiles of the player's area with a zone exit (what the player clicks to leave; Character.TakeExitAt).
 - `static IList<Door> Doors` **(preview)** — The doors in the player's area.

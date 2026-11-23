@@ -34,7 +34,7 @@ HA="$HOST/Mods/WorksTest/autorun.txt" JA="$JOIN/Mods/WorksTest/autorun.txt"
 
 # Host, first run: load the save and export the player as a .char for the joiner.
 printf 'wait 8\nwt.load %s\n' "$SAVE" > "$HOST/Mods/WorksTest/menurun.txt"
-printf 'wait 3\nwt.clone\nwait 2\nwt.unclone\n' > "$HA"
+printf 'wait 3\nwt.clone\nwait 2\nwt.unclone\nworks.charcheck %s\n' "$(win "$HOST/Mods/WorksTest/clone.char")" > "$HA"
 h timeout 100 "$SKILL/launch.sh" --save "$SAVE" 1280 720 >/dev/null 2>&1
 sleep 50
 h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
@@ -87,6 +87,7 @@ sleep 20     # a bleeding wound from the fight can down Mira once more after it 
 printf 'wt.choices Waylon\n' > "$HA"; sleep 3     # a conversation with answers to suggest
 printf 'coop.talk Waylon\nwait 6\ncoop.suggest 1\n' > "$JA"; sleep 14
 h "$SKILL/shot.sh" "$WORK/host-conversation.png" >/dev/null 2>&1
+printf 'works.reactions\n' > "$HA"; sleep 3
 h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; j timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 
 pass=0; fail=0
@@ -119,6 +120,7 @@ check "other mods: refused, named (joiner)" "$WORK/odd-first.log" "your mods dif
 check "other mods: the host is told"        "$HL" "odd refused: different mods"
 never "a client mod doesn't count"          "$HL" "tester refused.*HUD Layout"
 check "the character file is exported"      "$WORK/host-first.log" "exported [0-9]+ bytes"
+check "an ordinary character fits a game without expansions" "$WORK/host-first.log" "charcheck clone.char: fits"
 check "Mira enters the host's world"        "$HL" "Coop: tester plays Mira at"
 check "the joiner plays Mira"               "$JL" "the player is now Mira"
 check "Mira walks (host)"                   "$HL" "Mira: go 32,23"
@@ -132,6 +134,8 @@ check "a joiner's click opens the host's conversation" "$HL" "Coop: tester start
 check "... the joiner is told the host answers"     "$JL" "Coop: Waylon talks with asd: the host answers"
 check "... the joiner sees the line and its answers" "$JL" "Coop: conversation: Waylon: Pick one. \\(2 answers\\)"
 check "... and suggests an answer"                  "$HL" "Coop: tester suggests answer 1"
+check "NPCs' AI steps that look at the player are found" "$HL" "reactions: on, AI steps reading the player [1-9]"
+never "... and re-asking them never fails"       "$HL" "party: reaction: "
 check "nothing failed to start (host)"      "$HL" "parts that didn't start: none"
 never "no patch failed (host)"              "$HL" "UnderRailWorks: patch .* failed"
 never "no patch failed (joiner)"            "$JL" "UnderRailWorks: patch .* failed"

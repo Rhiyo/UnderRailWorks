@@ -71,17 +71,35 @@ character arriving mid-fight), so for the first release players join only in a l
   Co-op moves them from a joiner's bag every second), and **players give each other** items (whole stacks, condition
   kept: Works' `Inventory.Remove` / `Put`) and charons (any amount): the Co-op window's Give..., `coop.give`. Money is
   an item (currency\StygianCoin). The survey of every check and take is in the session notes of Nov 23.
-- **Designed, not built yet:**
-  - NPC reactions to any player: NPCs' own behaviour (walking up to talk, guards' warnings and attack on sight,
-    stealth flares, bark dialogs) asks `cnk.aqu().v().b()` in AI node conditions (`b64.acj`) and actions (`byh.aci`).
-    Plan: re-ask a reaction node per player with the host's sheet's body link (`au2.m_b`, a plain field) pointed at that
-    player's body for the call: NPCs react to any player's position, stats stay the host's. Open: which nodes to
-    re-ask without changing how often random ones fire (barks), and keeping the action on the same player as its
-    condition (a node that keeps "the player" past the call would act on the host).
-  - A shared shop: a shop the host's conversation opens opens for every player; every deal goes through the host (to
-    the real merchant), which sends everyone the merchant's new stock and cash; open windows update (the game builds
-    the barter window once: rebuild or reopen it); two players after one item: the first deal wins. The game ends the
-    conversation when trading starts (to confirm), so nobody waits for the others.
+- **NPC reactions to any player (Nov 23):** NPCs' own AI steps that look at the player (walking up to talk, guards,
+  attacking on sight, stealth flares, idle comments: the steps whose condition's code calls `cyt.v()`, read from their
+  IL once) are asked again per party member with the player's sheet pointing at that member's body (`au2`'s body field:
+  position, combat state and visibility are the member's; stats and gear stay the host's), and the step's action then
+  runs for that member (Works' `Party.ReactionsCountMembers`; `works.reactions` counts them).
+- **Shared shop (Nov 23):** see CoopShop.cs. A shop the host's game opens opens for every player (once the host's window
+  is up: opening restocks the merchant). A joiner's Trade button doesn't make the deal on their machine (Works'
+  `Trade.Dealing`, cancelled): both offers go to the host by code, value and stacks (item ids differ between machines),
+  the host checks every item is there and moves them item by item between the real merchant and its copy of the joiner
+  (`Character.RemoveFromStock` / `AddToStock`, `Item.Split`; replacing the whole stock left the host's open window
+  broken), then sends the joiner their character and every shop the new stock. An item another player got first: the
+  deal is refused, nothing moves. The host's own deals reach every shop through `Trade.Dealt`. Tested: the host buys,
+  the joiner's shop updates; the joiner buys and pays through the host; a stale offer refused.
+- **Sheet versions (Nov 23):** a joined character changes on both machines; each host copy has a version raised with
+  every sheet sent or taken, and a joiner's sheet made from an older version, or while the host's copy has an unsent
+  change, is refused (the host's copy goes back). Nothing is lost or doubled; a joiner's simultaneous change can be
+  undone. (Exporting a character refreshed every open window; a non-player's export no longer does.)
+- **Lobby character checks, turn time, rejoining (Nov 23):** an incoming character with feats or skills of an expansion
+  the game doesn't use, a level above 25 or specializations without Expedition, items this game doesn't have, or a newer
+  game version is refused, naming each (`World.CharacterFileProblems`, `works.charcheck`). A host option limits a joined
+  player's turn (warned at 10 s left; `coop.turntime`). A player who left reconnects under the same name to their own
+  character (and only that).
+- **Joiners' actions (researched Nov 23):** lockpicking, electronic locks, hacking consoles, hot-wiring and boarding
+  vehicles, and studying oddities use the joiner's own sheet. Fixed: a trap a joiner spots is revealed and disarming
+  gives them XP (`Party.TrapsCountMembers`); lift cutscenes that kill every non-player character on the lift spare
+  party members, and a joiner's pickpocketing is refused (the game's window is the player's) (`Party.Safeguards`); a
+  joiner looting an owned container runs its theft check with them as the taker (`Container.TakeAs`). Not fixed:
+  crafting is the player's window (joiners craft on their own machine; their sheet reaches the host). There's no
+  resting or time skip in the game. Untested in a scene: traps, lifts, pickpocketing, theft.
 - Later, to make it more dynamic: rejoining your own character after a disconnect, joining between zones.
 - Console (tests): `coop.hostnew <players> [port]`, `coop.hostsave <save> [new players] [port]`, `coop.start`;
   Works: `SaveGames.Names`, `SaveGames.ModData` (a save's co-op characters without loading it).

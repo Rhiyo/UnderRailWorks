@@ -109,6 +109,14 @@ public sealed partial class Item
     public static bool operator !=(Item a, Item b) { return !(a == b); }
     internal Item(coh item) { Game = item; }
     public string Code { get { return Game.Definition == null ? "" : Game.Definition.a5(); } }
+    // Splits stacks off into a new item (the game's own copy, coh.fy(): same condition and details, a new id); this one
+    // keeps the rest. Null if stacks isn't less than this item's stacks (take the whole item instead).
+    [Preview("multiplayer: built for Co-op so far")] public Item Split(int stacks)
+    {
+        if (stacks <= 0 || stacks >= Game.Stacks) return null;
+        var part = Game.fy(); part.Stacks = stacks; Game.Stacks -= stacks;
+        return new Item(part);
+    }
     // A quest ("plot") item: its definition's category is the one the game's own scripts keep safe (bk3.bi() == a0.c:
     // never stolen from the player's house, moved off corpses to safety, never deleted), or its code starts "plot.".
     [Preview("multiplayer: built for Co-op so far")] public bool IsQuestItem { get { var d = Game.Definition; return d != null && (d.bi() == a0.c || (d.a5() ?? "").StartsWith("plot.", StringComparison.OrdinalIgnoreCase)); } }

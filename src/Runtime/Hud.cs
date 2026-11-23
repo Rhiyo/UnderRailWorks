@@ -666,7 +666,12 @@ static class HudHooks
         harmony.Patch(typeof(ci3).GetMethod("a", any, null, new[] { typeof(bool) }, null), postfix: m("Toggled"));
         harmony.Patch(typeof(dvp).GetMethod("aqd", any, null, new[] { typeof(efk) }, null), postfix: m("Markup"));
         harmony.Patch(typeof(b6o).GetMethod("d", any, null, Type.EmptyTypes, null), postfix: m("SellFactorHook"));
+        harmony.Patch(typeof(b6o).GetMethod("h", any, null, new[] { typeof(object), typeof(b25) }, null), prefix: m("DealStarting"), postfix: m("DealDone"));
     }
+    // b6o.h: the Trade button, before the deal (Trade.Dealing may cancel it).
+    static bool DealStarting(b6o __instance, ref bool __state) { try { __state = Trade.RaiseDealing(__instance); } catch (Exception ex) { Log.Write("trade: " + ex.Message); __state = true; } return __state; }
+    // b6o.h: the Trade button's deal, done (offers moved).
+    static void DealDone(bool __state) { if (!__state) return; try { Trade.RaiseDealt(); } catch (Exception ex) { Log.Write("trade: " + ex.Message); } }
 
     static void Toggled(bool __0) { try { Hud.Toggled(__0); } catch (Exception ex) { Log.Write("hud: " + ex.Message); } }
     static void Markup(dvp __instance, ref float __result) { try { __result = Prices.Buy(__instance, __result); } catch (Exception ex) { Log.Write("prices: " + ex.Message); } }

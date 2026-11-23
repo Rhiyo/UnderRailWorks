@@ -39,6 +39,10 @@ namespace UnderRailWorks
             foreach (var i in items) bag.z3(i.Game, true);
             return true;
         }
+        // One item out of / into a merchant's stock, as a deal does (an open barter window follows: SetStock, which
+        // replaces everything, leaves one showing items that are gone).
+        [Preview("multiplayer: built for Co-op so far")] public bool RemoveFromStock(Item item) { var bag = StockBag; return bag != null && item != null && bag.z5(item.Game); }
+        [Preview("multiplayer: built for Co-op so far")] public bool AddToStock(Item item) { var bag = StockBag; if (bag == null || item == null) return false; bag.z3(item.Game, false); return true; }
         dbi StockBag { get { var c = Entity as c5x; var m = c == null ? null : c.GetAspect<dvp>(); return m == null ? null : m.ap7(); } }
     }
 

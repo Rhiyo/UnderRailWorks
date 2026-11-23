@@ -69,6 +69,22 @@ namespace UnderRailWorks
         // wearing" only if none does. One disguised member is enough for the group (and members can split factions).
         [Preview("multiplayer: built for Co-op so far")] public static bool FactionArmorCountsAnyMember { get; set; }
 
+        // NPCs' own reactions to the player (walking up to talk, guards warning trespassers, attacking on sight,
+        // noticing a sneaking player, idle comments: the AI steps whose code asks for the player's sheet) also react to
+        // the party's other members: such a step is asked again with the player's body taken to be the member's (the
+        // sheet, so stats and gear, stays the player's), and its action then runs for the member it passed for. Random
+        // steps that also look at the player are asked once per member, so they come up a little more often.
+        [Preview("multiplayer: built for Co-op so far")] public static bool ReactionsCountMembers { get; set; }
+
+        // Spotting and disarming traps work for the party's other members as for the player: a trap a member spots is
+        // revealed (the game's reveal and "Trap detected!" are the player's), and disarming one gives them its XP. For
+        // the scan or the disarm the member counts as the player (as for triggers).
+        [Preview("multiplayer: built for Co-op so far")] public static bool TrapsCountMembers { get; set; }
+        // Safeguards for members the game doesn't expect: scripts that remove every non-player character in a place
+        // (the lift cutscenes kill whoever rides along) spare them, and a member's pickpocketing is refused (the game's
+        // window for it opens for the player, with the player's bag).
+        [Preview("multiplayer: built for Co-op so far")] public static bool Safeguards { get; set; }
+
         public static void Add(WorksMod mod, Character c) { if (c != null) lock (others) others[c] = mod.Id; }
         public static void Remove(Character c) { if (c != null) lock (others) others.Remove(c); }
         public static bool Contains(Character c) { if (c == null) return false; if (c.IsPlayer) return true; lock (others) return others.ContainsKey(c); }
@@ -252,8 +268,158 @@ namespace UnderRailWorks.Internal
             return r;
         }
 
+        // --- NPC reactions (Party.ReactionsCountMembers) -------------------------------------------------------------
+        // b64.acj: an AI step's condition (its delegate a); b64/byh.aci: its action. A step "reads the player" if its
+        // condition's code calls cyt.v() (the player's sheet): read once per method from its IL.
+        const System.Reflection.BindingFlags AnyInst = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+        static readonly System.Reflection.FieldInfo Condition = typeof(b64).GetField("a", AnyInst);
+        static readonly System.Reflection.FieldInfo SheetBody = typeof(au2).GetFields(AnyInst).FirstOrDefault(f => f.FieldType == typeof(b0b));
+        static readonly System.Reflection.MethodInfo PlayerSheet = typeof(cyt).GetMethod("v", AnyInst, null, Type.EmptyTypes, null);
+        static readonly Dictionary<System.Reflection.MethodBase, bool> readsPlayer = new Dictionary<System.Reflection.MethodBase, bool>();
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<b64, b0b> passedFor = new System.Runtime.CompilerServices.ConditionalWeakTable<b64, b0b>();
+        [ThreadStatic] static bool inReaction;
+        // works.reactions: steps found that read the player, how often they were asked again, passes for a member.
+        static long asked, passedMembers;
+        static readonly HashSet<string> loggedPass = new HashSet<string>();
+        internal static string ReactionReport()
+        {
+            int found; lock (readsPlayer) found = readsPlayer.Count(kv => kv.Value);
+            var r = "reactions: " + (Party.ReactionsCountMembers ? "on" : "off") + ", AI steps reading the player " + found + ", asked for members " + asked + ", passed for a member " + passedMembers;
+            Log.Write(r); return r;
+        }
+        static bool ReadsPlayer(System.Reflection.MethodBase m)
+        {
+            bool r;
+            if (m == null || PlayerSheet == null) return false;
+            lock (readsPlayer) if (readsPlayer.TryGetValue(m, out r)) return r;
+            try { r = HarmonyLib.PatchProcessor.ReadMethodBody(m).Any(kv => (kv.Key == System.Reflection.Emit.OpCodes.Call || kv.Key == System.Reflection.Emit.OpCodes.Callvirt) && Equals(kv.Value, PlayerSheet)); }
+            catch { r = false; }
+            lock (readsPlayer) readsPlayer[m] = r;
+            return r;
+        }
+        static au2 HostSheet() { var g = bpo.GetService<cnk>(); var s = g == null ? null : g.aqu(); return s == null ? null : s.v(); }
+
+        static bool ReactionCondition(b64 __instance, TimeSpan __0, double __1, ref bool __result)
+        {
+            if (inReaction || !Party.ReactionsCountMembers || Condition == null || SheetBody == null) return true;
+            try
+            {
+                var cond = Condition.GetValue(__instance) as Func<TimeSpan, double, bool>;
+                if (cond == null || !ReadsPlayer(cond.Method)) return true;
+                passedFor.Remove(__instance);
+                var sheet = HostSheet();
+                var own = sheet == null ? null : SheetBody.GetValue(sheet) as b0b;
+                if (own == null) return true;
+                inReaction = true;
+                try
+                {
+                    if (cond(__0, __1)) { __result = true; return false; }
+                    foreach (var m in Party.Members)
+                    {
+                        var body = m.Entity as b0b;
+                        if (body == null || body == own || m.IsDead) continue;
+                        SheetBody.SetValue(sheet, body);
+                        bool ok;
+                        asked++;
+                        try { ok = cond(__0, __1); } finally { SheetBody.SetValue(sheet, own); }
+                        if (!ok) continue;
+                        passedFor.Add(__instance, body); __result = true; passedMembers++;
+                        var key = cond.Method.DeclaringType + "." + cond.Method.Name + "/" + m.Name;
+                        lock (loggedPass) if (loggedPass.Add(key)) Log.Write("party: an NPC's AI step (" + (cond.Method.DeclaringType == null ? "?" : cond.Method.DeclaringType.Name) + ") reacts to " + m.Name);
+                        return false;
+                    }
+                }
+                finally { inReaction = false; }
+                __result = false;
+                return false;
+            }
+            catch (Exception ex) { Log.Write("party: reaction: " + ex.Message); inReaction = false; return true; }
+        }
+        sealed class ReactionState { public au2 Sheet; public b0b Own; }
+        static void ReactionActing(b64 __instance, out ReactionState __state)
+        {
+            __state = null;
+            b0b body;
+            if (!Party.ReactionsCountMembers || SheetBody == null || !passedFor.TryGetValue(__instance, out body)) return;
+            var sheet = HostSheet(); var own = sheet == null ? null : SheetBody.GetValue(sheet) as b0b;
+            if (own == null || body == null) return;
+            SheetBody.SetValue(sheet, body);
+            __state = new ReactionState { Sheet = sheet, Own = own };
+        }
+        static Exception ReactionActed(Exception __exception, ReactionState __state)
+        {
+            if (__state != null) try { SheetBody.SetValue(__state.Sheet, __state.Own); } catch { }
+            return __exception;
+        }
+
+        // --- Traps and safeguards -----------------------------------------------------------------------------------
+        static bool IsMember(c5x body) { if (body == null || body.IsPlayer) return false; var c = Character.Of(body); return c != null && Party.Contains(c); }
+        static AsPlayerState AsPlayer(c5x body)
+        {
+            var aspect = body.GetAspect<amc>();
+            var st = new AsPlayerState { Body = body, Aspect = aspect, WasPlayer = false, WasAspect = aspect != null && aspect.@as() };
+            World.SetPlayerFlag(body, true);
+            if (aspect != null) aspect.h(true);
+            return st;
+        }
+        // amc.a(List<ak1>): a character's trap and hidden-object scan; ds.fr: the disarm action.
+        static void ScanStarting(amc __instance, out AsPlayerState __state)
+        {
+            __state = null;
+            try { var b = __instance.a8() as c5x; if (Party.TrapsCountMembers && IsMember(b)) __state = AsPlayer(b); } catch (Exception ex) { Log.Write("party: trap scan: " + ex.Message); }
+        }
+        static void DisarmStarting(ds __instance, out AsPlayerState __state)
+        {
+            __state = null;
+            try { var b = __instance.vg() == null ? null : __instance.vg().q() as c5x; if (Party.TrapsCountMembers && IsMember(b)) __state = AsPlayer(b); } catch (Exception ex) { Log.Write("party: disarm: " + ex.Message); }
+        }
+        // amc.a(cwt, bool) with no cause: a script's removal (the lifts). Members are spared.
+        static bool ScriptDeath(amc __instance, cwt __0)
+        {
+            try
+            {
+                if (__0 != null || !Party.Safeguards) return true;
+                var b = __instance.a8() as c5x;
+                if (!IsMember(b)) return true;
+                Log.Write("party: a script would have killed " + Character.Of(b).Name + " (a party member): spared");
+                return false;
+            }
+            catch (Exception ex) { Log.Write("party: script death: " + ex.Message); return true; }
+        }
+        // dka.am8(thief, victim, handler): the pickpocket window. Not for members.
+        static bool Pickpocket(b0b __0)
+        {
+            var b = __0 as c5x;
+            if (!Party.Safeguards || !IsMember(b)) return true;
+            Log.Write("party: " + Character.Of(b).Name + " can't pickpocket (a party member: the window is the player's)");
+            Combat.Float(Character.Of(b), "Pickpocketing isn't available in co-op yet.", Color.Orange);
+            return false;
+        }
+
         internal static void Install(HarmonyLib.Harmony harmony)
         {
+            const System.Reflection.BindingFlags all = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+            Func<string, HarmonyLib.HarmonyMethod> hm = n => new HarmonyLib.HarmonyMethod(typeof(PartyHooks).GetMethod(n, System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic));
+            var scan = typeof(amc).GetMethod("a", all, null, new[] { typeof(List<ak1>) }, null);
+            if (scan != null) harmony.Patch(scan, prefix: hm("ScanStarting"), finalizer: hm("TriggerDone")); else Log.Write("party: the trap scan wasn't found");
+            var disarm = typeof(ds).GetMethod("fr", all, null, new[] { typeof(TimeSpan), typeof(TimeSpan) }, null);
+            if (disarm != null) harmony.Patch(disarm, prefix: hm("DisarmStarting"), finalizer: hm("TriggerDone")); else Log.Write("party: the disarm action wasn't found");
+            var death = typeof(amc).GetMethod("a", all, null, new[] { typeof(cwt), typeof(bool) }, null);
+            if (death != null) harmony.Patch(death, prefix: hm("ScriptDeath"));
+            var pick = typeof(dka).GetMethod("am8", all, null, new[] { typeof(b0b), typeof(object), typeof(csy) }, null);
+            if (pick != null) harmony.Patch(pick, prefix: hm("Pickpocket"));
+            if (Condition != null && SheetBody != null && PlayerSheet != null)
+            {
+                var cond = typeof(b64).GetMethod("acj", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public, null, new[] { typeof(TimeSpan), typeof(double) }, null);
+                if (cond != null) harmony.Patch(cond, prefix: new HarmonyLib.HarmonyMethod(typeof(PartyHooks).GetMethod("ReactionCondition", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
+                foreach (var t in new[] { typeof(b64), typeof(byh) })
+                {
+                    var act = t.GetMethod("aci", AnyInst, null, new[] { typeof(TimeSpan), typeof(double) }, null);
+                    if (act != null) harmony.Patch(act, prefix: new HarmonyLib.HarmonyMethod(typeof(PartyHooks).GetMethod("ReactionActing", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)),
+                        finalizer: new HarmonyLib.HarmonyMethod(typeof(PartyHooks).GetMethod("ReactionActed", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
+                }
+            }
+            else Log.Write("party: the AI step pieces weren't found: NPCs react to the player only");
             foreach (var t in new[] { typeof(cb2), typeof(enj), typeof(e7c) })
             {
                 var check = t.GetMethod("jh", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public, null, new[] { typeof(object) }, null);

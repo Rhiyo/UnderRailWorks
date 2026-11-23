@@ -10,6 +10,7 @@
 // is an ajk (version, DLC list, the sheet a, date, difficulty d), written by ajk.b(path), read by ajk.a(path).
 // A body here gets the game's StandAloneProvider holding its own sheet instead of dsx, so it isn't the player.
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Xna.Framework;
@@ -118,6 +119,52 @@ namespace UnderRailWorks
             return true;
         }
 
+        // What a character file (.char) has that a game using only these expansions wouldn't: feats and skills of another
+        // expansion (their DLC), a level above 25 or specializations without Expedition (the game's veteran levels),
+        // items this game's data doesn't have, a newer game version. Read from the file; nothing is built. Empty: it
+        // fits. Lines for a player, e.g. "the feat Last Stand (Expedition)".
+        [Preview("multiplayer: built for Co-op so far")] public static IList<string> CharacterFileProblems(string path, IEnumerable<string> expansions)
+        {
+            var problems = new List<string>();
+            var on = new HashSet<string>((expansions ?? new string[0]).Select(x => x.ToLowerInvariant()));
+            object file;
+            try { file = System.IO.File.Exists(path) ? ReadFile.Invoke(null, new object[] { path }) : null; }
+            catch (Exception ex) { problems.Add("the character file can't be read here (" + (ex.InnerException ?? ex).Message + ")"); return problems; }
+            var sheet = file == null ? null : FileSheet.GetValue(file) as au2;
+            if (sheet == null) { problems.Add("not a character file this game can read"); return problems; }
+            var made = FileVersion.GetValue(file) as Version;
+            if (made != null && made > dm9.d) problems.Add("made with a newer game version (" + made + ")");
+            Func<string, string> dlc = id => Expansions.Name(id);
+            foreach (var feat in sheet.Feats)
+                if (!string.IsNullOrEmpty(feat.DLC) && !on.Contains(feat.DLC.ToLowerInvariant())) problems.Add("the feat " + FeatName(feat) + " (" + dlc(feat.DLC) + ")");
+            foreach (var skill in sheet.Skills)
+                if (!string.IsNullOrEmpty(skill.DLC) && !on.Contains(skill.DLC.ToLowerInvariant()) && StatPoints(skill) > 0) problems.Add("the skill " + skill.GetType().Name + " (" + dlc(skill.DLC) + ")");
+            if (!on.Contains("xpbl"))
+            {
+                if (sheet.Level > aiy.bk) problems.Add("level " + sheet.Level + " (above " + aiy.bk + " needs Expedition)");
+                if (sheet.Specializations != null && sheet.Specializations.Count > 0 && sheet.Specializations.Values.Sum(v => v.Value) > 0) problems.Add("specializations (Expedition)");
+            }
+            var unknown = sheet.Bag.z2().Concat(sheet.Gear.i()).Where(i => i != null && i.Definition == null).ToList();
+            if (unknown.Count > 0) problems.Add(unknown.Count + " item(s) this game doesn't have");
+            return problems;
+        }
+        static string FeatName(ai8 feat)
+        {
+            var p = feat.GetType().GetProperty("Name", BindingFlags.Instance | BindingFlags.Public);
+            var n = p == null ? null : p.GetValue(feat, null) as string;
+            return string.IsNullOrEmpty(n) ? feat.GetType().Name : n;
+        }
+        // A skill's own points (Stat<int>'s value, "S4:V").
+        static int StatPoints(object stat)
+        {
+            for (var t = stat.GetType(); t != null; t = t.BaseType)
+            {
+                var f = t.GetField("b", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.DeclaredOnly);
+                if (f != null && f.FieldType == typeof(int)) return (int)f.GetValue(stat);
+            }
+            return 0;
+        }
+
         // In a game: back to the main menu as the in-game menu's Main Menu does (the game's QuitGameFromLocale workflow,
         // without saving). False: not in a game.
         [Preview("multiplayer: built for Co-op so far")] public static bool QuitToMainMenu()
@@ -192,7 +239,9 @@ namespace UnderRailWorks
             if (!string.IsNullOrEmpty(dir)) System.IO.Directory.CreateDirectory(dir);
             // As the game's own export (d6f.arv): the HUD's and the body's handlers on the sheet come off while it's written
             // (BinaryFormatter would try to write them), and go back on after.
-            var screens = bpo.GetService<ps>();
+            // Only the player's sheet carries the HUD's handlers: another character's export leaves the HUD (and the open windows
+            // it rebinds) alone; rebinding failed under an open barter window.
+            var screens = body.IsPlayer ? bpo.GetService<ps>() : null;
             var su = body.GetAspect<su>();
             bool live = body.Initialized;
             if (screens != null) screens.amy();
