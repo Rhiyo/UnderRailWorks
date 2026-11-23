@@ -132,8 +132,9 @@ character arriving mid-fight), so for the first release players join only in a l
 - The simulation is not deterministic (its own random numbers, real-time movement and AI outside combat), so
   "lockstep" (both games run the same inputs) won't stay in sync.
 - Only the zone the player is in is live; other zones are stored states.
-- Steam: Works only bridges the game's SteamHelper (9 functions); Steam networking isn't reachable without
-  redistributing Steamworks files, so connections would be direct (LAN, port forwarding, or a VPN like Tailscale).
+- Steam: the game's own steam_api.dll (2014) has lobbies and relayed P2P (SteamMatchMaking009, SteamNetworking005),
+  so nothing of Steam's needs shipping: see "Playing through Steam / GOG" below (Nov 23). Direct connection (LAN, port
+  forwarding, a VPN) still works beside it.
 
 ## Likely architecture (to confirm with a spike)
 
@@ -183,7 +184,7 @@ character placed by the mod and controlled by those commands instead of by the A
 11. Saving: only the host saves? What happens to joiners' characters when the host loads an older save?
 12. Joiners' game version and mods must match the host's (check on join).
 13. Cheating/trust: friends only (no anti-cheat); say so.
-14. Connection: LAN / port forward / Tailscale first; a relay later?
+14. Connection: through Steam / GOG lobbies (relayed by the store) or an address (LAN / port forward / VPN).
 
 ### Where the open questions stand (2026-11-12)
 
@@ -580,3 +581,29 @@ first. What that can and can't mean:
    the joiner's commands moving their character on the host.
 3. The client view (replication), the hardest part.
 4. Then the open questions above, one at a time.
+
+## Playing through Steam / GOG (Nov 23)
+
+- **Works' `Online`** (Preview): the store the game is signed in to (Steam, or GOG Galaxy). Friends-only lobbies,
+  reliable messages of any length (parts of 256 KB, joined on arrival) relayed by the store, the friends hosting,
+  the store's invite dialog, and invites accepted in the store's friends list / overlay (`InviteAccepted`, also when
+  Steam starts the game with `+connect_lobby`). All on the game's thread (polled from the helper every frame while in
+  a lobby, once a second otherwise).
+- **Helper** (UnderrailSteamHost.exe, src/SteamHost/OnlineHost.cs): Steam through the game's 2014 steam_api.dll by
+  vtable (SteamMatchMaking009, SteamNetworking005, SteamFriends014, SteamUser017, SteamUtils006; layouts from those
+  versions' headers). Wine Mono can't call thiscall through a delegate (the helper died on the first call), so each
+  method is called through a 10-byte stub (stdcall in, `this` into ECX). Call results (lobby made / entered) polled
+  through ISteamUtils; callbacks (member joined/left, invites, P2P session requests) read from the Steam client's
+  queue (steamclient's `Steam_BGetCallback`). GOG: the same commands through the game's GalaxyCSharp.dll on the Galaxy
+  thread (lobbies, P2P, the lobby in rich presence "connect" for friends to find).
+- **Co-op**: a lobby opened from the main menu also makes a store lobby (its size: the game's players), so friends see
+  it in Join a Game (the window lists friends hosting; "By address..." for the old way) or join from their friends
+  list; the host's Co-op window has "Invite friends...". Store players are `OnlinePeer`s beside the TCP ones (one
+  packet per frame per player: the frame's lines). `coop.join online:<lobby>`, `coop.join friend [name]`,
+  `coop.friends`, `coop.online`.
+- **Tested**: real Steam with one account (signed in, lobby made, members, a message and a 700 KB one to myself,
+  joining a closed lobby answered "no longer exists"; `works.online`); Co-op end to end through Works' test store
+  (`UNDERRAILWORKS_TEST_STORE`: lobbies and messages as files; tools/smoketest/coop-online.sh, 13 checks).
+  **Not yet:** two Steam accounts (another player joining for real: member callbacks, P2P between two people, the
+  friends list, the overlay invite under Proton), and GOG at all (no GOG copy here; built against the game's
+  GalaxyCSharp.dll; GOG may need the game's Galaxy client set up for lobbies).

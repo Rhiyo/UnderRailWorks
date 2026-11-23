@@ -696,6 +696,7 @@ static class UiHooks
         try { Character.WalkTick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("walk: " + ex.Message); }
         try { TalkHooks.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("talk: " + ex.Message); }
         try { Profiler.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("perf: " + ex.Message); }
+        try { Online.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("online: " + ex.Message); }
         try { Keybinds.CheckGameKeys(); } catch (Exception ex) { Log.Write("keys: " + ex.Message); }
         try { AbilityBars.Tick(); } catch (Exception ex) { Log.Write("abilities: " + ex.Message); }
         try { Widgets.Tick(__0 == null ? 0 : __0.ElapsedGameTime.TotalSeconds); } catch (Exception ex) { Log.Write("ui: " + ex.Message); }

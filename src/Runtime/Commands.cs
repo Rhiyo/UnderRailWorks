@@ -15,6 +15,7 @@ namespace UnderRailWorks
 {
     public static class Commands
     {
+        static string lastTestLobby;     // works.online join: the lobby works.online host made
         sealed class Command { public string Mod, Name, Help; public Func<string[], string> Run; }
         static readonly Dictionary<string, Command> all = new Dictionary<string, Command>(StringComparer.OrdinalIgnoreCase);
 
@@ -54,7 +55,7 @@ namespace UnderRailWorks
             if (words.Count == 0 || !all.TryGetValue(words[0], out c)) return false;
             var was = ModScope.Current; ModScope.Current = c.Mod;
             try { var r = c.Run(words.Skip(1).ToArray()); if (r != null) { Print(r); Log.Write("console: " + line + " -> " + r); } }
-            catch (Exception ex) { Print("[error]" + c.Name + " failed: " + ex.Message); ModErrors.Report(c.Mod, "command " + c.Name, ex); }
+            catch (Exception ex) { Print("[error]" + c.Name + " failed: " + ex.Message); ModErrors.Report(c.Mod, "command " + c.Name, ex); Log.Write("commands: " + c.Name + ": " + ex); }
             finally { ModScope.Current = was; }
             return true;
         }
@@ -160,6 +161,28 @@ namespace UnderRailWorks
             });
             Add("UnderRailWorks", "works.reactions", "works.reactions: NPC AI steps that look at the player, and how often they reacted to another party member", a => PartyHooks.ReactionReport());
             Add("UnderRailWorks", "works.armorcheck", "works.armorcheck: the game's faction-armour conditions (CAU, Tchortist, not Gray Army) as they answer now, and for the player alone", a => PartyHooks.ArmorReport());
+            Add("UnderRailWorks", "works.online", "works.online [info|host <n>|members|friends|self <text>|leave]: Steam / GOG play-together (testing)", a =>
+            {
+                var what = a.Length > 0 ? a[0] : "info";
+                string r;
+                switch (what)
+                {
+                    case "host": r = Online.Host(a.Length > 1 ? int.Parse(a[1]) : 4) ? "making a lobby" : "can't"; break;
+                    case "members": r = string.Join(", ", Online.Members().Select(m => m.ToString()).ToArray()); break;
+                    case "friends": r = "friends hosting: " + string.Join(", ", Online.FriendsHosting().Select(m => m + " lobby " + m.Lobby).ToArray()); break;
+                    case "self": r = Online.Send(Online.MyId, System.Text.Encoding.UTF8.GetBytes(a.Length > 1 ? string.Join(" ", a.Skip(1).ToArray()) : "hello")) ? "sent to myself" : "not sent"; break;
+                    case "big": r = Online.Send(Online.MyId, new byte[int.Parse(a.Length > 1 ? a[1] : "600000")]) ? "sent a big one to myself" : "not sent"; break;
+                    case "leave": Online.Leave(); r = "left"; break;
+                    case "join": r = Online.Join(a.Length > 1 ? a[1] : lastTestLobby) ? "joining" : "can't"; break;
+                    default: r = Online.Available ? Online.Service + " as " + Online.MyName + " (" + Online.MyId + ")" + (Online.Lobby == null ? "" : ", lobby " + Online.Lobby + (Online.IsHosting ? " (hosting)" : "")) : "no store"; break;
+                }
+                Log.Write("online test: " + r);
+                return r;
+            });
+            Online.Hosted.Add("UnderRailWorks", l => { lastTestLobby = l; Log.Write("online test: hosted " + l); });
+            Online.Entered.Add("UnderRailWorks", (l, o) => Log.Write("online test: entered " + l + ", host " + o));
+            Online.Received.Add("UnderRailWorks", (f, d) => Log.Write("online test: received " + d.Length + " bytes from " + f + (d.Length < 100 ? ": " + System.Text.Encoding.UTF8.GetString(d) : "")));
+            Online.Failed.Add("UnderRailWorks", (w, y) => Log.Write("online test: failed " + w + ": " + y));
             Add("UnderRailWorks", "works.export", "works.export: export the player character (for a new game's Import)", a => World.ExportPlayer() ? "exported" : "[error]no game");
             Add("UnderRailWorks", "works.perf", "works.perf [seconds]: time each mod's handlers for a while (default 10 s), then list the busiest (also in the log)", a =>
             {

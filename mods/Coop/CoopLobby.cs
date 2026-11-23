@@ -67,6 +67,7 @@ public sealed partial class Coop
         var failed = Listen(port);
         if (failed != null) return failed;
         lobby = kind; lobbySave = save;
+        HostOnline(slots.Count + 1);     // friends on Steam / GOG can join too
         unticked.Clear();
         Log.Info("lobby: " + (kind == "saved" ? "saved game " + save + " (expansions: " + Names(SaveGames.ExpansionsOf(save) ?? new List<string>()) + "), " : "new game, ") + slots.Count + " places (" + string.Join(", ", slots.Select(s => s.New ? "new" : s.Saved.Name).ToArray()) + ") on port " + port);
         Changed();

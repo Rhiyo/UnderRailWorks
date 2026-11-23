@@ -1299,6 +1299,37 @@ Values: `Left, Right, Middle`
 - `Character Npc`
 - `bool EndTurn` — True: the NPC's turn ends now, before it acts further.
 
+## Online  _(class, Online.cs)_
+
+- `static string Service` — "Steam", "GOG", or null (not signed in to a store: then nothing here works).
+- `static bool Available`
+- `static string MyId`
+- `static string MyName`
+- `static string Lobby` — The lobby this player is in (hosting or joined), or null; and who made it.
+- `static string LobbyOwner`
+- `static bool IsHosting`
+- `static readonly Hook<Action<string>> Hosted = new Hook<Action<string>>("Online.Hosted")` — A lobby of ours is up (lobby id): friends can now see and join it.
+- `static readonly Hook<Action<string, string>> Entered = new Hook<Action<string, string>>("Online.Entered")` — We're in someone's lobby (lobby, owner): talk to the owner with Send.
+- `static readonly Hook<Action<string, string>> Failed = new Hook<Action<string, string>>("Online.Failed")` — Host or Join didn't work ("host" / "join", why, for the player).
+- `static readonly Hook<Action<OnlinePlayer>> MemberJoined = new Hook<Action<OnlinePlayer>>("Online.MemberJoined")`
+- `static readonly Hook<Action<string>> MemberLeft = new Hook<Action<string>>("Online.MemberLeft")` — A member left the lobby or their connection failed (id). For a joiner: the host's id means the game is gone.
+- `static readonly Hook<Action<string, byte[]>> Received = new Hook<Action<string, byte[]>>("Online.Received")`
+- `static readonly Hook<Action<string>> InviteAccepted = new Hook<Action<string>>("Online.InviteAccepted")` — The player accepted an invite or chose Join Game in the store's friends list (lobby id), also when the game was started by it (Steam's "+connect_lobby"; raised once the main menu is up).
+- `static bool Host(int maxMembers)` — Makes a friends-only lobby for up to maxMembers players (you included). Answered by Hosted or Failed.
+- `static bool Join(string lobby)` — Enters a friend's lobby. Answered by Entered or Failed.
+- `static void Leave()`
+- `static bool Send(string to, byte[] data)` — Reliable, in order. False: not in a lobby, or the helper refused.
+- `static IList<OnlinePlayer> Members()`
+- `static IList<OnlinePlayer> FriendsHosting()` — Friends hosting (or in) a lobby of this game, with their lobby. GOG: from their rich presence, which arrives a moment after the first call.
+- `static bool OpenInviteDialog()` — The store's overlay invite dialog for our lobby (if the overlay runs in this game).
+
+## OnlinePlayer  _(class, Online.cs)_
+
+- `string Id`
+- `string Name`
+- `string Lobby`
+- `override string ToString()`
+
 ## OpenWindow  _(class, Hud.cs)_
 
 An open window of the game with a title bar (a9t: the title, the close button at the right): inventory, notes...

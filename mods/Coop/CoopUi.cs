@@ -51,6 +51,7 @@ public sealed partial class Coop
     string Mode()
     {
         if (listener != null) return lobby != null || starting ? "lobby" : "host";
+        if (onlineJoining != null) return "connecting";
         if (host != null && !host.Closed) return playing ? "play" : readyAs != null ? "ready" : choices.Count > 0 || hostName != null ? "choose" : "connecting";
         return "idle";
     }
@@ -88,6 +89,7 @@ public sealed partial class Coop
                 break;
             case "lobby":
                 button("Start", () => { var r = StartGame(); if (r != "starting") Notify.Log("Co-op: " + r, Say); });
+                if (Online.IsHosting) button("Invite friends...", () => { if (!Online.OpenInviteDialog()) Tell("the " + Online.Service + " overlay isn't available here: friends join from Join a Game, or Join Game in their friends list"); });
                 button("Stop hosting", () => StopHosting());
                 break;
             case "ready":
@@ -195,7 +197,7 @@ public sealed partial class Coop
                 }
                 break;
             case "connecting":
-                Ui.SetText(statusLabel, "Connecting...");
+                Ui.SetText(statusLabel, onlineJoining != null ? "Joining through " + Online.Service + "..." : "Connecting...");
                 break;
             case "lobby":
             {
@@ -211,6 +213,8 @@ public sealed partial class Coop
                 }
                 foreach (var s in seats.Values.Where(x => !slots.Any(sl => sl.Seat == x))) { items.Add(s.Peer.Name + "  (choosing)"); colours.Add(Grey); }
                 items.Add(""); colours.Add(Grey);
+                if (Online.IsHosting) { items.Add(Online.Service + " friends: Join a Game shows your game (or Join Game in their friends list)."); colours.Add(Mine_); }
+                else if (Online.Available) { items.Add("Making a " + Online.Service + " lobby..."); colours.Add(Grey); }
                 items.Add("Others join with Join a Game and one of these addresses:"); colours.Add(Grey);
                 foreach (var a in Addresses()) { items.Add("   " + WithPort(a, listener.Port)); colours.Add(Mine_); }
                 items.Add("(over the internet: your router's address, with port " + listener.Port + " forwarded)"); colours.Add(Grey);
@@ -265,7 +269,50 @@ public sealed partial class Coop
         host.Send(w);
     }
 
+    // Join a Game: friends hosting on Steam / GOG (if signed in), or an address.
+    UiWindow joinWindow;
     void AskJoin()
+    {
+        if (!Online.Available) { AskAddress(); return; }
+        if (joinWindow != null && joinWindow.IsOpen) joinWindow.Close();
+        int w = Ui.S(520), h = Ui.S(360), pad = Ui.S(10);
+        joinWindow = Ui.Window(this, "join", "Join a Game", w, h);
+        if (joinWindow == null) return;
+        joinWindow.Closed += () => joinWindow = null;
+        w = joinWindow.Width; h = joinWindow.Height;
+        int y = joinWindow.Top + Ui.S(4);
+        Ui.Add(joinWindow, Ui.Label(Online.Service + " friends hosting:", w - 2 * pad), pad, y);
+        y += Ui.LineHeight + Ui.S(6);
+        var friendsList = new List<OnlinePlayer>();
+        int chosen = -1;
+        var join = Ui.Button("Join", () =>
+        {
+            if (chosen < 0 || chosen >= friendsList.Count) { Tell("choose a friend's game"); return; }
+            var r = Join(new[] { "online:" + friendsList[chosen].Lobby });
+            Tell(r);
+            if (joinWindow != null) joinWindow.Close();
+            if (window == null || !window.IsOpen) Build(); else Changed();
+        });
+        UiList rows = null;
+        Action fill = () =>
+        {
+            friendsList.Clear(); friendsList.AddRange(Online.FriendsHosting());
+            rows.Items = friendsList.Count == 0 ? new List<string> { "(none right now: Refresh in a moment)" } : friendsList.Select(f => f.Name).ToList();
+            chosen = -1;
+        };
+        var refresh = Ui.Button("Refresh", () => fill());
+        var address = Ui.Button("By address...", () => { if (joinWindow != null) joinWindow.Close(); AskAddress(); });
+        var close = Ui.Button("Close", () => { if (joinWindow != null) joinWindow.Close(); });
+        int by = h - pad - join.Height;
+        rows = Ui.List(w - 2 * pad, by - Ui.S(8) - y);
+        rows.Selected += i => chosen = i;
+        Ui.Add(joinWindow, rows.View, pad, y);
+        int x = pad;
+        foreach (var b in new[] { join, refresh, address, close }) { Ui.Add(joinWindow, b, x, by); x += b.Width + Ui.S(6); }
+        fill();
+    }
+
+    void AskAddress()
     {
         Ui.Ask(this, "Host's address", lastAddress, address =>
         {
@@ -279,7 +326,9 @@ public sealed partial class Coop
 
     void Leave()
     {
+        if (onlineJoining != null) { onlineJoining = null; Online.Leave(); Changed(); return; }
         if (host == null) return;
+        if (host is OnlinePeer) Online.Leave();
         host.Send("BYE"); host.Close(); host = null; playing = false; readyAs = null; state = null; choices.Clear(); hostName = null;
         LeftWorld();
         Tell("you left");

@@ -10,18 +10,31 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 
-sealed class Peer
+// A connection to another player: plain TCP (TcpPeer), or through the store's lobby (OnlinePeer: Works' Online).
+abstract class Peer
 {
     static int next;
     public readonly int Id = Interlocked.Increment(ref next);
-    readonly TcpClient tcp;
-    readonly StreamWriter writer;
-    readonly object sendLock = new object();
     public volatile bool Closed;
     public string Name = "?";
     public string Address;
 
-    public Peer(TcpClient tcp, Action<Peer, string[]> received, Action<Peer> closed)
+    public void Send(params object[] words)
+    {
+        if (Closed) return;
+        SendLine(string.Join("\t", words.Select(w => (w == null ? "" : Convert.ToString(w, System.Globalization.CultureInfo.InvariantCulture)).Replace('\t', ' ').Replace('\n', ' ').Replace('\r', ' ')).ToArray()));
+    }
+    protected abstract void SendLine(string line);
+    public abstract void Close();
+}
+
+sealed class TcpPeer : Peer
+{
+    readonly TcpClient tcp;
+    readonly StreamWriter writer;
+    readonly object sendLock = new object();
+
+    public TcpPeer(TcpClient tcp, Action<Peer, string[]> received, Action<Peer> closed)
     {
         this.tcp = tcp;
         tcp.NoDelay = true;
@@ -44,20 +57,36 @@ sealed class Peer
         t.Start();
     }
 
-    public void Send(params object[] words)
+    protected override void SendLine(string line)
     {
-        if (Closed) return;
-        var line = string.Join("\t", words.Select(w => (w == null ? "" : Convert.ToString(w, System.Globalization.CultureInfo.InvariantCulture)).Replace('\t', ' ').Replace('\n', ' ').Replace('\r', ' ')).ToArray());
         try { lock (sendLock) writer.WriteLine(line); }
         catch (Exception) { Close(); }
     }
 
-    public void Close()
+    public override void Close()
     {
         if (Closed) return;
         Closed = true;
         try { tcp.Close(); } catch { }
     }
+}
+
+// A player in our store lobby (or the lobby's host). A frame's messages go together as one packet (lines joined by
+// newlines), sent with Works' Online.Send (relayed by Steam or GOG) when Flush is called (Coop, every frame); they
+// arrive through Online.Received on the game's thread (Coop.LoadOnline).
+sealed class OnlinePeer : Peer
+{
+    public readonly string Remote;     // their store id
+    readonly StringBuilder pending = new StringBuilder();
+    public OnlinePeer(string remote, string service) { Remote = remote; Address = service; }
+    protected override void SendLine(string line) { lock (pending) { if (pending.Length > 0) pending.Append('\n'); pending.Append(line); } }
+    public void Flush()
+    {
+        string text;
+        lock (pending) { if (pending.Length == 0 || Closed) return; text = pending.ToString(); pending.Length = 0; }
+        if (!UnderRailWorks.Online.Send(Remote, Encoding.UTF8.GetBytes(text))) Close();
+    }
+    public override void Close() { Flush(); Closed = true; }
 }
 
 // The messages from all peers, for the game's thread.

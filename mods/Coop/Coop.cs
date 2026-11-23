@@ -84,7 +84,7 @@ public sealed partial class Coop : WorksMod
     string Listen(int port)
     {
         if (listener != null) return "already hosting on port " + listener.Port;
-        try { listener = new Listener(port, tcp => new Peer(tcp, inbox.Add, p => inbox.Add(p, new[] { "_closed" }))); }
+        try { listener = new Listener(port, tcp => new TcpPeer(tcp, inbox.Add, p => inbox.Add(p, new[] { "_closed" }))); }
         catch (Exception ex) { listener = null; return "can't host on port " + port + ": " + ex.Message; }
         // The group travels together: an exit is taken only with every player near the one taking it (Works' Party).
         ApplyTravelRule();
@@ -107,6 +107,8 @@ public sealed partial class Coop : WorksMod
         if (listener == null) return;
         WriteRecords();
         foreach (var p in seats.Keys.ToList()) { p.Send("BYE", "the host stopped"); p.Close(); }
+        onlinePeers.Clear();
+        if (onlineHosting) { Online.Leave(); onlineHosting = false; }
         foreach (var s in seats.Values.Concat(orphans)) if (s.Character != null) CharacterControl.Release(s.Character);
         seats.Clear(); orphans.Clear();
         slots.Clear(); lobby = null; starting = false;
@@ -245,22 +247,123 @@ public sealed partial class Coop : WorksMod
         if (listener != null) return "you're hosting";
         if (host != null && !host.Closed) return "already connected (coop.leave first)";
         if (args.Length < 1) return "coop.join <address[:port]> [your name]";
+        string name = args.Length > 1 ? string.Join(" ", args.Skip(1).ToArray()) : (World.Player != null ? World.Player.Name : Environment.UserName);
+        if (args[0] == "friend")     // the first friend hosting (or the one named)
+        {
+            if (!Online.Available) return "not signed in to Steam or GOG Galaxy: join by address instead";
+            var f = Online.FriendsHosting().FirstOrDefault(x => args.Length < 2 || x.Name.Equals(args[1], StringComparison.OrdinalIgnoreCase));
+            if (f == null) return "no friend hosting on " + Online.Service + (args.Length > 1 ? " called " + args[1] : "");
+            var rest = new List<string> { "online:" + f.Lobby };
+            for (int i = 2; i < args.Length; i++) rest.Add(args[i]);     // (Skip past the end, then Concat, threw on .NET 10)
+            args = rest.ToArray();
+        }
+        if (args[0].StartsWith("online:"))     // a friend's lobby on Steam / GOG
+        {
+            if (!Online.Available) return "not signed in to Steam or GOG Galaxy: join by address instead";
+            if (args.Length < 2 && Online.MyName != null) name = Online.MyName;
+            onlineJoining = name;
+            playing = false; readyAs = null; state = null; choices.Clear(); hostMods = null; hostName = null;
+            lastJoin = args;
+            if (!Online.Join(args[0].Substring(7))) { onlineJoining = null; return "couldn't join through " + Online.Service; }
+            Changed();
+            return "joining through " + Online.Service + "...";
+        }
         var parts = args[0].Split(':');
         int port = DefaultPort;
         if (parts.Length > 1 && !int.TryParse(parts[1], out port)) return "coop.join <address[:port]> [your name]";
-        string name = args.Length > 1 ? string.Join(" ", args.Skip(1).ToArray()) : (World.Player != null ? World.Player.Name : Environment.UserName);
         try
         {
             var tcp = new System.Net.Sockets.TcpClient();
             tcp.Connect(parts[0], port);
-            host = new Peer(tcp, inbox.Add, p => inbox.Add(p, new[] { "_closed" }));
+            host = new TcpPeer(tcp, inbox.Add, p => inbox.Add(p, new[] { "_closed" }));
         }
         catch (Exception ex) { host = null; return "can't reach " + args[0] + ": " + ex.Message; }
         playing = false; readyAs = null; state = null; choices.Clear(); hostMods = null;
         lastJoin = args;
-        host.Send("HELLO", Handshake, name, string.Join(",", Mods.Running(true)), string.Join(",", Expansions.Installed));
-        Log.Info("connected to " + args[0] + " as " + name);
+        Hello(args[0], name);
         return "connected to " + args[0] + ", waiting for the character list";
+    }
+
+    void Hello(string to, string name)
+    {
+        host.Send("HELLO", Handshake, name, string.Join(",", Mods.Running(true)), string.Join(",", Expansions.Installed));
+        Log.Info("connected to " + to + " as " + name);
+    }
+
+    // --- Through the store (Works' Online): the host's lobby beside its port; joiners by lobby --------------------
+    readonly Dictionary<string, OnlinePeer> onlinePeers = new Dictionary<string, OnlinePeer>();     // host: by store id
+    string onlineJoining;     // joiner: our name while the store enters the lobby
+    bool onlineHosting;       // host: a lobby asked for (or up)
+
+    OnlinePeer OnlinePeerFor(string id, string name)
+    {
+        OnlinePeer p;
+        if (onlinePeers.TryGetValue(id, out p) && !p.Closed) return p;
+        p = new OnlinePeer(id, Online.Service);
+        onlinePeers[id] = p;
+        Log.Info((name ?? id) + " came in through " + Online.Service);
+        return p;
+    }
+
+    void HostOnline(int players)
+    {
+        if (!Online.Available) return;
+        onlineHosting = true;
+        if (!Online.Host(players)) Log.Info("couldn't make a " + Online.Service + " lobby (joining by address still works)");
+    }
+
+    void LoadOnline()
+    {
+        // A frame's messages to each store peer, as one packet.
+        GameEvents.Update.Add(this, dt =>
+        {
+            foreach (var p in onlinePeers.Values) p.Flush();
+            var hp = host as OnlinePeer; if (hp != null) hp.Flush();
+        }, HookOrder.Late);
+        Online.Hosted.Add(this, lobbyId =>
+        {
+            if (!onlineHosting) return;     // not Co-op's
+            if (listener == null) { Online.Leave(); onlineHosting = false; return; }
+            Notify.Log("Co-op: " + Online.Service + " friends can join you: Join a Game, or Join Game in their friends list", Say);
+            Changed();
+        });
+        Online.MemberJoined.Add(this, m => { if (listener != null) OnlinePeerFor(m.Id, m.Name); });
+        Online.Received.Add(this, (from, data) =>
+        {
+            var lines = System.Text.Encoding.UTF8.GetString(data).Split('\n');
+            Peer to = null;
+            if (listener != null) to = OnlinePeerFor(from, null);
+            else { var op = host as OnlinePeer; if (op != null && op.Remote == from) to = op; }
+            if (to == null || to.Closed) return;
+            foreach (var l in lines) if (l.Length > 0) inbox.Add(to, l.Split('\t'));
+        });
+        Online.MemberLeft.Add(this, id =>
+        {
+            OnlinePeer p;
+            if (listener != null && onlinePeers.TryGetValue(id, out p)) { onlinePeers.Remove(id); p.Close(); inbox.Add(p, new[] { "_closed" }); return; }
+            var op = host as OnlinePeer;
+            if (op != null && op.Remote == id) { op.Close(); inbox.Add(op, new[] { "_closed" }); }
+        });
+        Online.Entered.Add(this, (lobbyId, owner) =>
+        {
+            if (onlineJoining == null) return;     // not Co-op's
+            var name = onlineJoining; onlineJoining = null;
+            host = new OnlinePeer(owner, Online.Service);
+            Hello(Online.Service + " lobby " + lobbyId, name);
+            Changed();
+        });
+        Online.Failed.Add(this, (what, why) =>
+        {
+            if (what == "join" && onlineJoining != null) { onlineJoining = null; Tell("can't join: " + why); Changed(); }
+            else if (what == "host" && listener != null) Tell(Online.Service + " friends can't join (" + why + "); joining by address still works");
+        });
+        Online.InviteAccepted.Add(this, lobbyId =>
+        {
+            if (listener != null || (host != null && !host.Closed)) { Tell("leave this co-op game first to join another"); return; }
+            if (World.Player != null) { Tell("a friend's invite: go to the main menu (Escape -> main menu) and accept it again, or use Join a Game"); return; }
+            Tell(Join(new[] { "online:" + lobbyId }));
+            if (window == null || !window.IsOpen) Build();
+        });
     }
 
     void JoinerMessage(string[] w)
@@ -471,7 +574,20 @@ public sealed partial class Coop : WorksMod
                 + (orphans.Count > 0 ? "; left behind: " + string.Join(", ", orphans.Select(o => o.Record.Name).ToArray()) : "");
             Log.Info(s); return s;
         });
-        Commands.Add(this, "coop.join", "coop.join <address[:port]> [your name]: join a co-op game", Join);
+        Commands.Add(this, "coop.join", "coop.join <address[:port]> [your name] | coop.join online:<lobby> [your name] | coop.join friend [friend's name] [your name]: join a co-op game (by address, or a friend's Steam / GOG lobby)", Join);
+        Commands.Add(this, "coop.friends", "coop.friends: Steam / GOG friends hosting a co-op game (join with coop.join online:<lobby>)", a =>
+        {
+            if (!Online.Available) return "not signed in to Steam or GOG Galaxy";
+            var f = Online.FriendsHosting();
+            var r = f.Count == 0 ? "no friends hosting on " + Online.Service : string.Join("; ", f.Select(x => x.Name + ": online:" + x.Lobby).ToArray());
+            Log.Info("friends: " + r); return r;
+        });
+        Commands.Add(this, "coop.online", "coop.online: whether Steam / GOG play-together works here, and the lobby", a =>
+        {
+            var r = !Online.Available ? "not signed in to Steam or GOG Galaxy" : Online.Service + " as " + Online.MyName + (Online.Lobby == null ? ", no lobby" : (Online.IsHosting ? ", hosting lobby " : ", in lobby ") + Online.Lobby);
+            Log.Info("online: " + r); return r;
+        });
+        LoadOnline();
         Commands.Add(this, "coop.leave", "coop.leave: leave the co-op game", a => { if (host == null) return "not joined"; Leave(); return "left"; });
         Commands.Add(this, "coop.follow", "coop.follow: your character walks next to the host's", a => Mine("FOLLOW"));
         Commands.Add(this, "coop.pick", "coop.pick <number>: play that character from the host's list", a => { if (host == null) return "not joined"; host.Send("PICK", a.Length > 0 ? a[0] : ""); return null; });

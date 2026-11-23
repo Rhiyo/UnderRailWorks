@@ -47,7 +47,8 @@ public static class SteamBridge
                 }
                 input.WriteLine(command);
                 string reply = output.ReadLine();
-                Log.Write("helper: " + shown + " -> " + reply);
+                // Online's traffic (every frame, and data) isn't logged; Online logs what happens.
+                if (!shown.StartsWith("NetPoll") && !shown.StartsWith("NetSend") && !shown.StartsWith("NetMembers") && !shown.StartsWith("NetFriends")) Log.Write("helper: " + shown + " -> " + reply);
                 return reply;
             }
             catch (Exception ex) { Log.Write("helper: " + shown + " failed: " + ex.Message); return null; }

@@ -57,7 +57,7 @@ Works comes with **no mods installed**. Each mod is its own download on the
 | Mod | What it does |
 |---|---|
 | **Wall Vision** | See and select characters behind walls and scenery: a keyhole, lines, dots, a fill or an outline where they're hidden, set per kind of character (you, hostiles, others). |
-| **Co-op** | Play together (2-4 players): the host opens a lobby from the main menu for a new game or a saved one, the others join it with their own characters, and the game starts when everyone is there. Walking, fighting, looting, trading, conversations, travelling as a group, and everyone gets all the XP. Direct connection (LAN, port forwarding or a VPN). |
+| **Co-op** | Play together (2-4 players): the host opens a lobby from the main menu for a new game or a saved one, the others join it with their own characters, and the game starts when everyone is there. Walking, fighting, looting, trading, conversations, travelling as a group, and everyone gets all the XP. Friends join through Steam from Join a Game or their friends list, no addresses needed (GOG Galaxy: built, not yet tested); joining by address (LAN, port forwarding or a VPN) works too. |
 | **HUD Layout** | Drag the game's HUD parts and mods' panels where you want them; saved per HUD size. |
 | **Movable Windows** | Drag the game's windows (inventory, notes, crafting, map...) by their title bar; a window you moved stays open when another opens beside it. |
 
