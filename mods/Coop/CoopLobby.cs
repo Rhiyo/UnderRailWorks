@@ -165,15 +165,16 @@ public sealed partial class Coop
         if (name.Length == 0) { p.Send("SAID", "coop.new <name>"); return; }
         Func<string, bool> used = n => slots.Any(s => (s.Saved != null && s.Saved.Name.Equals(n, StringComparison.OrdinalIgnoreCase)) || (s.Seat != null && s.Seat.Record != null && s.Seat.Record.Name.Equals(n, StringComparison.OrdinalIgnoreCase)));
         if (used(name)) { int n2 = 2; while (used(name + " " + n2)) n2++; p.Send("SAID", "there's already a " + name + " in this game: yours is " + name + " " + n2); name = name + " " + n2; }
-        // A character made or imported on the joiner's machine: only what this game has (its expansions, items, levels).
+        // A character made in creation on the joiner's machine (Import is off in co-op): fresh (level 1, no XP), and only
+        // what this game has (its expansions, items).
         var sheet = w.Length > 2 && w[2].Length > 0 ? w[2] : null;
         if (sheet != null)
         {
-            var problems = World.CharacterFileProblems(WriteSheet(name + "-check", sheet), LobbyExpansions());
+            var problems = World.CharacterFileProblems(WriteSheet(name + "-check", sheet), LobbyExpansions(), true);
             if (problems.Count > 0)
             {
                 Log.Info(p.Name + "'s character " + name + " refused: " + string.Join("; ", problems.ToArray()));
-                p.Send("SAID", name + " can't join this game: " + string.Join("; ", problems.ToArray()) + ". Make or import another character.");
+                p.Send("SAID", name + " can't join this game: " + string.Join("; ", problems.ToArray()) + ". Make a new character.");
                 return;
             }
         }

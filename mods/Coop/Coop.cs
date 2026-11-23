@@ -480,7 +480,9 @@ public sealed partial class Coop : WorksMod
         Commands.Add(this, "coop.attack", "coop.attack <name>: your character attacks the nearest one of that name", a => Mine(new[] { "ATTACK" }.Concat(a).ToArray()));
         Commands.Add(this, "coop.end", "coop.end: ends your character's combat turn", a => Mine("END"));
         Commands.Add(this, "coop.door", "coop.door <id start>: your character uses that door (wt.doors lists them)", a => { var d = a.Length == 0 ? null : World.Doors.FirstOrDefault(x => x.EntityId.StartsWith(a[0])); return d == null ? "no such door" : Mine("USE", d.EntityId); });
-        Commands.Add(this, "coop.newfrom", "coop.newfrom <file.char> <name>: join with a character exported earlier (as finishing creation does)", a => { if (host == null || a.Length < 2) return "coop.newfrom <file.char> <name>"; host.Send("NEW", a[1], Convert.ToBase64String(System.IO.File.ReadAllBytes(a[0]))); return "sent"; });
+        // No importing in co-op (host or joiner): characters come from creation only, never from another game or another
+        // mod setup (its items and stats might not exist here).
+        GameEvents.Update.Add(this, dt => World.CreationImport = listener == null && host == null);
         Commands.Add(this, "coop.turntime", "coop.turntime <seconds>: how long a joined player's turn may take (0: no limit)", a =>
         {
             int n; var o = Option(Id, "turntime");

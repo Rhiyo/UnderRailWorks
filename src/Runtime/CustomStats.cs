@@ -150,6 +150,15 @@ namespace UnderRailWorks.Internal
         } catch (Exception ex_) { PatchGuard.Failed("CustomStats.Opened", ex_); }
     }
 
+        static readonly FieldInfo ImportField = typeof(iw).GetField("j", Inst | BindingFlags.DeclaredOnly);
+        static void ImportButton(iw __instance)
+        { try {
+            if (World.CreationImport || ImportField == null) return;
+            var b = ImportField.GetValue(__instance) as dak;
+            if (b != null) b.Visible = false;
+        } catch (Exception ex_) { PatchGuard.Failed("CustomStats.ImportButton", ex_); } }
+        static bool ImportClicked() { if (!World.CreationImport) { Log.Write("creation: import is off"); return false; } return true; }
+
         // iw.a(cku): closing; cku.b is Cancel.
         static void Closing(object __instance, cku __0)
         { try {
@@ -259,6 +268,9 @@ namespace UnderRailWorks.Internal
             harmony.Patch(typeof(iw).GetMethod("c", Inst | BindingFlags.DeclaredOnly, null, Type.EmptyTypes, null), postfix: m("Built"));
             harmony.Patch(typeof(iw).GetConstructor(new[] { typeof(e3q), typeof(a9m), typeof(bool) }), postfix: m("Opened"));
             harmony.Patch(typeof(amm).GetMethod("a", Inst | BindingFlags.DeclaredOnly, null, new[] { typeof(cku) }, null), prefix: m("Closing"));
+            // World.CreationImport: iw.d() builds the Import button (field j), iw.a(object, b25) is its click (the import dialog).
+            harmony.Patch(typeof(iw).GetMethod("d", Inst | BindingFlags.DeclaredOnly, null, Type.EmptyTypes, null), postfix: m("ImportButton"));
+            harmony.Patch(typeof(iw).GetMethod("a", Inst | BindingFlags.DeclaredOnly, null, new[] { typeof(object), typeof(b25) }, null), prefix: m("ImportClicked"));
         }
     }
 }

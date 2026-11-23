@@ -88,6 +88,11 @@ character arriving mid-fight), so for the first release players join only in a l
   every sheet sent or taken, and a joiner's sheet made from an older version, or while the host's copy has an unsent
   change, is refused (the host's copy goes back). Nothing is lost or doubled; a joiner's simultaneous change can be
   undone. (Exporting a character refreshed every open window; a non-player's export no longer does.)
+- **No importing in co-op (Nov 23):** while hosting or joined, character creation has no Import button (Works'
+  `World.CreationImport`), for the host too, and the host refuses a joiner's new character that isn't fresh (level 1, no
+  XP). A character exported from another game could carry items and stats from mods or setups this game doesn't have
+  (a mod's item loads as an "Unknown" item; points a mod allowed look like stock data), so for now every co-op
+  character is made in creation.
 - **Lobby character checks, turn time, rejoining (Nov 23):** an incoming character with feats or skills of an expansion
   the game doesn't use, a level above 25 or specializations without Expedition, items this game doesn't have, or a newer
   game version is refused, naming each (`World.CharacterFileProblems`, `works.charcheck`). A host option limits a joined

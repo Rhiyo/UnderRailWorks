@@ -123,7 +123,12 @@ namespace UnderRailWorks
         // expansion (their DLC), a level above 25 or specializations without Expedition (the game's veteran levels),
         // items this game's data doesn't have, a newer game version. Read from the file; nothing is built. Empty: it
         // fits. Lines for a player, e.g. "the feat Last Stand (Expedition)".
-        [Preview("multiplayer: built for Co-op so far")] public static IList<string> CharacterFileProblems(string path, IEnumerable<string> expansions)
+        // False: character creation offers no Import (the button is hidden, and its dialog doesn't open). Co-op turns it
+        // off while hosting or joined: only characters made in creation, nothing from another game or modded setup.
+        [Preview("multiplayer: built for Co-op so far")] public static bool CreationImport = true;
+
+        // newOnly: also refuse a character that isn't fresh from creation (level above 1, or any XP).
+        [Preview("multiplayer: built for Co-op so far")] public static IList<string> CharacterFileProblems(string path, IEnumerable<string> expansions, bool newOnly = false)
         {
             var problems = new List<string>();
             var on = new HashSet<string>((expansions ?? new string[0]).Select(x => x.ToLowerInvariant()));
@@ -132,6 +137,11 @@ namespace UnderRailWorks
             catch (Exception ex) { problems.Add("the character file can't be read here (" + (ex.InnerException ?? ex).Message + ")"); return problems; }
             var sheet = file == null ? null : FileSheet.GetValue(file) as au2;
             if (sheet == null) { problems.Add("not a character file this game can read"); return problems; }
+            if (newOnly)
+            {
+                var xp = sheet is e3q ? ((e3q)sheet).i() : 0;
+                if (sheet.Level > 1 || xp > 0) problems.Add("not a new character (level " + sheet.Level + ", " + xp + " XP): only characters made in creation can join");
+            }
             var made = FileVersion.GetValue(file) as Version;
             if (made != null && made > dm9.d) problems.Add("made with a newer game version (" + made + ")");
             Func<string, string> dlc = id => Expansions.Name(id);
