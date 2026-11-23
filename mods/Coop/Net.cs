@@ -72,7 +72,7 @@ sealed class TcpPeer : Peer
 }
 
 // A player in our store lobby (or the lobby's host). A frame's messages go together as one packet (lines joined by
-// newlines), sent with Works' Online.Send (relayed by Steam or GOG) when Flush is called (Coop, every frame); they
+// newlines), sent with Works' Online.Send (relayed by Steam) when Flush is called (Coop, every frame); they
 // arrive through Online.Received on the game's thread (Coop.LoadOnline).
 sealed class OnlinePeer : Peer
 {

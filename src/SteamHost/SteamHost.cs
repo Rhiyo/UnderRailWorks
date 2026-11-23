@@ -108,7 +108,6 @@ static class GalaxyCalls
     public static void Process()
     {
         try { Galaxy.Api.GalaxyInstance.ProcessData(); } catch { }
-        try { GalaxyNet.Pump(); } catch (Exception ex) { OnlineHost.Event("failed", "pump", OnlineHost.B64(ex.GetType().Name + ": " + ex.Message)); }
     }
 
     public static string Do(string command, string arg)
@@ -128,7 +127,6 @@ static class GalaxyCalls
                 if (GalaxyRunner.initialised) { GalaxyRunner.initialised = false; Galaxy.Api.GalaxyInstance.Shutdown(true); }
                 return "";
         }
-        if (command.StartsWith("Net")) return GalaxyRunner.initialised && GalaxyRunner.signedIn ? GalaxyNet.Do(command, arg) : (command == "NetInfo" ? "none" : "0");
         if (!(GalaxyRunner.initialised && GalaxyRunner.signedIn && GalaxyRunner.statsReady)) return "0";
         var s = Galaxy.Api.GalaxyInstance.Stats();
         switch (command)
@@ -156,168 +154,5 @@ static class GalaxyCalls
     {
         public override void OnUserStatsAndAchievementsRetrieveSuccess(Galaxy.Api.GalaxyID user) { GalaxyRunner.statsReady = true; }
         public override void OnUserStatsAndAchievementsRetrieveFailure(Galaxy.Api.GalaxyID user, Galaxy.Api.IUserStatsAndAchievementsRetrieveListener.FailureReason reason) { }
-    }
-}
-
-// GOG Galaxy's lobbies and P2P (on GalaxyRunner's thread): the same commands and events as Steam's (OnlineHost.cs).
-// The host's lobby id is in its rich presence ("connect": "+connect_lobby <id>"), which is how friends find it and
-// what Galaxy's own "join" passes (OnGameJoinRequested).
-static class GalaxyNet
-{
-    static Galaxy.Api.GalaxyID lobby;
-    static bool listening;
-    static readonly System.Collections.Generic.Queue<System.Collections.Generic.KeyValuePair<ulong, byte[]>> outgoing = new System.Collections.Generic.Queue<System.Collections.Generic.KeyValuePair<ulong, byte[]>>();
-    static Created created; static Entered entered; static MemberState members; static JoinRequested joinRequested; static FriendList friendList;
-
-    static Galaxy.Api.IMatchmaking Mm { get { return Galaxy.Api.GalaxyInstance.Matchmaking(); } }
-    static Galaxy.Api.GalaxyID Me { get { return Galaxy.Api.GalaxyInstance.User().GetGalaxyID(); } }
-
-    static void Listen()
-    {
-        if (listening) return;
-        listening = true;
-        created = new Created(); entered = new Entered(); members = new MemberState(); joinRequested = new JoinRequested(); friendList = new FriendList();
-        Galaxy.Api.GalaxyInstance.Friends().RequestFriendList();
-    }
-
-    public static string Do(string command, string arg)
-    {
-        Listen();
-        switch (command)
-        {
-            case "NetInfo": return "gog " + Me.ToUint64() + " " + OnlineHost.B64(Galaxy.Api.GalaxyInstance.Friends().GetPersonaName());
-            case "NetHost":
-            {
-                uint max; if (!uint.TryParse(arg, out max)) max = 4;
-                Leave();
-                Mm.CreateLobby(Galaxy.Api.LobbyType.LOBBY_TYPE_FRIENDS_ONLY, max, true, Galaxy.Api.LobbyTopologyType.LOBBY_TOPOLOGY_TYPE_STAR);
-                return "1";
-            }
-            case "NetJoin":
-            {
-                ulong id; if (!ulong.TryParse(arg, out id)) return "0";
-                Leave();
-                Mm.JoinLobby(new Galaxy.Api.GalaxyID(id));
-                return "1";
-            }
-            case "NetLeave": Leave(); return "";
-            case "NetSend":
-            {
-                var p = arg.Split(' '); ulong to;
-                if (p.Length != 2 || !ulong.TryParse(p[0], out to)) return "0";
-                outgoing.Enqueue(new System.Collections.Generic.KeyValuePair<ulong, byte[]>(to, Convert.FromBase64String(p[1])));
-                return "1";
-            }
-            case "NetMembers":
-            {
-                var list = new System.Collections.Generic.List<string>();
-                if (lobby != null)
-                    for (uint i = 0, n = Mm.GetNumLobbyMembers(lobby); i < n; i++)
-                    { var m = Mm.GetLobbyMemberByIndex(lobby, i); list.Add(m.ToUint64() + "," + OnlineHost.B64(NameOf(m))); }
-                return string.Join(" ", list.ToArray());
-            }
-            case "NetFriends":
-            {
-                var f = Galaxy.Api.GalaxyInstance.Friends();
-                var list = new System.Collections.Generic.List<string>();
-                for (uint i = 0, n = f.GetFriendCount(); i < n; i++)
-                {
-                    var friend = f.GetFriendByIndex(i);
-                    f.RequestRichPresence(friend);     // answered later: the list shows it from the next time
-                    string connect = null;
-                    try { connect = f.GetRichPresence("connect", friend); } catch { }
-                    ulong l;
-                    var parts = (connect ?? "").Split(' ');
-                    if (parts.Length == 2 && parts[0] == "+connect_lobby" && ulong.TryParse(parts[1], out l)) list.Add(friend.ToUint64() + "," + OnlineHost.B64(f.GetFriendPersonaName(friend)) + "," + l);
-                }
-                return string.Join(" ", list.ToArray());
-            }
-            case "NetInvite":
-                if (lobby == null) return "0";
-                Galaxy.Api.GalaxyInstance.Friends().ShowOverlayInviteDialog("+connect_lobby " + lobby.ToUint64());
-                return "1";
-        }
-        return "?";
-    }
-
-    static string NameOf(Galaxy.Api.GalaxyID id)
-    {
-        var f = Galaxy.Api.GalaxyInstance.Friends();
-        if (id.ToUint64() == Me.ToUint64()) return f.GetPersonaName();
-        try { return f.GetFriendPersonaName(id); } catch { return id.ToUint64().ToString(); }
-    }
-
-    static void Leave()
-    {
-        if (lobby == null) return;
-        try { Mm.LeaveLobby(lobby); } catch { }
-        try { Galaxy.Api.GalaxyInstance.Friends().DeleteRichPresence("connect"); } catch { }
-        lobby = null;
-    }
-
-    public static void Pump()
-    {
-        if (!listening) return;
-        var net = Galaxy.Api.GalaxyInstance.Networking();
-        uint size = 0;
-        var buffer = new byte[1 << 20];
-        while (net.IsP2PPacketAvailable(ref size))
-        {
-            if (size > buffer.Length) buffer = new byte[size];
-            uint got = 0; var from = new Galaxy.Api.GalaxyID();
-            if (!net.ReadP2PPacket(buffer, (uint)buffer.Length, ref got, ref from)) break;
-            OnlineHost.Event("data", from.ToUint64(), Convert.ToBase64String(buffer, 0, (int)got));
-        }
-        while (outgoing.Count > 0)
-        {
-            var o = outgoing.Peek();
-            if (!net.SendP2PPacket(new Galaxy.Api.GalaxyID(o.Key), o.Value, (uint)o.Value.Length, Galaxy.Api.P2PSendType.P2P_SEND_RELIABLE)) break;
-            outgoing.Dequeue();
-        }
-    }
-
-    sealed class Created : Galaxy.Api.GlobalLobbyCreatedListener
-    {
-        public override void OnLobbyCreated(Galaxy.Api.GalaxyID id, Galaxy.Api.LobbyCreateResult result)
-        {
-            if (result != Galaxy.Api.LobbyCreateResult.LOBBY_CREATE_RESULT_SUCCESS) { OnlineHost.Event("failed", "host", OnlineHost.B64("GOG couldn't make the lobby")); return; }
-            lobby = id;
-            Mm.SetLobbyData(id, "game", "underrailworks");
-            Galaxy.Api.GalaxyInstance.Friends().SetRichPresence("connect", "+connect_lobby " + id.ToUint64());
-            OnlineHost.Event("hosted", id.ToUint64());
-        }
-    }
-    sealed class Entered : Galaxy.Api.GlobalLobbyEnteredListener
-    {
-        public override void OnLobbyEntered(Galaxy.Api.GalaxyID id, Galaxy.Api.LobbyEnterResult result)
-        {
-            if (lobby != null && id.ToUint64() == lobby.ToUint64()) return;     // our own lobby, just made
-            if (result != Galaxy.Api.LobbyEnterResult.LOBBY_ENTER_RESULT_SUCCESS)
-            { OnlineHost.Event("failed", "join", OnlineHost.B64(result == Galaxy.Api.LobbyEnterResult.LOBBY_ENTER_RESULT_LOBBY_DOES_NOT_EXIST ? "that game no longer exists" : result == Galaxy.Api.LobbyEnterResult.LOBBY_ENTER_RESULT_LOBBY_IS_FULL ? "that game is full" : "GOG couldn't enter the lobby")); return; }
-            lobby = id;
-            OnlineHost.Event("entered", id.ToUint64(), Mm.GetLobbyOwner(id).ToUint64());
-        }
-    }
-    sealed class MemberState : Galaxy.Api.GlobalLobbyMemberStateListener
-    {
-        public override void OnLobbyMemberStateChanged(Galaxy.Api.GalaxyID id, Galaxy.Api.GalaxyID member, Galaxy.Api.LobbyMemberStateChange change)
-        {
-            if (lobby == null || id.ToUint64() != lobby.ToUint64()) return;
-            if (change == Galaxy.Api.LobbyMemberStateChange.LOBBY_MEMBER_STATE_CHANGED_ENTERED) OnlineHost.Event("joined", member.ToUint64(), OnlineHost.B64(NameOf(member)));
-            else OnlineHost.Event("left", member.ToUint64());
-        }
-    }
-    sealed class JoinRequested : Galaxy.Api.GlobalGameJoinRequestedListener
-    {
-        public override void OnGameJoinRequested(Galaxy.Api.GalaxyID user, string connection)
-        {
-            var parts = (connection ?? "").Split(' '); ulong l;
-            if (parts.Length == 2 && parts[0] == "+connect_lobby" && ulong.TryParse(parts[1], out l)) OnlineHost.Event("invite", l);
-        }
-    }
-    sealed class FriendList : Galaxy.Api.GlobalFriendListListener
-    {
-        public override void OnFriendListRetrieveSuccess() { }
-        public override void OnFriendListRetrieveFailure(Galaxy.Api.IFriendListListener.FailureReason reason) { }
     }
 }

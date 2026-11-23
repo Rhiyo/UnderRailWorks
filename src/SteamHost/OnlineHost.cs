@@ -5,9 +5,9 @@
 // a lobby of this game. Callbacks are read from the Steam client's queue (steamclient's Steam_BGetCallback, as
 // steam_api's own RunCallbacks does) on a pump thread; call results (lobby created / entered) are polled through
 // ISteamUtils.
-// GOG: the same through Galaxy (GalaxyCSharp.dll, on GalaxyRunner's thread): lobbies, P2P, friends' rich presence.
+// Steam only: GOG Galaxy multiplayer was dropped (untestable here, and needs the Galaxy app, which Linux players lack).
 // Commands (one line each, as the rest of the helper):
-//   NetInfo                 -> "steam <my id> <name b64>" | "gog <id> <name b64>" | "none"
+//   NetInfo                 -> "steam <my id> <name b64>" | "none"
 //   NetHost <max members>   -> "1"/"0"; then the event "hosted <lobby>" or "failed host"
 //   NetJoin <lobby>         -> "1"/"0"; then "entered <lobby> <owner>" or "failed join <why>"
 //   NetLeave                -> ""
@@ -15,7 +15,7 @@
 //   NetPoll                 -> events, space separated, each "kind,arg,arg...": hosted,<lobby> entered,<lobby>,<owner>
 //                              failed,<what>,<why> joined,<id> left,<id> data,<from>,<b64> invite,<lobby>
 //   NetMembers              -> "<id>,<name b64> ..." (the lobby's members)
-//   NetFriends              -> "<id>,<name b64>,<lobby> ..." (friends in a lobby of this game; GOG: their rich presence)
+//   NetFriends              -> "<id>,<name b64>,<lobby> ..." (friends in a lobby of this game)
 //   NetInvite               -> "1"/"0": the store's overlay invite dialog for the lobby
 using System;
 using System.Collections.Generic;
@@ -42,7 +42,6 @@ static class OnlineHost
     {
         if (command == "NetPoll") { lock (events) { var r = string.Join(" ", events.ToArray()); events.Clear(); return r; } }
         if (SteamStarted) return SteamNet.Do(command, arg);
-        if (GalaxyRunner.signedIn) return GalaxyRunner.Run(command, arg);
         return command == "NetInfo" ? "none" : "0";
     }
 }

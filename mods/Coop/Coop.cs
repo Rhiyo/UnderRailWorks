@@ -250,16 +250,16 @@ public sealed partial class Coop : WorksMod
         string name = args.Length > 1 ? string.Join(" ", args.Skip(1).ToArray()) : (World.Player != null ? World.Player.Name : Environment.UserName);
         if (args[0] == "friend")     // the first friend hosting (or the one named)
         {
-            if (!Online.Available) return "not signed in to Steam or GOG Galaxy: join by address instead";
+            if (!Online.Available) return "not signed in to Steam: join by address instead";
             var f = Online.FriendsHosting().FirstOrDefault(x => args.Length < 2 || x.Name.Equals(args[1], StringComparison.OrdinalIgnoreCase));
             if (f == null) return "no friend hosting on " + Online.Service + (args.Length > 1 ? " called " + args[1] : "");
             var rest = new List<string> { "online:" + f.Lobby };
             for (int i = 2; i < args.Length; i++) rest.Add(args[i]);     // (Skip past the end, then Concat, threw on .NET 10)
             args = rest.ToArray();
         }
-        if (args[0].StartsWith("online:"))     // a friend's lobby on Steam / GOG
+        if (args[0].StartsWith("online:"))     // a friend's lobby on Steam
         {
-            if (!Online.Available) return "not signed in to Steam or GOG Galaxy: join by address instead";
+            if (!Online.Available) return "not signed in to Steam: join by address instead";
             if (args.Length < 2 && Online.MyName != null) name = Online.MyName;
             onlineJoining = name;
             playing = false; readyAs = null; state = null; choices.Clear(); hostMods = null; hostName = null;
@@ -574,17 +574,17 @@ public sealed partial class Coop : WorksMod
                 + (orphans.Count > 0 ? "; left behind: " + string.Join(", ", orphans.Select(o => o.Record.Name).ToArray()) : "");
             Log.Info(s); return s;
         });
-        Commands.Add(this, "coop.join", "coop.join <address[:port]> [your name] | coop.join online:<lobby> [your name] | coop.join friend [friend's name] [your name]: join a co-op game (by address, or a friend's Steam / GOG lobby)", Join);
-        Commands.Add(this, "coop.friends", "coop.friends: Steam / GOG friends hosting a co-op game (join with coop.join online:<lobby>)", a =>
+        Commands.Add(this, "coop.join", "coop.join <address[:port]> [your name] | coop.join online:<lobby> [your name] | coop.join friend [friend's name] [your name]: join a co-op game (by address, or a friend's Steam lobby)", Join);
+        Commands.Add(this, "coop.friends", "coop.friends: Steam friends hosting a co-op game (join with coop.join online:<lobby>)", a =>
         {
-            if (!Online.Available) return "not signed in to Steam or GOG Galaxy";
+            if (!Online.Available) return "not signed in to Steam";
             var f = Online.FriendsHosting();
             var r = f.Count == 0 ? "no friends hosting on " + Online.Service : string.Join("; ", f.Select(x => x.Name + ": online:" + x.Lobby).ToArray());
             Log.Info("friends: " + r); return r;
         });
-        Commands.Add(this, "coop.online", "coop.online: whether Steam / GOG play-together works here, and the lobby", a =>
+        Commands.Add(this, "coop.online", "coop.online: whether Steam play-together works here, and the lobby", a =>
         {
-            var r = !Online.Available ? "not signed in to Steam or GOG Galaxy" : Online.Service + " as " + Online.MyName + (Online.Lobby == null ? ", no lobby" : (Online.IsHosting ? ", hosting lobby " : ", in lobby ") + Online.Lobby);
+            var r = !Online.Available ? "not signed in to Steam" : Online.Service + " as " + Online.MyName + (Online.Lobby == null ? ", no lobby" : (Online.IsHosting ? ", hosting lobby " : ", in lobby ") + Online.Lobby);
             Log.Info("online: " + r); return r;
         });
         LoadOnline();

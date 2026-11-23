@@ -269,7 +269,7 @@ public sealed partial class Coop
         host.Send(w);
     }
 
-    // Join a Game: friends hosting on Steam / GOG (if signed in), or an address.
+    // Join a Game: friends hosting on Steam (if signed in), or an address.
     UiWindow joinWindow;
     void AskJoin()
     {

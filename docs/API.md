@@ -1301,7 +1301,7 @@ Values: `Left, Right, Middle`
 
 ## Online  _(class, Online.cs)_
 
-- `static string Service` — "Steam", "GOG", or null (not signed in to a store: then nothing here works).
+- `static string Service` — "Steam" (or "Test store"), or null (not signed in to a store: then nothing here works).
 - `static bool Available`
 - `static string MyId`
 - `static string MyName`
@@ -1320,7 +1320,7 @@ Values: `Left, Right, Middle`
 - `static void Leave()`
 - `static bool Send(string to, byte[] data)` — Reliable, in order. False: not in a lobby, or the helper refused.
 - `static IList<OnlinePlayer> Members()`
-- `static IList<OnlinePlayer> FriendsHosting()` — Friends hosting (or in) a lobby of this game, with their lobby. GOG: from their rich presence, which arrives a moment after the first call.
+- `static IList<OnlinePlayer> FriendsHosting()` — Friends hosting (or in) a lobby of this game, with their lobby.
 - `static bool OpenInviteDialog()` — The store's overlay invite dialog for our lobby (if the overlay runs in this game).
 
 ## OnlinePlayer  _(class, Online.cs)_

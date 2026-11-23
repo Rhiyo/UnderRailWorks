@@ -1,5 +1,6 @@
-// UnderRailWorks: playing together through the store the game came from: Steam or GOG Galaxy (whichever the game is
-// signed in to). Lobbies only your friends can see and join, messages relayed by the store (no addresses, no port
+// UnderRailWorks: playing together through Steam (the only store supported for now: GOG Galaxy's multiplayer
+// needs the Galaxy app, which most Linux GOG players don't run, and couldn't be tested).
+// Lobbies only your friends can see and join, messages relayed by the store (no addresses, no port
 // forwarding), the friends who are hosting, the store's invite dialog, and invites accepted in the store's friends list
 // or overlay. The store's own API runs in the 32-bit helper process (UnderrailSteamHost.exe, OnlineHost.cs); this side
 // polls it on the game's thread, so every hook here runs on the game's thread.
@@ -36,7 +37,7 @@ namespace UnderRailWorks
         static bool pending;     // a Host or Join waiting for its answer
         static readonly Dictionary<string, MemoryStream> partial = new Dictionary<string, MemoryStream>();
 
-        // "Steam", "GOG", or null (not signed in to a store: then nothing here works).
+        // "Steam" (or "Test store"), or null (not signed in to a store: then nothing here works).
         public static string Service { get { Ask(); return service; } }
         public static bool Available { get { return Service != null; } }
         public static string MyId { get { Ask(); return myId; } }
@@ -66,9 +67,9 @@ namespace UnderRailWorks
             askTimer = 10;
             var r = Store.Call("NetInfo");
             var p = (r ?? "").Split(' ');
-            if (p.Length == 3 && (p[0] == "steam" || p[0] == "gog" || p[0] == "test"))
+            if (p.Length == 3 && (p[0] == "steam" || p[0] == "test"))
             {
-                service = p[0] == "steam" ? "Steam" : p[0] == "gog" ? "GOG" : "Test store";
+                service = p[0] == "steam" ? "Steam" : "Test store";
                 myId = p[1]; myName = Text(p[2]);
                 Log.Write("online: " + service + " as " + myName);
             }
@@ -117,8 +118,7 @@ namespace UnderRailWorks
         }
 
         public static IList<OnlinePlayer> Members() { return Players(Lobby == null ? null : Store.Call("NetMembers")); }
-        // Friends hosting (or in) a lobby of this game, with their lobby. GOG: from their rich presence, which arrives a
-        // moment after the first call.
+        // Friends hosting (or in) a lobby of this game, with their lobby.
         public static IList<OnlinePlayer> FriendsHosting() { return Players(Available ? Store.Call("NetFriends") : null); }
         // The store's overlay invite dialog for our lobby (if the overlay runs in this game).
         public static bool OpenInviteDialog() { return Lobby != null && Store.Call("NetInvite") == "1"; }
@@ -215,7 +215,7 @@ namespace UnderRailWorks
         }
     }
 
-    // Where Online's commands go: the helper (Steam / GOG), or with UNDERRAILWORKS_TEST_STORE=<folder> a pretend store
+    // Where Online's commands go: the helper (Steam), or with UNDERRAILWORKS_TEST_STORE=<folder> a pretend store
     // for test runs: games on one computer sharing that folder (lobbies and messages as files), so two test games can
     // play together through Online without two store accounts.
     static class Store
