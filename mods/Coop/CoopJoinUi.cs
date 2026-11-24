@@ -76,7 +76,7 @@ public sealed partial class Coop
     {
         if (World.Player != null) { Tell("characters are made from the main menu: go there (Escape -> main menu) and use Co-op, Join a Game"); return; }
         if (host == null || host.Closed) return;
-        creating = true;
+        creating = true; inCreation = true;
         Tell("make your character; you'll come back to " + (hostName == null || hostName == "the host" ? "the host" : hostName) + "'s lobby when it's done");
         if (!World.OpenCharacterCreation()) { creating = false; Tell("couldn't open character creation"); }
     }
@@ -166,7 +166,7 @@ public sealed partial class Coop
 
         var buttons = new List<UiElement>();
         if (choosing && picking) { var c = Ui.Button("Play this character", ChooseContinue); Ui.Tooltip(c, "Play the selected saved character"); buttons.Add(c); }
-        else if (lobbyKindSeen != "saved") { var c = Ui.Button(readyAs == null ? "Create character" : "Change character", CreateCharacter); Ui.Tooltip(c, "Your character, made in the game's character creation; you come back here when it's done"); buttons.Add(c); }
+        else if (lobbyKindSeen != "saved") { var c = Ui.Button(readyAs == null ? "Create character" : "Recreate character", CreateCharacter); Ui.Tooltip(c, "Your character, made in the game's character creation; you come back here when it's done"); buttons.Add(c); }
         var leave = Ui.Button("Leave", Leave); Ui.Tooltip(leave, choosing ? "Leave the lobby" : "Give up your place and leave the lobby"); buttons.Add(leave);
         int bh = buttons.Max(b => b.Height);
         string who = hostName == null || hostName == "the host" ? "the host" : hostName;

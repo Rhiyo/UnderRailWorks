@@ -121,7 +121,7 @@ public sealed partial class Coop
             // A new game starts with whoever is here: the places nobody took are dropped.
             if (hostCharacter == null || hostSheet == null || !System.IO.File.Exists(hostSheet)) return "create your character first";
             var hostProblems = World.CharacterFileProblems(hostSheet, LobbyExpansions(), true);
-            if (hostProblems.Count > 0) return "your character doesn't fit this game: " + string.Join("; ", hostProblems.ToArray()) + ". Change character.";
+            if (hostProblems.Count > 0) return "your character doesn't fit this game: " + string.Join("; ", hostProblems.ToArray()) + ". Recreate character.";
             var making = slots.Where(s => s.Seat != null && s.Seat.Record == null).Select(s => s.Seat.Peer.Name).ToList();
             if (making.Count > 0) return "waiting for " + string.Join(", ", making.ToArray()) + " to finish making " + (making.Count == 1 ? "their character" : "their characters");
             if (missing == slots.Count) return "waiting for at least one player to join";

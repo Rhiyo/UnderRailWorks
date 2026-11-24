@@ -121,10 +121,14 @@ namespace UnderRailWorks
 
         // On the main menu: the game's character creation alone, for a character made for elsewhere (Co-op: for the host's
         // game). The new game is made behind it as New Game makes it (cnk.arf), then StartCharacterGeneration runs; the
-        // Rules screen (difficulty, XP system: the game's, not the character's) is skipped. Pair it with
-        // GameEvents.CharacterCreated (BackToMainMenu = true), else Accept starts that new game. False: not on the main menu.
-        [Preview("multiplayer: built for Co-op so far")] public static bool OpenCharacterCreation()
+        // Rules screen (difficulty, XP system: the game's, not the character's) is skipped. Its Cancel says backText
+        // (default "Back") and goes straight back to the main menu (no "are you sure": nothing is lost, there's no game).
+        // Pair it with GameEvents.CharacterCreated (BackToMainMenu = true), else Accept starts that new game. False: not
+        // on the main menu.
+        [Preview("multiplayer: built for Co-op so far")] public static bool OpenCharacterCreation() { return OpenCharacterCreation("Back"); }
+        [Preview("multiplayer: built for Co-op so far")] public static bool OpenCharacterCreation(string backText)
         {
+            CreationBackText = string.IsNullOrEmpty(backText) ? null : backText;
             if (!(UiPopups.Screen() is a8k)) return false;
             CreationOnly = true;     // the new game behind it isn't a game (yet): mods' NewGame / GameStarted wait (Saves.CreationClosing)
             bpo.GetServiceOrThrow<cnk>().arf();
@@ -135,6 +139,7 @@ namespace UnderRailWorks
         }
 
         internal static bool CreationOnly;
+        internal static string CreationBackText;
         internal static string StartAs;
 
         // On the main menu: the game's New Game (its Rules screen: difficulty, XP system), then the game starts with the

@@ -167,7 +167,7 @@ public sealed partial class Coop
     }
 
     // --- Joiner -------------------------------------------------------------------------------------------------
-    bool receiving, loading, inWorld, creating, reopenOnMenu;
+    bool receiving, loading, inWorld, creating, reopenOnMenu, inCreation, leftForCreation;
     string myKey;
     readonly Dictionary<string, Character> spawned = new Dictionary<string, Character>();
     readonly Dictionary<string, string[]> spawnInfo = new Dictionary<string, string[]>();
@@ -409,10 +409,15 @@ public sealed partial class Coop
             Tell("sending " + e.Name + " to " + (hostName ?? "the host") + "...");
             reopenOnMenu = true;
         });
+        // Character creation opened from the lobby (CreateCharacter / CreateHostCharacter): once it has gone and the main
+        // menu is back (Accept or Back), the lobby window again.
         GameEvents.Update.Add(this, dt =>
         {
-            if (!reopenOnMenu || !MainMenu.IsShowing) return;
-            reopenOnMenu = false;
+            if (inCreation && !MainMenu.IsShowing) { inCreation = false; leftForCreation = true; }
+            if ((!reopenOnMenu && !leftForCreation) || !MainMenu.IsShowing) return;
+            if (leftForCreation && (creating || creatingHost)) Log.Info("back from character creation: nothing made" + (listener != null ? (hostCharacter != null ? ", still " + hostCharacter : "") : readyAs != null ? ", still " + readyAs : ""));
+            if (leftForCreation) { creating = false; creatingHost = false; }     // Back: nothing made, the character before stays
+            reopenOnMenu = false; leftForCreation = false;
             if (window == null || !window.IsOpen) Build();
         });
         GameEvents.ZoneLoaded.Add(this, (zone, first) => { if (loading && host != null) Simulation.Apply(Arrived); });

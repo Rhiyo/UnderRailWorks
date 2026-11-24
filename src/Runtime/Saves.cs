@@ -101,7 +101,10 @@ static class Saves
         // ReturnToMainMenu.
         harmony.Patch(typeof(h1).GetMethod("a", any, null, new[] { typeof(object), typeof(el5) }, null), prefix: m("CreationClosing"));
         // Character creation opening: h1.a() (World.StartNewGameAs skips it).
-        harmony.Patch(typeof(h1).GetMethod("a", any, null, Type.EmptyTypes, null), prefix: m("CreationOpeningHook"));
+        // After it: the screen is up (Back for World.OpenCharacterCreation).
+        harmony.Patch(typeof(h1).GetMethod("a", any, null, Type.EmptyTypes, null), prefix: m("CreationOpeningHook"), postfix: m("CreationBuilt"));
+        // Its Cancel (iw.c(object, b25)): no question for World.OpenCharacterCreation.
+        harmony.Patch(typeof(iw).GetMethod("c", any, null, new[] { typeof(object), typeof(b25) }, null), prefix: m("CreationCancel"));
         // Combat: crp.ahn (start) / crp.ahr (end); crp.ahg() = in combat.
         harmony.Patch(typeof(crp).GetMethod("ahn", any), prefix: m("CombatBefore"), postfix: m("CombatStartedHook"));
         harmony.Patch(typeof(crp).GetMethod("ahr", any), prefix: m("CombatEnding"));
@@ -246,6 +249,37 @@ static class Saves
         }
         catch { return true; }     // can't tell: as before
     }
+    static void CreationBuilt()
+    {
+        try
+        {
+            var __instance = UiPopups.Screen() as iw;
+            if (__instance == null || !World.CreationOnly || World.CreationBackText == null) return;
+            var cancel = dh9.c("Cancel");
+            var texts = new List<string>();
+            foreach (var f in typeof(iw).GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Where(f => typeof(euz).IsAssignableFrom(f.FieldType)))
+            {
+                var b = f.GetValue(__instance) as euz;
+                if (b == null) continue;
+                texts.Add(f.Name + ":" + f.FieldType.Name + "=" + b.Text);
+                if (b.Text == cancel) { b.Text = World.CreationBackText; Log.Write("world: character creation's Cancel says " + b.Text); return; }
+            }
+            Log.Write("world: character creation's Cancel not found (" + cancel + "): " + string.Join(", ", texts.ToArray()));
+        }
+        catch (Exception ex_) { PatchGuard.Failed("Saves.CreationBuilt", ex_); }
+    }
+    static readonly MethodInfo CreationClose = typeof(iw).GetMethod("a", BindingFlags.Instance | BindingFlags.NonPublic, null, Type.EmptyTypes, null);
+    static bool CreationCancel(iw __instance)
+    {
+        try
+        {
+            if (!World.CreationOnly || CreationClose == null) return true;
+            CreationClose.Invoke(__instance, null);     // as the confirm box's Yes: closed with cku.b (back to the main menu)
+            return false;
+        }
+        catch (Exception ex_) { PatchGuard.Failed("Saves.CreationCancel", ex_); return true; }
+    }
+
     static bool CreationOpeningHook() { try { return World.CreationOpening(); } catch (Exception ex_) { PatchGuard.Failed("Saves.CreationOpening", ex_); return true; } }
 
     static bool CreationClosing(object __0, el5 __1)

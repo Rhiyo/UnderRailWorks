@@ -21,15 +21,19 @@ gamecopy "$HOST" || exit 1; gamecopy "$JOIN" || exit 1; gamecopy "$TWO" || exit 
 HL="$HOST/UnderRailWorks.log" JL="$JOIN/UnderRailWorks.log"
 printf 'wait 8\ncoop.hostnew 4 %s\n' "$PORT" > "$HOST/Mods/WorksTest/menurun.txt"
 h timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1; sleep 25
-printf 'wait 8\ncoop.join 127.0.0.1:%s\nwait 8\ncoop.ui coop\nwait 4\ncoop.ui create\nwait 10\nworks.accept Bobby\n' "$PORT" > "$JOIN/Mods/WorksTest/menurun.txt"
-j timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1; sleep 60
+printf 'wait 8\ncoop.join 127.0.0.1:%s\nwait 8\ncoop.ui coop\nwait 4\ncoop.ui create\n' "$PORT" > "$JOIN/Mods/WorksTest/menurun.txt"
+j timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1; sleep 45
+j "$SKILL/inp.sh" focus click 1036 678 >/dev/null 2>&1; sleep 8     # creation's Back (1280x720)
+printf 'coop.ui create\nwait 10\nworks.accept Bobby\n' > "$JOIN/Mods/WorksTest/menurun.txt"; sleep 25
 # A second joiner without a name: "Player (2)".
 printf 'wait 8\ncoop.join 127.0.0.1:%s\n' "$PORT" > "$TWO/Mods/WorksTest/menurun.txt"
 t timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1; sleep 40
 t timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; sleep 3
 # Start is refused until the host has a character; the host makes one, then Start: the Rules screen, then the game
 # starts as that character (no creation), with Bobby.
-printf 'coop.start\nwait 2\ncoop.ui hostcreate\nwait 10\nworks.accept Hosty\nwait 8\ncoop.start\n' > "$HOST/Mods/WorksTest/menurun.txt"; sleep 32
+printf 'coop.start\nwait 2\ncoop.ui hostcreate\nwait 10\nworks.accept Hosty\nwait 8\ncoop.ui hostcreate\n' > "$HOST/Mods/WorksTest/menurun.txt"; sleep 30
+h "$SKILL/inp.sh" focus click 1036 678 >/dev/null 2>&1; sleep 8     # Recreate character, then Back: still Hosty
+printf 'coop.start\n' > "$HOST/Mods/WorksTest/menurun.txt"; sleep 8
 h "$SKILL/inp.sh" focus click 902 678 >/dev/null 2>&1; sleep 25
 j timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1     # the joiner first
 
@@ -43,6 +47,9 @@ check "... and goes back to the main menu"        "$JL" "saves: Bobby made in ch
 check "a joiner without a name is Player"        "$HL" "Coop: Player has a place; making a character"
 check "a second one without a name is Player (2)" "$HL" "Coop: Player \\(2\\) has a place; making a character"
 check "Start refused without the host's character" "$HL" "coop.start -> create your character first"
+check "creation's Cancel says Back"              "$JL" "world: character creation's Cancel says Back"
+check "Back: the joiner is back in the lobby"     "$JL" "Coop: back from character creation: nothing made"
+check "Recreate, then Back: the host keeps Hosty" "$HL" "Coop: back from character creation: nothing made, still Hosty"
 check "the host makes a character in the lobby"   "$HL" "Coop: the host will play Hosty"
 check "the game starts as the host's character"   "$HL" "world: new game started as Hosty"
 check "Bobby enters the host's game"              "$HL" "Coop: Player plays Bobby"

@@ -121,7 +121,7 @@ public sealed partial class Coop
         if (editable)
         {
             // The host makes their character here too (before the start), as everyone else does.
-            hostCreateButton = Ui.Button(hostCharacter == null ? "Create character" : "Change character", CreateHostCharacter);
+            hostCreateButton = Ui.Button(hostCharacter == null ? "Create character" : "Recreate character", CreateHostCharacter);
             Ui.Tooltip(hostCreateButton, "Your character, made in the game's character creation; you come back here when it's done");
             buttons.Add(hostCreateButton);
         }
@@ -156,7 +156,7 @@ public sealed partial class Coop
     void CreateHostCharacter()
     {
         if (lobby != "new") return;
-        creatingHost = true;
+        creatingHost = true; inCreation = true;
         if (!World.OpenCharacterCreation()) { creatingHost = false; Notify.Log("Co-op: couldn't open character creation", Say); }
     }
 
@@ -196,7 +196,7 @@ public sealed partial class Coop
         foreach (var s in seats.Values.Where(x => !slots.Any(sl => sl.Seat == x))) rowsNow.Add(new PlayerRow { Player = s.Peer.Name, Tag = "choosing" });
         playerRows = rowsNow;
         if (startButton != null) startButton.Enabled = CanStart();
-        if (hostCreateButton != null) Ui.SetText(hostCreateButton, hostCharacter == null ? "Create character" : "Change character");
+        if (hostCreateButton != null) Ui.SetText(hostCreateButton, hostCharacter == null ? "Create character" : "Recreate character");
     }
 
     // Hosting, in game: who plays what (health), who left; Give... / Stop hosting. Nobody new joins a game under way;
