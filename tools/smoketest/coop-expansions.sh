@@ -36,7 +36,7 @@ printf 'wait 8\ncoop.hostnew 2 %s\n' "$PORT" > "$HM"
 h timeout 100 "$SKILL/launch.sh" --save "$SAVE" 1280 720 >/dev/null 2>&1; sleep 25
 printf 'wait 8\ncoop.join 127.0.0.1:%s tester\nwait 5\ncoop.new Bob\n' "$PORT" > "$JOIN/Mods/WorksTest/menurun.txt"
 j timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1; sleep 30
-printf 'coop.expansion xpbl off\nwait 3\ncoop.start\n' > "$HM"; sleep 15
+printf 'coop.ui hostcreate\nwait 10\nworks.accept Hosty\nwait 8\ncoop.expansion xpbl off\nwait 3\ncoop.start\n' > "$HM"; sleep 35
 # The rules screen is open: closed again, hosting stopped.
 h timeout 20 "$SKILL/inp.sh" click 1037 679 >/dev/null 2>&1; sleep 3
 printf 'coop.stop\n' > "$HM"; sleep 10

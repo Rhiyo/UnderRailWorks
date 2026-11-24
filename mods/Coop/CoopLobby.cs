@@ -70,7 +70,7 @@ public sealed partial class Coop
         if (World.Player != null) return "host from the main menu (Escape -> main menu): Co-op, then Host New Game or Host Saved Game";
         if (host != null && !host.Closed) return "you're joined to someone's game (Leave first)";
         StopHosting();
-        slots.Clear(); lobby = null; starting = false;
+        slots.Clear(); lobby = null; starting = false; hostCharacter = null; hostSheet = null; creatingHost = false;
         if (kind == "saved")
         {
             SaveGames.UseLocation(this, SaveFolder);     // co-op games' saves (hosting keeps it: SaveLocationRule)
@@ -119,6 +119,9 @@ public sealed partial class Coop
         if (lobby == "new")
         {
             // A new game starts with whoever is here: the places nobody took are dropped.
+            if (hostCharacter == null || hostSheet == null || !System.IO.File.Exists(hostSheet)) return "create your character first";
+            var hostProblems = World.CharacterFileProblems(hostSheet, LobbyExpansions(), true);
+            if (hostProblems.Count > 0) return "your character doesn't fit this game: " + string.Join("; ", hostProblems.ToArray()) + ". Change character.";
             var making = slots.Where(s => s.Seat != null && s.Seat.Record == null).Select(s => s.Seat.Peer.Name).ToList();
             if (making.Count > 0) return "waiting for " + string.Join(", ", making.ToArray()) + " to finish making " + (making.Count == 1 ? "their character" : "their characters");
             if (missing == slots.Count) return "waiting for at least one player to join";
@@ -135,7 +138,7 @@ public sealed partial class Coop
         foreach (var s in seats.Values) SendExpansions(s.Peer);
         lobby = null; starting = true;     // from here nobody joins
         foreach (var s in seats.Values) s.Peer.Send("SAID", kind == "saved" ? "the host is loading the game" : "the host is making their character; the game starts after that");
-        bool ok = kind == "saved" ? SaveGames.Load(lobbySave) : World.StartNewGame();
+        bool ok = kind == "saved" ? SaveGames.Load(lobbySave) : World.StartNewGameAs(hostSheet);
         if (!ok) { lobby = kind; starting = false; return kind == "saved" ? "couldn't load " + lobbySave : "couldn't open the new game"; }
         Log.Info("starting the " + (kind == "saved" ? "saved game " + lobbySave : "new game") + " with " + string.Join(", ", slots.Select(s => s.Seat.Peer.Name + " as " + s.Seat.Record.Name).ToArray()));
         Changed();
@@ -170,7 +173,7 @@ public sealed partial class Coop
     // The lobby's places, for a joiner choosing: saved characters by name, new places as "(new character)".
     void SendLobbyList(Peer p)
     {
-        p.Send("LIST", Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "the host", lobby == "saved" ? "saved" : "new", p.Name);
+        p.Send("LIST", Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "the host", lobby == "saved" ? "saved" : "new", p.Name, hostCharacter ?? "");
         // CHAR n name taken|free [player] [their character]: who took each place, for the joiners' copy of the lobby.
         for (int i = 0; i < slots.Count; i++)
         {
@@ -181,7 +184,6 @@ public sealed partial class Coop
         // SETTING label value: the game's settings as the host's lobby shows them (the joiners see them, can't change them).
         p.Send("SETTING", "Expansions", Names(LobbyExpansions()));
         foreach (var o in options) p.Send("SETTING", o.Label, OptionText(o, o.Value));
-        p.Send("SETTING", "When a player's health runs out", DeathRules[Math.Max(0, Math.Min(DeathRules.Length - 1, deathRule))]);
         p.Send("LISTEND");
         SendExpansions(p);
     }
@@ -201,7 +203,8 @@ public sealed partial class Coop
     {
         var p = seat.Peer;
         var mine = slots.FirstOrDefault(s => s.Seat == seat);
-        if (mine != null && (w[0] == "PICK" || seat.Record != null)) { p.Send("SAID", "you already have a place"); return; }
+        if (mine != null && w[0] == "PICK") { p.Send("SAID", "you already have a place"); return; }
+        if (mine != null && seat.Record != null && !mine.New) { p.Send("SAID", "you already play " + seat.Record.Name); return; }
         if (w[0] == "PICK")
         {
             int i;
@@ -216,7 +219,7 @@ public sealed partial class Coop
         if (free == null) { p.Send("SAID", "this game has no place for a new character: pick one of its characters"); return; }
         var name = w.Length > 1 ? w[1].Trim() : "";
         if (name.Length == 0) { p.Send("SAID", "coop.new <name>"); return; }
-        Func<string, bool> used = n => slots.Any(s => (s.Saved != null && s.Saved.Name.Equals(n, StringComparison.OrdinalIgnoreCase)) || (s.Seat != null && s.Seat.Record != null && s.Seat.Record.Name.Equals(n, StringComparison.OrdinalIgnoreCase)));
+        Func<string, bool> used = n => (hostCharacter != null && hostCharacter.Equals(n, StringComparison.OrdinalIgnoreCase)) || slots.Any(s => s.Seat != seat && ((s.Saved != null && s.Saved.Name.Equals(n, StringComparison.OrdinalIgnoreCase)) || (s.Seat != null && s.Seat.Record != null && s.Seat.Record.Name.Equals(n, StringComparison.OrdinalIgnoreCase))));
         if (used(name)) { int n2 = 2; while (used(name + " " + n2)) n2++; p.Send("SAID", "there's already a " + name + " in this game: yours is " + name + " " + n2); name = name + " " + n2; }
         // A character made in creation on the joiner's machine (Import is off in co-op): fresh (level 1, no XP), and only
         // what this game has (its expansions, items).

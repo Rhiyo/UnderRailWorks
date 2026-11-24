@@ -1962,6 +1962,7 @@ Moving an element with the mouse: start it on a press over the element, then cal
 A handle on an interface element (one of the game's controls inside).
 
 - `bool Visible`
+- `bool Enabled` — False: shown greyed out and not clickable (the game's own disabled look for its buttons).
 - `int X` — Its position in its parent (interface units), as Ui.Move sets it.
 - `int Y`
 - `int Width`
@@ -2120,6 +2121,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static bool MakePlayer(Character c)` **(preview)** — This machine's player becomes c (its HUD, inventory and character windows, quick bar, camera, fog of war); the old player's body stays as a character with its own sheet. For a game shown from elsewhere (co-op): saving it here afterwards would save c as the player.
 - `static bool StartNewGame()` **(preview)** — On the main menu: the game's New Game (its rules screen, then character creation, then the first zone), as the menu's button. False: not on the main menu.
 - `static bool OpenCharacterCreation()` **(preview)** — On the main menu: the game's character creation alone, for a character made for elsewhere (Co-op: for the host's game). The new game is made behind it as New Game makes it (cnk.arf), then StartCharacterGeneration runs; the Rules screen (difficulty, XP system: the game's, not the character's) is skipped. Pair it with GameEvents.CharacterCreated (BackToMainMenu = true), else Accept starts that new game. False: not on the main menu.
+- `static bool StartNewGameAs(string characterFile)` **(preview)** — On the main menu: the game's New Game (its Rules screen: difficulty, XP system), then the game starts with the character in this .char (made earlier, e.g. with OpenCharacterCreation) instead of character creation. False: not on the main menu, or no such file.
 - `static bool CreationImport = true` **(preview)** — What a character file (.char) has that a game using only these expansions wouldn't: feats and skills of another expansion (their DLC), a level above 25 or specializations without Expedition (the game's veteran levels), items this game's data doesn't have, a newer game version. Read from the file; nothing is built. Empty: it fits. Lines for a player, e.g. "the feat Last Stand (Expedition)". False: character creation offers no Import (the button is hidden, and its dialog doesn't open). Co-op turns it off while hosting or joined: only characters made in creation, nothing from another game or modded setup.
 - `static IList<string> CharacterFileProblems(string path, IEnumerable<string> expansions, bool newOnly = false)` **(preview)** — newOnly: also refuse a character that isn't fresh from creation (level above 1, or any XP).
 - `static bool QuitToMainMenu()` **(preview)** — In a game: back to the main menu as the in-game menu's Main Menu does (the game's QuitGameFromLocale workflow, without saving). False: not in a game.

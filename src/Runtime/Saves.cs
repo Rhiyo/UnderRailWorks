@@ -100,6 +100,8 @@ static class Saves
         // New game's character creation closing: h1.a(object iw, el5 result): cku.a Accept -> StartGameInLocale, cku.b ->
         // ReturnToMainMenu.
         harmony.Patch(typeof(h1).GetMethod("a", any, null, new[] { typeof(object), typeof(el5) }, null), prefix: m("CreationClosing"));
+        // Character creation opening: h1.a() (World.StartNewGameAs skips it).
+        harmony.Patch(typeof(h1).GetMethod("a", any, null, Type.EmptyTypes, null), prefix: m("CreationOpeningHook"));
         // Combat: crp.ahn (start) / crp.ahr (end); crp.ahg() = in combat.
         harmony.Patch(typeof(crp).GetMethod("ahn", any), prefix: m("CombatBefore"), postfix: m("CombatStartedHook"));
         harmony.Patch(typeof(crp).GetMethod("ahr", any), prefix: m("CombatEnding"));
@@ -244,17 +246,22 @@ static class Saves
         }
         catch { return true; }     // can't tell: as before
     }
+    static bool CreationOpeningHook() { try { return World.CreationOpening(); } catch (Exception ex_) { PatchGuard.Failed("Saves.CreationOpening", ex_); return true; } }
+
     static bool CreationClosing(object __0, el5 __1)
     {
         try
         {
             var screen = __0 as iw;
-            if (screen == null || __1 == null || __1.a() != cku.a || !GameEvents.CharacterCreated.Any) return true;
+            bool creationOnly = World.CreationOnly;
+            World.CreationOnly = false;
+            if (screen == null || __1 == null || __1.a() != cku.a) return true;
+            if (!GameEvents.CharacterCreated.Any) { if (creationOnly) NewGameEvents(); return true; }
             var sheet = screen.g() as au2;
             if (sheet == null) return true;
             var e = new NewCharacter { Sheet = sheet, Name = sheet.Name };
             GameEvents.CharacterCreated.Run(h => h(e));
-            if (!e.BackToMainMenu) return true;
+            if (!e.BackToMainMenu) { if (creationOnly) NewGameEvents(); return true; }     // the game starts after all: its events now
             Log.Write("saves: " + e.Name + " made in character creation; back to the main menu (no game started)");
             bpo.GetServiceOrThrow<d4m>().avp(dla.a(TimelapseVertigo.Common.TimelapseWorkflows.ReturnToMainMenu));
             return false;
@@ -271,7 +278,8 @@ static class Saves
         Run("re-applying placements", World.ReapplyAll);
         if (written && GameEvents.Saved.Any) GameEvents.Saved.Run(h => h(__0)); } catch (Exception ex_) { PatchGuard.Failed("Saves.SaveDone", ex_); }
     }
-    static void NewGameCreated() { SaveFiles.NewGame(); World.ForgetAll(); Run("imported character data", CharacterFiles.NewGame); if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); if (GameEvents.GameStarted.Any) GameEvents.GameStarted.Run(h => h()); }
+    static void NewGameCreated() { SaveFiles.NewGame(); World.ForgetAll(); Run("imported character data", CharacterFiles.NewGame); if (!World.CreationOnly) NewGameEvents(); }
+    static void NewGameEvents() { if (GameEvents.NewGame.Any) GameEvents.NewGame.Run(h => h()); if (GameEvents.GameStarted.Any) GameEvents.GameStarted.Run(h => h()); }
 
     static void Loading(string __0) { try { loading = true; CharacterFiles.Forget(); SaveFiles.Load(__0); World.ForgetAll(); Log.Write("saves: loading " + __0); } catch (Exception ex_) { PatchGuard.Failed("Saves.Loading", ex_); }
     }

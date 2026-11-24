@@ -109,6 +109,7 @@ namespace UnderRailWorks
         internal static void Built(a8k menu)
         {
             MainMenuPage.Current = null;     // a new menu shows its own column
+            World.StartAs = null; World.CreationOnly = false;     // back on the menu: a New Game left before creation
             List<Entry> list;
             lock (entries) list = entries.ToList();
             // Works' own first: the Mods screen (switching mods on and off, their order, profiles).

@@ -246,6 +246,7 @@ public sealed partial class Coop : WorksMod
     readonly List<KeyValuePair<string, string>> choiceTakers = new List<KeyValuePair<string, string>>();     // per place: player, their character
     readonly List<KeyValuePair<string, string>> lobbySettings = new List<KeyValuePair<string, string>>();     // the host's game settings
     string lobbyKindSeen;     // "new" / "saved"
+    string hostCharacterSeen;     // the host's character in a new game's lobby (made there)
     string myLobbyName;       // the name the host knows us by ("Player" without a store name; "(2)" added to a name already there)
     readonly List<string> messages = new List<string>();
     string[] state;     // the host's last STATE for our character
@@ -396,7 +397,7 @@ public sealed partial class Coop : WorksMod
             case "BYE": Tell("the host closed the connection: " + (w.Length > 1 ? w[1] : "")); if (hostMods != null) Changed(); return;
             case "HOSTMODS": HostModsArrived(w); return;
             case "EXPANSIONS": ExpansionsArrived(w); return;
-            case "LIST": hostName = w.Length > 1 ? w[1] : "?"; lobbyKindSeen = w.Length > 2 ? w[2] : null; if (w.Length > 3 && w[3].Length > 0) myLobbyName = w[3]; choices.Clear(); choiceTakers.Clear(); lobbySettings.Clear(); return;
+            case "LIST": hostName = w.Length > 1 ? w[1] : "?"; lobbyKindSeen = w.Length > 2 ? w[2] : null; if (w.Length > 3 && w[3].Length > 0) myLobbyName = w[3]; hostCharacterSeen = w.Length > 4 && w[4].Length > 0 ? w[4] : null; choices.Clear(); choiceTakers.Clear(); lobbySettings.Clear(); return;
             case "CHAR":
                 choices.Add(new KeyValuePair<string, bool>(w[2], w.Length > 3 && w[3] == "taken"));
                 choiceTakers.Add(new KeyValuePair<string, string>(w.Length > 4 ? w[4] : "", w.Length > 5 ? w[5] : ""));
@@ -626,7 +627,7 @@ public sealed partial class Coop : WorksMod
         // mod setup (its items and stats might not exist here).
         GameEvents.Update.Add(this, dt => World.CreationImport = listener == null && host == null);
         // Tests: open a window by name (layouts are checked by Works: "ui: window ... fits" in the log).
-        Commands.Add(this, "coop.ui", "coop.ui <coop|join|hostsave|page|create|give|loot|talk|close>: open a Co-op window (tests)", a2 =>
+        Commands.Add(this, "coop.ui", "coop.ui <coop|join|hostsave|page|create|hostcreate|give|loot|talk|close>: open a Co-op window (tests)", a2 =>
         {
             switch (a2.Length == 0 ? "" : a2[0])
             {
@@ -635,6 +636,7 @@ public sealed partial class Coop : WorksMod
                 case "hostsave": PickSave(); return "opened";
                 case "page": if (coopPage != null) coopPage.Open(); return "opened";
                 case "create": CreateCharacter(); return "creating";
+                case "hostcreate": CreateHostCharacter(); return "creating";
                 case "give": OpenGive(); return "opened";
                 case "loot": if (lootName == null) lootName = "Test crate"; ShowLoot(); return "opened";
                 case "talk": ShowTalk(); return "opened";
@@ -642,7 +644,7 @@ public sealed partial class Coop : WorksMod
                     foreach (var w2 in new[] { window, joinWindow, saveWindow, giveWindow, lootWindow, talkWindow }) if (w2 != null && w2.IsOpen) w2.Close();
                     return "closed";
             }
-            return "coop.ui <coop|join|hostsave|page|create|give|loot|talk|close>";
+            return "coop.ui <coop|join|hostsave|page|create|hostcreate|give|loot|talk|close>";
         });
         Commands.Add(this, "coop.suggest", "coop.suggest <answer number>: in the host's conversation, suggest that answer (again: take it back)", a =>
         {

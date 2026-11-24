@@ -126,11 +126,47 @@ namespace UnderRailWorks
         [Preview("multiplayer: built for Co-op so far")] public static bool OpenCharacterCreation()
         {
             if (!(UiPopups.Screen() is a8k)) return false;
+            CreationOnly = true;     // the new game behind it isn't a game (yet): mods' NewGame / GameStarted wait (Saves.CreationClosing)
             bpo.GetServiceOrThrow<cnk>().arf();
             kl.a();
             bpo.GetServiceOrThrow<d4m>().avp(dla.a(TimelapseVertigo.Common.TimelapseWorkflows.StartCharacterGeneration));
             Log.Write("world: character creation (no rules screen)");
             return true;
+        }
+
+        internal static bool CreationOnly;
+        internal static string StartAs;
+
+        // On the main menu: the game's New Game (its Rules screen: difficulty, XP system), then the game starts with the
+        // character in this .char (made earlier, e.g. with OpenCharacterCreation) instead of character creation. False:
+        // not on the main menu, or no such file.
+        [Preview("multiplayer: built for Co-op so far")] public static bool StartNewGameAs(string characterFile)
+        {
+            if (string.IsNullOrEmpty(characterFile) || !System.IO.File.Exists(characterFile)) return false;
+            StartAs = characterFile;
+            if (StartNewGame()) return true;
+            StartAs = null;
+            return false;
+        }
+
+        // h1.a(): character creation about to open. With StartAs: the file's sheet becomes the new game's player and the
+        // game starts (as creation's Accept does: cnk.aqu().a(sheet), StartGameInLocale).
+        internal static bool CreationOpening()
+        {
+            var file = StartAs;
+            StartAs = null;
+            if (file == null) return true;
+            try
+            {
+                var f = ReadFile.Invoke(null, new object[] { file });
+                var sheet = f == null ? null : FileSheet.GetValue(f) as au2;
+                if (sheet == null) { Log.Write("world: " + file + " has no player sheet: character creation instead"); return true; }
+                bpo.GetServiceOrThrow<cnk>().aqu().a(sheet);
+                Log.Write("world: new game started as " + sheet.Name + " (" + System.IO.Path.GetFileName(file) + ")");
+                bpo.GetServiceOrThrow<d4m>().avp(dla.a(TimelapseVertigo.Common.TimelapseWorkflows.StartGameInLocale));
+                return false;
+            }
+            catch (Exception ex) { Log.Write("world: starting as " + file + ": " + ex.Message + "; character creation instead"); return true; }
         }
 
         // What a character file (.char) has that a game using only these expansions wouldn't: feats and skills of another

@@ -166,7 +166,7 @@ public sealed partial class Coop
 
         var buttons = new List<UiElement>();
         if (choosing && picking) { var c = Ui.Button("Play this character", ChooseContinue); Ui.Tooltip(c, "Play the selected saved character"); buttons.Add(c); }
-        else if (choosing) { var c = Ui.Button("Create character", CreateCharacter); Ui.Tooltip(c, "Make your character in the game's character creation; you come back here when it's done"); buttons.Add(c); }
+        else if (lobbyKindSeen != "saved") { var c = Ui.Button(readyAs == null ? "Create character" : "Change character", CreateCharacter); Ui.Tooltip(c, "Your character, made in the game's character creation; you come back here when it's done"); buttons.Add(c); }
         var leave = Ui.Button("Leave", Leave); Ui.Tooltip(leave, choosing ? "Leave the lobby" : "Give up your place and leave the lobby"); buttons.Add(leave);
         int bh = buttons.Max(b => b.Height);
         string who = hostName == null || hostName == "the host" ? "the host" : hostName;
@@ -185,7 +185,7 @@ public sealed partial class Coop
         string who = hostName == null || hostName == "the host" ? "the host" : hostName;
         int taken = choices.Count(c => c.Value), open = choices.Count - taken;
         if (playersHeading != null) Ui.SetText(playersHeading, "Players  (" + (taken + 1) + " of " + (choices.Count + 1) + ")");
-        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = who == "the host" ? "Host" : who, Tag = "Host", Host = true } };
+        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = who == "the host" ? "Host" : who, Character = hostCharacterSeen, Tag = "Host", Host = true } };
         for (int i = 0; i < choices.Count; i++)
         {
             bool isNew = choices[i].Key == "(new character)";

@@ -101,24 +101,32 @@ public sealed partial class Coop
                 row(o.Label, sl.View, sl.View.Height);
             }
         }
-        textRow("When a player's health runs out", DeathRules[Math.Max(0, Math.Min(DeathRules.Length - 1, deathRule))]);
         y += section - gap;
 
-        // How friends join
-        at(heading("How friends join"), pad, y); y += line + gap;
-        if (Online.Available)
-            note(Online.Service + " friends: Co-op, then Join a Game on the main menu, or Join Game in " + Online.Service + ".", Normal);
+        // How friends join: one line (the details in its tooltip).
         var lan = Addresses().Where(a => !a.StartsWith("127.")).ToList();
         if (listener != null)
         {
-            note("By address: " + (lan.Count == 0 ? "127.0.0.1" : WithPort(lan[0], listener.Port)) + (lan.Count > 1 ? "  (or " + string.Join(", ", lan.Skip(1).Select(a => WithPort(a, listener.Port)).ToArray()) + ")" : ""), Online.Available ? Grey : Normal);
-            note((Online.Available ? "Over the internet without " + Online.Service : "Over the internet") + ": forward port " + listener.Port + " or use a VPN.", Grey);
+            var address = lan.Count == 0 ? "127.0.0.1" : WithPort(lan[0], listener.Port);
+            var how = Ui.Label(Cut("Friends join with Co-op, Join a Game" + (Online.Available ? "" : ": " + address) + (Online.Available ? " (or the address " + address + ")" : ""), inner), inner);
+            Ui.SetColor(how, Grey);
+            Ui.Tooltip(how, (Online.Available ? Online.Service + " friends see your game in Join a Game, or use Join Game in " + Online.Service + ". " : "")
+                + "By address: " + string.Join(", ", lan.Select(a => WithPort(a, listener.Port)).DefaultIfEmpty("127.0.0.1").ToArray())
+                + ". Over the internet" + (Online.Available ? " without " + Online.Service : "") + ": forward port " + listener.Port + " on your router, or use a VPN.");
+            at(how, pad, y); y += line + section;
         }
-        y += section;
 
         // Buttons
         var buttons = new List<UiElement>();
-        var start = Ui.Button("Start game", () => { var r = StartGame(); if (r != "starting") Notify.Log("Co-op: " + r, Say); });
+        if (editable)
+        {
+            // The host makes their character here too (before the start), as everyone else does.
+            hostCreateButton = Ui.Button(hostCharacter == null ? "Create character" : "Change character", CreateHostCharacter);
+            Ui.Tooltip(hostCreateButton, "Your character, made in the game's character creation; you come back here when it's done");
+            buttons.Add(hostCreateButton);
+        }
+        else hostCreateButton = null;
+        var start = startButton = Ui.Button("Start game", () => { var r = StartGame(); if (r != "starting") Notify.Log("Co-op: " + r, Say); });
         buttons.Add(start);
         if (Online.Available) buttons.Add(Ui.Button("Invite friends...", () =>
         {
@@ -137,8 +145,27 @@ public sealed partial class Coop
         int bx = pad, by = window.Height - pad - bh;
         foreach (var b in buttons) { Ui.Add(window, b, bx, by); bx += b.Width + gap; }
         Ui.Add(window, cancel, window.Width - pad - cancel.Width, by);
-        Ui.Tooltip(start, editable ? "Start with everyone who has joined (open places are dropped)" : "Load the save (every place must be taken)");
+        Ui.Tooltip(start, editable ? "When everyone (you too) has a character: the game's Rules, then the game starts with everyone who joined (open places are dropped)" : "Load the save (every place must be taken)");
         Ui.Tooltip(cancel, "Close the lobby: everyone who joined is sent back");
+    }
+
+    UiElement hostCreateButton, startButton;
+    string hostCharacter, hostSheet;     // a new game's lobby: the host's character, made here (its .char)
+    bool creatingHost;
+
+    void CreateHostCharacter()
+    {
+        if (lobby != "new") return;
+        creatingHost = true;
+        if (!World.OpenCharacterCreation()) { creatingHost = false; Notify.Log("Co-op: couldn't open character creation", Say); }
+    }
+
+    // Start game: a new game when the host and everyone who joined have characters; a save when every place is taken.
+    bool CanStart()
+    {
+        if (starting || lobby == null) return false;
+        if (lobby == "saved") return slots.All(s => s.Seat != null);
+        return hostCharacter != null && slots.Any(s => s.Seat != null) && slots.All(s => s.Seat == null || s.Seat.Record != null);
     }
 
     void RememberOption(HostOption o) { if (!o.NotRemembered) Settings.Set("option." + o.Mod + "." + o.Key, o.Value.ToString()); }
@@ -151,13 +178,15 @@ public sealed partial class Coop
         RefreshExpansionRow();
         string status; Color colour = Normal;
         if (starting) { status = "Starting the game..."; colour = Mine_; }
-        else if (makingNames.Count > 0) status = string.Join(", ", makingNames.ToArray()) + (makingNames.Count == 1 ? " is" : " are") + " making " + (makingNames.Count == 1 ? "a character." : "characters.");
+        else if (isNew && hostCharacter == null) status = "Create your character" + (taken == 0 ? "; friends can join meanwhile." : ".");
+        else if (makingNames.Count > 0) status = "Waiting for " + string.Join(", ", makingNames.ToArray()) + " to create " + (makingNames.Count == 1 ? "a character." : "characters.");
+        else if (isNew && taken == 0) status = "Waiting for friends to join.";
+        else if (isNew) { status = "Everyone has a character: Start game when everyone is here."; colour = Mine_; }
         else if (free == 0) { status = "Everyone is here: Start game."; colour = Mine_; }
-        else if (isNew) status = taken == 0 ? "Waiting for friends to join." : taken + (taken == 1 ? " player has" : " players have") + " joined. Start when everyone is here.";
         else status = "Waiting for " + free + " more player" + (free == 1 ? "" : "s") + ": every saved character needs its player.";
         Ui.SetText(statusLabel, status); Ui.SetColor(statusLabel, colour);
         if (playersHeading != null) Ui.SetText(playersHeading, "Players  (" + (taken + 1) + " of " + (slots.Count + 1) + ")");
-        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "You", Character = World.Player != null ? World.Player.Name : null, Tag = "Host (you)", Me = true, Host = true } };
+        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "You", Character = World.Player != null ? World.Player.Name : hostCharacter, Tag = "Host (you)", Me = true, Host = true } };
         foreach (var sl in slots)
         {
             if (sl.Seat != null) rowsNow.Add(new PlayerRow { Player = sl.Seat.Peer.Name, Character = sl.New ? (sl.Seat.Record == null ? null : sl.Seat.Record.Name) : sl.Saved.Name });
@@ -166,6 +195,8 @@ public sealed partial class Coop
         }
         foreach (var s in seats.Values.Where(x => !slots.Any(sl => sl.Seat == x))) rowsNow.Add(new PlayerRow { Player = s.Peer.Name, Tag = "choosing" });
         playerRows = rowsNow;
+        if (startButton != null) startButton.Enabled = CanStart();
+        if (hostCreateButton != null) Ui.SetText(hostCreateButton, hostCharacter == null ? "Create character" : "Change character");
     }
 
     // Hosting, in game: who plays what (health), who left; Give... / Stop hosting. Nobody new joins a game under way;

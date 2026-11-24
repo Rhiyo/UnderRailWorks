@@ -381,6 +381,21 @@ public sealed partial class Coop
         // goes back to the main menu (no game of its own starts); the Co-op window opens again there.
         GameEvents.CharacterCreated.Add(this, e =>
         {
+            if (creatingHost)
+            {
+                // The host's own character for a new game's lobby: kept as a .char; the game starts with it (Start game).
+                creatingHost = false;
+                if (listener == null || lobby != "new") return;
+                e.BackToMainMenu = true;
+                var file = SheetPath("host");
+                try { if (e.ExportTo(file)) { hostSheet = file; hostCharacter = e.Name; } }
+                catch (Exception ex) { Log.Warn("can't keep the host's character " + e.Name + ": " + ex); }
+                if (hostCharacter == null) { Notify.Log("Co-op: couldn't keep your character", Say); return; }
+                Log.Info("the host will play " + hostCharacter);
+                reopenOnMenu = true;
+                LobbyChanged();
+                return;
+            }
             if (!creating) return;
             creating = false;
             if (host == null || host.Closed) return;

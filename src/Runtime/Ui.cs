@@ -351,6 +351,8 @@ public class UiElement
     internal static UiElement Of(euz control) { return control == null ? null : Handles.GetValue(control, c => new UiElement(c)); }
 
     public bool Visible { get { return Control.Visible; } set { if (!Hud.Defer(this, value)) Control.Visible = value; } }
+    // False: shown greyed out and not clickable (the game's own disabled look for its buttons).
+    public bool Enabled { get { return Control.Enabled; } set { Control.Enabled = value; } }
     // Its position in its parent (interface units), as Ui.Move sets it.
     public int X { get { return UnderrailDropdownScroll.X(UnderrailDropdownScroll.LocationOf(Control)); } }
     public int Y { get { return UnderrailDropdownScroll.Y(UnderrailDropdownScroll.LocationOf(Control)); } }
