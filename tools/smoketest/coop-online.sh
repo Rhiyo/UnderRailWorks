@@ -36,7 +36,7 @@ check "the lobby made with the game's lobby"   "$HL" "online: hosting lobby [0-9
 check "the joiner sees the host's game"        "$JL" "friends: Hosty: online:[0-9]+"
 check "... and enters its lobby"               "$JL" "online: in lobby [0-9]+ \(host [0-9]+\)"
 check "the host: the joiner came in"           "$HL" "Coop: Joiny came in through Test store"
-check "the handshake over the store"           "$HL" "Coop: Joiny is choosing a character"
+check "the handshake over the store"           "$HL" "Coop: Joiny (is choosing a character|has a place; making a character)"
 check "the character list over the store"      "$JL" "Coop: characters: .* \(host\)"
 check "a place for a new character"            "$HL" "Coop: Joiny will play Bob"
 check "the joiner left: the host knows"        "$HL" "Coop: Joiny (left|disconnected)"

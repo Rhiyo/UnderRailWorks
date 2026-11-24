@@ -119,6 +119,8 @@ public sealed partial class Coop
         if (lobby == "new")
         {
             // A new game starts with whoever is here: the places nobody took are dropped.
+            var making = slots.Where(s => s.Seat != null && s.Seat.Record == null).Select(s => s.Seat.Peer.Name).ToList();
+            if (making.Count > 0) return "waiting for " + string.Join(", ", making.ToArray()) + " to finish making " + (making.Count == 1 ? "their character" : "their characters");
             if (missing == slots.Count) return "waiting for at least one player to join";
             slots.RemoveAll(s => s.Seat == null);
         }
@@ -168,7 +170,7 @@ public sealed partial class Coop
     // The lobby's places, for a joiner choosing: saved characters by name, new places as "(new character)".
     void SendLobbyList(Peer p)
     {
-        p.Send("LIST", Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "the host", lobby == "saved" ? "saved" : "new");
+        p.Send("LIST", Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "the host", lobby == "saved" ? "saved" : "new", p.Name);
         // CHAR n name taken|free [player] [their character]: who took each place, for the joiners' copy of the lobby.
         for (int i = 0; i < slots.Count; i++)
         {
@@ -198,7 +200,8 @@ public sealed partial class Coop
     void LobbyChoice(Seat seat, string[] w)
     {
         var p = seat.Peer;
-        if (slots.Any(s => s.Seat == seat)) { p.Send("SAID", "you already have a place"); return; }
+        var mine = slots.FirstOrDefault(s => s.Seat == seat);
+        if (mine != null && (w[0] == "PICK" || seat.Record != null)) { p.Send("SAID", "you already have a place"); return; }
         if (w[0] == "PICK")
         {
             int i;
@@ -209,7 +212,7 @@ public sealed partial class Coop
             TakeSlot(seat, slot, slot.Saved);
             return;
         }
-        var free = slots.FirstOrDefault(s => s.New && s.Seat == null);
+        var free = mine ?? slots.FirstOrDefault(s => s.New && s.Seat == null);
         if (free == null) { p.Send("SAID", "this game has no place for a new character: pick one of its characters"); return; }
         var name = w.Length > 1 ? w[1].Trim() : "";
         if (name.Length == 0) { p.Send("SAID", "coop.new <name>"); return; }

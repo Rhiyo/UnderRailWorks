@@ -57,7 +57,7 @@ h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; b timeout 60 "$SKILL/stop.sh" >/d
 pass=0; fail=0
 check() { if grep -qE "$3" "$2"; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: $1 (expected in $(basename "$2"): $3)"; fi; }
 H1="$WORK/host-first.log"
-check "the joiner says it has Expedition"          "$H1" "Coop: tester is choosing a character; expansions they have: Expedition"
+check "the joiner says it has Expedition"          "$H1" "Coop: tester (is choosing a character|has a place; making a character); expansions they have: Expedition"
 check "the joiner sees the game's set"             "$JL" "Coop: expansions for this game: none \(off: Expedition\)"
 check "Start: both off on the host"                "$H1" "Coop: expansions for this game: none \(off: Expedition, Heavy Duty\)"
 check "Works switched them off (host)"             "$H1" "expansions: switched off (xpbl, xphw|xphw, xpbl)"

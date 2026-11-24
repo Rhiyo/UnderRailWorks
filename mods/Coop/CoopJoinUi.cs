@@ -71,7 +71,17 @@ public sealed partial class Coop
         Ui.AddButtons(window, buttons, pad);
     }
 
-    // Choose: the selected place (row 0 is the host).
+    // A new game's lobby: make the character for our place (the game's creation, no game started: back here after).
+    void CreateCharacter()
+    {
+        if (World.Player != null) { Tell("characters are made from the main menu: go there (Escape -> main menu) and use Co-op, Join a Game"); return; }
+        if (host == null || host.Closed) return;
+        creating = true;
+        Tell("make your character; you'll come back to " + (hostName == null || hostName == "the host" ? "the host" : hostName) + "'s lobby when it's done");
+        if (!World.OpenCharacterCreation()) { creating = false; Tell("couldn't open character creation"); }
+    }
+
+    // A save's lobby: the selected character (row 0 is the host).
     void ChooseContinue()
     {
         int i = selected - 1;
@@ -139,7 +149,8 @@ public sealed partial class Coop
         at(playersHeading, pad, y); y += line + gap;
         int rowH = line + Ui.S(6), rows = choices.Count + 1;
         list = Ui.List(inner, rows * rowH + Ui.S(6), rowH);
-        list.Selected += i => { if (choosing) { selected = i; Refresh(); } else list.Selection = -1; };
+        bool picking = choosing && lobbyKindSeen == "saved";     // a save: pick which of its characters is yours; a new game: your place is given
+        list.Selected += i => { if (picking) { selected = i; Refresh(); } else list.Selection = -1; };
         at(list.View, pad, y); y += rows * rowH + Ui.S(6) + section;
 
         at(heading(lobbyKindSeen == "saved" ? "Game settings (kept from the save)" : "Game settings (the host's)"), pad, y); y += line + gap;
@@ -154,7 +165,8 @@ public sealed partial class Coop
         y += section - gap;
 
         var buttons = new List<UiElement>();
-        if (choosing) { var c = Ui.Button("Continue", ChooseContinue); Ui.Tooltip(c, "Play the selected character, or make a new one for an open place"); buttons.Add(c); }
+        if (choosing && picking) { var c = Ui.Button("Play this character", ChooseContinue); Ui.Tooltip(c, "Play the selected saved character"); buttons.Add(c); }
+        else if (choosing) { var c = Ui.Button("Create character", CreateCharacter); Ui.Tooltip(c, "Make your character in the game's character creation; you come back here when it's done"); buttons.Add(c); }
         var leave = Ui.Button("Leave", Leave); Ui.Tooltip(leave, choosing ? "Leave the lobby" : "Give up your place and leave the lobby"); buttons.Add(leave);
         int bh = buttons.Max(b => b.Height);
         string who = hostName == null || hostName == "the host" ? "the host" : hostName;
@@ -178,10 +190,10 @@ public sealed partial class Coop
         {
             bool isNew = choices[i].Key == "(new character)";
             var taker = i < choiceTakers.Count ? choiceTakers[i] : new KeyValuePair<string, string>("", "");
-            bool mine = readyAs != null && (taker.Value == readyAs || (!isNew && choices[i].Key == readyAs));
+            bool mine = (myLobbyName != null && taker.Key == myLobbyName) || (readyAs != null && (taker.Value == readyAs || (!isNew && choices[i].Key == readyAs)));
             string text;
             if (!choices[i].Value) text = isNew ? "Open  -  a new character" : choices[i].Key + "  -  saved character, free";
-            else if (isNew) text = (taker.Key == "" ? "Taken" : taker.Key) + (taker.Value == "" ? "" : "  -  " + taker.Value + " (new character)");
+            else if (isNew) text = (taker.Key == "" ? "Taken" : taker.Key) + (taker.Value == "" ? "  -  making a character..." : "  -  " + taker.Value + " (new character)");
             else text = choices[i].Key + (taker.Key == "" ? "  -  taken" : "  -  " + taker.Key);
             items.Add(text + (mine ? "   (you)" : "")); colours.Add(mine ? Mine_ : choices[i].Value ? Normal : Grey);
         }
@@ -192,10 +204,17 @@ public sealed partial class Coop
             Ui.SetText(joinDetail, "Waiting for " + who + " to start the game" + (open > 0 && lobbyKindSeen == "saved" ? " (every saved character needs its player)." : "..."));
             return;
         }
+        if (lobbyKindSeen != "saved")
+        {
+            Ui.SetText(statusLabel, "You're in " + (who == "the host" ? "the host's" : who + "'s") + " game" + (myLobbyName != null ? " as " + myLobbyName : "") + ".");
+            Ui.SetColor(statusLabel, Normal);
+            Ui.SetText(joinDetail, "Create your character; you'll come back here when it's done.");
+            return;
+        }
         Ui.SetText(statusLabel, "Pick the character you'll play in " + (who == "the host" ? "the host's" : who + "'s") + " game.");
         int s = selected - 1;
-        Ui.SetText(joinDetail, s < 0 || s >= choices.Count ? "Select a free place, then Continue."
-            : choices[s].Value ? "That place is taken."
-            : choices[s].Key == "(new character)" ? "Continue: make a new character in the game's character creation." : "Continue: play " + choices[s].Key + ".");
+        Ui.SetText(joinDetail, s < 0 || s >= choices.Count ? "Select your saved character."
+            : choices[s].Value ? "That character is taken."
+            : "Play this character: you'll play " + choices[s].Key + ".");
     }
 }

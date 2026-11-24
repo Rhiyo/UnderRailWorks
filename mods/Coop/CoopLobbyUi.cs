@@ -145,10 +145,12 @@ public sealed partial class Coop
     void RefreshLobby(List<string> items, List<Color> colours)
     {
         int free = slots.Count(sl => sl.Seat == null), taken = slots.Count - free;
+        var makingNames = slots.Where(sl => sl.Seat != null && sl.Seat.Record == null).Select(sl => sl.Seat.Peer.Name).ToList();
         bool isNew = lobbyKindShown != "saved";
         RefreshExpansionRow();
         string status; Color colour = Normal;
         if (starting) { status = "Starting the game..."; colour = Mine_; }
+        else if (makingNames.Count > 0) status = string.Join(", ", makingNames.ToArray()) + (makingNames.Count == 1 ? " is" : " are") + " making " + (makingNames.Count == 1 ? "a character." : "characters.");
         else if (free == 0) { status = "Everyone is here: Start game."; colour = Mine_; }
         else if (isNew) status = taken == 0 ? "Waiting for friends to join." : taken + (taken == 1 ? " player has" : " players have") + " joined. Start when everyone is here.";
         else status = "Waiting for " + free + " more player" + (free == 1 ? "" : "s") + ": every saved character needs its player.";
@@ -160,6 +162,7 @@ public sealed partial class Coop
             if (sl.Seat != null)
             {
                 var who = sl.Seat.Peer.Name;
+                if (sl.Seat.Record == null) { items.Add(who + "  -  making a character..."); colours.Add(Grey); continue; }
                 items.Add(sl.New ? who + "  -  " + sl.Seat.Record.Name + " (new character)" : sl.Saved.Name + "  -  " + who);
                 colours.Add(Normal);
             }

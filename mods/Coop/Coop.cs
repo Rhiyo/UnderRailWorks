@@ -142,7 +142,7 @@ public sealed partial class Coop : WorksMod
                 Changed(false);
                 return;
             case "HELLO":
-                p.Name = w.Length > 2 && w[2].Trim().Length > 0 ? w[2].Trim() : "Player " + p.Id;
+                p.Name = w.Length > 2 && w[2].Trim().Length > 0 ? w[2].Trim() : "Player";     // no name to go by (no store): "Player"
                 if (w.Length < 2 || w[1] != Handshake) { p.Send("BYE", "the host has Co-op " + Handshake + ", you have " + (w.Length > 1 ? w[1] : "?") + " (both need the same)"); p.Close(); return; }
                 {
                     var owns = ParseExpansions(w.Length > 4 ? w[4] : "");
@@ -172,11 +172,16 @@ public sealed partial class Coop : WorksMod
                     var back = lobby == null ? orphans.FirstOrDefault(o => o.PlayerName != null && o.PlayerName.Equals(p.Name, StringComparison.OrdinalIgnoreCase) && o.Character != null && !o.Character.IsDead && o.Character.Area != null) : null;
                     if (back != null) { Rejoin(p, back); return; }
                 }
-                seats[p] = new Seat { Peer = p, PlayerName = p.Name, Owns = ParseExpansions(w.Length > 4 ? w[4] : "") };
+                var joined = seats[p] = new Seat { Peer = p, PlayerName = p.Name, Owns = ParseExpansions(w.Length > 4 ? w[4] : "") };
+                // A new game's lobby: a place of their own straight away (they make the character for it); a save's: they
+                // pick which of its characters is theirs.
+                var place = lobby == "new" ? slots.FirstOrDefault(s => s.Seat == null) : null;
+                if (place != null) place.Seat = joined;
+                p.Name = joined.PlayerName = UniqueName(p.Name, p);
                 Log.Info(p.Name + " connected from " + p.Address);
                 Changed(false);
-                Log.Info(p.Name + " is choosing a character; expansions they have: " + Names(seats[p].Owns));
-                Notify.Log("Co-op: " + p.Name + " is choosing a character" + (lobby == "new" ? "; expansions they have: " + Names(seats[p].Owns) : ""), Say);
+                Log.Info(p.Name + (place != null ? " has a place; making a character" : " is choosing a character") + "; expansions they have: " + Names(joined.Owns));
+                Notify.Log("Co-op: " + p.Name + " joined" + (lobby == "new" ? "; expansions they have: " + Names(joined.Owns) : ""), Say);
                 LobbyChanged();     // everyone: the places, and the expansions the game can use now
                 return;
             case "BYE": p.Close(); return;
@@ -241,6 +246,7 @@ public sealed partial class Coop : WorksMod
     readonly List<KeyValuePair<string, string>> choiceTakers = new List<KeyValuePair<string, string>>();     // per place: player, their character
     readonly List<KeyValuePair<string, string>> lobbySettings = new List<KeyValuePair<string, string>>();     // the host's game settings
     string lobbyKindSeen;     // "new" / "saved"
+    string myLobbyName;       // the name the host knows us by ("Player" without a store name; "(2)" added to a name already there)
     readonly List<string> messages = new List<string>();
     string[] state;     // the host's last STATE for our character
     string[] party;     // the host's last PARTY: name, health, max, dead... for every player
@@ -250,7 +256,7 @@ public sealed partial class Coop : WorksMod
         if (listener != null) return "you're hosting";
         if (host != null && !host.Closed) return "already connected (coop.leave first)";
         if (args.Length < 1) return "coop.join <address[:port]> [your name]";
-        string name = args.Length > 1 ? string.Join(" ", args.Skip(1).ToArray()) : (World.Player != null ? World.Player.Name : Environment.UserName);
+        string name = args.Length > 1 ? string.Join(" ", args.Skip(1).ToArray()) : Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "";     // none: the host calls them "Player"
         if (args[0] == "friend")     // the first friend hosting (or the one named)
         {
             if (!Online.Available) return "not signed in to Steam: join by address instead";
@@ -285,6 +291,19 @@ public sealed partial class Coop : WorksMod
         lastJoin = args;
         Hello(args[0], name);
         return "connected to " + args[0] + ", waiting for the character list";
+    }
+
+    // A player's name as everyone sees it: the first one keeps it, the same name again (two "Player"s without a store,
+    // or two Steam accounts called the same, the host's included) gets a number: Player, Player (2), Player (3).
+    string UniqueName(string name, Peer who)
+    {
+        var others = seats.Keys.Where(o => o != who).Select(o => o.Name).ToList();
+        if (Online.Available && !string.IsNullOrEmpty(Online.MyName)) others.Add(Online.MyName);     // the host
+        Func<string, bool> taken = n => others.Any(o => o.Equals(n, StringComparison.OrdinalIgnoreCase));
+        if (!taken(name)) return name;
+        int n2 = 2;
+        while (taken(name + " (" + n2 + ")")) n2++;
+        return name + " (" + n2 + ")";
     }
 
     void Hello(string to, string name)
@@ -377,7 +396,7 @@ public sealed partial class Coop : WorksMod
             case "BYE": Tell("the host closed the connection: " + (w.Length > 1 ? w[1] : "")); if (hostMods != null) Changed(); return;
             case "HOSTMODS": HostModsArrived(w); return;
             case "EXPANSIONS": ExpansionsArrived(w); return;
-            case "LIST": hostName = w.Length > 1 ? w[1] : "?"; lobbyKindSeen = w.Length > 2 ? w[2] : null; choices.Clear(); choiceTakers.Clear(); lobbySettings.Clear(); return;
+            case "LIST": hostName = w.Length > 1 ? w[1] : "?"; lobbyKindSeen = w.Length > 2 ? w[2] : null; if (w.Length > 3 && w[3].Length > 0) myLobbyName = w[3]; choices.Clear(); choiceTakers.Clear(); lobbySettings.Clear(); return;
             case "CHAR":
                 choices.Add(new KeyValuePair<string, bool>(w[2], w.Length > 3 && w[3] == "taken"));
                 choiceTakers.Add(new KeyValuePair<string, string>(w.Length > 4 ? w[4] : "", w.Length > 5 ? w[5] : ""));
@@ -615,12 +634,7 @@ public sealed partial class Coop : WorksMod
                 case "join": AskJoin(); return "opened";
                 case "hostsave": PickSave(); return "opened";
                 case "page": if (coopPage != null) coopPage.Open(); return "opened";
-                case "create":
-                {
-                    int free = choices.FindIndex(c => c.Key == "(new character)" && !c.Value);
-                    if (free < 0) return "no open place";
-                    selected = free + 1; ChooseContinue(); return "creating";
-                }
+                case "create": CreateCharacter(); return "creating";
                 case "give": OpenGive(); return "opened";
                 case "loot": if (lootName == null) lootName = "Test crate"; ShowLoot(); return "opened";
                 case "talk": ShowTalk(); return "opened";
