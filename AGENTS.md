@@ -10,6 +10,11 @@ still describe the 1.x structure and names (`UnderrailFix*`): see `UnderRailWork
 decisions and status, and `TODO.md` for the work list. The game knowledge below (obfuscated names, how the game draws,
 saves, traps) applies to both.
 
+**Each shipped mod has a `NOTES.md`** (`mods/<Mod>/NOTES.md`): the rules the player set for it, decisions, things
+measured and traps, the knowledge the code doesn't hold. Read it before working on that mod; add to it when the player
+gives a new rule or something is learned the hard way (e.g. Co-op: "host and joiner UI line up", "never save before a
+zone's first game update"). A new mod gets one too.
+
 ## What it was (UnderRailFixes 1.x; the engine fixes still work this way)
 
 Display and quality-of-life fixes for UnderRail (Styg, Steam app 250520), distributed as a **patcher**: it backs up the player's own

@@ -358,7 +358,7 @@ public sealed partial class Coop
         Camera.CenterOn(c);
         Log.Info("mirror: view on " + c.Name + " at " + c.Position.X + "," + c.Position.Y + " (was " + (before.HasValue ? before.Value.X + "," + before.Value.Y : "none") + ", now " + (Camera.Center.HasValue ? Camera.Center.Value.X + "," + Camera.Center.Value.Y : "none") + ")");
         // The host's conversation again: the window went with the old HUD.
-        if (talkActive) { if (dialogShown) { TalkAs.CloseShown(); dialogShown = false; } ShowConversation(); }
+        if (talkActive) ShowConversation();     // closes what's left of it, opens it again once the window is free
     }
     void FollowMe()
     {

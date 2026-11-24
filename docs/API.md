@@ -169,6 +169,7 @@ What a merchant charges: Markup is the multiplier so far (the game's: about 1.15
 - `bool RemoveFromStock(Item item)` **(preview)** — One item out of / into a merchant's stock, as a deal does (an open barter window follows: SetStock, which replaces everything, leaves one showing items that are gone).
 - `bool AddToStock(Item item)` **(preview)**
 - `bool IsPlayer`
+- `float Opacity` — How opaque its body is drawn, 0 to 1 (1: normally). The game's scripts hide a character by setting it to 0 (the player in cutscenes: c5x.ae, with the "hidePlayer" flag); fades and stealth effects lower it too (c5x.ajl()).
 - `bool IsHostile` — Hostile or unfriendly to the player, not passive (red and orange outlines).
 - `Vector3 Position` — Map position (tiles; fractional while moving).
 - `void Follow(Character leader, int distance = 3)` — Keeps near leader (within distance tiles) out of combat; null stops it. For spawned allies, pets, escorts.
@@ -1738,6 +1739,7 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 - `static bool Choose(int index)` — Answers with choice index (as listed in the last line), or -1 to go on / end when it has none.
 - `static void Close()` — Ends the conversation now.
 - `static bool CloseShown()` — Ends whatever conversation the game's window shows now (any: the player's own, a mod's). False: none open.
+- `static bool IsShown` — A conversation is in the game's window now (any).
 - `delegate string AnswerLabel(int index, string text)` — The player's own conversation window: each answer's text as shown (index from 0, the text as the dialog has it), changed by every handler in turn, e.g. a mark after an answer others would pick. The answer itself and what TalkLine reports are unchanged. RefreshAnswers() shows changed marks at once.
 - `static readonly Hook<AnswerLabel> AnswerText = new Hook<AnswerLabel>("TalkAs.AnswerText")`
 - `static bool RefreshAnswers()` — The open conversation window's answers built again (AnswerText asked again). False: no window open.

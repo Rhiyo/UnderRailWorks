@@ -131,51 +131,23 @@ public sealed partial class Coop
     void BuildJoinLobby()
     {
         bool choosing = builtFor == "choose";
-        int pad = Ui.S(12), w = Ui.S(600), line = Ui.LineHeight, gap = Ui.S(6), section = Ui.S(14);
-        int inner = w - 2 * pad, labelW = inner * 11 / 20, valueW = inner - labelW - Ui.S(10);
-        var place = new List<KeyValuePair<UiElement, Point>>();
-        int y = 0;
-        Action<UiElement, int, int> at = (e, x, yy) => place.Add(new KeyValuePair<UiElement, Point>(e, new Point(x, yy)));
-        Func<string, UiElement> heading = text => { var h = Ui.Label(text, inner); Ui.SetColor(h, Mine_); return h; };
         builtPlaces = choices.Count; builtSettings = lobbySettings.Count;
-
-        statusLabel = Ui.Label("", inner);
-        at(statusLabel, pad, y); y += line + Ui.S(4);
-        joinDetail = Ui.Label("", inner);
-        Ui.SetColor(joinDetail, Grey);
-        at(joinDetail, pad, y); y += line + section;
-
-        playersHeading = heading("Players");
-        at(playersHeading, pad, y); y += line + gap;
-        int rows = choices.Count + 1;
         bool picking = choosing && lobbyKindSeen == "saved";     // a save: pick which of its characters is yours; a new game: your place is given
-        list = null; playerRows = new List<PlayerRow>();
-        playersTable = PlayersTable(inner, rows, picking ? (Action<int>)(i => { selected = i; Refresh(); }) : null);
-        at(playersTable, pad, y); y += TableHeight(rows) + section;
-
-        at(heading(lobbyKindSeen == "saved" ? "Game settings (kept from the save)" : "Game settings (the host's)"), pad, y); y += line + gap;
-        foreach (var kv in lobbySettings)
-        {
-            var wrapped = Ui.Wrap(kv.Value, valueW);
-            at(Ui.Label(kv.Key, labelW), pad + Ui.S(10), y);
-            for (int i = 0; i < wrapped.Count; i++) { var v = Ui.Label(wrapped[i], valueW); Ui.SetColor(v, Normal); at(v, pad + Ui.S(10) + labelW, y); y += line + (i == wrapped.Count - 1 ? gap : Ui.S(2)); }
-            if (wrapped.Count == 0) y += line + gap;
-        }
-        if (lobbySettings.Count == 0) { var e = Ui.Label("(not sent by the host)", inner); Ui.SetColor(e, Grey); at(e, pad + Ui.S(10), y); y += line + gap; }
-        y += section - gap;
-
-        var buttons = new List<UiElement>();
-        if (choosing && picking) { var c = Ui.Button("Play this character", ChooseContinue); Ui.Tooltip(c, "Play the selected saved character"); buttons.Add(c); }
-        else if (lobbyKindSeen != "saved") { var c = Ui.Button(readyAs == null ? "Create character" : "Recreate character", CreateCharacter); Ui.Tooltip(c, "Your character, made in the game's character creation; you come back here when it's done"); buttons.Add(c); }
-        var leave = Ui.Button("Leave", Leave); Ui.Tooltip(leave, choosing ? "Leave the lobby" : "Give up your place and leave the lobby"); buttons.Add(leave);
-        int bh = buttons.Max(b => b.Height);
         string who = hostName == null || hostName == "the host" ? "the host" : hostName;
-        window = Ui.Window(this, "coop", who == "the host" ? "Join a game" : "Join " + who + "'s game", Math.Max(w, Ui.ButtonsWidth(buttons, pad)), 22 + Ui.S(4) + y + bh + pad);
-        if (window == null) return;
-        window.Closed += () => { window = null; builtFor = null; };
-        int top = window.Top + Ui.S(4);
-        foreach (var p in place) Ui.Add(window, p.Key, p.Value.X, top + p.Value.Y);
-        Ui.AddButtons(window, buttons, pad);
+        var v = new LobbyView
+        {
+            Title = who == "the host" ? "Join a game" : "Join " + who + "'s game", Detail = true, Rows = choices.Count + 1,
+            Pick = picking ? (Action<int>)(i => { selected = i; Refresh(); }) : null,
+            SettingsHeading = lobbyKindSeen == "saved" ? "Game settings (kept from the save)" : "Game settings (the host's)",
+        };
+        // Your character, under the players, where the host has theirs.
+        if (picking) { v.PlayerAction = Ui.Button("Play this character", ChooseContinue); Ui.Tooltip(v.PlayerAction, "Play the selected saved character"); }
+        else if (lobbyKindSeen != "saved") { v.PlayerAction = Ui.Button(readyAs == null ? "Create character" : "Recreate character", CreateCharacter); Ui.Tooltip(v.PlayerAction, "Your character, made in the game's character creation; you come back here when it's done"); }
+        foreach (var kv in lobbySettings) v.Settings.Add(Pair(kv.Key, LobbyValue(kv.Value)));
+        // Leave where the host has Cancel.
+        v.Right = Ui.Button("Leave", Leave);
+        Ui.Tooltip(v.Right, choosing ? "Leave the lobby" : "Give up your place and leave the lobby");
+        BuildLobbyWindow(v);
     }
 
     void RefreshJoinLobby(List<string> items, List<Color> colours)

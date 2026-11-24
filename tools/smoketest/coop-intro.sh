@@ -26,14 +26,17 @@ h "$SKILL/inp.sh" focus click 214 239 sleep 300 click 902 678 >/dev/null 2>&1; s
 printf 'coop.ui hostcreate\nwait 10\nworks.accept Hosty\n' > "$HOST/Mods/WorksTest/menurun.txt"; sleep 25
 printf 'wait 8\ncoop.join 127.0.0.1:%s\nwait 6\ncoop.ui create\nwait 10\nworks.accept Bobby\n' "$PORT" > "$JOIN/Mods/WorksTest/menurun.txt"
 j timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1; sleep 50
+shot() { [ -n "${SHOTS:-}" ] && { mkdir -p "$SHOTS"; h "$SKILL/shot.sh" "$SHOTS/$1-host.png" 50 >/dev/null; j "$SKILL/shot.sh" "$SHOTS/$1-join.png" 50 >/dev/null; }; }     # SHOTS=<folder>: screenshots
+shot 0-lobby
 printf 'coop.start\n' > "$HOST/Mods/WorksTest/menurun.txt"; sleep 8
 h "$SKILL/inp.sh" focus move 640 300 >/dev/null 2>&1; j "$SKILL/inp.sh" focus move 640 300 >/dev/null 2>&1
 sleep 12
-shot() { [ -n "${SHOTS:-}" ] && { mkdir -p "$SHOTS"; h "$SKILL/shot.sh" "$SHOTS/$1-host.png" 50 >/dev/null; j "$SKILL/shot.sh" "$SHOTS/$1-join.png" 50 >/dev/null; }; }     # SHOTS=<folder>: screenshots
 j "$SKILL/inp.sh" focus click 430 628 >/dev/null 2>&1; sleep 4     # the joiner votes for 1 (Continue): a click on it in its own window (1280x720)
 shot 1-intro
 h "$SKILL/inp.sh" focus key 0x32 >/dev/null 2>&1; sleep 25     # 2. Skip intro (the host decides)
 shot 2-after-skip
+h "$SKILL/inp.sh" focus key 0x31 >/dev/null 2>&1; sleep 8     # the host goes on (1. Continue) in the next zone's conversation
+shot 3-after-continue
 j timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 
 pass=0; fail=0
@@ -54,6 +57,8 @@ check "Skip intro: the host moves on"            "$HL" "zone loaded: StationAlph
 check "... its arrival conversation opens (a transition's trigger, not only a new game's)" "$HL" "dialog sgs_vencel with"
 [ "$(grep -c "zone settled: sending the world" "$HL")" -ge 2 ] && pass=$((pass+1)) || { fail=$((fail+1)); echo "FAIL: the world goes again when the next zone settled"; }
 check "... and the joiner sees that conversation" "$JL" "Coop: conversation: Vencel"
+# The host's next line: the joiner gets it and shows it in the game's window (it once closed and never reopened).
+if awk '/Coop: conversation: Vencel: ::He picks up/ { f=1 } f && /dialog coop\/listen with Vencel/ { ok=1 } END { exit !ok }' "$JL"; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: after the host's Continue the joiner shows the next line in its window"; fi
 check "... and the joiner follows"               "$JL" "zone loaded: StationAlpha-Level2"
 echo "co-op intro test: $pass passed, $fail failed (logs: $HL, $JL)"
 [ "$fail" -eq 0 ]

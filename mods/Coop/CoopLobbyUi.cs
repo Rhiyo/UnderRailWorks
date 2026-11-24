@@ -27,144 +27,101 @@ public sealed partial class Coop
         bool editable = lobby == "new";
         lobbyKindShown = lobby ?? lobbyKindShown ?? "new";
         bool saved = lobbyKindShown == "saved";
-        int pad = Ui.S(12), w = Ui.S(600), line = Ui.LineHeight, gap = Ui.S(6), section = Ui.S(14);
-        int inner = w - 2 * pad, labelW = inner * 11 / 20, controlW = inner - labelW - Ui.S(10);
-        var place = new List<KeyValuePair<UiElement, Point>>();
-        int y = 0;
-        Action<UiElement, int, int> at = (e, x, yy) => place.Add(new KeyValuePair<UiElement, Point>(e, new Point(x, yy)));
-        Func<string, UiElement> heading = text => { var h = Ui.Label(text, inner); Ui.SetColor(h, Mine_); return h; };
-        Action<string, Color> note = (text, colour) =>
-        {
-            foreach (var l in Ui.Wrap(text, inner - Ui.S(10))) { var e = Ui.Label(l, inner - Ui.S(10)); Ui.SetColor(e, colour); at(e, pad + Ui.S(10), y); y += line + Ui.S(2); }
-        };
+        int line = Ui.LineHeight, valueW = LobbyValueWidth;
+        var v = new LobbyView { Title = saved ? "Host saved game: " + (lobbySave ?? "") : "Host a new game", Rows = slots.Count + 1 };
 
-        statusLabel = Ui.Label("", inner);
-        at(statusLabel, pad, y); y += line + section;
-
-        // Players
-        playersHeading = heading("Players");
-        at(playersHeading, pad, y); y += line + gap;
-        int rows = slots.Count + 1;
-        list = null; playerRows = new List<PlayerRow>();
-        playersTable = PlayersTable(inner, rows, null);
-        at(playersTable, pad, y); y += TableHeight(rows) + gap;
         // Your character, under the players (a new game: the host makes one here too, as everyone does).
         hostCreateButton = null;
         if (editable)
         {
             hostCreateButton = Ui.Button(hostCharacter == null ? "Create character" : "Recreate character", CreateHostCharacter);
             Ui.Tooltip(hostCreateButton, "Your character, made in the game's character creation; you come back here when it's done");
-            at(hostCreateButton, pad, y); y += hostCreateButton.Height;
+            v.PlayerAction = hostCreateButton;
         }
-        y += section;
 
-        // Game settings, with Edit settings beside the heading (a new game's rules: the game's Rules screen again).
-        UiElement edit = editable && hostRules != null ? Ui.Button("Edit settings", EditRules) : null;
-        int headH = edit == null ? line : Math.Max(line, edit.Height);
-        at(heading(saved ? "Game settings (kept from the save)" : "Game settings"), pad, y + (headH - line) / 2);
-        if (edit != null) { Ui.Tooltip(edit, "The game's rules again (difficulty, experience system)"); at(edit, pad + inner - edit.Width, y); }
-        y += headH + gap;
-        Action<string, UiElement, int> row = (label, control, h) =>
-        {
-            int rh = Math.Max(line, h);
-            at(Ui.Label(label, labelW), pad + Ui.S(10), y + (rh - line) / 2);
-            if (control != null) at(control, pad + Ui.S(10) + labelW, y + (rh - h) / 2);
-            y += rh + gap;
-        };
-        Action<string, string> textRow = (label, value) => { var v = Ui.Label(value, controlW); Ui.SetColor(v, Normal); row(label, v, line); };
+        // Game settings (a new game's rules: Edit settings opens the game's Rules screen again).
+        v.SettingsHeading = saved ? "Game settings (kept from the save)" : "Game settings";
+        if (editable && hostRules != null) { v.SettingsAction = Ui.Button("Edit settings", EditRules); Ui.Tooltip(v.SettingsAction, "The game's rules again (difficulty, experience system)"); }
+        if (editable && hostRules != null) { v.Settings.Add(Pair("Difficulty", LobbyValue(hostRules.Difficulty))); v.Settings.Add(Pair("Experience", LobbyValue(hostRules.Experience))); }
         expansionTicks.Clear(); expansionLabels.Clear();
-        if (editable && hostRules != null) { textRow("Difficulty", hostRules.Difficulty); textRow("Experience", hostRules.Experience); }
         if (editable)
         {
-            // Expansions: a tick each, side by side.
-            int x = pad + Ui.S(10) + labelW, rh = line;
-            at(Ui.Label("Expansions", labelW), pad + Ui.S(10), y);
+            // Expansions: a tick each, one under the other, in one panel.
+            int rh = 0;
+            var rows = new List<KeyValuePair<UiTickBox, UiElement>>();
             foreach (var id in Expansions.Known)
             {
                 var tick = Ui.TickBox(Unavailable(id) == null && !unticked.Contains(id));
-                var label = Ui.Label(Expansions.Name(id), controlW - tick.Width - Ui.S(6));
-                at(tick, x, y); at(label, x + tick.Width + Ui.S(6), y + Math.Max(0, (tick.Height - line) / 2));
-                expansionTicks[id] = tick; expansionLabels[id] = label;
+                var label = Ui.Label(Expansions.Name(id), valueW - tick.Width - Ui.S(6));
                 Ui.Tooltip(tick, Expansions.Name(id) + ": everyone needs it to play this game");
-                rh = Math.Max(tick.Height, line);
-                y += rh + Ui.S(2);
+                expansionTicks[id] = tick; expansionLabels[id] = label;
+                rows.Add(new KeyValuePair<UiTickBox, UiElement>(tick, label));
+                rh = Math.Max(rh, Math.Max(tick.Height, line));
             }
-            y += gap;
+            var panel = Ui.Panel(valueW, Math.Max(line, rows.Count * (rh + Ui.S(2))));
+            for (int i = 0; i < rows.Count; i++)
+            {
+                Ui.Add(panel, rows[i].Key, 0, i * (rh + Ui.S(2)));
+                Ui.Add(panel, rows[i].Value, rows[i].Key.Width + Ui.S(6), i * (rh + Ui.S(2)) + Math.Max(0, (rows[i].Key.Height - line) / 2));
+            }
+            v.Settings.Add(Pair("Expansions", panel));
         }
         else
         {
             var difficulty = lobbySave == null ? null : SaveGames.DifficultyOf(lobbySave);
-            if (difficulty != null) textRow("Difficulty", difficulty);
-            textRow("Expansions", Names(LobbyExpansions()));
+            if (difficulty != null) v.Settings.Add(Pair("Difficulty", LobbyValue(difficulty)));
+            v.Settings.Add(Pair("Expansions", LobbyValue(Names(LobbyExpansions()))));
         }
         foreach (var o in options)
         {
             var opt = o;
-            if (!editable) { textRow(o.Label, OptionText(o, o.Value)); continue; }
+            if (!editable) { v.Settings.Add(Pair(o.Label, LobbyValue(OptionText(o, o.Value)))); continue; }
             // A choice for named options and for numbers with few steps (each shown as its value), else a slider.
             var values = o.Names != null ? Enumerable.Range(0, o.Names.Length).ToList()
                 : (o.Max - o.Min) / Math.Max(1, o.Step) <= 24 ? Enumerable.Range(0, (o.Max - o.Min) / Math.Max(1, o.Step) + 1).Select(i => o.Min + i * o.Step).ToList() : null;
             if (values != null)
             {
                 int index = Math.Max(0, values.IndexOf(o.Value));
-                var c = Ui.Choice(controlW, values.Select(v => OptionText(opt, v)).ToList(), index);
+                var c = Ui.Choice(valueW, values.Select(x => OptionText(opt, x)).ToList(), index);
                 c.Changed += i => { opt.Value = values[Math.Max(0, Math.Min(values.Count - 1, i))]; RememberOption(opt); };
                 Ui.Tooltip(c.View, "Click: next, right-click: back");
-                row(o.Label, c.View, c.View.Height);
+                v.Settings.Add(Pair(o.Label, c.View));
             }
             else
             {
-                var sl = Ui.Slider(controlW, o.Min, o.Max, o.Value);
+                var sl = Ui.Slider(valueW, o.Min, o.Max, o.Value);
                 sl.Step = o.Step;
-                sl.Changed += v => { opt.Value = (int)Math.Round(v); RememberOption(opt); };
-                row(o.Label, sl.View, sl.View.Height);
+                sl.Changed += x => { opt.Value = (int)Math.Round(x); RememberOption(opt); };
+                v.Settings.Add(Pair(o.Label, sl.View));
             }
         }
-        y += section - gap;
 
         // How friends join: one line (the details in its tooltip).
         var lan = Addresses().Where(a => !a.StartsWith("127.")).ToList();
         if (listener != null)
         {
             var address = lan.Count == 0 ? "127.0.0.1" : WithPort(lan[0], listener.Port);
-            var how = Ui.Label(Cut("Friends join with Co-op, Join a Game" + (Online.Available ? "" : ": " + address) + (Online.Available ? " (or the address " + address + ")" : ""), inner), inner);
-            Ui.SetColor(how, Grey);
-            Ui.Tooltip(how, (Online.Available ? Online.Service + " friends see your game in Join a Game, or use Join Game in " + Online.Service + ". " : "")
+            v.Note = "Friends join with Co-op, Join a Game" + (Online.Available ? " (or the address " + address + ")" : ": " + address);
+            v.NoteTip = (Online.Available ? Online.Service + " friends see your game in Join a Game, or use Join Game in " + Online.Service + ". " : "")
                 + "By address: " + string.Join(", ", lan.Select(a => WithPort(a, listener.Port)).DefaultIfEmpty("127.0.0.1").ToArray())
-                + ". Over the internet" + (Online.Available ? " without " + Online.Service : "") + ": forward port " + listener.Port + " on your router, or use a VPN.");
-            at(how, pad, y); y += line + section;
+                + ". Over the internet" + (Online.Available ? " without " + Online.Service : "") + ": forward port " + listener.Port + " on your router, or use a VPN.";
         }
 
-        // Buttons
-        var buttons = new List<UiElement>();
-        var start = startButton = Ui.Button("Start game", () => { var r = StartGame(); if (r != "starting") Notify.Log("Co-op: " + r, Say); });
-        buttons.Add(start);
-        if (Online.Available) buttons.Add(Ui.Button("Invite friends...", () =>
+        // Start game (and Invite friends...) on the left, Cancel on the right.
+        startButton = Ui.Button("Start game", () => { var r = StartGame(); if (r != "starting") Notify.Log("Co-op: " + r, Say); });
+        Ui.Tooltip(startButton, editable ? "When everyone (you too) has a character: the game starts with these settings and everyone who joined (open places are dropped)" : "Load the save (every place must be taken)");
+        v.Left.Add(startButton);
+        if (Online.Available) v.Left.Add(Ui.Button("Invite friends...", () =>
         {
             if (!Online.IsHosting) { Tell("the " + Online.Service + " lobby isn't ready yet"); return; }
             if (!Online.OpenInviteDialog()) Tell("the " + Online.Service + " overlay isn't available here: friends join from Co-op, Join a Game, or Join Game in their friends list");
         }));
-        var cancel = Ui.Button("Cancel", () => { StopHosting(); if (window != null) window.Close(); if (coopPage != null && MainMenu.IsShowing) coopPage.Open(); });     // back to the Co-op page
-        buttons.Add(cancel);
-        // The window keeps its width (the content is laid out for it): Start game (and Invite friends...) on the left,
-        // Cancel on the right; on a screen too narrow for that, the buttons wrap (Ui.AddButtons).
-        bool oneRow = Ui.ButtonsWidth(buttons, pad) + Ui.S(20) <= w;
-        int height = y + (oneRow ? buttons.Max(b => b.Height) : Ui.ButtonsHeight(buttons, w, pad)) + pad;
-        window = Ui.Window(this, "coop", saved ? "Host saved game: " + (lobbySave ?? "") : "Host a new game", w, 22 + Ui.S(4) + height);
-        if (window == null) return;
-        window.Closed += () => { window = null; builtFor = null; };
-        int top = window.Top + Ui.S(4);
-        foreach (var p in place) Ui.Add(window, p.Key, p.Value.X, top + p.Value.Y);
-        if (oneRow)
-        {
-            int by = window.Height - pad - buttons.Max(b => b.Height), bx = pad;
-            foreach (var b in buttons.Where(b => b != cancel)) { Ui.Add(window, b, bx, by); bx += b.Width + gap; }
-            Ui.Add(window, cancel, window.Width - pad - cancel.Width, by);
-        }
-        else Ui.AddButtons(window, buttons, pad);
-        Ui.Tooltip(start, editable ? "When everyone (you too) has a character: the game starts with these settings and everyone who joined (open places are dropped)" : "Load the save (every place must be taken)");
-        Ui.Tooltip(cancel, "Close the lobby: everyone who joined is sent back");
+        v.Right = Ui.Button("Cancel", () => { StopHosting(); if (window != null) window.Close(); if (coopPage != null && MainMenu.IsShowing) coopPage.Open(); });     // back to the Co-op page
+        Ui.Tooltip(v.Right, "Close the lobby: everyone who joined is sent back");
+        BuildLobbyWindow(v);
     }
+
+    static KeyValuePair<string, UiElement> Pair(string label, UiElement control) { return new KeyValuePair<string, UiElement>(label, control); }
 
     UiElement hostCreateButton, startButton;
     string hostCharacter, hostSheet;     // a new game's lobby: the host's character, made here (its .char)

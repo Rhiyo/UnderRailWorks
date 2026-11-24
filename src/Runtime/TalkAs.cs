@@ -76,6 +76,8 @@ namespace UnderRailWorks
         public static void Close() { var a = TalkHooks.Active; if (a != null && a.Controller != null) a.Controller.ad(); }
         // Ends whatever conversation the game's window shows now (any: the player's own, a mod's). False: none open.
         public static bool CloseShown() { var c = TalkHooks.ShownController; if (c == null) return false; c.ad(); return true; }
+        // A conversation is in the game's window now (any).
+        public static bool IsShown { get { return TalkHooks.ShownController != null; } }
 
         // The player's own conversation window: each answer's text as shown (index from 0, the text as the dialog has
         // it), changed by every handler in turn, e.g. a mark after an answer others would pick. The answer itself and

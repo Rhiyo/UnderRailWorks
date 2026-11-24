@@ -112,12 +112,12 @@ public sealed partial class Coop
         // The host's window: who suggested each answer, after it.
         TalkAs.AnswerText.Add(this, (index, text) =>
         {
-            if (listener == null && dialogShown)
+            if (listener == null && talkActive)
             {
                 // The joiner's window: the votes after each answer, as on the host's.
                 if (index < 0 || index >= talkChoices.Count) return text;
                 string voters; talkSuggested.TryGetValue(talkChoices[index].Key, out voters);
-                return string.IsNullOrEmpty(voters) ? text : text + "   [" + voters + "]";
+                return string.IsNullOrEmpty(voters) ? text : text + "   [" + voters.Replace(",", ", ") + "]";     // "Alice, Bob" as on the host's
             }
             if (listener == null || !hostTalking || index < 0 || index >= hostChoices.Count || hostChoiceTexts[index] != text) return text;
             var names = suggested.Where(kv => kv.Value == hostChoices[index]).Select(kv => kv.Key).ToList();
@@ -159,14 +159,14 @@ public sealed partial class Coop
                     int eq = pair.IndexOf('='); int i;
                     if (eq > 0 && int.TryParse(pair.Substring(0, eq), out i)) talkSuggested[i] = pair.Substring(eq + 1);
                 }
-                if (dialogShown) TalkAs.RefreshAnswers();
+                if (TalkAs.IsShown) TalkAs.RefreshAnswers();
                 else if (talkWindow != null && talkWindow.IsOpen) ShowTalk();
                 return true;
             case "DLGSHOW": talkActive = true; Log.Info("conversation: " + talkSpeaker + ": " + talkText + " (" + talkChoices.Count + " answers)"); ShowConversation(); return true;
             case "DLGEND":
                 talkActive = false; talkEnding = true; if (talkWindow != null && talkWindow.IsOpen) talkWindow.Close(); talkWindow = null; talkEnding = false; mySuggestion = -1;
                 openPending = false;
-                if (dialogShown) TalkAs.CloseShown();
+                if (TalkAs.IsShown) TalkAs.CloseShown();
                 hostCamera = null;
                 if (World.Player != null) { Camera.Follow(World.Player); Camera.CenterOn(World.Player); }     // back to your own character
                 return true;
@@ -236,7 +236,7 @@ public sealed partial class Coop
         if (host == null || host.Closed) return;
         mySuggestion = mySuggestion == index ? -1 : index;
         host.Send("DLGSUGGEST", index);
-        if (dialogShown) TalkAs.RefreshAnswers(); else ShowTalk();
+        if (TalkAs.IsShown && talkActive) TalkAs.RefreshAnswers(); else ShowTalk();
     }
 
     // --- The joiner's view of the host's conversation: the game's own window ------------------------------------
@@ -246,7 +246,7 @@ public sealed partial class Coop
     // on every player's window (TalkAs.AnswerText). The host's answer moves everyone on. The camera is the host's.
     string talkSpeakerKey;
     Vector3? hostCamera;     // the host's camera in the conversation: kept here every frame (this window's own opening moves it)
-    bool dialogShown, openPending;
+    bool dialogShown, openPending, waitLogged;
     Character lastSpeaker;
 
     Character SpeakerHere()
@@ -275,19 +275,23 @@ public sealed partial class Coop
                 else l.OptionGreyed(choices[i].Value, "l", Condition.Code(() => false));
             }
         });
+        // The previous line's window closes; the new one opens on a later frame, once no window is up (asked of the
+        // game, TalkAs.IsShown: a flag of our own went wrong when a close's event came after the next opening).
         openPending = true;
-        if (dialogShown) TalkAs.CloseShown();     // the previous line's window: closed, the new one opens when it's gone
-        else OpenConversation();
+        if (TalkAs.IsShown) TalkAs.CloseShown();
     }
 
     void OpenConversation()
     {
         if (!openPending || !talkActive) return;
         // Not before this machine's own character is in place: making it the player builds the HUD again, and the
-        // conversation's window would go with the old one.
-        if (followed == null || centreOn != null) return;
+        // conversation's window would go with the old one. (That rebuild is done once it's followed; the view's
+        // centring after it waits for the HUD, which a conversation hides: not a reason to wait.)
+        if (followed == null) { if (!waitLogged) { waitLogged = true; Log.Info("conversation: waiting for this machine's character before showing it"); } return; }
+        waitLogged = false;
         var npc = SpeakerHere();
         if (npc == null || World.Player == null) { openPending = false; ShowTalk(); return; }
+        if (TalkAs.IsShown) return;     // still closing the previous one
         openPending = false;
         bool ok = false;
         Simulation.Apply(() => ok = Dialogs.Start(npc, "coop/listen"));     // this game is a copy: Works lets Co-op's own conversation through
@@ -297,16 +301,11 @@ public sealed partial class Coop
 
     void LoadConversationView()
     {
-        GameEvents.DialogEnded.Add(this, name =>
-        {
-            if (listener != null || !dialogShown) return;
-            dialogShown = false;
-            if (openPending) OpenConversation();     // the next line
-        });
+        GameEvents.DialogEnded.Add(this, name => { if (listener == null) dialogShown = TalkAs.IsShown; });
         GameEvents.Update.Add(this, dt =>
         {
             if (listener != null) return;
-            if (openPending && !dialogShown) OpenConversation();
+            if (openPending) OpenConversation();     // the next line, once the window is free
             if (talkActive && hostCamera != null) { var at = Camera.Position; if (at == null || Vector3.Distance(at.Value, hostCamera.Value) > 0.01f) Camera.Position = hostCamera; }
         });
     }
