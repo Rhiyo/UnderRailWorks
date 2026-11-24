@@ -4,11 +4,7 @@
 //                   After a refusal for different mods: what differs, Match host (CoopMatch.cs); Restore my mods.
 //   lobby (host)    CoopLobbyUi.cs: players, game settings, how friends join; Start game / Invite friends... / Cancel
 //   hosting         who is playing what, Stop hosting
-//   choosing        the lobby's places (saved characters, "new character" places; taken ones greyed), Play selected /
-//                   New character...
-//   ready           the character you'll play, waiting for the host to start
-//   playing         your character's health and whose turn it is, the messages, End turn / Attack nearest enemy /
-//                   Follow host / Walk to... / Leave ("Attack nearest": the nearest character hostile to yours)
+//   joining         CoopJoinUi.cs: connecting, choosing a character, waiting for the host, playing
 // Built from Works' UI (Ui.Window, Ui.List, Ui.Button, Ui.Ask, Hud.AddPart), sized with Ui.S and Ui.LineHeight.
 using System;
 using System.Collections.Generic;
@@ -66,6 +62,8 @@ public sealed partial class Coop
     void Build()
     {
         if (Mode() == "lobby") { builtFor = "lobby"; selected = -1; BuildLobby(); if (window != null) Refresh(); else builtFor = null; return; }
+        if (Mode() == "host") { builtFor = "host"; selected = -1; BuildHosting(); if (window != null) Refresh(); else builtFor = null; return; }
+        if (JoinTitles.ContainsKey(Mode())) { builtFor = Mode(); selected = -1; BuildJoiner(); if (window != null) Refresh(); else builtFor = null; return; }
         int w = Ui.S(600), h = Ui.S(Mode() == "lobby" ? 520 : 380), line = Ui.LineHeight, pad = Ui.S(10);
         window = Ui.Window(this, "coop", "Co-op", w, h);
         if (window == null) return;
@@ -87,44 +85,9 @@ public sealed partial class Coop
                 button("Join a game...", AskJoin);
                 if (Mods.HasProfile(BackupProfile)) button("Restore my mods", () => RestoreMine());
                 break;
-            case "ready":
-                button("Leave", Leave);
-                break;
             case "host":
                 if (World.Player != null) button("Give...", OpenGive);
                 button("Stop hosting", () => StopHosting());
-                break;
-            case "connecting":
-                button("Leave", Leave);
-                break;
-            case "choose":
-                button("Play selected", () =>
-                {
-                    if (selected < 1) { Tell(selected == 0 ? "that's the host's character" : "select a character first"); return; }
-                    host.Send("PICK", selected);
-                });
-                button("New character...", () =>
-                {
-                    // Made in the game's own creation (a new game on this machine, left as soon as it starts).
-                    if (World.Player != null) { Tell("new characters are made from the main menu: go there (Escape -> main menu) and use Co-op, Join a Game"); return; }
-                    creating = true;
-                    Tell("make your character; you'll join " + (hostName ?? "the host") + " when it's done");
-                    if (!World.StartNewGame()) { creating = false; Tell("couldn't open character creation"); }
-                });
-                button("Leave", Leave);
-                break;
-            case "play":
-                button("End turn", () => Run("END"));
-                button("Give...", OpenGive);
-                button("Attack nearest", () => Run("ATTACK"));
-                button("Follow host", () => Run("FOLLOW"));
-                button("Walk to...", () => Ui.Ask(this, "Walk to tile (x y)", "", text =>
-                {
-                    var p = (text ?? "").Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
-                    int tx, ty;
-                    if (p.Length == 2 && int.TryParse(p[0], out tx) && int.TryParse(p[1], out ty)) Run("GO", tx.ToString(), ty.ToString()); else Tell("two numbers, e.g. 12 30");
-                }, "Walk"));
-                button("Leave", Leave);
                 break;
         }
         int gap = Ui.S(6), bh = buttons.Count == 0 ? 0 : buttons.Max(b => b.Height);
@@ -169,53 +132,23 @@ public sealed partial class Coop
                 items.AddRange(messages.Skip(Math.Max(0, messages.Count - 30))); colours.AddRange(items.Select(_ => Normal));
                 break;
             case "host":
-                Ui.SetText(statusLabel, "Hosting on port " + listener.Port + ". Who's playing:");
-                foreach (var s in seats.Values)
-                {
-                    items.Add(s.Peer.Name + (s.Character == null ? "  (choosing a character)" : "  plays " + s.Character.Name + (s.Character.IsDead ? " (dead)" : ", " + (int)s.Character.Health + "/" + (int)s.Character.MaxHealth + " HP")));
-                    colours.Add(Normal);
-                }
-                foreach (var o in orphans) { items.Add(o.Record.Name + "  (player left; passes its turns)"); colours.Add(Grey); }
-                if (items.Count == 0) { items.Add("Nobody has joined yet."); colours.Add(Grey); }
-                items.Add(""); colours.Add(Grey);
-                items.Add("Others join with one of these addresses:"); colours.Add(Grey);
-                foreach (var a in Addresses()) { items.Add("   " + WithPort(a, listener.Port)); colours.Add(Mine_); }
-                items.Add("(over the internet: your router's address, with port " + listener.Port + " forwarded)"); colours.Add(Grey);
-                {
-                    // What joiners need: the same mods, same versions, except those that only change one player's screen.
-                    var need = Mods.Running(true); var all = Mods.Running();
-                    items.Add(""); colours.Add(Grey);
-                    items.Add("Others need these " + need.Length + " mods, same versions (" + (all.Length - need.Length) + " others only change your screen):"); colours.Add(Grey);
-                    var names = need.Select(x => { int at = x.LastIndexOf('@'); var m = ModLoader.Find(x.Substring(0, at)); return (m == null ? x.Substring(0, at) : m.Name) + " " + x.Substring(at + 1); }).ToList();
-                    for (int i = 0; i < names.Count; i += 3) { items.Add("   " + string.Join(", ", names.Skip(i).Take(3).ToArray())); colours.Add(Normal); }
-                }
-                break;
-            case "connecting":
-                Ui.SetText(statusLabel, onlineJoining != null ? "Joining through " + Online.Service + "..." : "Connecting...");
+                RefreshHosting(items, colours);
                 break;
             case "lobby":
                 RefreshLobby(items, colours);
                 break;
-            case "ready":
-                if (sessionExpansions != null) { items.Add("Expansions in this game: " + Names(sessionExpansions)); colours.Add(Grey); }
-                Ui.SetText(statusLabel, "You'll play " + readyAs + " in " + (hostName ?? "the host") + "'s game. Waiting for the host to start...");
-                items.AddRange(messages.Skip(Math.Max(0, messages.Count - 30))); colours.AddRange(items.Select(_ => Normal));
-                break;
+            case "connecting":
             case "choose":
-                Ui.SetText(statusLabel, "Take a place in " + (hostName ?? "the host") + "'s game" + (selected > 0 && selected <= choices.Count ? ": " + choices[selected - 1].Key : "") + ". A \"new character\" place: New character...");
-                items.Add((hostName ?? "?") + "  (the host)"); colours.Add(Grey);
-                foreach (var c in choices) { items.Add(c.Key + (c.Value ? "  (taken)" : "")); colours.Add(c.Value ? Grey : Normal); }
-                if (sessionExpansions != null) { items.Add(""); colours.Add(Grey); items.Add("Expansions in this game: " + Names(sessionExpansions)); colours.Add(Grey); }
-                break;
+            case "ready":
             case "play":
-                Ui.SetText(statusLabel, StateText());
-                items.AddRange(messages.Skip(Math.Max(0, messages.Count - 40))); colours.AddRange(items.Select(_ => Normal));
+                RefreshJoiner(items, colours);
                 break;
         }
+        if (list == null) return;
         list.Items = items;
         list.ItemColors = colours;
         if (builtFor == "choose") list.Selection = selected;
-        else if (builtFor == "play" || builtFor == "idle")
+        else if (builtFor == "play" || builtFor == "ready" || builtFor == "idle")
         {
             int rows = Math.Max(1, list.View.Height / Math.Max(1, Ui.LineHeight + 2));
             list.First = Math.Max(0, items.Count - rows);     // the newest messages in view
@@ -251,16 +184,15 @@ public sealed partial class Coop
     {
         if (!Online.Available) { AskAddress(); return; }
         if (joinWindow != null && joinWindow.IsOpen) joinWindow.Close();
-        int w = Ui.S(520), h = Ui.S(360), pad = Ui.S(10);
-        joinWindow = Ui.Window(this, "join", "Join a Game", w, h);
-        if (joinWindow == null) return;
-        joinWindow.Closed += () => joinWindow = null;
-        w = joinWindow.Width; h = joinWindow.Height;
-        int y = joinWindow.Top + Ui.S(4);
-        Ui.Add(joinWindow, Ui.Label(Online.Service + " friends hosting:", w - 2 * pad), pad, y);
-        y += Ui.LineHeight + Ui.S(6);
         var friendsList = new List<OnlinePlayer>();
         int chosen = -1;
+        UiList rows = null;
+        Action fill = () =>
+        {
+            friendsList.Clear(); friendsList.AddRange(Online.FriendsHosting());
+            rows.Items = friendsList.Count == 0 ? new List<string> { "Nobody is hosting right now: Refresh in a moment." } : friendsList.Select(f => f.Name).ToList();
+            chosen = -1;
+        };
         var join = Ui.Button("Join", () =>
         {
             if (chosen < 0 || chosen >= friendsList.Count) { Tell("choose a friend's game"); return; }
@@ -269,22 +201,21 @@ public sealed partial class Coop
             if (joinWindow != null) joinWindow.Close();
             if (window == null || !window.IsOpen) Build(); else Changed();
         });
-        UiList rows = null;
-        Action fill = () =>
-        {
-            friendsList.Clear(); friendsList.AddRange(Online.FriendsHosting());
-            rows.Items = friendsList.Count == 0 ? new List<string> { "(none right now: Refresh in a moment)" } : friendsList.Select(f => f.Name).ToList();
-            chosen = -1;
-        };
         var refresh = Ui.Button("Refresh", () => fill());
         var address = Ui.Button("By address...", () => { if (joinWindow != null) joinWindow.Close(); AskAddress(); });
         var close = Ui.Button("Close", () => { if (joinWindow != null) joinWindow.Close(); });
-        int by = h - pad - join.Height;
+        var buttons = new List<UiElement> { join, refresh, address, close };
+        int pad = Ui.S(10);
+        joinWindow = Ui.Window(this, "join", "Join a Game", Math.Max(Ui.S(520), Ui.ButtonsWidth(buttons)), Ui.S(360));
+        if (joinWindow == null) return;
+        joinWindow.Closed += () => joinWindow = null;
+        int w = joinWindow.Width, y = joinWindow.Top + Ui.S(4);
+        Ui.Add(joinWindow, Ui.Label(Online.Service + " friends hosting a game:", w - 2 * pad), pad, y);
+        y += Ui.LineHeight + Ui.S(6);
+        int by = Ui.AddButtons(joinWindow, buttons);
         rows = Ui.List(w - 2 * pad, by - Ui.S(8) - y);
         rows.Selected += i => chosen = i;
         Ui.Add(joinWindow, rows.View, pad, y);
-        int x = pad;
-        foreach (var b in new[] { join, refresh, address, close }) { Ui.Add(joinWindow, b, x, by); x += b.Width + Ui.S(6); }
         fill();
     }
 

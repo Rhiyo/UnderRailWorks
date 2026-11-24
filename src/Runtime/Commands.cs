@@ -93,6 +93,16 @@ namespace UnderRailWorks
                 var c = World.Spawn(a[0], t.X, t.Y, a.Length > 1 && a[1].StartsWith("h", StringComparison.OrdinalIgnoreCase));
                 return c == null ? "[error]couldn't spawn " + a[0] : "spawned " + c.Name + " at " + t.X + "," + t.Y;
             });
+            // Tests: finish a new game's character creation without the point checks (a character made for co-op, etc.).
+            Add("UnderRailWorks", "works.accept", "works.accept <name>: (tests) in character creation, name the character and accept it as it is", a =>
+            {
+                var screen = UiPopups.Screen() as iw;
+                if (screen == null) return "not in character creation";
+                if (a.Length > 0) ((e3q)screen.g()).Name = string.Join(" ", a);
+                typeof(amm).GetMethod("a", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic, null, new[] { typeof(cku) }, null).Invoke(screen, new object[] { cku.a });
+                screen.z();
+                return "accepted";
+            });
             Add("UnderRailWorks", "works.var", "works.var <name> [value]: read or write a global variable (saved)", a =>
             {
                 if (a.Length == 0) return "[error]works.var <name> [value]";

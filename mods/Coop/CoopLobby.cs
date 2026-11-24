@@ -168,9 +168,18 @@ public sealed partial class Coop
     // The lobby's places, for a joiner choosing: saved characters by name, new places as "(new character)".
     void SendLobbyList(Peer p)
     {
-        p.Send("LIST", "the host", lobby == "saved" ? "saved" : "new");
+        p.Send("LIST", Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "the host", lobby == "saved" ? "saved" : "new");
+        // CHAR n name taken|free [player] [their character]: who took each place, for the joiners' copy of the lobby.
         for (int i = 0; i < slots.Count; i++)
-            p.Send("CHAR", i + 1, slots[i].New ? "(new character)" : slots[i].Saved.Name, slots[i].Seat != null ? "taken" : "free");
+        {
+            var seat = slots[i].Seat;
+            p.Send("CHAR", i + 1, slots[i].New ? "(new character)" : slots[i].Saved.Name, seat != null ? "taken" : "free",
+                seat == null ? "" : seat.Peer.Name, seat == null || seat.Record == null ? "" : seat.Record.Name);
+        }
+        // SETTING label value: the game's settings as the host's lobby shows them (the joiners see them, can't change them).
+        p.Send("SETTING", "Expansions", Names(LobbyExpansions()));
+        foreach (var o in options) p.Send("SETTING", o.Label, OptionText(o, o.Value));
+        p.Send("SETTING", "When a player's health runs out", DeathRules[Math.Max(0, Math.Min(DeathRules.Length - 1, deathRule))]);
         p.Send("LISTEND");
         SendExpansions(p);
     }

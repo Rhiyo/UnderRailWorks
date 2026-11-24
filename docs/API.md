@@ -567,6 +567,7 @@ Zone exits (the tiles World.ExitTiles lists) switched off and on. An exit that's
 - `static readonly Hook<Action<Theft>> ItemStolen = new Hook<Action<Theft>>("ItemStolen")`
 - `static readonly Hook<Action<Theft>> CaughtStealing = new Hook<Action<Theft>>("CaughtStealing")`
 - `static readonly Hook<Action<TradeStart>> TradeOpening = new Hook<Action<TradeStart>>("TradeOpening")`
+- `static readonly Hook<Action<NewCharacter>> CharacterCreated = new Hook<Action<NewCharacter>>("CharacterCreated")` **(preview)** — A new game's character creation was just accepted (see NewCharacter).
 - `static readonly Hook<Action<ContainerOpen>> ContainerOpening = new Hook<Action<ContainerOpen>>("ContainerOpening")`
 - `static readonly Hook<Action<ItemTake>> ItemTaking = new Hook<Action<ItemTake>>("ItemTaking")` — An item about to be taken from a container by the player (Cancel: it stays; in "Take all" the rest stay too).
 - `static readonly Hook<Action<DialogStart>> DialogStarting = new Hook<Action<DialogStart>>("DialogStarting")` — A conversation about to open (Cancel, or change Name to open another). Not combat barks.
@@ -1275,6 +1276,15 @@ Values: `Left, Right, Middle`
 - `static void Add(WorksMod mod, string id, string oggFile)` — A new song id (to play with Override, Play, or an area's "Music" property set by a mod).
 - `static void Override(WorksMod mod, Func<string> choose)` — Asked every frame: a song id to play instead of the game's choice, or null for the game's. The first mod (in hook order) with an answer wins.
 
+## NewCharacter  _(class, Cancellable.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
+
+A new game's character creation was accepted (CharacterCreated): the character as made, before the game starts. ExportTo writes it as a .char (the game's export format: a new game's Import reads it; World.SpawnFromCharacterFile builds it). BackToMainMenu = true: the game doesn't start, the main menu comes back (as Cancel would), e.g. a character made for someone else's game (Co-op).
+
+- `string Name`
+- `bool BackToMainMenu`
+- `bool ExportTo(string path)`
+- `bool ExportTo(string path, DateTime made)`
+
 ## NewGameOptions  _(class, NewGameOptions.cs)_
 
 - `static void AddSlider(WorksMod mod, string key, string label, int value, int min, int max, int step = 1, bool percent = false)` — A slider from min to max (step: its small step), shown as a number or a percentage.
@@ -1914,6 +1924,8 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static UiElement SmallButton(string text, int width, int height, Action click)` — A small button of any size drawn in the game's colours (Ui.Button is the game's own, at its own sizes).
 - `static UiChoice Choice(int width, IList<string> options, int index = 0)` — A button that steps through options on click (right-click: back).
 - `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD, or on the main menu when it is showing (null otherwise; there the menu's buttons are hidden while it's open, as for the game's own screens). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
+- `static int AddButtons(UiElement window, IList<UiElement> buttons, int pad = -1, int gap = -1)` — Buttons along the bottom of a window (or any panel), from the left, wrapping onto more rows when they don't fit its width. Returns the y where the buttons start (lay the rest of the window out above it). int bottom = Ui.AddButtons(w, new[] { ok, cancel });
+- `static int ButtonsWidth(IList<UiElement> buttons, int pad = -1, int gap = -1)` — How wide a window must be for these buttons on one row (with AddButtons' default spacing).
 - `static UiWorldView WorldView(int width, int height, Vector2? centre = null)` — A view of the player's area, width x height, centred on centre (null: the player). Null without a game.
 
 ## UiCanvas  _(class, Ui.cs)_
@@ -2107,6 +2119,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static Character SpawnFromCharacterFile(string path, int x, int y)` **(preview)** — A character built from a .char file as the game builds the player (its look, sheet, inventory), standing at tile x, y of the player's area, facing south. Not the player: its sheet is its own, and its AI runs unless a mod takes it (CharacterControl). Like Spawn it's never saved (taken out around saves) and stays in this zone. Null: no such file, not a player sheet, or no room there.
 - `static bool MakePlayer(Character c)` **(preview)** — This machine's player becomes c (its HUD, inventory and character windows, quick bar, camera, fog of war); the old player's body stays as a character with its own sheet. For a game shown from elsewhere (co-op): saving it here afterwards would save c as the player.
 - `static bool StartNewGame()` **(preview)** — On the main menu: the game's New Game (its rules screen, then character creation, then the first zone), as the menu's button. False: not on the main menu.
+- `static bool OpenCharacterCreation()` **(preview)** — On the main menu: the game's character creation alone, for a character made for elsewhere (Co-op: for the host's game). The new game is made behind it as New Game makes it (cnk.arf), then StartCharacterGeneration runs; the Rules screen (difficulty, XP system: the game's, not the character's) is skipped. Pair it with GameEvents.CharacterCreated (BackToMainMenu = true), else Accept starts that new game. False: not on the main menu.
 - `static bool CreationImport = true` **(preview)** — What a character file (.char) has that a game using only these expansions wouldn't: feats and skills of another expansion (their DLC), a level above 25 or specializations without Expedition (the game's veteran levels), items this game's data doesn't have, a newer game version. Read from the file; nothing is built. Empty: it fits. Lines for a player, e.g. "the feat Last Stand (Expedition)". False: character creation offers no Import (the button is hidden, and its dialog doesn't open). Co-op turns it off while hosting or joined: only characters made in creation, nothing from another game or modded setup.
 - `static IList<string> CharacterFileProblems(string path, IEnumerable<string> expansions, bool newOnly = false)` **(preview)** — newOnly: also refuse a character that isn't fresh from creation (level above 1, or any XP).
 - `static bool QuitToMainMenu()` **(preview)** — In a game: back to the main menu as the in-game menu's Main Menu does (the game's QuitGameFromLocale workflow, without saving). False: not in a game.

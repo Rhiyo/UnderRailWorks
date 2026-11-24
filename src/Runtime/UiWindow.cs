@@ -52,6 +52,39 @@ public static partial class Ui
         return OpenWindow(mod, id, title, width, height);
     }
 
+    // Buttons along the bottom of a window (or any panel), from the left, wrapping onto more rows when they don't fit
+    // its width. Returns the y where the buttons start (lay the rest of the window out above it).
+    //   int bottom = Ui.AddButtons(w, new[] { ok, cancel });
+    public static int AddButtons(UiElement window, IList<UiElement> buttons, int pad = -1, int gap = -1)
+    {
+        if (window == null || buttons == null || buttons.Count == 0) return window == null ? 0 : window.Height;
+        if (pad < 0) pad = S(10);
+        if (gap < 0) gap = S(6);
+        int width = window.Width - 2 * pad, bh = buttons.Max(b => b.Height);
+        var rows = new List<List<UiElement>> { new List<UiElement>() };
+        int used = 0;
+        foreach (var b in buttons)
+        {
+            if (used > 0 && used + b.Width > width) { rows.Add(new List<UiElement>()); used = 0; }
+            rows[rows.Count - 1].Add(b); used += b.Width + gap;
+        }
+        int top = window.Height - pad - rows.Count * (bh + gap) + gap, y = top;
+        foreach (var row in rows)
+        {
+            int x = pad;
+            foreach (var b in row) { Add(window, b, x, y); x += b.Width + gap; }
+            y += bh + gap;
+        }
+        return top;
+    }
+    // How wide a window must be for these buttons on one row (with AddButtons' default spacing).
+    public static int ButtonsWidth(IList<UiElement> buttons, int pad = -1, int gap = -1)
+    {
+        if (pad < 0) pad = S(10);
+        if (gap < 0) gap = S(6);
+        return buttons == null || buttons.Count == 0 ? 2 * pad : buttons.Sum(b => b.Width) + gap * (buttons.Count - 1) + 2 * pad;
+    }
+
     // mod null: Works' own window (the Mods screen): opened in the middle each time, its place not remembered.
     internal static UiWindow OpenWindow(WorksMod mod, string id, string title, int width, int height)
     {
@@ -132,10 +165,40 @@ static class UiWindows
         MainMenu.ShowButtons(!hide);
     }
 
+    // A window's contents checked once after it opened (and after it moved to fit): anything outside the window or the
+    // window outside the screen is logged ("ui: ... doesn't fit"), so a layout that breaks at some resolution or
+    // interface size shows in the log instead of only on that screen.
+    static readonly HashSet<UiWindow> Checked = new HashSet<UiWindow>();
+    static void CheckFit(UiWindow w)
+    {
+        if (!Checked.Add(w)) return;
+        var game = w.Control;
+        int ww = UnderrailDropdownScroll.W(game.Size), wh = UnderrailDropdownScroll.H(game.Size);
+        var bad = new List<string>();
+        foreach (var c in game.Controls.Cast<euz>())
+        {
+            if (!c.Visible) continue;
+            var at = UnderrailDropdownScroll.LocationOf(c);
+            int x = UnderrailDropdownScroll.X(at), y = UnderrailDropdownScroll.Y(at), cw = UnderrailDropdownScroll.W(c.Size), ch = UnderrailDropdownScroll.H(c.Size);
+            if (x < 0 || y < 0 || x + cw > ww || y + ch > wh)
+                bad.Add((string.IsNullOrEmpty(c.Text) ? c.GetType().Name : "\"" + c.Text + "\"") + " at " + x + "," + y + " " + cw + "x" + ch);
+            else if (c is avo && !string.IsNullOrEmpty(c.Text) && Ui.TextWidth(c.Text) > cw + 1)
+                bad.Add("\"" + c.Text + "\" is wider than its label (" + Ui.TextWidth(c.Text) + " > " + cw + ")");
+        }
+        var screen = Hud.Root ?? (UiPopups.Screen() == null ? null : UiElement.Of(UiPopups.Screen()));
+        bool offScreen = screen != null && (ww > screen.Width || wh > screen.Height);
+        string title = (game as a9t) == null ? "" : ((a9t)game).Text;
+        if (bad.Count > 0) Log.Write("ui: window \"" + title + "\" (" + (w.Mod == null ? "UnderRailWorks" : w.Mod.Id) + ", " + ww + "x" + wh + "): " + bad.Count + " part(s) don't fit inside it: " + string.Join("; ", bad.Take(6).ToArray()));
+        if (offScreen) Log.Write("ui: window \"" + title + "\" (" + (w.Mod == null ? "UnderRailWorks" : w.Mod.Id) + ") is " + ww + "x" + wh + ", bigger than the screen (" + screen.Width + "x" + screen.Height + ")");
+        if (bad.Count == 0 && !offScreen) Log.Write("ui: window \"" + title + "\" (" + (w.Mod == null ? "UnderRailWorks" : w.Mod.Id) + ", " + ww + "x" + wh + ") fits");
+    }
+
     internal static void Tick()
     {
         UiPopups.Tick();
         Open.RemoveAll(w => !w.IsOpen);
+        Checked.RemoveWhere(w => !w.IsOpen);
+        foreach (var w in Open.ToList()) try { CheckFit(w); } catch (Exception ex) { Log.Write("ui: checking a window: " + ex.Message); }
         try { MenuButtons(); } catch (Exception ex) { Log.Write("windows: the main menu's buttons: " + ex.Message); }
         try { MainMenuPage.Tick(); } catch (Exception ex) { Log.Write("main menu: page: " + ex.Message); }
         if (Open.Count == 0)

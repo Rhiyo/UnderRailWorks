@@ -141,7 +141,7 @@ namespace UnderRailWorks
                     int index = l.First + i;
                     if (index == l.Selection) c.Fill(r, Look.Orange * 0.6f);
                     else if (Ui.IsHot(l.Element) && r.Contains(m)) c.Fill(r, Look.Hot);
-                    c.Text(l.Items[index], r.X + 4, r.Y + Math.Max(0, (l.RowHeight - Ui.LineHeight) / 2), l.ItemColors != null && index < l.ItemColors.Count ? l.ItemColors[index] : Look.Text);
+                    c.Text(Fit(l.Items[index], r.Width - 8), r.X + 4, r.Y + Math.Max(0, (l.RowHeight - Ui.LineHeight) / 2), l.ItemColors != null && index < l.ItemColors.Count ? l.ItemColors[index] : Look.Text);
                 }
                 if (l.Items.Count > rows)
                 {
@@ -152,6 +152,20 @@ namespace UnderRailWorks
             });
             Widgets.Lists.Add(new WeakReference(l));
             return l;
+        }
+
+        // Text cut to fit a width, ending in "..." (a list row never draws past its list).
+        static readonly Dictionary<string, string> fitted = new Dictionary<string, string>();
+        static string Fit(string text, int width)
+        {
+            if (string.IsNullOrEmpty(text) || Ui.TextWidth(text) <= width) return text;
+            string key = width + "|" + text, cut;
+            if (fitted.TryGetValue(key, out cut)) return cut;
+            int n = text.Length;
+            while (n > 0 && Ui.TextWidth(text.Substring(0, n) + "...") > width) n--;
+            cut = text.Substring(0, n).TrimEnd() + "...";
+            if (fitted.Count > 2000) fitted.Clear();
+            return fitted[key] = cut;
         }
 
         // A slider from min to max (drag or click; the value is drawn on it).

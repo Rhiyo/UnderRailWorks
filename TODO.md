@@ -212,6 +212,12 @@ startsOff, works.perf. Mods: Bounty Hunter, Beastmaster, Hunger, Ambushes.
   audio sink (Nov 2026): menu music RMS ~3100, in-game music and ambience ~1500 (NVorbis streaming works on .NET 10);
   single sound effects not isolated.
 
-## Multiplayer (planned)
+## Multiplayer
 
-- [ ] Co-op mod: design, known facts and open questions in docs/Multiplayer.md. Next: the no-network spike (a second character controlled by commands).
+Co-op: design, results and open questions in docs/Multiplayer.md.
+
+- [ ] **Remind Sean (asked Nov 24): the gaps in play.** Barter started from a joiner's conversation opens on the host
+  (should be the joiner's); leaving mid-conversation (check it's handled, else close it with TalkAs.Close); trading
+  items between players (not built).
+- [ ] Sean: a real two-person game over Steam (joining, messages, friends list, Invite friends under Proton).
+- [ ] Sean: hand play-testing of traps, lifts, pickpocketing, theft, stealth with two players, a long session with saves.

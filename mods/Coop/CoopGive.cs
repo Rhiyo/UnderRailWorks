@@ -99,13 +99,11 @@ public sealed partial class Coop
             if (giveWindow != null) giveWindow.Close();
         });
         var cancel = Ui.Button("Close", () => { if (giveWindow != null) giveWindow.Close(); });
-        int by = h - pad - go.Height;
+        int by = Ui.AddButtons(giveWindow, new[] { go, cancel });
         var list = Ui.List(w - 2 * pad, by - Ui.S(8) - y);
         list.Items = rows;
         list.Selected += i => chosen = i;
         Ui.Add(giveWindow, list.View, pad, y);
-        Ui.Add(giveWindow, go, pad, by);
-        Ui.Add(giveWindow, cancel, pad + go.Width + Ui.S(6), by);
     }
 
     void SendGive(string to, string code, int money)

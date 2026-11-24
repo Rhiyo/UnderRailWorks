@@ -97,6 +97,9 @@ static class Saves
         harmony.Patch(typeof(dka).GetMethods(any).First(x => x.Name == "amw" && x.GetParameters().Length == 2), postfix: m("TradeHook"));
         // Death: amc.a(cwt attack, bool shattered).
         harmony.Patch(typeof(amc).GetMethod("a", any, null, new[] { typeof(cwt), typeof(bool) }, null), prefix: m("Dying"), postfix: m("Died"));
+        // New game's character creation closing: h1.a(object iw, el5 result): cku.a Accept -> StartGameInLocale, cku.b ->
+        // ReturnToMainMenu.
+        harmony.Patch(typeof(h1).GetMethod("a", any, null, new[] { typeof(object), typeof(el5) }, null), prefix: m("CreationClosing"));
         // Combat: crp.ahn (start) / crp.ahr (end); crp.ahg() = in combat.
         harmony.Patch(typeof(crp).GetMethod("ahn", any), prefix: m("CombatBefore"), postfix: m("CombatStartedHook"));
         harmony.Patch(typeof(crp).GetMethod("ahr", any), prefix: m("CombatEnding"));
@@ -241,6 +244,24 @@ static class Saves
         }
         catch { return true; }     // can't tell: as before
     }
+    static bool CreationClosing(object __0, el5 __1)
+    {
+        try
+        {
+            var screen = __0 as iw;
+            if (screen == null || __1 == null || __1.a() != cku.a || !GameEvents.CharacterCreated.Any) return true;
+            var sheet = screen.g() as au2;
+            if (sheet == null) return true;
+            var e = new NewCharacter { Sheet = sheet, Name = sheet.Name };
+            GameEvents.CharacterCreated.Run(h => h(e));
+            if (!e.BackToMainMenu) return true;
+            Log.Write("saves: " + e.Name + " made in character creation; back to the main menu (no game started)");
+            bpo.GetServiceOrThrow<d4m>().avp(dla.a(TimelapseVertigo.Common.TimelapseWorkflows.ReturnToMainMenu));
+            return false;
+        }
+        catch (Exception ex_) { PatchGuard.Failed("Saves.CreationClosing", ex_); return true; }
+    }
+
     static void SaveStarting(string __0) { saveStarted = DateTime.UtcNow.AddSeconds(-2); try { Run("recording mod statuses", ModStatusStore.Record); Log.Write("saves: saving " + __0); if (GameEvents.Saving.Any) GameEvents.Saving.Run(h => h(__0)); } catch (Exception ex_) { PatchGuard.Failed("Saves.SaveStarting", ex_); }
     }
     static void SaveDone(string __0) { try {

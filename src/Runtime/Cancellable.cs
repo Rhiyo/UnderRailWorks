@@ -25,10 +25,25 @@ namespace UnderRailWorks
     // A character (the player or an NPC's AI) about to switch between its primary and secondary weapon.
     public sealed class WeaponSwitch : Cancellable { internal WeaponSwitch() { } public Character Character { get; internal set; } public bool ToSecondary { get; internal set; } }
     public sealed class CraftAttempt : Cancellable { internal CraftAttempt() { } public string Blueprint { get; internal set; } }
+    // A new game's character creation was accepted (CharacterCreated): the character as made, before the game starts.
+    // ExportTo writes it as a .char (the game's export format: a new game's Import reads it; World.SpawnFromCharacterFile
+    // builds it). BackToMainMenu = true: the game doesn't start, the main menu comes back (as Cancel would), e.g. a
+    // character made for someone else's game (Co-op).
+    [Preview("multiplayer: built for Co-op so far")] public sealed class NewCharacter
+    {
+        internal au2 Sheet;
+        internal NewCharacter() { }
+        public string Name { get; internal set; }
+        public bool BackToMainMenu { get; set; }
+        public bool ExportTo(string path) { return World.WriteSheet(Sheet, path, DateTime.Now); }
+        public bool ExportTo(string path, DateTime made) { return World.WriteSheet(Sheet, path, made); }
+    }
 
     public static partial class GameEvents
     {
         public static readonly Hook<Action<TradeStart>> TradeOpening = new Hook<Action<TradeStart>>("TradeOpening");
+        // A new game's character creation was just accepted (see NewCharacter).
+        [Preview("multiplayer: built for Co-op so far")] public static readonly Hook<Action<NewCharacter>> CharacterCreated = new Hook<Action<NewCharacter>>("CharacterCreated");
         public static readonly Hook<Action<ContainerOpen>> ContainerOpening = new Hook<Action<ContainerOpen>>("ContainerOpening");
         // An item about to be taken from a container by the player (Cancel: it stays; in "Take all" the rest stay too).
         public static readonly Hook<Action<ItemTake>> ItemTaking = new Hook<Action<ItemTake>>("ItemTaking");

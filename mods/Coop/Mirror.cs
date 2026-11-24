@@ -167,7 +167,7 @@ public sealed partial class Coop
     }
 
     // --- Joiner -------------------------------------------------------------------------------------------------
-    bool receiving, loading, inWorld, creating, quitToMenu;
+    bool receiving, loading, inWorld, creating, reopenOnMenu;
     string myKey;
     readonly Dictionary<string, Character> spawned = new Dictionary<string, Character>();
     readonly Dictionary<string, string[]> spawnInfo = new Dictionary<string, string[]>();
@@ -377,24 +377,28 @@ public sealed partial class Coop
             host.Send("SWAP");
         });
         GameEvents.Update.Add(this, dt => { if (listener != null) { HostMirror(dt); HostSheets(dt); } });
-        // A character made in the game's creation for co-op: when its new game's first zone is there, it goes to the host.
-        GameEvents.ZoneLoaded.Add(this, (zone, first) =>
+        // A character made in the game's creation for co-op: when creation is accepted it goes to the host, and the game
+        // goes back to the main menu (no game of its own starts); the Co-op window opens again there.
+        GameEvents.CharacterCreated.Add(this, e =>
         {
-            if (!creating || host == null || host.Closed || World.Player == null) return;
+            if (!creating) return;
             creating = false;
-            var sheet = SheetOf(World.Player);
+            if (host == null || host.Closed) return;
+            e.BackToMainMenu = true;
+            var path = SheetPath("export");
+            string sheet = null;
+            try { if (e.ExportTo(path, new DateTime(2026, 1, 1))) sheet = Convert.ToBase64String(System.IO.File.ReadAllBytes(path)); }
+            catch (Exception ex) { Log.Warn("can't export " + e.Name + ": " + ex); }
             if (sheet == null) { Tell("couldn't export your character"); return; }
-            host.Send("NEW", World.Player.Name, sheet);
-            Tell("sending " + World.Player.Name + " to the host...");
-            // Not this new game: back to the main menu to wait (the host's world comes when they start). Next frame, not
-            // from inside the zone's loading.
-            quitToMenu = true;
+            host.Send("NEW", e.Name, sheet);
+            Tell("sending " + e.Name + " to " + (hostName ?? "the host") + "...");
+            reopenOnMenu = true;
         });
         GameEvents.Update.Add(this, dt =>
         {
-            if (!quitToMenu || World.Player == null) return;
-            quitToMenu = false;
-            if (World.QuitToMainMenu()) Tell("back on the main menu: you'll enter " + (hostName ?? "the host") + "'s game when they start it");
+            if (!reopenOnMenu || !MainMenu.IsShowing) return;
+            reopenOnMenu = false;
+            if (window == null || !window.IsOpen) Build();
         });
         GameEvents.ZoneLoaded.Add(this, (zone, first) => { if (loading && host != null) Simulation.Apply(Arrived); });
         // The joiner's orders go to the host: walking and attacking for now.

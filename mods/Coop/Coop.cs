@@ -238,6 +238,9 @@ public sealed partial class Coop : WorksMod
     string hostName;
     string readyAs;     // the lobby gave us this character: waiting for the host to start
     readonly List<KeyValuePair<string, bool>> choices = new List<KeyValuePair<string, bool>>();     // name, taken
+    readonly List<KeyValuePair<string, string>> choiceTakers = new List<KeyValuePair<string, string>>();     // per place: player, their character
+    readonly List<KeyValuePair<string, string>> lobbySettings = new List<KeyValuePair<string, string>>();     // the host's game settings
+    string lobbyKindSeen;     // "new" / "saved"
     readonly List<string> messages = new List<string>();
     string[] state;     // the host's last STATE for our character
     string[] party;     // the host's last PARTY: name, health, max, dead... for every player
@@ -374,8 +377,12 @@ public sealed partial class Coop : WorksMod
             case "BYE": Tell("the host closed the connection: " + (w.Length > 1 ? w[1] : "")); if (hostMods != null) Changed(); return;
             case "HOSTMODS": HostModsArrived(w); return;
             case "EXPANSIONS": ExpansionsArrived(w); return;
-            case "LIST": hostName = w.Length > 1 ? w[1] : "?"; choices.Clear(); return;
-            case "CHAR": choices.Add(new KeyValuePair<string, bool>(w[2], w.Length > 3 && w[3] == "taken")); return;
+            case "LIST": hostName = w.Length > 1 ? w[1] : "?"; lobbyKindSeen = w.Length > 2 ? w[2] : null; choices.Clear(); choiceTakers.Clear(); lobbySettings.Clear(); return;
+            case "CHAR":
+                choices.Add(new KeyValuePair<string, bool>(w[2], w.Length > 3 && w[3] == "taken"));
+                choiceTakers.Add(new KeyValuePair<string, string>(w.Length > 4 ? w[4] : "", w.Length > 5 ? w[5] : ""));
+                return;
+            case "SETTING": if (w.Length > 2) lobbySettings.Add(new KeyValuePair<string, string>(w[1], w[2])); return;
             case "LISTEND":
                 Log.Info("characters: " + hostName + " (host), " + string.Join(", ", choices.Select((c, i) => (i + 1) + ". " + c.Key + (c.Value ? " (taken)" : "")).ToArray()));
                 Commands.Print("co-op: characters: " + hostName + " (host), " + string.Join(", ", choices.Select((c, i) => (i + 1) + ". " + c.Key + (c.Value ? " (taken)" : "")).ToArray()) + ". coop.pick <number> or coop.new <name>");
@@ -599,6 +606,30 @@ public sealed partial class Coop : WorksMod
         // No importing in co-op (host or joiner): characters come from creation only, never from another game or another
         // mod setup (its items and stats might not exist here).
         GameEvents.Update.Add(this, dt => World.CreationImport = listener == null && host == null);
+        // Tests: open a window by name (layouts are checked by Works: "ui: window ... fits" in the log).
+        Commands.Add(this, "coop.ui", "coop.ui <coop|join|hostsave|page|create|give|loot|talk|close>: open a Co-op window (tests)", a2 =>
+        {
+            switch (a2.Length == 0 ? "" : a2[0])
+            {
+                case "coop": Build(); return "opened";
+                case "join": AskJoin(); return "opened";
+                case "hostsave": PickSave(); return "opened";
+                case "page": if (coopPage != null) coopPage.Open(); return "opened";
+                case "create":
+                {
+                    int free = choices.FindIndex(c => c.Key == "(new character)" && !c.Value);
+                    if (free < 0) return "no open place";
+                    selected = free + 1; ChooseContinue(); return "creating";
+                }
+                case "give": OpenGive(); return "opened";
+                case "loot": if (lootName == null) lootName = "Test crate"; ShowLoot(); return "opened";
+                case "talk": ShowTalk(); return "opened";
+                case "close":
+                    foreach (var w2 in new[] { window, joinWindow, saveWindow, giveWindow, lootWindow, talkWindow }) if (w2 != null && w2.IsOpen) w2.Close();
+                    return "closed";
+            }
+            return "coop.ui <coop|join|hostsave|page|create|give|loot|talk|close>";
+        });
         Commands.Add(this, "coop.suggest", "coop.suggest <answer number>: in the host's conversation, suggest that answer (again: take it back)", a =>
         {
             int n; if (a.Length < 1 || !int.TryParse(a[0], out n) || n < 1 || n > talkChoices.Count) return "coop.suggest <answer number, 1-" + talkChoices.Count + ">";

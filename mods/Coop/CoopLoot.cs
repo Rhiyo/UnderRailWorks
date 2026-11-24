@@ -77,11 +77,10 @@ public sealed partial class Coop
             var all = Ui.Button("Take all", () => { if (host != null && lootId != null) host.Send("TAKEALL", lootId); });
             var close = Ui.Button("Close", () => { if (lootWindow != null) lootWindow.Close(); });
             int top = lootWindow.Top + Ui.S(4);
-            lootList = Ui.List(w - 2 * pad, h - top - pad - all.Height - Ui.S(8));
+            int by = Ui.AddButtons(lootWindow, new[] { all, close });
+            lootList = Ui.List(w - 2 * pad, by - Ui.S(8) - top);
             lootList.Selected += row => { if (row >= 0 && row < lootItems.Count && host != null && lootId != null) host.Send("TAKE", lootId, row); };
             Ui.Add(lootWindow, lootList.View, pad, top);
-            Ui.Add(lootWindow, all, pad, h - pad - all.Height);
-            Ui.Add(lootWindow, close, pad + all.Width + Ui.S(6), h - pad - close.Height);
         }
         lootList.Items = lootItems.Count == 0 ? new List<string> { lootName + " is empty." } : lootItems.ToList();
         lootList.ItemColors = lootList.Items.Select(_ => lootItems.Count == 0 ? Grey : Normal).ToList();

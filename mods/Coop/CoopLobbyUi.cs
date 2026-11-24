@@ -67,7 +67,7 @@ public sealed partial class Coop
             foreach (var id in Expansions.Known)
             {
                 var tick = Ui.TickBox(Unavailable(id) == null && !unticked.Contains(id));
-                var label = Ui.Label(Expansions.Name(id), controlW);
+                var label = Ui.Label(Expansions.Name(id), controlW - tick.Width - Ui.S(6));
                 at(tick, x, y); at(label, x + tick.Width + Ui.S(6), y + Math.Max(0, (tick.Height - line) / 2));
                 expansionTicks[id] = tick; expansionLabels[id] = label;
                 Ui.Tooltip(tick, Expansions.Name(id) + ": everyone needs it to play this game");
@@ -166,5 +166,50 @@ public sealed partial class Coop
             else { items.Add(sl.New ? "Open" : sl.Saved.Name + "  -  waiting for its player"); colours.Add(Grey); }
         }
         foreach (var s in seats.Values.Where(x => !slots.Any(sl => sl.Seat == x))) { items.Add(s.Peer.Name + "  -  choosing a character..."); colours.Add(Grey); }
+    }
+
+    // Hosting, in game: who plays what (health), who left; Give... / Stop hosting. Nobody new joins a game under way;
+    // a player who left comes back to their own character with Co-op, Join a Game.
+    void BuildHosting()
+    {
+        int pad = Ui.S(12), w = Ui.S(600), line = Ui.LineHeight, gap = Ui.S(6), section = Ui.S(14), inner = w - 2 * pad;
+        var place = new List<KeyValuePair<UiElement, Point>>();
+        int y = 0;
+        Action<UiElement, int> at = (e, yy) => place.Add(new KeyValuePair<UiElement, Point>(e, new Point(pad, yy)));
+        statusLabel = Ui.Label("", inner);
+        at(statusLabel, y); y += line + section;
+        playersHeading = Ui.Label("Players", inner); Ui.SetColor(playersHeading, Mine_);
+        at(playersHeading, y); y += line + gap;
+        int rowH = line + Ui.S(6), rows = Math.Max(2, Math.Min(6, seats.Count + orphans.Count + 1));
+        list = Ui.List(inner, rows * rowH + Ui.S(6), rowH);
+        at(list.View, y); y += rows * rowH + Ui.S(6) + gap;
+        foreach (var l in Ui.Wrap("A player who leaves can come back to their character: Co-op, Join a Game, with the same name.", inner))
+        { var e = Ui.Label(l, inner); Ui.SetColor(e, Grey); at(e, y); y += line + Ui.S(2); }
+        y += section;
+        var buttons = new List<UiElement>();
+        if (World.Player != null) { var g = Ui.Button("Give...", OpenGive); Ui.Tooltip(g, "Give an item or charons to another player"); buttons.Add(g); }
+        var stop = Ui.Button("Stop hosting", () => StopHosting()); Ui.Tooltip(stop, "End the co-op game: everyone else is sent back to their main menu"); buttons.Add(stop);
+        int bh = buttons.Max(b => b.Height);
+        window = Ui.Window(this, "coop", "Co-op", Math.Max(w, Ui.ButtonsWidth(buttons, pad)), 22 + Ui.S(4) + y + bh + pad);
+        if (window == null) return;
+        window.Closed += () => { window = null; builtFor = null; };
+        int top = window.Top + Ui.S(4);
+        foreach (var p in place) Ui.Add(window, p.Key, p.Value.X, top + p.Value.Y);
+        Ui.AddButtons(window, buttons, pad);
+    }
+
+    void RefreshHosting(List<string> items, List<Color> colours)
+    {
+        int n = seats.Values.Count(s => s.Character != null);
+        Ui.SetText(statusLabel, "Hosting a co-op game: " + (n == 0 ? "nobody else is playing right now." : n + (n == 1 ? " other player." : " other players.")));
+        if (playersHeading != null) Ui.SetText(playersHeading, "Players  (" + (n + 1) + ")");
+        var me = World.Player;
+        if (me != null) { items.Add(me.Name + "  -  you (host)" + (me.IsDead ? ", dead" : ",  " + (int)me.Health + "/" + (int)me.MaxHealth + " HP")); colours.Add(Mine_); }
+        foreach (var s in seats.Values)
+        {
+            items.Add(s.Character == null ? s.Peer.Name + "  -  joining..." : s.Character.Name + "  -  " + s.Peer.Name + (s.Character.IsDead ? ", dead" : ",  " + (int)s.Character.Health + "/" + (int)s.Character.MaxHealth + " HP"));
+            colours.Add(s.Character == null ? Grey : Normal);
+        }
+        foreach (var o in orphans) { items.Add(o.Record.Name + "  -  player left (passes its turns)"); colours.Add(Grey); }
     }
 }

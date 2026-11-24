@@ -119,6 +119,20 @@ namespace UnderRailWorks
             return true;
         }
 
+        // On the main menu: the game's character creation alone, for a character made for elsewhere (Co-op: for the host's
+        // game). The new game is made behind it as New Game makes it (cnk.arf), then StartCharacterGeneration runs; the
+        // Rules screen (difficulty, XP system: the game's, not the character's) is skipped. Pair it with
+        // GameEvents.CharacterCreated (BackToMainMenu = true), else Accept starts that new game. False: not on the main menu.
+        [Preview("multiplayer: built for Co-op so far")] public static bool OpenCharacterCreation()
+        {
+            if (!(UiPopups.Screen() is a8k)) return false;
+            bpo.GetServiceOrThrow<cnk>().arf();
+            kl.a();
+            bpo.GetServiceOrThrow<d4m>().avp(dla.a(TimelapseVertigo.Common.TimelapseWorkflows.StartCharacterGeneration));
+            Log.Write("world: character creation (no rules screen)");
+            return true;
+        }
+
         // What a character file (.char) has that a game using only these expansions wouldn't: feats and skills of another
         // expansion (their DLC), a level above 25 or specializations without Expedition (the game's veteran levels),
         // items this game's data doesn't have, a newer game version. Read from the file; nothing is built. Empty: it
@@ -173,6 +187,61 @@ namespace UnderRailWorks
                 if (f != null && f.FieldType == typeof(int)) return (int)f.GetValue(stat);
             }
             return 0;
+        }
+
+        // A sheet with no body yet (character creation's) written as a .char, as Character.ExportTo writes a body's.
+        internal static bool WriteSheet(au2 sheet, string path, DateTime made)
+        {
+            var game = bpo.GetService<cnk>();
+            if (sheet == null || game == null || game.aqu() == null) return false;
+            var file = new ajk();
+            FileVersion.SetValue(file, (Version)dm9.d.Clone());
+            FileDlcs.SetValue(file, new System.Collections.Generic.List<string>(dk2.b()));
+            FileSheet.SetValue(file, sheet);
+            FileDate.SetValue(file, made);
+            FileDifficulty.SetValue(file, game.aqu().m());
+            var dir = System.IO.Path.GetDirectoryName(path);
+            if (!string.IsNullOrEmpty(dir)) System.IO.Directory.CreateDirectory(dir);
+            // Creation's sheet still has the creation screen's handlers on it (its events), which can't be written (the game's
+            // own export takes a body's handlers off first, as ExportTo does): every handler in the sheet comes off while
+            // it's written and goes back after.
+            var detached = DetachHandlers(sheet);
+            try { WriteFile.Invoke(file, new object[] { path }); }
+            catch (TargetInvocationException ex) { throw ex.InnerException ?? ex; }
+            finally { foreach (var d in detached) d.Key.Key.SetValue(d.Key.Value, d.Value); }
+            return true;
+        }
+
+        // Every delegate field in an object graph set to null; returned (field, owner) -> the delegate, to put back.
+        static List<KeyValuePair<KeyValuePair<FieldInfo, object>, object>> DetachHandlers(object root)
+        {
+            var found = new List<KeyValuePair<KeyValuePair<FieldInfo, object>, object>>();
+            var seen = new HashSet<object>(ReferenceEquality.Instance);
+            var todo = new Stack<object>();
+            todo.Push(root);
+            while (todo.Count > 0 && seen.Count < 200000)
+            {
+                var o = todo.Pop();
+                if (o == null || o is string || o is Delegate || o.GetType().IsPrimitive || o.GetType().IsEnum || !seen.Add(o)) continue;
+                var arr = o as Array;
+                if (arr != null) { if (!arr.GetType().GetElementType().IsPrimitive) foreach (var e in arr) if (e != null && !e.GetType().IsValueType) todo.Push(e); continue; }
+                for (var t = o.GetType(); t != null && t != typeof(object); t = t.BaseType)
+                    foreach (var f in t.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly))
+                    {
+                        if (f.IsNotSerialized || f.FieldType.IsPrimitive || f.FieldType.IsEnum || f.FieldType == typeof(string) || f.FieldType.IsValueType) continue;
+                        var v = f.GetValue(o);
+                        if (v == null) continue;
+                        if (v is Delegate) { found.Add(new KeyValuePair<KeyValuePair<FieldInfo, object>, object>(new KeyValuePair<FieldInfo, object>(f, o), v)); f.SetValue(o, null); }
+                        else todo.Push(v);
+                    }
+            }
+            return found;
+        }
+        sealed class ReferenceEquality : IEqualityComparer<object>
+        {
+            internal static readonly ReferenceEquality Instance = new ReferenceEquality();
+            public new bool Equals(object a, object b) { return ReferenceEquals(a, b); }
+            public int GetHashCode(object o) { return System.Runtime.CompilerServices.RuntimeHelpers.GetHashCode(o); }
         }
 
         // In a game: back to the main menu as the in-game menu's Main Menu does (the game's QuitGameFromLocale workflow,
