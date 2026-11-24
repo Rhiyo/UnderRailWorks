@@ -71,6 +71,7 @@ public sealed partial class Coop
         if (host != null && !host.Closed) return "you're joined to someone's game (Leave first)";
         StopHosting();
         slots.Clear(); lobby = null; starting = false; hostCharacter = null; hostSheet = null; creatingHost = false;
+        hostRules = kind == "new" ? rulesForLobby : null;     // chosen just before (Host New Game), for the window built below
         if (kind == "saved")
         {
             SaveGames.UseLocation(this, SaveFolder);     // co-op games' saves (hosting keeps it: SaveLocationRule)
@@ -138,7 +139,7 @@ public sealed partial class Coop
         foreach (var s in seats.Values) SendExpansions(s.Peer);
         lobby = null; starting = true;     // from here nobody joins
         foreach (var s in seats.Values) s.Peer.Send("SAID", kind == "saved" ? "the host is loading the game" : "the host is making their character; the game starts after that");
-        bool ok = kind == "saved" ? SaveGames.Load(lobbySave) : World.StartNewGameAs(hostSheet);
+        bool ok = kind == "saved" ? SaveGames.Load(lobbySave) : hostRules != null ? World.StartNewGameAs(hostSheet, hostRules) : World.StartNewGameAs(hostSheet);
         if (!ok) { lobby = kind; starting = false; return kind == "saved" ? "couldn't load " + lobbySave : "couldn't open the new game"; }
         Log.Info("starting the " + (kind == "saved" ? "saved game " + lobbySave : "new game") + " with " + string.Join(", ", slots.Select(s => s.Seat.Peer.Name + " as " + s.Seat.Record.Name).ToArray()));
         Changed();
@@ -182,6 +183,7 @@ public sealed partial class Coop
                 seat == null ? "" : seat.Peer.Name, seat == null || seat.Record == null ? "" : seat.Record.Name);
         }
         // SETTING label value: the game's settings as the host's lobby shows them (the joiners see them, can't change them).
+        if (hostRules != null) { p.Send("SETTING", "Difficulty", hostRules.Difficulty); p.Send("SETTING", "Experience", hostRules.Experience); }
         p.Send("SETTING", "Expansions", Names(LobbyExpansions()));
         foreach (var o in options) p.Send("SETTING", o.Label, OptionText(o, o.Value));
         p.Send("LISTEND");
@@ -270,10 +272,24 @@ public sealed partial class Coop
         coopPage.AddButton("Host New Game", () => HostFromMenu("new", null));
         coopPage.AddButton("Host Saved Game", PickSave);
         coopPage.AddButton("Join a Game", AskJoin);
-        GameEvents.Update.Add(this, dt => SaveLocationRule());
+        GameEvents.Update.Add(this, dt => { SaveLocationRule(); OpenLobbyWhenRulesChosen(); });
     }
 
     MainMenuPage coopPage;
+    NewGameRules rulesForLobby, hostRules;     // the rules chosen before a new game's lobby opens; the lobby's
+    void OpenLobbyWhenRulesChosen()
+    {
+        if (rulesForLobby == null || !MainMenu.IsShowing) return;
+        HostFromMenu("new", null);
+    }
+    // Edit settings (a new game's lobby): the Rules screen again; back to the lobby after.
+    void EditRules()
+    {
+        if (lobby != "new") return;
+        inCreation = true;     // the lobby window opens again when the menu is back (Mirror: leftForCreation)
+        if (!World.ChooseNewGameRules(rules => { if (rules != null && lobby == "new") { hostRules = rules; Log.Info("rules: " + rules.Difficulty + ", " + rules.Experience); LobbyChanged(); } }))
+        { inCreation = false; Notify.Log("Co-op: couldn't open the game's rules", Say); }
+    }
     internal const string SaveFolder = "Co-op Saves";
     // Co-op games are saved in their own folder (My Games\Underrail\Saves\Co-op Saves: inside the game's
     // Saves, so Steam Cloud keeps them; Load Game skips the folder), never among single-player saves:
@@ -293,7 +309,16 @@ public sealed partial class Coop
     // The game's settings are in the lobby (Game settings...).
     void HostFromMenu(string kind, string save)
     {
+        // A new game: its rules first (the game's Rules screen: difficulty, XP system; Back: nothing hosted), then the
+        // lobby with them.
+        if (kind == "new" && rulesForLobby == null)
+        {
+            if (!World.ChooseNewGameRules(rules => { if (rules != null) rulesForLobby = rules; }))
+                Notify.Log("Co-op: couldn't open the game's rules", Say);
+            return;
+        }
         var r = OpenLobby(kind, save, kind == "new" ? MaxPlayers - 1 : 0, DefaultPort);
+        rulesForLobby = null;
         Commands.Print("co-op: " + r);
         if (lobby == null) Notify.Log("Co-op: " + r, Say);     // refused: say why (opened: the lobby window shows it)
     }

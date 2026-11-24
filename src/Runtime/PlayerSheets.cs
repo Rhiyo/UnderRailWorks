@@ -53,6 +53,9 @@ namespace UnderRailWorks
             // A sheet copied from a character here (an import of this game's player) has its id: who-did-what (the blow's
             // attacker, recorded by this id) would find the other one. A new id then.
             if (UidField != null && Characters.Any(other => other.GameData != null && other.GameData.Uid == sheet.Uid)) sheet.Uid = Guid.NewGuid();
+            // This game's experience system (Classic / Oddity), as the player's: one game, one rule.
+            var playerSheet = game.aqu() == null ? null : game.aqu().v();
+            if (playerSheet != null && sheet.e() != playerSheet.e()) sheet.a(playerSheet.e());
             var body = (c5x)BuildBody.Invoke(game, new object[] { sheet });
             // The game builds every player body with the player's one fixed entity id (aju.a): its scripts find the
             // player by it, and AI memory, targets and references go by entity id. A second body with it was the same
@@ -140,6 +143,78 @@ namespace UnderRailWorks
 
         internal static bool CreationOnly;
         internal static string CreationBackText;
+        internal static Action<NewGameRules> RulesChosen;
+        static readonly FieldInfo CustomRules = typeof(cyt).GetField("r", BindingFlags.Instance | BindingFlags.Public);     // cyt.r: custom difficulty settings (also a method name)     // ChooseNewGameRules: waiting for its Rules screen
+
+        // On the main menu: the game's own Rules screen for a new game (difficulty, XP system, custom rules, the Mods tab)
+        // alone, with Back instead of Close. Accept: done gets the rules chosen (to start a game with them later:
+        // StartNewGameAs(file, rules)); Back: done gets null. Either way the main menu comes back. False: not on the main
+        // menu.
+        [Preview("multiplayer: built for Co-op so far")] public static bool ChooseNewGameRules(Action<NewGameRules> done)
+        {
+            if (done == null || !(UiPopups.Screen() is a8k)) return false;
+            CreationOnly = true;     // the game made behind the screen isn't one: mods' NewGame / GameStarted wait
+            RulesChosen = done;
+            bpo.GetServiceOrThrow<cnk>().arf();
+            kl.a();
+            new hj().a();
+            var screen = UiPopups.Screen() as c9v;
+            if (screen != null)
+            {
+                var close = dh9.c("Close"); var cancel = dh9.c("Cancel");
+                foreach (var f in typeof(c9v).GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public).Where(f => f.FieldType == typeof(dak)))
+                {
+                    var b = f.GetValue(screen) as dak;
+                    if (b != null && (b.Text == close || b.Text == cancel)) b.Text = "Back";
+                }
+            }
+            Log.Write("world: the Rules screen (for a game started later)");
+            return true;
+        }
+
+        // hj's close handler: with ChooseNewGameRules, the rules are kept and the main menu comes back.
+        internal static bool RulesClosing(el5 result)
+        {
+            var done = RulesChosen;
+            if (done == null) return true;
+            RulesChosen = null; CreationOnly = false;
+            NewGameRules rules = null;
+            if (result != null && result.a() == cku.a)
+            {
+                var game = bpo.GetServiceOrThrow<cnk>().aqu();
+                rules = new NewGameRules { D = game.i(), X = game.v().e(), Custom = CustomRules.GetValue(game), Mods = NewGameOptions.Values() };
+                Log.Write("world: rules chosen: " + rules.Difficulty + ", " + rules.Experience + " experience");
+            }
+            bpo.GetServiceOrThrow<d4m>().avp(dla.a(TimelapseVertigo.Common.TimelapseWorkflows.ReturnToMainMenu));
+            try { done(rules); } catch (Exception ex) { Log.Write("world: rules chosen: a handler failed: " + ex); }
+            return false;
+        }
+
+        // A new game with these rules (no Rules screen) and the character in the .char (no creation). False: not on the
+        // main menu, or no such file.
+        [Preview("multiplayer: built for Co-op so far")] public static bool StartNewGameAs(string characterFile, NewGameRules rules)
+        {
+            if (rules == null) return StartNewGameAs(characterFile);
+            if (string.IsNullOrEmpty(characterFile) || !System.IO.File.Exists(characterFile) || !(UiPopups.Screen() is a8k)) return false;
+            var f = ReadFile.Invoke(null, new object[] { characterFile });
+            var sheet = f == null ? null : FileSheet.GetValue(f) as au2;
+            if (sheet == null) return false;
+            var game = bpo.GetServiceOrThrow<cnk>();
+            game.arf();     // the new game (mods' NewGame / GameStarted)
+            kl.a();
+            var g = game.aqu();
+            g.a(rules.D);
+            if (rules.Custom != null) CustomRules.SetValue(g, rules.Custom);
+            sheet.a(rules.X);
+            g.a(sheet);
+            NewGameOptions.Apply(rules.Mods);
+            Log.Write("world: new game started as " + sheet.Name + " (" + System.IO.Path.GetFileName(characterFile) + "), " + rules.Difficulty + ", " + rules.Experience + " experience");
+            bpo.GetServiceOrThrow<d4m>().avp(dla.a(TimelapseVertigo.Common.TimelapseWorkflows.StartGameInLocale));
+            return true;
+        }
+
+        // This game's experience system ("Classic" or "Oddity"; null: no game).
+        [Preview("multiplayer: built for Co-op so far")] public static string ExperienceSystemName { get { var g = bpo.GetService<cnk>(); var s = g == null || g.aqu() == null ? null : g.aqu().v(); return s == null ? null : s.e().ToString(); } }
         internal static string StartAs;
 
         // On the main menu: the game's New Game (its Rules screen: difficulty, XP system), then the game starts with the
@@ -301,6 +376,20 @@ namespace UnderRailWorks
             var f = (e2b)Flags.GetValue(e);
             Flags.SetValue(e, on ? f | e2b.d : f & ~e2b.d);
         }
+    }
+
+    // A new game's rules chosen on the game's Rules screen (World.ChooseNewGameRules): kept to start a game with them.
+    [Preview("multiplayer: built for Co-op so far")] public sealed class NewGameRules
+    {
+        internal NewGameRules() { }
+        internal TimelapseVertigo.Rules.GameDifficulty D;
+        internal TimelapseVertigo.Rules.Characters.ExperienceSystem X;
+        internal object Custom;
+        internal List<KeyValuePair<string, int>> Mods;
+        public string Difficulty { get { return D.ToString(); } }
+        public string Experience { get { return X.ToString(); } }
+        // The Mods tab's values, "<mod>/<key>" -> value.
+        public IDictionary<string, int> ModValues { get { return (Mods ?? new List<KeyValuePair<string, int>>()).ToDictionary(kv => kv.Key, kv => kv.Value); } }
     }
 
     public sealed partial class Character

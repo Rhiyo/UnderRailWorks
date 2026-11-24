@@ -100,6 +100,8 @@ static class Saves
         // New game's character creation closing: h1.a(object iw, el5 result): cku.a Accept -> StartGameInLocale, cku.b ->
         // ReturnToMainMenu.
         harmony.Patch(typeof(h1).GetMethod("a", any, null, new[] { typeof(object), typeof(el5) }, null), prefix: m("CreationClosing"));
+        // The Rules screen closing: hj.a(object, el5) (World.ChooseNewGameRules keeps the rules, back to the main menu).
+        harmony.Patch(typeof(hj).GetMethod("a", any, null, new[] { typeof(object), typeof(el5) }, null), prefix: m("RulesClosingHook"));
         // Character creation opening: h1.a() (World.StartNewGameAs skips it).
         // After it: the screen is up (Back for World.OpenCharacterCreation).
         harmony.Patch(typeof(h1).GetMethod("a", any, null, Type.EmptyTypes, null), prefix: m("CreationOpeningHook"), postfix: m("CreationBuilt"));
@@ -279,6 +281,8 @@ static class Saves
         }
         catch (Exception ex_) { PatchGuard.Failed("Saves.CreationCancel", ex_); return true; }
     }
+
+    static bool RulesClosingHook(el5 __1) { try { return World.RulesClosing(__1); } catch (Exception ex_) { PatchGuard.Failed("Saves.RulesClosing", ex_); return true; } }
 
     static bool CreationOpeningHook() { try { return World.CreationOpening(); } catch (Exception ex_) { PatchGuard.Failed("Saves.CreationOpening", ex_); return true; } }
 

@@ -627,7 +627,7 @@ public sealed partial class Coop : WorksMod
         // mod setup (its items and stats might not exist here).
         GameEvents.Update.Add(this, dt => World.CreationImport = listener == null && host == null);
         // Tests: open a window by name (layouts are checked by Works: "ui: window ... fits" in the log).
-        Commands.Add(this, "coop.ui", "coop.ui <coop|join|hostsave|page|create|hostcreate|give|loot|talk|close>: open a Co-op window (tests)", a2 =>
+        Commands.Add(this, "coop.ui", "coop.ui <coop|join|hostsave|page|create|hostcreate|hostnew|editrules|give|loot|talk|close>: open a Co-op window (tests)", a2 =>
         {
             switch (a2.Length == 0 ? "" : a2[0])
             {
@@ -637,6 +637,8 @@ public sealed partial class Coop : WorksMod
                 case "page": if (coopPage != null) coopPage.Open(); return "opened";
                 case "create": CreateCharacter(); return "creating";
                 case "hostcreate": CreateHostCharacter(); return "creating";
+                case "hostnew": HostFromMenu("new", null); return "hosting";
+                case "editrules": EditRules(); return "rules";
                 case "give": OpenGive(); return "opened";
                 case "loot": if (lootName == null) lootName = "Test crate"; ShowLoot(); return "opened";
                 case "talk": ShowTalk(); return "opened";
@@ -644,7 +646,7 @@ public sealed partial class Coop : WorksMod
                     foreach (var w2 in new[] { window, joinWindow, saveWindow, giveWindow, lootWindow, talkWindow }) if (w2 != null && w2.IsOpen) w2.Close();
                     return "closed";
             }
-            return "coop.ui <coop|join|hostsave|page|create|hostcreate|give|loot|talk|close>";
+            return "coop.ui <coop|join|hostsave|page|create|hostcreate|hostnew|editrules|give|loot|talk|close>";
         });
         Commands.Add(this, "coop.suggest", "coop.suggest <answer number>: in the host's conversation, suggest that answer (again: take it back)", a =>
         {

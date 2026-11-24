@@ -60,6 +60,7 @@ public sealed partial class Coop
         };
         Action<string, string> textRow = (label, value) => { var v = Ui.Label(value, controlW); Ui.SetColor(v, Normal); row(label, v, line); };
         expansionTicks.Clear(); expansionLabels.Clear();
+        if (editable && hostRules != null) { textRow("Difficulty", hostRules.Difficulty); textRow("Experience", hostRules.Experience); }
         if (editable)
         {
             // Expansions: a tick each, side by side.
@@ -126,6 +127,7 @@ public sealed partial class Coop
             buttons.Add(hostCreateButton);
         }
         else hostCreateButton = null;
+        if (editable && hostRules != null) { var edit = Ui.Button("Edit settings", EditRules); Ui.Tooltip(edit, "The game's rules again (difficulty, experience system)"); buttons.Add(edit); }
         var start = startButton = Ui.Button("Start game", () => { var r = StartGame(); if (r != "starting") Notify.Log("Co-op: " + r, Say); });
         buttons.Add(start);
         if (Online.Available) buttons.Add(Ui.Button("Invite friends...", () =>
@@ -133,18 +135,17 @@ public sealed partial class Coop
             if (!Online.IsHosting) { Tell("the " + Online.Service + " lobby isn't ready yet"); return; }
             if (!Online.OpenInviteDialog()) Tell("the " + Online.Service + " overlay isn't available here: friends join from Co-op, Join a Game, or Join Game in their friends list");
         }));
-        var cancel = Ui.Button("Cancel", () => { StopHosting(); if (window != null) window.Close(); });     // back to the main menu
-        int bh = Math.Max(start.Height, cancel.Height);
-
-        int height = y + bh + pad;
-        window = Ui.Window(this, "coop", saved ? "Host saved game: " + (lobbySave ?? "") : "Host a new game", w, 22 + Ui.S(4) + height);
+        var cancel = Ui.Button("Cancel", () => { StopHosting(); if (window != null) window.Close(); if (coopPage != null && MainMenu.IsShowing) coopPage.Open(); });     // back to the Co-op page
+        buttons.Add(cancel);
+        // Wide enough for the buttons on one row where the screen allows; else they wrap (Ui.AddButtons).
+        int width = Math.Min(Math.Max(w, Ui.ButtonsWidth(buttons, pad)), Math.Max(w, Ui.ScreenWidth - Ui.S(40)));
+        int height = y + Ui.ButtonsHeight(buttons, width, pad) + pad;
+        window = Ui.Window(this, "coop", saved ? "Host saved game: " + (lobbySave ?? "") : "Host a new game", width, 22 + Ui.S(4) + height);
         if (window == null) return;
         window.Closed += () => { window = null; builtFor = null; };
         int top = window.Top + Ui.S(4);
         foreach (var p in place) Ui.Add(window, p.Key, p.Value.X, top + p.Value.Y);
-        int bx = pad, by = window.Height - pad - bh;
-        foreach (var b in buttons) { Ui.Add(window, b, bx, by); bx += b.Width + gap; }
-        Ui.Add(window, cancel, window.Width - pad - cancel.Width, by);
+        Ui.AddButtons(window, buttons, pad);
         Ui.Tooltip(start, editable ? "When everyone (you too) has a character: the game's Rules, then the game starts with everyone who joined (open places are dropped)" : "Load the save (every place must be taken)");
         Ui.Tooltip(cancel, "Close the lobby: everyone who joined is sent back");
     }

@@ -54,6 +54,23 @@ namespace UnderRailWorks
         // The player accepted the new-game screen: the values are in each mod's data (Get) for the new game.
         public static readonly Hook<Action> Applied = new Hook<Action>("NewGameOptions.Applied");
 
+        // The values shown on the screen now ("<mod>/<key>" -> value), and the same put into a new game later (rules chosen
+        // ahead: World.ChooseNewGameRules / StartNewGameAs).
+        internal static List<KeyValuePair<string, int>> Values() { lock (Options) return Shown.Select(kv => new KeyValuePair<string, int>(kv.Key.Mod.Id + "/" + kv.Key.Key, kv.Value.l())).ToList(); }
+        internal static void Apply(List<KeyValuePair<string, int>> values)
+        {
+            if (values == null || values.Count == 0) return;
+            foreach (var kv in values)
+            {
+                int at = kv.Key.IndexOf('/');
+                var mod = at < 0 ? null : ModLoader.Find(kv.Key.Substring(0, at));
+                if (mod == null || mod.Instance == null) continue;
+                SaveData.Of(mod.Instance).Set("newgame." + kv.Key.Substring(at + 1), kv.Value);
+                Log.Write("new game: " + kv.Key + " = " + kv.Value);
+            }
+            if (Applied.Any) Applied.Run(h => h());
+        }
+
         // Accept on the new-game screen: the values shown go into each mod's data for the game being created.
         internal static void Accepted()
         {

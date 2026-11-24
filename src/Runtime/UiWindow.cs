@@ -77,6 +77,20 @@ public static partial class Ui
         }
         return top;
     }
+    // The interface area windows go in (the HUD, or the main menu), in layout units: 0 when neither is showing.
+    public static int ScreenWidth { get { var r = Hud.Root ?? (UiPopups.Screen() is a8k ? UiElement.Of(UiPopups.Screen()) : null); return r == null ? 0 : r.Width; } }
+    public static int ScreenHeight { get { var r = Hud.Root ?? (UiPopups.Screen() is a8k ? UiElement.Of(UiPopups.Screen()) : null); return r == null ? 0 : r.Height; } }
+
+    // How tall AddButtons' rows are in a window this wide (to size the window before adding them).
+    public static int ButtonsHeight(IList<UiElement> buttons, int windowWidth, int pad = -1, int gap = -1)
+    {
+        if (buttons == null || buttons.Count == 0) return 0;
+        if (pad < 0) pad = S(10);
+        if (gap < 0) gap = S(6);
+        int width = windowWidth - 2 * pad, bh = buttons.Max(b => b.Height), rows = 1, used = 0;
+        foreach (var b in buttons) { if (used > 0 && used + b.Width > width) { rows++; used = 0; } used += b.Width + gap; }
+        return rows * (bh + gap) - gap;
+    }
     // How wide a window must be for these buttons on one row (with AddButtons' default spacing).
     public static int ButtonsWidth(IList<UiElement> buttons, int pad = -1, int gap = -1)
     {
