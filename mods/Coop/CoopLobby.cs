@@ -1,7 +1,8 @@
 // Co-op's lobby: players join only before the game starts, never into a game under way (a player arriving mid-game
 // meets a world that already moved on: fights, conversations, zones). The host opens the lobby from the main menu:
-//   Host New Game     how many players (you included); each joiner makes a character in the game's own creation. When
-//                     every place is taken, Start: the host makes their own character, and everyone starts together.
+//   Host New Game     straight into the lobby with places for 4 players (you and three others); each joiner makes a
+//                     character in the game's own creation. Start once at least one has: places nobody took are
+//                     dropped, the host makes their own character, and everyone starts together.
 //   Host Saved Game   a co-op game's save: its co-op characters are the places, each joiner takes one (no places
 //                     added or left out; single-player saves aren't offered). The game loads only when every place is
 //                     taken: a saved character never goes missing from the game it belongs to.
@@ -38,18 +39,49 @@ public sealed partial class Coop
         return result;
     }
 
+    // A co-op save among the single-player ones (made before co-op had its own folder, or put there by hand): copied
+    // into Co-op Saves (the original stays) so it can be hosted.
+    void CopyIntoCoopSaves(string save)
+    {
+        SaveGames.UseLocation(this, null);
+        var from = SaveGames.Folder(save);
+        SaveGames.UseLocation(this, SaveFolder);
+        var to = SaveGames.Folder(save);
+        if (!System.IO.Directory.Exists(from) || System.IO.Directory.Exists(to)) return;
+        SaveGames.UseLocation(this, null);
+        bool coop = SavedCharacters(save).Count > 0;     // only a co-op game's save (a single-player one is refused as before)
+        SaveGames.UseLocation(this, SaveFolder);
+        if (!coop) return;
+        try
+        {
+            foreach (var d in System.IO.Directory.GetDirectories(from, "*", System.IO.SearchOption.AllDirectories)) System.IO.Directory.CreateDirectory(to + d.Substring(from.Length));
+            System.IO.Directory.CreateDirectory(to);
+            foreach (var f in System.IO.Directory.GetFiles(from, "*", System.IO.SearchOption.AllDirectories)) System.IO.File.Copy(f, to + f.Substring(from.Length));
+            Log.Info("copied the save " + save + " into " + SaveFolder);
+        }
+        catch (Exception ex) { Log.Error("copying " + save + " into " + SaveFolder + ": " + ex.Message); }
+    }
+
     // A save's co-op characters, read from the save on disk.
     List<Record> SavedCharacters(string save) { return ParseRecords(SaveGames.ModData(this, save, "characters")); }
 
     string OpenLobby(string kind, string save, int newPlayers, int port)
     {
-        if (World.Player != null) return "host from the main menu (Escape -> main menu): Host New Game or Host Saved Game";
+        if (World.Player != null) return "host from the main menu (Escape -> main menu): Co-op, then Host New Game or Host Saved Game";
         if (host != null && !host.Closed) return "you're joined to someone's game (Leave first)";
         StopHosting();
         slots.Clear(); lobby = null; starting = false;
         if (kind == "saved")
         {
-            if (string.IsNullOrEmpty(save) || !SaveGames.Names.Contains(save)) return "no save called " + save;
+            SaveGames.UseLocation(this, SaveFolder);     // co-op games' saves (hosting keeps it: SaveLocationRule)
+            if (!string.IsNullOrEmpty(save) && !SaveGames.Names.Contains(save)) CopyIntoCoopSaves(save);
+            if (string.IsNullOrEmpty(save) || !SaveGames.Names.Contains(save))
+            {
+                SaveGames.UseLocation(this, null);
+                bool singlePlayer = !string.IsNullOrEmpty(save) && SaveGames.Names.Contains(save);
+                SaveGames.UseLocation(this, SaveFolder);
+                return singlePlayer ? save + " isn't a co-op game (no co-op characters): co-op games start with Host New Game" : "no save called " + save;
+            }
             records = SavedCharacters(save);
             // Only a co-op game's save, with exactly its players: no places added or left out (a saved character never
             // goes missing from its game). A single-player game becomes co-op only from the start: Host New Game.
@@ -61,6 +93,8 @@ public sealed partial class Coop
         {
             records = new List<Record>();
             for (int i = 0; i < newPlayers; i++) slots.Add(new Slot());
+            // A new game: the settings as last time (a saved game's lobby may have shown that save's).
+            foreach (var o in options) { int v; if (!o.NotRemembered && int.TryParse(Settings.Get("option." + o.Mod + "." + o.Key), out v)) o.Value = v; }
         }
         if (slots.Count == 0) return "at least one other player";
         if (slots.Count > MaxPlayers - 1) return "at most " + MaxPlayers + " players (you and " + (MaxPlayers - 1) + " others); this would be " + (slots.Count + 1);
@@ -77,12 +111,18 @@ public sealed partial class Coop
 
     int FreePlaces() { return slots.Count(s => s.Seat == null); }
 
-    // Start: every place taken, then the game is made (Host New Game: the host's own creation) or loaded.
+    // Start: a new game with whoever joined, a save with every place taken; then the game is made (Host New Game: the host's own creation) or loaded.
     string StartGame()
     {
         if (lobby == null) return starting ? "starting..." : "no lobby (Host New Game / Host Saved Game on the main menu)";
         int missing = FreePlaces();
-        if (missing > 0) return "waiting for " + missing + " more player" + (missing == 1 ? "" : "s") + ": every place must be taken first";
+        if (lobby == "new")
+        {
+            // A new game starts with whoever is here: the places nobody took are dropped.
+            if (missing == slots.Count) return "waiting for at least one player to join";
+            slots.RemoveAll(s => s.Seat == null);
+        }
+        else if (missing > 0) return "waiting for " + missing + " more player" + (missing == 1 ? "" : "s") + ": every saved character's player must be here first";
         foreach (var s in seats.Values.Where(x => !slots.Any(sl => sl.Seat == x)).ToList()) { s.Peer.Send("BYE", "the game is full"); s.Peer.Close(); }
         var needed = LobbyExpansions();
         var notHere = needed.Where(id => !Expansions.Installed.Contains(id)).ToList();
@@ -141,7 +181,7 @@ public sealed partial class Coop
         slot.Seat = seat; seat.Record = r;
         seat.Peer.Send("READY", r.Name);
         Log.Info(seat.Peer.Name + " will play " + r.Name);
-        Notify.Log("Co-op: " + seat.Peer.Name + " will play " + r.Name + (FreePlaces() == 0 ? ". Everyone is here: Start." : ""), Say);
+        Notify.Log("Co-op: " + seat.Peer.Name + " will play " + r.Name + (FreePlaces() == 0 ? ". Everyone is here: Start." : lobby == "new" ? ". Start when everyone is here." : ""), Say);
         LobbyChanged();
     }
 
@@ -209,9 +249,38 @@ public sealed partial class Coop
             if (a.Length < 1 || (a.Length > 1 && !int.TryParse(a[1], out port))) return "coop.hostsave <save> [port]";
             return OpenLobby("saved", a[0], 0, port);
         });
-        Commands.Add(this, "coop.start", "coop.start: start the lobby's game (every place taken)", a => StartGame());
-        MainMenu.AddButton(this, "Host New Game", () => AskHost("new", null));
-        MainMenu.AddButton(this, "Host Saved Game", PickSave);
+        Commands.Add(this, "coop.start", "coop.start: start the lobby's game (a new game: at least one player; a save: every place taken)", a => StartGame());
+        // The main menu's Co-op page: everything co-op in one place (its saves are its own: see SaveLocationRule).
+        coopPage = MainMenu.AddPage(this, "Co-op");
+        coopPage.AddButton("Host New Game", () => HostFromMenu("new", null));
+        coopPage.AddButton("Host Saved Game", PickSave);
+        coopPage.AddButton("Join a Game", AskJoin);
+        GameEvents.Update.Add(this, dt => SaveLocationRule());
+    }
+
+    MainMenuPage coopPage;
+    internal const string SaveFolder = "Co-op Saves";
+    // Co-op games are saved in their own folder (My Games\Underrail\Saves\Co-op Saves: inside the game's
+    // Saves, so Steam Cloud keeps them; Load Game skips the folder), never among single-player saves:
+    // single-player Load Game doesn't list them, and the Co-op page's Host Saved Game lists only them. The folder is in
+    // use while hosting or joined, while a co-op game is being played (also after hosting stopped), and on the main
+    // menu while the Co-op page is open.
+    void SaveLocationRule()
+    {
+        // In between (a save loading, character creation): as it was, so a load never switches folders halfway.
+        bool coop = listener != null || (host != null && !host.Closed) || onlineJoining != null
+            || (MainMenu.IsShowing ? coopPage != null && MainMenu.OpenPage == coopPage
+                : World.Player != null ? records.Count > 0 : SaveGames.Location != null);
+        if ((SaveGames.Location != null) != coop) SaveGames.UseLocation(this, coop ? SaveFolder : null);
+    }
+
+    // The main menu's Host buttons: straight into the lobby (a new game: places for MaxPlayers; a save: its characters).
+    // The game's settings are in the lobby (Game settings...).
+    void HostFromMenu(string kind, string save)
+    {
+        var r = OpenLobby(kind, save, kind == "new" ? MaxPlayers - 1 : 0, DefaultPort);
+        Commands.Print("co-op: " + r);
+        if (lobby == null) Notify.Log("Co-op: " + r, Say);     // refused: say why (opened: the lobby window shows it)
     }
 
     // Host Saved Game: the saves, with their co-op characters.
@@ -220,21 +289,30 @@ public sealed partial class Coop
     {
         if (saveWindow != null && saveWindow.IsOpen) return;
         // Only co-op games' saves (with co-op characters): single-player games become co-op with Host New Game.
+        // Co-op Saves first; then co-op saves still among the single-player ones (older; copied over when hosted).
+        var was = SaveGames.Location;
+        SaveGames.UseLocation(this, null);
+        var older = SaveGames.Names.Where(n => SavedCharacters(n).Count > 0).ToDictionary(n => n, n => SavedCharacters(n));
+        SaveGames.UseLocation(this, SaveFolder);
         var names = SaveGames.Names.Where(n => SavedCharacters(n).Count > 0).ToList();
+        var players = names.ToDictionary(n => n, n => SavedCharacters(n));
+        var inCoop = new HashSet<string>(names);
+        foreach (var o in older) if (!players.ContainsKey(o.Key)) { names.Add(o.Key); players[o.Key] = o.Value; }
+        SaveGames.UseLocation(this, was);
         int pad = Ui.S(10), w = Ui.S(620), h = Ui.S(420);
         saveWindow = Ui.Window(this, "hostsave", "Host a saved game", w, h);
         if (saveWindow == null) return;
         saveWindow.Closed += () => saveWindow = null;
         w = saveWindow.Width; h = saveWindow.Height;
         int chosen = -1;
-        var items = names.Select(n => n + "   (" + string.Join(", ", SavedCharacters(n).Select(r => r.Name).ToArray()) + ")").ToList();
-        Ui.Add(saveWindow, Ui.Label("Co-op games' saves: their players take their characters again.", w - 2 * pad), pad, saveWindow.Top + Ui.S(2));
-        var next = Ui.Button("Next...", () =>
+        var items = names.Select(n => n + "   -   with " + string.Join(", ", players[n].Select(r => r.Name).ToArray()) + (!inCoop.Contains(n) ? "   (in your single-player saves)" : "")).ToList();
+        Ui.Add(saveWindow, Ui.Label("Pick a co-op game's save: its players take their characters again.", w - 2 * pad), pad, saveWindow.Top + Ui.S(2));
+        var next = Ui.Button("Host", () =>
         {
             if (chosen < 0 || chosen >= names.Count) { Notify.Log("Co-op: select a save first", Grey); return; }
             var save = names[chosen];
             saveWindow.Close();
-            AskHost("saved", save);
+            HostFromMenu("saved", save);
         });
         var cancel = Ui.Button("Cancel", () => saveWindow.Close());
         int by = h - pad - next.Height;

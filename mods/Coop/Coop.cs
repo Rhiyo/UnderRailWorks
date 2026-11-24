@@ -1,8 +1,8 @@
 // Co-op: an UnderRailWorks mod (design, results and open questions: docs/Multiplayer.md in the Works repo).
 // The host's game is the only real one. Players gather in the host's lobby before the game starts (CoopLobby.cs: Host
-// New Game / Host Saved Game on the main menu; nobody joins a game under way). Each joiner takes a place: a co-op
-// character saved with that game, or a new one made in the game's own creation. When every place is taken the host
-// starts, and each character appears in the host's game (where it was saved, else next to the host's character),
+// New Game / Host Saved Game on the main menu's Co-op page; nobody joins a game under way). Each joiner takes a place: a co-op
+// character saved with that game, or a new one made in the game's own creation. The host starts (a new game: with
+// whoever joined; a save: when every saved character's player is there), and each character appears in the host's game (where it was saved, else next to the host's character),
 // driven by its player instead of an AI (Works' CharacterControl).
 // The joiner's game loads the host's save and mirrors it (Mirror.cs); their clicks become commands here; conversations
 // (CoopTalk.cs) and looting (CoopLoot.cs) are relayed. The group travels together (every player near the exit), and
@@ -98,7 +98,7 @@ public sealed partial class Coop : WorksMod
         Party.TrapsCountMembers = true;
         Party.Safeguards = true;
         Log.Info("hosting on port " + port);
-        Notify.Log("Co-op: hosting on port " + port + ". Others join with Join a Game and your address" + (port == DefaultPort ? "" : ":" + port), Say);
+        Notify.Log("Co-op: hosting on port " + port + ". Others join with Co-op, Join a Game and your address" + (port == DefaultPort ? "" : ":" + port), Say);
         return null;
     }
 
@@ -324,7 +324,7 @@ public sealed partial class Coop : WorksMod
         {
             if (!onlineHosting) return;     // not Co-op's
             if (listener == null) { Online.Leave(); onlineHosting = false; return; }
-            Notify.Log("Co-op: " + Online.Service + " friends can join you: Join a Game, or Join Game in their friends list", Say);
+            Notify.Log("Co-op: " + Online.Service + " friends can join you: Co-op, Join a Game, or Join Game in their friends list", Say);
             Changed();
         });
         Online.MemberJoined.Add(this, m => { if (listener != null) OnlinePeerFor(m.Id, m.Name); });
@@ -360,7 +360,7 @@ public sealed partial class Coop : WorksMod
         Online.InviteAccepted.Add(this, lobbyId =>
         {
             if (listener != null || (host != null && !host.Closed)) { Tell("leave this co-op game first to join another"); return; }
-            if (World.Player != null) { Tell("a friend's invite: go to the main menu (Escape -> main menu) and accept it again, or use Join a Game"); return; }
+            if (World.Player != null) { Tell("a friend's invite: go to the main menu (Escape -> main menu) and accept it again, or use Co-op, Join a Game"); return; }
             Tell(Join(new[] { "online:" + lobbyId }));
             if (window == null || !window.IsOpen) Build();
         });
@@ -599,12 +599,6 @@ public sealed partial class Coop : WorksMod
         // No importing in co-op (host or joiner): characters come from creation only, never from another game or another
         // mod setup (its items and stats might not exist here).
         GameEvents.Update.Add(this, dt => World.CreationImport = listener == null && host == null);
-        Commands.Add(this, "coop.turntime", "coop.turntime <seconds>: how long a joined player's turn may take (0: no limit)", a =>
-        {
-            int n; var o = Option(Id, "turntime");
-            if (o == null || a.Length < 1 || !int.TryParse(a[0], out n) || n < 0) return "coop.turntime <seconds>";
-            o.Value = n; return "turn time: " + (n == 0 ? "no limit" : n + " s");
-        });
         Commands.Add(this, "coop.suggest", "coop.suggest <answer number>: in the host's conversation, suggest that answer (again: take it back)", a =>
         {
             int n; if (a.Length < 1 || !int.TryParse(a[0], out n) || n < 1 || n > talkChoices.Count) return "coop.suggest <answer number, 1-" + talkChoices.Count + ">";

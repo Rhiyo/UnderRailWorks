@@ -132,6 +132,7 @@ static class Saves
 
     // While a save loads, ari loads the zone (arp) before Works restores mod quests: nothing zone-related before its end.
     static bool loading, statusPending;
+    internal static bool IsLoading { get { return loading; } }
 
     // The player is placed after the zone loads (ars, after arp; for a save, at its end): the zone's placements and
     // event wait for the first update with the zone and the player there.
@@ -257,6 +258,7 @@ static class Saves
     static Exception LoadFinished(Exception __exception)
     {
         loading = false;
+        SaveLocation.Apply();
         if (__exception != null) return __exception;
         Run("restoring mod quests", RestoreQuests);
         Combat.Round = 1;     // the last game's count isn't this one's (a save made mid-fight starts counting again)

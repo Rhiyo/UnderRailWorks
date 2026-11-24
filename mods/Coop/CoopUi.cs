@@ -2,7 +2,7 @@
 // game's titled window. What it shows follows the state:
 //   not connected   Join a game... (the address asked with the game's text popup); hosting starts on the main menu.
 //                   After a refusal for different mods: what differs, Match host (CoopMatch.cs); Restore my mods.
-//   lobby (host)    the places and who took them, the addresses others join with, Start (every place taken) / Stop
+//   lobby (host)    CoopLobbyUi.cs: players, game settings, how friends join; Start game / Invite friends... / Cancel
 //   hosting         who is playing what, Stop hosting
 //   choosing        the lobby's places (saved characters, "new character" places; taken ones greyed), Play selected /
 //                   New character...
@@ -39,7 +39,6 @@ public sealed partial class Coop
 
         });
         GameEvents.Update.Add(this, dt => { if (windowKey.Pressed) Toggle(); });
-        MainMenu.AddButton(this, "Join a Game", AskJoin);
     }
 
     void Toggle()
@@ -66,6 +65,7 @@ public sealed partial class Coop
 
     void Build()
     {
+        if (Mode() == "lobby") { builtFor = "lobby"; selected = -1; BuildLobby(); if (window != null) Refresh(); else builtFor = null; return; }
         int w = Ui.S(600), h = Ui.S(Mode() == "lobby" ? 520 : 380), line = Ui.LineHeight, pad = Ui.S(10);
         window = Ui.Window(this, "coop", "Co-op", w, h);
         if (window == null) return;
@@ -87,11 +87,6 @@ public sealed partial class Coop
                 button("Join a game...", AskJoin);
                 if (Mods.HasProfile(BackupProfile)) button("Restore my mods", () => RestoreMine());
                 break;
-            case "lobby":
-                button("Start", () => { var r = StartGame(); if (r != "starting") Notify.Log("Co-op: " + r, Say); });
-                if (Online.IsHosting) button("Invite friends...", () => { if (!Online.OpenInviteDialog()) Tell("the " + Online.Service + " overlay isn't available here: friends join from Join a Game, or Join Game in their friends list"); });
-                button("Stop hosting", () => StopHosting());
-                break;
             case "ready":
                 button("Leave", Leave);
                 break;
@@ -111,7 +106,7 @@ public sealed partial class Coop
                 button("New character...", () =>
                 {
                     // Made in the game's own creation (a new game on this machine, left as soon as it starts).
-                    if (World.Player != null) { Tell("new characters are made from the main menu: go there (Escape -> main menu) and use Join a Game"); return; }
+                    if (World.Player != null) { Tell("new characters are made from the main menu: go there (Escape -> main menu) and use Co-op, Join a Game"); return; }
                     creating = true;
                     Tell("make your character; you'll join " + (hostName ?? "the host") + " when it's done");
                     if (!World.StartNewGame()) { creating = false; Tell("couldn't open character creation"); }
@@ -149,7 +144,6 @@ public sealed partial class Coop
         }
 
         int listTop = window.Top + line + Ui.S(8);
-        if (builtFor == "lobby") listTop += AddExpansionRow(window, pad, listTop, w - 2 * pad);
         int listBottom = h - pad - rowsOf.Count * (bh + gap);
         list = Ui.List(w - 2 * pad, Math.Max(line * 2, listBottom - listTop));
         list.Selected += i => { selected = i; Refresh(); };
@@ -171,7 +165,7 @@ public sealed partial class Coop
                     items.Add(""); colours.Add(Grey);
                     break;
                 }
-                Ui.SetText(statusLabel, World.Player == null ? "Play together: Host New Game or Host Saved Game here, or join someone's lobby." : "Players join before a game starts: host from the main menu (Host New Game / Host Saved Game).");
+                Ui.SetText(statusLabel, World.Player == null ? "Play together: Co-op on the main menu (host a game, or join one)." : "Players join before a game starts: host from the main menu's Co-op page.");
                 items.AddRange(messages.Skip(Math.Max(0, messages.Count - 30))); colours.AddRange(items.Select(_ => Normal));
                 break;
             case "host":
@@ -200,26 +194,8 @@ public sealed partial class Coop
                 Ui.SetText(statusLabel, onlineJoining != null ? "Joining through " + Online.Service + "..." : "Connecting...");
                 break;
             case "lobby":
-            {
-                int free = slots.Count(sl => sl.Seat == null);
-                RefreshExpansionRow();
-                Ui.SetText(statusLabel, starting ? "Starting the game..." : free == 0 ? "Everyone is here: Start." : "Waiting for " + free + " player" + (free == 1 ? "" : "s") + " (port " + listener.Port + ")");
-                items.Add((World.Player != null ? World.Player.Name : "You") + "  (the host)"); colours.Add(Grey);
-                foreach (var sl in slots)
-                {
-                    var what = sl.New ? "a new character" : sl.Saved.Name;
-                    items.Add(sl.Seat == null ? what + "  (free)" : what + "  -  " + sl.Seat.Peer.Name + (sl.New ? " plays " + sl.Seat.Record.Name : ""));
-                    colours.Add(sl.Seat == null ? Normal : Mine_);
-                }
-                foreach (var s in seats.Values.Where(x => !slots.Any(sl => sl.Seat == x))) { items.Add(s.Peer.Name + "  (choosing)"); colours.Add(Grey); }
-                items.Add(""); colours.Add(Grey);
-                if (Online.IsHosting) { items.Add(Online.Service + " friends: Join a Game shows your game (or Join Game in their friends list)."); colours.Add(Mine_); }
-                else if (Online.Available) { items.Add("Making a " + Online.Service + " lobby..."); colours.Add(Grey); }
-                items.Add("Others join with Join a Game and one of these addresses:"); colours.Add(Grey);
-                foreach (var a in Addresses()) { items.Add("   " + WithPort(a, listener.Port)); colours.Add(Mine_); }
-                items.Add("(over the internet: your router's address, with port " + listener.Port + " forwarded)"); colours.Add(Grey);
+                RefreshLobby(items, colours);
                 break;
-            }
             case "ready":
                 if (sessionExpansions != null) { items.Add("Expansions in this game: " + Names(sessionExpansions)); colours.Add(Grey); }
                 Ui.SetText(statusLabel, "You'll play " + readyAs + " in " + (hostName ?? "the host") + "'s game. Waiting for the host to start...");

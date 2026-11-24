@@ -1036,6 +1036,21 @@ Loot just rolled for a container or a character (once per entity per game). Add 
 
 - `static void SetBackground(WorksMod mod, string file)` — The picture behind the main menu (and the other full-screen menus that use the same art: options, loading a game). Works' BackgroundFit setting decides between cropping and letterboxing it.
 - `static void AddButton(WorksMod mod, string text, Action onClick)`
+- `static MainMenuPage AddPage(WorksMod mod, string text)` — A page of buttons opened from the main menu (see the top of this file). Adding it again returns the same page.
+- `static bool IsShowing` — The main menu is the screen showing (not a game, not a load or character creation in between).
+- `static MainMenuPage OpenPage` — The page showing now (null: the main menu's own column).
+
+## MainMenuPage  _(class, MainMenuButtons.cs)_
+
+A page of main menu buttons (MainMenu.AddPage): shown in the menu's column in place of its buttons, top-aligned, with Back last; the column's panel shrinks to fit (its bottom stays) and grows back when the page closes.
+
+- `string Text`
+- `void AddButton(string text, Action onClick)` — A button on the page, in the order added (again with the same text: replaced).
+- `bool IsOpen`
+- `event Action Opened, Closed` — After it opened / after it closed (Back, Escape, Close, or the menu going away).
+- `void Open()`
+- `void Close()`
+- `Action Opened`
 
 ## MapMarker  _(class, Markers.cs)_
 
@@ -1567,6 +1582,8 @@ The first handler that returns true replaces the game's step.
 - `static bool SaveNow(string name)` — Writes the current game into the save folder name now (replacing it). False: not in a game, or no save came out.
 - `static bool Delete(string name)` — Deletes that save as the Load Game window's Delete does (cnk.arn). False: no such save, or it couldn't be deleted.
 - `static string Folder(string name)` — The save's folder on disk (it may not exist).
+- `static string Location` — Where saves go: null = the game's own Saves folder (what single-player Load Game lists), or the name of a folder inside it (My Games\Underrail\Saves\<name>) for a mode whose saves shouldn't mix with single-player ones (Co-op: "Co-op Saves"). The game lists only folders with an info.dat (every save has one), so the folder itself never shows in Load Game, with or without Works, and Steam Cloud (UnderRail syncs everything under Saves) keeps it. While set, everything the game does with saves uses it: saving, quicksave, autosave, Load Game, Resume Last Saved, and Names / Load / Delete here. A change made while a save is loading applies after it. The saves themselves are the game's own (the stock game loads one moved into its Saves folder).
+- `static void UseLocation(WorksMod mod, string folder)`
 - `static IList<string> Names` — The saves the Load Game window lists, newest first (folder names, as Load takes them).
 - `static IList<string> ExpansionsOf(string name)` — The expansions a save was made with (ids, as Expansions names them): the game loads it only with all of them. Null: no such save.
 - `static object ModData(WorksMod mod, string save, string key)` — A mod's saved value (SaveData.Of(mod).Get(key)) from a save on disk, without loading it: e.g. a lobby showing the characters a save has. Null: no such save, value, or data.
@@ -1896,7 +1913,7 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static UiSlider Slider(int width, double min, double max, double value)` — A slider from min to max (drag or click; the value is drawn on it).
 - `static UiElement SmallButton(string text, int width, int height, Action click)` — A small button of any size drawn in the game's colours (Ui.Button is the game's own, at its own sizes).
 - `static UiChoice Choice(int width, IList<string> options, int index = 0)` — A button that steps through options on click (right-click: back).
-- `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD, or on the main menu when it is showing (null otherwise). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
+- `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD, or on the main menu when it is showing (null otherwise; there the menu's buttons are hidden while it's open, as for the game's own screens). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
 - `static UiWorldView WorldView(int width, int height, Vector2? centre = null)` — A view of the player's area, width x height, centred on centre (null: the player). Null without a game.
 
 ## UiCanvas  _(class, Ui.cs)_
@@ -1996,6 +2013,7 @@ Rows of text with buttons at their right end, in an area of a panel or window (a
 - `int TitleHeight` — The title bar's height at this interface size.
 - `int Top` — Where content starts (below the title bar).
 - `bool IsOpen`
+- `bool KeepMainMenu` — On the main menu: true keeps the menu's buttons showing while this window is open (by default they're hidden, as for the game's own screens). Set it right after opening; it can change any time.
 - `event Action Closed` — Runs once when the window closes (button, Escape, Close, or the HUD going away).
 - `void Close()`
 

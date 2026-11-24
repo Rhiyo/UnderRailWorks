@@ -24,6 +24,9 @@ wide after insets) can be clipped, overlapping or tiny elsewhere.
     scaled by the interface size, `wj.g4`). `Ui.Confirm` / `Ui.Choose` size it from the text with its own fonts.
   - `ec9`: the game's framed pane (base of its popups); `amm` the closable-with-result base.
   Find more with `grep -l 'new c68('` (text boxes) or by their button texts in the decompile.
+- **Main menu windows**: a `Ui.Window` opened over the main menu hides the menu's buttons while it's open, as the
+  game's own screens do (Works does it for every window: `UiWindows.MenuButtons`); mods do nothing for it. A window that should leave
+  the buttons up sets `KeepMainMenu = true`.
 - **Centre and clamp against the live screen size** (`bjn.b().aau().Size`, or the HUD root's), at the moment of
   showing; never assume 1920x1080 or the test size.
 - **Test at more than one size before calling it done**: at least the default test size and the player's own setup

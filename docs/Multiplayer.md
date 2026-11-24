@@ -16,12 +16,23 @@ zones" below).
 Joining a game under way caused the hardest problems (a world that moved on: fights, conversations, other zones, a
 character arriving mid-fight), so for the first release players join only in a lobby, before the game starts:
 
-- **Host New Game** (main menu): the host chooses the number of players (2-4, the host included). Each joiner makes a
-  character in the game's own creation on their machine and takes a place. When every place is taken the host starts:
-  they make their own character, and everyone starts together.
-- **Host Saved Game** (main menu): the host picks a save. Its co-op characters are the places; each joiner takes one
-  (the host can add new places for joiners who make a new character). The save loads only when every place is taken:
-  a saved character never goes missing from the game it belongs to.
+- **The main menu's Co-op page** (Nov 24): one Co-op button opens a page in the menu's column (Works'
+  `MainMenu.AddPage`): Host New Game, Host Saved Game, Join a Game, Back (Escape too).
+- **Co-op saves have their own folder** (Nov 24): `My Games\Underrail\Saves\Co-op Saves` (Works' `SaveGames.UseLocation`
+  points the game's save paths, `d5x.k()` / `d5x.d(name)`, there). In use while hosting or joined, while a co-op
+  game is played (also after hosting stopped), and on the Co-op page; so single-player Load Game / Resume never list
+  co-op saves, and Host Saved Game lists only them. A co-op save found among the single-player saves (older ones)
+  is copied into Co-op Saves when hosted. The saves are the game's own format (a stock game loads one moved into
+  Saves). Inside the game's Saves folder on purpose: UnderRail's Steam Cloud rule is everything under
+  `My Games\Underrail\Saves` (checked in Steam's app info), and the game's save list skips folders without an
+  info.dat (d6f.arm), so the folder never shows in Load Game, with or without Works.
+- **Host New Game** (main menu): straight into the lobby, with places for 4 players (the host and three others; Nov
+  24, there was a player-count window before). Each joiner makes a character in the game's own creation on their
+  machine and takes a place. The host starts once at least one has joined (places nobody took are dropped): they make
+  their own character, and everyone starts together. Co-op's and other mods' options: Game settings... in the lobby.
+- **Host Saved Game** (main menu): the host picks a save and is in its lobby. Its co-op characters are the places;
+  each joiner takes one. The save loads only when every place is taken: a saved character never goes missing from the
+  game it belongs to.
 - After the start nobody joins (refused: "the game has already started"). A player who leaves leaves their character,
   passing its turns.
 - **Death (0.0.1):** one rule, not an option: a player whose health runs out is downed (1 health, incapacitated,
@@ -93,10 +104,10 @@ character arriving mid-fight), so for the first release players join only in a l
   XP). A character exported from another game could carry items and stats from mods or setups this game doesn't have
   (a mod's item loads as an "Unknown" item; points a mod allowed look like stock data), so for now every co-op
   character is made in creation.
-- **Lobby character checks, turn time, rejoining (Nov 23):** an incoming character with feats or skills of an expansion
+- **Lobby character checks, rejoining (Nov 23):** an incoming character with feats or skills of an expansion
   the game doesn't use, a level above 25 or specializations without Expedition, items this game doesn't have, or a newer
-  game version is refused, naming each (`World.CharacterFileProblems`, `works.charcheck`). A host option limits a joined
-  player's turn (warned at 10 s left; `coop.turntime`). A player who left reconnects under the same name to their own
+  game version is refused, naming each (`World.CharacterFileProblems`, `works.charcheck`). (A turn time limit was
+  built and removed again on Nov 24: not needed.) A player who left reconnects under the same name to their own
   character (and only that).
 - **Joiners' actions (researched Nov 23):** lockpicking, electronic locks, hacking consoles, hot-wiring and boarding
   vehicles, and studying oddities use the joiner's own sheet. Fixed: a trap a joiner spots is revealed and disarming

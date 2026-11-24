@@ -25,6 +25,9 @@ public sealed class UiWindow : UiPanel
     // Where content starts (below the title bar).
     public int Top { get { return TitleHeight + 4; } }
     public bool IsOpen { get { return Control.Parent != null; } }
+    // On the main menu: true keeps the menu's buttons showing while this window is open (by default they're hidden, as
+    // for the game's own screens). Set it right after opening; it can change any time.
+    public bool KeepMainMenu { get; set; }
     // Runs once when the window closes (button, Escape, Close, or the HUD going away).
     public event Action Closed;
     public void Close()
@@ -38,7 +41,8 @@ public sealed class UiWindow : UiPanel
 
 public static partial class Ui
 {
-    // A window on the HUD, or on the main menu when it is showing (null otherwise). id: unique within the mod, for remembering its place. Opening a
+    // A window on the HUD, or on the main menu when it is showing (null otherwise; there the menu's buttons are hidden
+    // while it's open, as for the game's own screens). id: unique within the mod, for remembering its place. Opening a
     // window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player
     // something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose
     // (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
@@ -114,11 +118,38 @@ static class UiWindows
         harmony.Patch(handler, prefix: new HarmonyLib.HarmonyMethod(typeof(UiWindows).GetMethod("KeyPressed", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)));
     }
 
+    // On the main menu, the menu's buttons are hidden while a mod window is open over it (unless it has KeepMainMenu), as the game's own screens
+    // (Load Game, Options...) replace them; back when the last one closes. Checked every frame (cheap: only a change
+    // touches the menu), so a window closed any way, or a menu built anew, is followed.
+    static object buttonsMenu; static bool buttonsHidden;
+    static void MenuButtons()
+    {
+        var screen = Hud.Exists ? null : UiPopups.Screen() as a8k;
+        if (screen == null) { buttonsMenu = null; return; }
+        bool hide = Open.Any(w => !w.KeepMainMenu);
+        if (screen == buttonsMenu && hide == buttonsHidden) return;
+        buttonsMenu = screen; buttonsHidden = hide;
+        MainMenu.ShowButtons(!hide);
+    }
+
     internal static void Tick()
     {
         UiPopups.Tick();
         Open.RemoveAll(w => !w.IsOpen);
-        if (Open.Count == 0) { dragging = null; return; }
+        try { MenuButtons(); } catch (Exception ex) { Log.Write("windows: the main menu's buttons: " + ex.Message); }
+        try { MainMenuPage.Tick(); } catch (Exception ex) { Log.Write("main menu: page: " + ex.Message); }
+        if (Open.Count == 0)
+        {
+            dragging = null;
+            // Escape on a main menu page (no window, no game popup over it): back to the menu's own column.
+            var page = MainMenuPage.Current;
+            if (page != null && !Hud.Exists && !Input.Typing && Input.Pressed(Keys.Escape))
+            {
+                var screen = UiPopups.Screen();
+                if (screen is a8k && !screen.Controls.Cast<euz>().Any(c => c is bnr || c is e4u || c is tg)) page.Close();
+            }
+            return;
+        }
         // On the main menu the in-game key handler (KeyPressed) doesn't run: Escape closes the topmost window here,
         // unless a game popup (a question) is open over it, which takes Escape itself.
         if (!Hud.Exists && !Input.Typing && Input.Pressed(Keys.Escape))

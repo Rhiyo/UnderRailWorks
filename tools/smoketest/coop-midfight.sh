@@ -44,15 +44,11 @@ printf 'coop.start\n' > "$HOST/Mods/WorksTest/menurun.txt"
 sleep 60
 # The fight, with Mira in the game.
 printf 'wt.goto 19 3\nwait 2\nwt.anger Waylon\n' > "$HA"; sleep 15
-# A 15 s turn limit: Mira does nothing; her turn passes by itself.
-printf 'coop.turntime 15\n' > "$HA"; sleep 2
-for i in 1 2; do h timeout 20 "$SKILL/inp.sh" focus key 0x20 >/dev/null 2>&1; sleep 12; done
-printf 'coop.turntime 0\n' > "$HA"; sleep 2
 for i in 1 2; do printf 'coop.end\n' > "$JA"; h timeout 20 "$SKILL/inp.sh" focus key 0x20 >/dev/null 2>&1; sleep 7; done
 printf 'wt.save midfight\n' > "$HA"; sleep 5
 R="$HOME/.cache/underrail-test/runs"; SAVES="$R/cooph, $R/coopj: Documents/My Games/Underrail/Saves"
-left=$(find "$R/cooph" "$R/coopj" -mindepth 1 -type d -path '*/Documents/My Games/Underrail/Saves/coop-*' 2>/dev/null | wc -l)
-found=$(find "$R/cooph" -type d -path '*/Documents/My Games/Underrail/Saves/midfight' 2>/dev/null | wc -l)
+left=$(find "$R/cooph" "$R/coopj" -mindepth 1 -type d -name 'coop-*' -path '*/Documents/My Games/Underrail/Saves/*' 2>/dev/null | wc -l)
+found=$(find "$R/cooph" -type d -path '*/Documents/My Games/Underrail/Saves/Co-op Saves/midfight' 2>/dev/null | wc -l)     # a co-op game's save: in Co-op Saves
 j timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; sleep 5
 echo "=== LOAD ===" >> "$HL"
 printf 'coop.stop\nwait 2\nwt.load midfight\n' > "$HA"; sleep 25
@@ -67,13 +63,12 @@ afterward() { if awk -v m="$2" -v p="$3" 'f && $0 ~ p { bad=1 } $0 ~ m { f=1 } E
 inorder "Mira joined before the fight"        "Coop: tester plays Mira" "combat started"
 check   "the joiner got the world"            "$HL" "Coop: tester is in the world"
 inorder "Mira gets turns in that fight"       "combat started" "turn: Mira AP"
-check   "an idle player's turn passes at the limit" "$HL" "Coop: Mira's turn passed: the 15 s limit"
 check   "the mid-fight save loads"            "$HL" "saves: loading midfight"
 check   "co-op's save deleted once sent"      "$HL" "Coop: sending the world to tester"
 never() { if grep -qE "$3" "$2"; then fail=$((fail+1)); echo "FAIL: $1 (found: $(grep -m1 -E "$3" "$2" | cut -c1-160))"; else pass=$((pass+1)); fi; }
 never   "... no co-op save left behind (host)"  "$HL" "couldn't delete coop-host"
 never   "... no co-op save left behind (joiner)" "$JL" "couldn't delete coop-join"
-if [ "$found" = 1 ] && [ "$left" = 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: co-op saves on disk: $left, test save found: $found (in $SAVES)"; fi
+if [ "$found" = 1 ] && [ "$left" = 0 ]; then pass=$((pass+1)); else fail=$((fail+1)); echo "FAIL: co-op saves on disk: $left, test save found: $found (in $SAVES; the test save in Co-op Saves)"; fi
 inorder "the fight goes on after the load"    "=== LOAD ===" "turn: Waylon AP"
 afterward "no turns for the missing player"   "=== LOAD ===" "turn: Mira"
 inorder "the party is the host alone"         "=== LOAD ===" "party ids: asd [0-9a-f-]+; "

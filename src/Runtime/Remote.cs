@@ -263,6 +263,20 @@ namespace UnderRailWorks
         }
         // The save's folder on disk (it may not exist).
         public static string Folder(string name) { return d5x.d(name); }
+        // Where saves go: null = the game's own Saves folder (what single-player Load Game lists), or the name of a folder
+        // inside it (My Games\Underrail\Saves\<name>) for a mode whose saves shouldn't mix with single-player ones
+        // (Co-op: "Co-op Saves"). The game lists only folders with an info.dat (every save has one), so the folder itself
+        // never shows in Load Game, with or without Works, and Steam Cloud (UnderRail syncs everything under Saves) keeps it. While set, everything the game does with saves uses it: saving, quicksave, autosave, Load Game,
+        // Resume Last Saved, and Names / Load / Delete here. A change made while a save is loading applies after it.
+        // The saves themselves are the game's own (the stock game loads one moved into its Saves folder).
+        public static string Location { get { return SaveLocation.Wanted; } }
+        public static void UseLocation(WorksMod mod, string folder)
+        {
+            if (mod == null) throw new ArgumentNullException("mod");
+            if (folder != null && (folder.Trim().Length == 0 || folder.IndexOfAny(System.IO.Path.GetInvalidFileNameChars()) >= 0 || folder.Trim('.').Length == 0 || string.Equals(folder, d5x.u, StringComparison.OrdinalIgnoreCase)))
+                throw new ArgumentException("a folder name (no slashes; not \"" + d5x.u + "\")", "folder");
+            SaveLocation.Set(folder);
+        }
         // The saves the Load Game window lists, newest first (folder names, as Load takes them).
         public static IList<string> Names
         {
@@ -413,5 +427,49 @@ namespace UnderRailWorks.Internal
             harmony.Patch(typeof(crp).GetMethod("aho", Any, null, new[] { typeof(e6d) }, null), prefix: m("Combat"));
             Log.Write("remote: hooks in place");
         }
+    }
+}
+
+namespace UnderRailWorks.Internal
+{
+    // SaveGames.Location: the game builds every save path from d5x.k() (the Saves folder) and d5x.d(name) (one save in
+    // it; d5x.e(name), the "(previous)" copy, goes through d). Both are pointed at the chosen folder inside Saves. A
+    // single-player save of that very name (a folder with info.dat) is never used as the location: " (2)" is added.
+    static class SaveLocation
+    {
+        internal static string Wanted;
+        static string active;
+        internal static void Set(string folder)
+        {
+            if (Wanted == folder) return;
+            Wanted = folder;
+            Apply();
+        }
+        // Not in the middle of a load (its files come from one place).
+        internal static void Apply()
+        {
+            if (active == Wanted || Saves.IsLoading) return;
+            active = Wanted; root = null;
+            if (active != null) try { System.IO.Directory.CreateDirectory(Root()); } catch (Exception ex) { Log.Write("saves: " + ex.Message); }
+            Log.Write("saves: the save folder is now " + (active ?? d5x.u));
+        }
+        static string root;
+        static string Root() { return root ?? (root = Pick(active)); }
+        static string Pick(string folder)
+        {
+            var saves = System.IO.Path.Combine(d5x.e(), d5x.u);
+            var at = System.IO.Path.Combine(saves, folder);
+            for (int n = 2; System.IO.File.Exists(System.IO.Path.Combine(at, "info.dat")); n++) at = System.IO.Path.Combine(saves, folder + " (" + n + ")");
+            return at;
+        }
+
+        internal static void Install(HarmonyLib.Harmony harmony)
+        {
+            var any = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+            harmony.Patch(typeof(d5x).GetMethod("k", any, null, Type.EmptyTypes, null), prefix: new HarmonyLib.HarmonyMethod(typeof(SaveLocation).GetMethod("Folder", any)));
+            harmony.Patch(typeof(d5x).GetMethod("d", any, null, new[] { typeof(string) }, null), prefix: new HarmonyLib.HarmonyMethod(typeof(SaveLocation).GetMethod("SaveFolder", any)));
+        }
+        static bool Folder(ref string __result) { if (active == null) return true; __result = Root(); return false; }
+        static bool SaveFolder(string __0, ref string __result) { if (active == null) return true; __result = System.IO.Path.Combine(Root(), __0); return false; }
     }
 }

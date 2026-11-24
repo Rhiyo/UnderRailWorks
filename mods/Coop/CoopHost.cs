@@ -1,9 +1,9 @@
 // Co-op's options when hosting, and Co-op's API for other mods.
-// Host New Game / Host Saved Game (main menu) open the Host window: how many players, Co-op's own option (what happens
-// when a player's health runs out) and any other mod's, then the lobby (CoopLobby.cs). Values are remembered (the
-// mod's settings) for next time. Everyone gets all the XP anyone earns (Co-op 0.0.1: not an option).
+// The lobby's Game settings (CoopLobbyUi.cs): Co-op's own options (what happens when a player's health runs
+// out) and any other mod's. Values are remembered (the mod's settings) for next time; a saved
+// game's are shown as the save has them. Everyone gets all the XP anyone earns (Co-op 0.0.1: not an option).
 // The API (Mods.Api<CoopApi>("Coop"), or Mods.Call("Coop", ...)): who's playing, hosting or joined, events when players
-// come and go, options on the Host window, and a mod's own messages between the host and the joiners (so a mod can
+// come and go, options in the lobby's Game settings, and a mod's own messages between the host and the joiners (so a mod can
 // add to co-op without its own networking: separate fights, separate zones, a campaign's conversations...).
 //   var coop = Mods.Api<CoopApi>("Coop");
 //   coop.AddHostOption(this, "pace", "Turn time limit (s)", 0, 120, 10, 0);
@@ -54,7 +54,7 @@ public sealed class CoopApi
     // Host: send a player the host's world again (save, send, their game loads it: after a mod changed what they see).
     public void SendWorld(string player) { coop.ResendWorld(player); }
 
-    // An option on the Host window: a number (slider) or one of a few names (dropdown). Its value: HostOption.
+    // An option in the lobby's Game settings window: a number (slider) or one of a few names (dropdown). Its value: HostOption.
     public void AddHostOption(WorksMod mod, string key, string label, int min, int max, int step, int value) { coop.AddOption(new Coop.HostOption { Mod = mod.Id, Key = key, Label = label, Min = min, Max = max, Step = Math.Max(1, step), Value = value }); }
     public void AddHostChoice(WorksMod mod, string key, string label, string[] names, int value) { coop.AddOption(new Coop.HostOption { Mod = mod.Id, Key = key, Label = label, Names = names, Value = value }); }
     public int HostOption(WorksMod mod, string key) { var o = coop.Option(mod.Id, key); return o == null ? 0 : o.Value; }
@@ -68,7 +68,7 @@ public sealed class CoopApi
 
 public sealed partial class Coop
 {
-    internal sealed class HostOption { public string Mod, Key, Label; public int Min, Max, Step, Value; public string[] Names; public bool NotRemembered; }
+    internal sealed class HostOption { public string Mod, Key, Label; public int Min, Max, Step, Value; public string[] Names; public bool NotRemembered; public string Unit, ZeroText; }
     readonly List<HostOption> options = new List<HostOption>();
     internal readonly Dictionary<string, Action<string, string[]>> Handlers = new Dictionary<string, Action<string, string[]>>();
     internal CoopApi Api;
@@ -98,98 +98,6 @@ public sealed partial class Coop
     {
         Api = new CoopApi(this);
         Mods.Provide(this, Api);
-        // A joined player's turn in a fight: at most this long (0: no limit), then it passes (saved with the game, as
-        // every host option).
-        AddOption(new HostOption { Mod = Id, Key = "turntime", Label = "Seconds a joined player's turn may take (0: no limit)", Min = 0, Max = 180, Step = 15, Value = 0 });
-        Character turnOf = null; double turnSince = 0; bool warned = false;
-        Combat.TurnStarted.Add(this, c => { turnOf = c != null && seats.Values.Any(s => s.Character == c) ? c : null; turnSince = clock; warned = false; });
-        GameEvents.Update.Add(this, dt =>
-        {
-            if (listener == null || turnOf == null) return;
-            var o = Option(Id, "turntime"); int limit = o == null ? 0 : o.Value;
-            if (limit <= 0 || !Combat.InCombat || Combat.Current != turnOf) { if (!Combat.InCombat || (Combat.Current != null && Combat.Current != turnOf)) turnOf = null; return; }
-            var seat = seats.Values.FirstOrDefault(s => s.Character == turnOf);
-            double used = clock - turnSince;
-            if (!warned && used >= limit - 10 && limit > 10) { warned = true; if (seat != null) seat.Peer.Send("SAID", "10 seconds left in your turn"); }
-            if (used < limit) return;
-            Log.Info(turnOf.Name + "'s turn passed: the " + limit + " s limit");
-            if (seat != null) seat.Peer.Send("SAID", "your turn passed (the " + limit + " second limit)");
-            Notify.Log("Co-op: " + turnOf.Name + "'s turn passed (time limit)", Say);
-            var c2 = turnOf; turnOf = null;
-            c2.EndTurn();
-        });
-    }
-
-    UiWindow hostWindow;
-    // The Host window, under "Game settings": a new game's players, Co-op's and other mods' options (changeable); a saved
-    // game's, as the save has them (shown, not changeable: a co-op game keeps the settings it started with).
-    void AskHost(string kind, string save)
-    {
-        if (hostWindow != null && hostWindow.IsOpen) return;
-        bool saved = kind == "saved";
-        var players = saved ? SavedCharacters(save) : new List<Record>();
-        if (saved) RestoreOptions(SaveGames.ModData(this, save, "options"));
-        int pad = Ui.S(10), w = Ui.S(560), line = Ui.LineHeight, rowH = line * 2 + Ui.S(10);
-        int rows = saved ? 2 + options.Count : 1 + options.Count;
-        hostWindow = Ui.Window(this, "host", saved ? "Host " + save : "Host a new game", w, Ui.S(110) + rows * (saved ? line + Ui.S(6) : rowH) + Ui.S(50));
-        if (hostWindow == null) return;
-        hostWindow.Closed += () => hostWindow = null;
-        w = hostWindow.Width;
-        int y = hostWindow.Top + Ui.S(6);
-        var apply = new List<Action>();
-        var heading = Ui.Label(saved ? "Game settings (this game's: they don't change)" : "Game settings", w - 2 * pad);
-        Ui.SetColor(heading, Mine_);
-        Ui.Add(hostWindow, heading, pad, y);
-        y += line + Ui.S(8);
-        UiSlider count = null;
-        if (saved)
-        {
-            Action<string> show = text => { Ui.Add(hostWindow, Ui.Label(text, w - 2 * pad), pad, y); y += line + Ui.S(6); };
-            show("Players: you and " + string.Join(", ", players.Select(r => r.Name).ToArray()) + " (each place must be taken before it loads)");
-            show("Expansions: " + Names(SaveGames.ExpansionsOf(save) ?? new List<string>()));
-            foreach (var o in options) show(o.Label + ": " + (o.Names != null ? o.Names[Math.Max(0, Math.Min(o.Names.Length - 1, o.Value))] : o.Value.ToString()));
-        }
-        else
-        {
-            Ui.Add(hostWindow, Ui.Label("Players, you included (everyone makes a character; the game starts when all have)", w - 2 * pad), pad, y);
-            count = Ui.Slider(w - 2 * pad, 2, MaxPlayers, 2);
-            count.Step = 1;
-            Ui.Add(hostWindow, count.View, pad, y + line + Ui.S(6));
-            y += rowH;
-            foreach (var o in options)
-            {
-                var opt = o;
-                Ui.Add(hostWindow, Ui.Label(o.Label, w - 2 * pad), pad, y);
-                if (o.Names != null)
-                {
-                    var c = Ui.Choice(w - 2 * pad, o.Names, Math.Max(0, Math.Min(o.Names.Length - 1, o.Value)));
-                    Ui.Add(hostWindow, c.View, pad, y + line + Ui.S(2));
-                    apply.Add(() => opt.Value = c.Index);
-                }
-                else
-                {
-                    var sl = Ui.Slider(w - 2 * pad, o.Min, o.Max, o.Value);
-                    sl.Step = o.Step;
-                    Ui.Add(hostWindow, sl.View, pad, y + line + Ui.S(6));
-                    apply.Add(() => opt.Value = (int)Math.Round(sl.Value));
-                }
-                y += rowH;
-            }
-        }
-        var go = Ui.Button("Open lobby", () =>
-        {
-            foreach (var a in apply) a();
-            if (!saved) foreach (var o in options.Where(o => !o.NotRemembered)) Settings.Set("option." + o.Mod + "." + o.Key, o.Value.ToString());
-            int n = count == null ? 0 : (int)Math.Round(count.Value);
-            if (hostWindow != null) hostWindow.Close();
-            var r = OpenLobby(kind, save, saved ? 0 : n - 1, DefaultPort);
-            Commands.Print("co-op: " + r);
-            Notify.Log("Co-op: " + r, Say);
-        });
-        var cancel = Ui.Button("Cancel", () => { if (hostWindow != null) hostWindow.Close(); });
-        int by = hostWindow.Height - pad - go.Height;
-        Ui.Add(hostWindow, go, pad, by);
-        Ui.Add(hostWindow, cancel, pad + go.Width + Ui.S(6), by);
     }
 
     // The game's settings, kept with its saves ("options": "<mod>/<key>" -> value; Co-op's death rule among them), so a
