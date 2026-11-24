@@ -44,6 +44,10 @@ public static partial class GameEvents
     public static readonly Hook<Action<Character, int>> CharacterExperienceGained = new Hook<Action<Character, int>>("CharacterExperienceGained");
     // Before and after the game writes a save; the argument is the save's folder name ("quicksave", "autosave"...).
     public static readonly Hook<Action<string>> Saving = new Hook<Action<string>>("Saving");
+    // A zone the player arrived in (a new game, a transition, a loaded save) has had its first game update: what the
+    // zone starts on arrival has started (triggers on the player's entry, a new game's intro). The earliest point a
+    // save leaves that alone: a save before it (even at the arrival's last step) kept a new game's intro from opening.
+    [Preview("multiplayer: built for Co-op so far")] public static readonly Hook<Action<string>> ZoneSettled = new Hook<Action<string>>("ZoneSettled");
     public static readonly Hook<Action<string>> Saved = new Hook<Action<string>>("Saved");
     // A quest changed state (started, completed, failed): its id and new state.
     public static readonly Hook<Action<string, QuestState>> QuestChanged = new Hook<Action<string, QuestState>>("QuestChanged");
@@ -102,6 +106,19 @@ static class Saves
         harmony.Patch(typeof(h1).GetMethod("a", any, null, new[] { typeof(object), typeof(el5) }, null), prefix: m("CreationClosing"));
         // The Rules screen closing: hj.a(object, el5) (World.ChooseNewGameRules keeps the rules, back to the main menu).
         harmony.Patch(typeof(hj).GetMethod("a", any, null, new[] { typeof(object), typeof(el5) }, null), prefix: m("RulesClosingHook"));
+        // Arrival: the zone workflows' last step (ehb: new game, transition, both loads), then the next game update
+        // (d6f.d1): ZoneSettled.
+        harmony.Patch(typeof(ehb).GetMethod("b4", any), postfix: m("Arrived"));
+        harmony.Patch(Game("d6f").GetMethod("d1", any), postfix: m("GameUpdated"));
+        // Tests: UNDERRAILWORKS_TEST_SAVEAT=<step class> saves ("probe") right after that step of the game's zone
+        // workflows (ezo, dzv, cg, by, ehb), once per zone: to find where a save leaves a zone's start alone.
+        var probe = Environment.GetEnvironmentVariable("UNDERRAILWORKS_TEST_SAVEAT");
+        if (!string.IsNullOrEmpty(probe))
+        {
+            var step = typeof(ehb).Assembly.GetType(probe);
+            var run = step == null ? null : step.GetMethod("b4", any) ?? step.GetMethod("aen", any);
+            if (run != null) { harmony.Patch(run, postfix: m("ProbeSave")); Log.Write("saves: test: a save after each " + probe); }
+        }
         // Character creation opening: h1.a() (World.StartNewGameAs skips it).
         // After it: the screen is up (Back for World.OpenCharacterCreation).
         harmony.Patch(typeof(h1).GetMethod("a", any, null, Type.EmptyTypes, null), prefix: m("CreationOpeningHook"), postfix: m("CreationBuilt"));
@@ -280,6 +297,43 @@ static class Saves
             return false;
         }
         catch (Exception ex_) { PatchGuard.Failed("Saves.CreationCancel", ex_); return true; }
+    }
+
+    static bool arrived;
+    static void Arrived() { arrived = true; }
+    static void GameUpdated()
+    {
+        if (!arrived) return;
+        arrived = false;
+        try
+        {
+            var zone = World.ZoneId;
+            if (World.Player == null || zone == null) return;
+            if (Environment.GetEnvironmentVariable("UNDERRAILWORKS_TEST_SAVEAT") == "settled") Log.Write("saves: test: saving when settled: " + SaveGames.SaveNow("probe"));
+            if (GameEvents.ZoneSettled.Any) GameEvents.ZoneSettled.Run(h => h(zone));
+        }
+        catch (Exception ex_) { PatchGuard.Failed("Saves.GameUpdated", ex_); }
+    }
+
+    static string probedZone;
+    static int probeFrames = -1;
+    static void ProbeSave(object __instance)
+    {
+        try
+        {
+            if (World.Player == null || World.ZoneId == null || World.ZoneId == probedZone) return;
+            probedZone = World.ZoneId;
+            int frames; int.TryParse(Environment.GetEnvironmentVariable("UNDERRAILWORKS_TEST_SAVEFRAMES") ?? "0", out frames);
+            if (frames > 0) { probeFrames = frames; Log.Write("saves: test: saving " + frames + " frames after " + __instance.GetType().Name); return; }
+            Log.Write("saves: test: saving after " + __instance.GetType().Name + " in " + World.ZoneId + ": " + SaveGames.SaveNow("probe"));
+        }
+        catch (Exception ex_) { Log.Write("saves: test: " + ex_.Message); }
+    }
+    internal static void ProbeTick()
+    {
+        if (probeFrames < 0 || --probeFrames > 0) return;
+        probeFrames = -1;
+        try { Log.Write("saves: test: saving now (frames counted): " + SaveGames.SaveNow("probe")); } catch (Exception ex) { Log.Write("saves: test: " + ex.Message); }
     }
 
     static bool RulesClosingHook(el5 __1) { try { return World.RulesClosing(__1); } catch (Exception ex_) { PatchGuard.Failed("Saves.RulesClosing", ex_); return true; } }

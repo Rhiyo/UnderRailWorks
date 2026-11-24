@@ -287,6 +287,13 @@ namespace UnderRailWorks
                 return g.arm().Where(s => !string.IsNullOrEmpty(s.FolderName)).OrderByDescending(s => s.SaveTime).Select(s => s.FolderName).ToList();
             }
         }
+        // The difficulty a save was made with (as the Load Game window shows it), or null (no such save, or not recorded).
+        public static string DifficultyOf(string name)
+        {
+            var g = Game;
+            var save = g == null ? null : g.arm().FirstOrDefault(s => s.FolderName == name);
+            return save == null || save.Difficulty == null ? null : save.Difficulty.Value.ToString();
+        }
         // The expansions a save was made with (ids, as Expansions names them): the game loads it only with all of them.
         // Null: no such save.
         public static IList<string> ExpansionsOf(string name)

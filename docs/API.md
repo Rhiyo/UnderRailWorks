@@ -123,6 +123,8 @@ What a merchant charges: Markup is the multiplier so far (the game's: about 1.15
 ## Camera  _(class, Camera.cs)_
 
 - `static Vector2? Center` — The map position the view is centred on (tiles), or null (no world view). Setting it moves the view there.
+- `static void CenterOn(Character c)` — The view on a character: centred on it, at its height (a floor above or below draws elsewhere on screen).
+- `static float Height` — The camera's height (the floor level it looks at).
 - `static float Zoom` — The zoom (1 = 100%).
 - `static float TileWidth` — Interface units on screen for half a tile, across and down, at the current zoom (0 without a world view).
 - `static float TileHeight`
@@ -601,6 +603,7 @@ Zone exits (the tiles World.ExitTiles lists) switched off and on. An exit that's
 - `static readonly Hook<Action<int>> ExperienceGained = new Hook<Action<int>>("ExperienceGained")` — The player gained XP (before the game's own multipliers for the classic system are known: the amount given).
 - `static readonly Hook<Action<Character, int>> CharacterExperienceGained = new Hook<Action<Character, int>>("CharacterExperienceGained")` — Any character with a player sheet gained XP (the player, and characters like co-op partners): who, how much.
 - `static readonly Hook<Action<string>> Saving = new Hook<Action<string>>("Saving")` — Before and after the game writes a save; the argument is the save's folder name ("quicksave", "autosave"...).
+- `static readonly Hook<Action<string>> ZoneSettled = new Hook<Action<string>>("ZoneSettled")` **(preview)** — A zone the player arrived in (a new game, a transition, a loaded save) has had its first game update: what the zone starts on arrival has started (triggers on the player's entry, a new game's intro). The earliest point a save leaves that alone: a save before it (even at the arrival's last step) kept a new game's intro from opening.
 - `static readonly Hook<Action<string>> Saved = new Hook<Action<string>>("Saved")`
 - `static readonly Hook<Action<string, QuestState>> QuestChanged = new Hook<Action<string, QuestState>>("QuestChanged")` — A quest changed state (started, completed, failed): its id and new state.
 - `static readonly Hook<Action<Character>> TradeOpened = new Hook<Action<Character>>("TradeOpened")` — The barter screen opened with a merchant.
@@ -1293,6 +1296,14 @@ A new game's character creation was accepted (CharacterCreated): the character a
 - `static bool Chosen(WorksMod mod, string key)`
 - `static readonly Hook<Action> Applied = new Hook<Action>("NewGameOptions.Applied")` — The player accepted the new-game screen: the values are in each mod's data (Get) for the new game.
 
+## NewGameRules  _(class, PlayerSheets.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
+
+A new game's rules chosen on the game's Rules screen (World.ChooseNewGameRules): kept to start a game with them.
+
+- `string Difficulty`
+- `string Experience`
+- `IDictionary<string, int> ModValues` — The Mods tab's values, "<mod>/<key>" -> value.
+
 ## Notice  _(class, StealthNotice.cs)_
 
 - `double Distance`
@@ -1595,6 +1606,7 @@ The first handler that returns true replaces the game's step.
 - `static string Location` — Where saves go: null = the game's own Saves folder (what single-player Load Game lists), or the name of a folder inside it (My Games\Underrail\Saves\<name>) for a mode whose saves shouldn't mix with single-player ones (Co-op: "Co-op Saves"). The game lists only folders with an info.dat (every save has one), so the folder itself never shows in Load Game, with or without Works, and Steam Cloud (UnderRail syncs everything under Saves) keeps it. While set, everything the game does with saves uses it: saving, quicksave, autosave, Load Game, Resume Last Saved, and Names / Load / Delete here. A change made while a save is loading applies after it. The saves themselves are the game's own (the stock game loads one moved into its Saves folder).
 - `static void UseLocation(WorksMod mod, string folder)`
 - `static IList<string> Names` — The saves the Load Game window lists, newest first (folder names, as Load takes them).
+- `static string DifficultyOf(string name)` — The difficulty a save was made with (as the Load Game window shows it), or null (no such save, or not recorded).
 - `static IList<string> ExpansionsOf(string name)` — The expansions a save was made with (ids, as Expansions names them): the game loads it only with all of them. Null: no such save.
 - `static object ModData(WorksMod mod, string save, string key)` — A mod's saved value (SaveData.Of(mod).Get(key)) from a save on disk, without loading it: e.g. a lobby showing the characters a save has. Null: no such save, value, or data.
 - `static bool Load(string name)` — Loads that save (from the main menu or in game). False: there's no such save, or this game can't load it (another major version, or DLC it doesn't have). The load happens over the next frames.
@@ -1925,6 +1937,9 @@ A trap a character has just spotted (the player sees "Trap detected!").
 - `static UiChoice Choice(int width, IList<string> options, int index = 0)` — A button that steps through options on click (right-click: back).
 - `static UiWindow Window(WorksMod mod, string id, string title, int width, int height)` — A window on the HUD, or on the main menu when it is showing (null otherwise; there the menu's buttons are hidden while it's open, as for the game's own screens). id: unique within the mod, for remembering its place. Opening a window with an id already open returns that one. For a panel that stays open (a ledger, a list). To ask the player something, use the game's own popups instead: Ui.Ask (text), Ui.AskNumber, Ui.Confirm (yes/no), Ui.Choose (buttons). height counts a 22-high title bar; the real one follows the interface size (place content from Top).
 - `static int AddButtons(UiElement window, IList<UiElement> buttons, int pad = -1, int gap = -1)` — Buttons along the bottom of a window (or any panel), from the left, wrapping onto more rows when they don't fit its width. Returns the y where the buttons start (lay the rest of the window out above it). int bottom = Ui.AddButtons(w, new[] { ok, cancel });
+- `static int ScreenWidth` — The interface area windows go in (the HUD, or the main menu), in layout units: 0 when neither is showing.
+- `static int ScreenHeight`
+- `static int ButtonsHeight(IList<UiElement> buttons, int windowWidth, int pad = -1, int gap = -1)` — How tall AddButtons' rows are in a window this wide (to size the window before adding them).
 - `static int ButtonsWidth(IList<UiElement> buttons, int pad = -1, int gap = -1)` — How wide a window must be for these buttons on one row (with AddButtons' default spacing).
 - `static UiWorldView WorldView(int width, int height, Vector2? centre = null)` — A view of the player's area, width x height, centred on centre (null: the player). Null without a game.
 
@@ -2120,7 +2135,11 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static Character SpawnFromCharacterFile(string path, int x, int y)` **(preview)** — A character built from a .char file as the game builds the player (its look, sheet, inventory), standing at tile x, y of the player's area, facing south. Not the player: its sheet is its own, and its AI runs unless a mod takes it (CharacterControl). Like Spawn it's never saved (taken out around saves) and stays in this zone. Null: no such file, not a player sheet, or no room there.
 - `static bool MakePlayer(Character c)` **(preview)** — This machine's player becomes c (its HUD, inventory and character windows, quick bar, camera, fog of war); the old player's body stays as a character with its own sheet. For a game shown from elsewhere (co-op): saving it here afterwards would save c as the player.
 - `static bool StartNewGame()` **(preview)** — On the main menu: the game's New Game (its rules screen, then character creation, then the first zone), as the menu's button. False: not on the main menu.
-- `static bool OpenCharacterCreation()` **(preview)** — On the main menu: the game's character creation alone, for a character made for elsewhere (Co-op: for the host's game). The new game is made behind it as New Game makes it (cnk.arf), then StartCharacterGeneration runs; the Rules screen (difficulty, XP system: the game's, not the character's) is skipped. Pair it with GameEvents.CharacterCreated (BackToMainMenu = true), else Accept starts that new game. False: not on the main menu.
+- `static bool OpenCharacterCreation()` **(preview)** — On the main menu: the game's character creation alone, for a character made for elsewhere (Co-op: for the host's game). The new game is made behind it as New Game makes it (cnk.arf), then StartCharacterGeneration runs; the Rules screen (difficulty, XP system: the game's, not the character's) is skipped. Its Cancel says backText (default "Back") and goes straight back to the main menu (no "are you sure": nothing is lost, there's no game). Pair it with GameEvents.CharacterCreated (BackToMainMenu = true), else Accept starts that new game. False: not on the main menu.
+- `static bool OpenCharacterCreation(string backText)` **(preview)**
+- `static bool ChooseNewGameRules(Action<NewGameRules> done)` **(preview)** — On the main menu: the game's own Rules screen for a new game (difficulty, XP system, custom rules, the Mods tab) alone, with Back instead of Close. Accept: done gets the rules chosen (to start a game with them later: StartNewGameAs(file, rules)); Back: done gets null. Either way the main menu comes back. False: not on the main menu.
+- `static bool StartNewGameAs(string characterFile, NewGameRules rules)` **(preview)** — A new game with these rules (no Rules screen) and the character in the .char (no creation). False: not on the main menu, or no such file.
+- `static string ExperienceSystemName` **(preview)** — This game's experience system ("Classic" or "Oddity"; null: no game).
 - `static bool StartNewGameAs(string characterFile)` **(preview)** — On the main menu: the game's New Game (its Rules screen: difficulty, XP system), then the game starts with the character in this .char (made earlier, e.g. with OpenCharacterCreation) instead of character creation. False: not on the main menu, or no such file.
 - `static bool CreationImport = true` **(preview)** — What a character file (.char) has that a game using only these expansions wouldn't: feats and skills of another expansion (their DLC), a level above 25 or specializations without Expedition (the game's veteran levels), items this game's data doesn't have, a newer game version. Read from the file; nothing is built. Empty: it fits. Lines for a player, e.g. "the feat Last Stand (Expedition)". False: character creation offers no Import (the button is hidden, and its dialog doesn't open). Co-op turns it off while hosting or joined: only characters made in creation, nothing from another game or modded setup.
 - `static IList<string> CharacterFileProblems(string path, IEnumerable<string> expansions, bool newOnly = false)` **(preview)** — newOnly: also refuse a character that isn't fresh from creation (level above 1, or any XP).

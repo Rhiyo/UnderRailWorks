@@ -184,6 +184,7 @@ public sealed partial class Coop
         }
         // SETTING label value: the game's settings as the host's lobby shows them (the joiners see them, can't change them).
         if (hostRules != null) { p.Send("SETTING", "Difficulty", hostRules.Difficulty); p.Send("SETTING", "Experience", hostRules.Experience); }
+        else if (lobby == "saved" && SaveGames.DifficultyOf(lobbySave) != null) p.Send("SETTING", "Difficulty", SaveGames.DifficultyOf(lobbySave));
         p.Send("SETTING", "Expansions", Names(LobbyExpansions()));
         foreach (var o in options) p.Send("SETTING", o.Label, OptionText(o, o.Value));
         p.Send("LISTEND");

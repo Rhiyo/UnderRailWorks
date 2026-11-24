@@ -78,7 +78,12 @@ public sealed partial class Coop
             }
             y += gap;
         }
-        else textRow("Expansions", Names(LobbyExpansions()));
+        else
+        {
+            var difficulty = lobbySave == null ? null : SaveGames.DifficultyOf(lobbySave);
+            if (difficulty != null) textRow("Difficulty", difficulty);
+            textRow("Expansions", Names(LobbyExpansions()));
+        }
         foreach (var o in options)
         {
             var opt = o;

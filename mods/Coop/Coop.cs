@@ -765,9 +765,14 @@ public sealed partial class Coop : WorksMod
                 s.Peer.Send("PLAYING", s.Record.Name, (int)c.Position.X, (int)c.Position.Y);
                 if (!s.Announced) { s.Announced = true; Notify.Log("Co-op: " + s.Peer.Name + " plays " + s.Record.Name, Say); if (Api != null) Api.RaiseJoined(s.Peer.Name, c); }
             }
-            // The joiners follow into the new zone, a moment later: a save in the zone's first moments stops what the
-            // game starts then (a new game's intro conversation never opened after a save at the zone's first frame).
-            worldSendAt = DateTime.UtcNow.AddSeconds(2);
+            // The joiners follow into the new zone once it has settled (Works' ZoneSettled: its first game update after
+            // the arrival, when what the zone starts on entry has started): a save before that stopped a new game's
+            // intro from ever opening (measured: a save at any step of the arrival, or 1 frame after, no intro; after
+            // the first game update, the intro every time). If the zone never says so: after 10 s.
+            worldSendAt = DateTime.MaxValue; settleBy = DateTime.UtcNow.AddSeconds(10);
+            // Meanwhile only the host's character sets off the map's triggers: the zone's own start (a new game's intro)
+            // is the player's, not a joined character's placed beside it (seen: Bobby taking the intro's trigger).
+            Party.TriggersCountMembers = false; triggersBack = true;
             foreach (var s in seats.Values.Where(s => s.Character != null)) { s.WorldPending = true; s.WorldWaiting = true; }
             orphans.RemoveAll(o => o.Character == null || o.Character.Area == null);
         });

@@ -39,7 +39,8 @@ public sealed partial class Coop
     }
 
     // Saves now and sends the save; in combat (the game doesn't save then) as soon as it ends.
-    DateTime worldSendAt;
+    DateTime worldSendAt, settleBy;
+    bool triggersBack;     // Party.TriggersCountMembers goes back on with the world's sending
     void SendWorld(Seat seat)
     {
         if (seat.Peer == null || seat.Peer.Closed) return;
@@ -94,6 +95,8 @@ public sealed partial class Coop
     {
         // Joiners waiting for the world: after a new zone's first moments (worldSendAt), or when the host can save again
         // (a fight's save failed).
+        if (worldSendAt == DateTime.MaxValue && DateTime.UtcNow >= settleBy) { worldSendAt = DateTime.UtcNow; Log.Warn("the zone didn't settle in 10 s: sending the world anyway"); }
+        if (triggersBack && DateTime.UtcNow >= worldSendAt) { triggersBack = false; if (listener != null) Party.TriggersCountMembers = true; }
         if (DateTime.UtcNow >= worldSendAt)
             foreach (var s in seats.Values.Where(s => s.WorldPending && s.Character != null).ToList())
                 if (s.WorldWaiting || SaveGames.CanSave) { s.WorldWaiting = false; SendWorld(s); }
@@ -404,6 +407,8 @@ public sealed partial class Coop
             host.Send("SWAP");
         });
         GameEvents.Update.Add(this, dt => { if (listener != null) { HostMirror(dt); HostSheets(dt); } else if (centreOn != null) AfterPlayerChange(); });
+        // The zone has settled (its first game update after the arrival): the world can go to the joiners now.
+        GameEvents.ZoneSettled.Add(this, zone => { if (listener != null && worldSendAt == DateTime.MaxValue) { worldSendAt = DateTime.UtcNow; Log.Info("zone settled: sending the world"); } });
         // A character made in the game's creation for co-op: when creation is accepted it goes to the host, and the game
         // goes back to the main menu (no game of its own starts); the Co-op window opens again there.
         GameEvents.CharacterCreated.Add(this, e =>

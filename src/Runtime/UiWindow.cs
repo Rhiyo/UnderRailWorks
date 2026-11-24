@@ -216,6 +216,7 @@ static class UiWindows
         try { MenuButtons(); } catch (Exception ex) { Log.Write("windows: the main menu's buttons: " + ex.Message); }
         try { MainMenuPage.Tick(); } catch (Exception ex) { Log.Write("main menu: page: " + ex.Message); }
         try { Camera.Tick(); } catch (Exception ex) { Log.Write("camera: " + ex.Message); }
+        Saves.ProbeTick();
         if (Open.Count == 0)
         {
             dragging = null;

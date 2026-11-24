@@ -43,7 +43,11 @@ check "the host's intro opens"                   "$HL" "dialog intro1 with"
 check "the joiner gets the conversation"         "$JL" "Coop: conversation: Hadrian Tanner"
 never "no trigger runs on the joiner"            "$JL" "party: .* counts as the player"
 check "the joiner's own triggers are refused"    "$JL" "mirror: a map trigger refused"
+check "the world goes when the zone has settled"  "$HL" "Coop: zone settled: sending the world"
 check "Skip intro: the host moves on"            "$HL" "zone loaded: StationAlpha-Level2"
+check "... its arrival conversation opens (a transition's trigger, not only a new game's)" "$HL" "dialog sgs_vencel with"
+[ "$(grep -c "zone settled: sending the world" "$HL")" -ge 2 ] && pass=$((pass+1)) || { fail=$((fail+1)); echo "FAIL: the world goes again when the next zone settled"; }
+check "... and the joiner sees that conversation" "$JL" "Coop: conversation: Vencel"
 check "... and the joiner follows"               "$JL" "zone loaded: StationAlpha-Level2"
 echo "co-op intro test: $pass passed, $fail failed (logs: $HL, $JL)"
 [ "$fail" -eq 0 ]
