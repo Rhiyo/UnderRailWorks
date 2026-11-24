@@ -26,6 +26,36 @@ namespace UnderRailWorks
             set { var v = View; var c = v == null ? null : v.an9(); if (c == null || value == null) return; var p = c.t1(); c.t2(new Vector3(value.Value.X, value.Value.Y, p.Z)); }
         }
 
+        // The view on a character: centred on it, at its height (a floor above or below draws elsewhere on screen).
+        public static void CenterOn(Character c)
+        {
+            var v = View; var cam = v == null ? null : v.an9();
+            if (cam == null || c == null) return;
+            FitToArea();
+            var e = c.Entity as b0b;
+            cam.t2(e != null ? e.aj() : new Vector3(c.Position.X, c.Position.Y, c.Position.Z));     // the entity's own place (its height included)
+        }
+        // A world view made after its zone loaded (a HUD built again: World.MakePlayer) starts with the camera kept
+        // inside (0,0)-(1,1) (ci3 builds it so; the zone's load widens it): widened to its area here.
+        internal static string BoxText { get { var v = View; var c = v == null ? null : v.an9(); var a = v == null ? null : v.anz(); return c == null ? "?" : c.t4().X + "," + c.t4().Y + "-" + c.t6().X + "," + c.t6().Y + " area " + (a == null ? "none" : UnderrailDropdownScroll.W(a.Size) + "x" + UnderrailDropdownScroll.H(a.Size)); } }
+        static int fitFrames;
+        internal static void FitSoon() { fitFrames = 30; }     // the next frames, once the new view has its area
+        internal static void Tick() { if (fitFrames > 0) { fitFrames--; FitToArea(); } }
+        internal static void FitToArea()
+        {
+            var v = View; var cam = v == null ? null : v.an9();
+            var area = v == null ? null : v.anz();
+            if (cam == null || area == null) return;
+            var max = cam.t6();
+            int w = UnderrailDropdownScroll.W(area.Size), h = UnderrailDropdownScroll.H(area.Size);
+            if (max.X >= w && max.Y >= h) return;
+            cam.t5(new Vector2(0f, 0f));
+            cam.t7(new Vector2(w, h));
+            Log.Write("camera: kept inside the area again (" + w + "x" + h + ")");
+        }
+        // The camera's height (the floor level it looks at).
+        public static float Height { get { var v = View; var c = v == null ? null : v.an9(); return c == null ? 0 : c.t1().Z; } }
+
         // The zoom (1 = 100%).
         public static float Zoom { get { var v = View; return v == null || ZoomField == null ? 1f : Convert.ToSingle(ZoomField.GetValue(v)); } }
 

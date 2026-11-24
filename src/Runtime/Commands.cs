@@ -94,6 +94,28 @@ namespace UnderRailWorks
                 return c == null ? "[error]couldn't spawn " + a[0] : "spawned " + c.Name + " at " + t.X + "," + t.Y;
             });
             // Tests: finish a new game's character creation without the point checks (a character made for co-op, etc.).
+            // Tests: a new game from the main menu without the Rules screen (default rules): creation opens; works.accept starts it.
+            // Tests: Party's switches by name (to find which one a behaviour comes from).
+            Add("UnderRailWorks", "works.partyrule", "works.partyrule <name> <on|off>: (tests) set one of Party's bool switches (TriggersCountMembers, Safeguards...)", a =>
+            {
+                var p = a.Length < 2 ? null : typeof(Party).GetProperty(a[0], System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public);
+                if (p == null || p.PropertyType != typeof(bool)) return "works.partyrule <" + string.Join("|", typeof(Party).GetProperties(System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public).Where(x => x.PropertyType == typeof(bool) && x.CanWrite).Select(x => x.Name).ToArray()) + "> <on|off>";
+                p.SetValue(null, a[1] == "on", null);
+                return a[0] + " " + (a[1] == "on" ? "on" : "off");
+            });
+            // Diagnostics: the world view (where it's drawn, its size, the camera's centre and zoom).
+            Add("UnderRailWorks", "works.view", "works.view: the world view's place and size on screen, the camera's centre and zoom", a =>
+            {
+                var hud = Hud.Current;
+                var f = hud == null ? null : (typeof(ci3).GetField("m_t", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic) ?? typeof(ci3).GetField("t", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic));
+                var v = f == null ? null : f.GetValue(hud) as euz;
+                if (v == null) return "no world view";
+                var at = UnderrailDropdownScroll.LocationOf(v);
+                var c = Camera.Center;
+                return "view at " + UnderrailDropdownScroll.X(at) + "," + UnderrailDropdownScroll.Y(at) + " size " + UnderrailDropdownScroll.W(v.Size) + "x" + UnderrailDropdownScroll.H(v.Size) + ", centre " + (c.HasValue ? c.Value.X + "," + c.Value.Y : "?") + ", height " + Camera.Height + (World.Player != null ? " (player at " + World.Player.Position.X + "," + World.Player.Position.Y + "," + World.Player.Position.Z + ", entity at " + ((b0b)World.Player.Entity).aj() + ")" : "") + ", box " + Camera.BoxText + ", zoom " + Camera.Zoom + ", screen " + (hud == null ? "?" : UnderrailDropdownScroll.W(hud.Size) + "x" + UnderrailDropdownScroll.H(hud.Size));
+            });
+            Add("UnderRailWorks", "works.newgame", "works.newgame: (tests) on the main menu, character creation for a new game (default rules); works.accept <name> starts it", a =>
+                World.OpenCharacterCreation(null) ? "character creation" : "not on the main menu");
             Add("UnderRailWorks", "works.accept", "works.accept <name>: (tests) in character creation, name the character and accept it as it is", a =>
             {
                 var screen = UiPopups.Screen() as iw;

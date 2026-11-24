@@ -103,7 +103,7 @@ namespace UnderRailWorks
             newAspect.h(true);
             SetPlayerFlag(newBody, true);
             var screens = bpo.GetService<ps>();
-            if (screens != null && Hud.Exists) screens.anc();      // the HUD binds the sheet when it's built
+            if (screens != null && Hud.Exists) { screens.anc(); Camera.FitSoon(); }      // the HUD binds the sheet when it's built
             Log.Write("world: the player is now " + c.Name);
             return true;
         }

@@ -186,15 +186,18 @@ namespace UnderRailWorks.Internal
         // for the call (Party.TriggersCountMembers).
         sealed class AsPlayerState { public c5x Body; public amc Aspect; public bool WasPlayer, WasAspect; }
         static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ya, object> logged = new System.Runtime.CompilerServices.ConditionalWeakTable<ya, object>();
-        static void TriggerStarting(ya __instance, b0b __0, out AsPlayerState __state)
+        static bool TriggerStarting(ya __instance, b0b __0, out AsPlayerState __state)
         {
             __state = null;
+            // A copy of another game (a co-op joiner's): the map's triggers are the real game's to run (they start
+            // conversations, cutscenes, quests there); here they'd run a second time, out of step.
+            if (Simulation.IsMirror && !Simulation.Applying) { Simulation.Refuses("a map trigger"); return false; }
             try
             {
                 var body = __0 as c5x;
-                if (!Party.TriggersCountMembers || body == null || body.IsPlayer) return;
+                if (!Party.TriggersCountMembers || body == null || body.IsPlayer) return true;
                 var c = Character.Of(body);
-                if (c == null || !Party.Contains(c)) return;
+                if (c == null || !Party.Contains(c)) return true;
                 var aspect = body.GetAspect<amc>();
                 __state = new AsPlayerState { Body = body, Aspect = aspect, WasPlayer = false, WasAspect = aspect != null && aspect.@as() };
                 World.SetPlayerFlag(body, true);
@@ -203,6 +206,7 @@ namespace UnderRailWorks.Internal
                 if (!logged.TryGetValue(__instance, out seen)) { logged.Add(__instance, c); Log.Write("party: " + c.Name + " counts as the player for a trigger (" + __instance.GetType().Name + ")"); }
             }
             catch (Exception ex) { Log.Write("party: trigger: " + ex.Message); }
+            return true;
         }
         static Exception TriggerDone(Exception __exception, AsPlayerState __state)
         {

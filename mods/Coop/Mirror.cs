@@ -39,13 +39,15 @@ public sealed partial class Coop
     }
 
     // Saves now and sends the save; in combat (the game doesn't save then) as soon as it ends.
+    DateTime worldSendAt;
     void SendWorld(Seat seat)
     {
         if (seat.Peer == null || seat.Peer.Closed) return;
         seat.InWorld = false; seat.Sent.Clear();
         // The game's own "may save now" says no in a fight (a rule for the player's saves); this save is only for sending,
         // so in a fight it's written anyway (cnk.arg works then), and only if that fails does the joiner wait.
-        if (!SaveGames.CanSave && !Combat.InCombat) { if (!seat.WorldPending) seat.Peer.Send("SAID", "you'll see the world when the host can save"); seat.WorldPending = true; return; }
+        // In a conversation (a new game's intro too) it's written anyway: saving then leaves the conversation as it is.
+        if (!SaveGames.CanSave && !Combat.InCombat && !hostTalking) { if (!seat.WorldPending) seat.Peer.Send("SAID", "you'll see the world when the host can save"); seat.WorldPending = true; return; }
         seat.WorldPending = false;
         if (!SaveGames.SaveNow(HostSave))
         {
@@ -90,7 +92,11 @@ public sealed partial class Coop
     readonly Dictionary<string, Character> known = new Dictionary<string, Character>();     // what each key was, to tell dead from gone
     void HostMirror(double dt)
     {
-        foreach (var s in seats.Values.Where(s => s.WorldPending && s.Character != null).ToList()) if (SaveGames.CanSave) SendWorld(s);     // (a fight's save failed: after it)
+        // Joiners waiting for the world: after a new zone's first moments (worldSendAt), or when the host can save again
+        // (a fight's save failed).
+        if (DateTime.UtcNow >= worldSendAt)
+            foreach (var s in seats.Values.Where(s => s.WorldPending && s.Character != null).ToList())
+                if (s.WorldWaiting || SaveGames.CanSave) { s.WorldWaiting = false; SendWorld(s); }
         if ((mirrorTimer -= dt) > 0) return;
         mirrorTimer = 0.1;
         var watching = seats.Values.Where(s => s.InWorld && s.Peer != null && !s.Peer.Closed).ToList();
@@ -163,7 +169,12 @@ public sealed partial class Coop
 
     void HostMirrorMessage(Seat seat, string[] w)
     {
-        if (w[0] == "LOADED") { seat.InWorld = true; seat.Sent.Clear(); seat.Walks.Clear(); seat.Doors.Clear(); seat.Statuses.Clear(); seat.Peer.Send("YOU", "c:" + (seat.Character == null ? "" : seat.Character.Name)); Log.Info(seat.Peer.Name + " is in the world"); }
+        if (w[0] == "LOADED")
+        {
+            seat.InWorld = true; seat.Sent.Clear(); seat.Walks.Clear(); seat.Doors.Clear(); seat.Statuses.Clear(); seat.Peer.Send("YOU", "c:" + (seat.Character == null ? "" : seat.Character.Name)); Log.Info(seat.Peer.Name + " is in the world");
+            // A conversation already going (a new game's intro starts before anyone is in): its current line.
+            if (hostTalking && lastLine.Count > 0) foreach (var l in lastLine) seat.Peer.Send(l);
+        }
     }
 
     // --- Joiner -------------------------------------------------------------------------------------------------
@@ -257,12 +268,12 @@ public sealed partial class Coop
                 // Another player's character: in place. Our own (this machine's player): a new body, the HUD built for it
                 // (swapping the player's sheet in place left the HUD's portrait and the bag view behind).
                 if (w[1] != myKey) try { inPlace = old.ReplaceSheet(WriteSheet("mirror-" + w[1].Substring(2), w[2])); } catch (Exception ex) { Log.Warn("sheet in place: " + ex.Message); }
-                if (inPlace) { if (w[1] == myKey) { lastSign = SignOf(old); Build(); } return; }
+                if (inPlace) { if (w[1] == myKey) { lastSign = SignOf(old); RebuildIfOpen(); } return; }
                 var at = old.Position;
                 var c = SpawnSheet(w[1], (int)Math.Round(at.X), (int)Math.Round(at.Y));
                 if (c == null) return;
                 c.PlaceAt(at, old.Facing);
-                if (w[1] == myKey) { World.MakePlayer(c); followed = c; lastSign = SignOf(c); Build(); }
+                if (w[1] == myKey) { World.MakePlayer(c); followed = c; lastSign = SignOf(c); RebuildIfOpen(); }
                 World.Despawn(old);
                 return;
             }
@@ -332,15 +343,30 @@ public sealed partial class Coop
 
     static float P(string s) { float f; return float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out f) ? f : 0; }
 
-    Character followed;
+    Character followed, centreOn;
+    void AfterPlayerChange()
+    {
+        var c = centreOn;
+        if (c == null || !Hud.Exists) return;
+        centreOn = null;
+        var before = Camera.Center;
+        Camera.Follow(c);
+        Camera.CenterOn(c);
+        Log.Info("mirror: view on " + c.Name + " at " + c.Position.X + "," + c.Position.Y + " (was " + (before.HasValue ? before.Value.X + "," + before.Value.Y : "none") + ", now " + (Camera.Center.HasValue ? Camera.Center.Value.X + "," + Camera.Center.Value.Y : "none") + ")");
+        if (talkActive && (talkWindow == null || !talkWindow.IsOpen)) ShowTalk();
+    }
     void FollowMe()
     {
         Character c;
         if (myKey == null || !spawned.TryGetValue(myKey, out c) || c == followed) return;
         followed = c;
         // A character with its own sheet becomes this machine's player (HUD, inventory, camera); else the camera follows.
-        if (c.HasPlayerSheet && World.MakePlayer(c)) { lastSign = SignOf(c); Build(); }
+        if (c.HasPlayerSheet && World.MakePlayer(c)) { lastSign = SignOf(c); RebuildIfOpen(); }
         else Camera.Follow(c);
+        // The view on the character (the loaded save's camera was wherever the host's was, e.g. an intro's), a frame
+        // later when the HUD made for the new player is there; and the host's conversation again (windows go with the
+        // old HUD).
+        centreOn = c;
     }
 
     // The host's world is loaded here: frozen, then set from the host.
@@ -356,7 +382,8 @@ public sealed partial class Coop
         if (!SaveGames.Delete(JoinSave)) Log.Warn("couldn't delete " + JoinSave + " after loading it");     // loaded: not one of this player's saves
         host.Send("LOADED");
         Tell("you're in " + (hostName ?? "the host") + "'s world: click to walk, click an enemy to attack");
-        Build();
+        // No Co-op window over the game now (it's on the HUD's Co-op button); the host's conversation, if one is going,
+        // comes in its own window.
     }
 
     void LeftWorld()
@@ -376,7 +403,7 @@ public sealed partial class Coop
             e.Cancel = true;
             host.Send("SWAP");
         });
-        GameEvents.Update.Add(this, dt => { if (listener != null) { HostMirror(dt); HostSheets(dt); } });
+        GameEvents.Update.Add(this, dt => { if (listener != null) { HostMirror(dt); HostSheets(dt); } else if (centreOn != null) AfterPlayerChange(); });
         // A character made in the game's creation for co-op: when creation is accepted it goes to the host, and the game
         // goes back to the main menu (no game of its own starts); the Co-op window opens again there.
         GameEvents.CharacterCreated.Add(this, e =>

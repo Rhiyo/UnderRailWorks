@@ -55,9 +55,15 @@ public sealed partial class Coop
     void Changed(bool structural = true)
     {
         if (window == null || !window.IsOpen) return;
+        // Into the game (the joiner's world arrived, or the host's game started): the lobby window closes; the HUD's Co-op
+        // button opens the in-game one.
+        if (builtFor != Mode() && (Mode() == "play" || Mode() == "host")) { window.Close(); return; }
         if (builtFor != Mode()) { window.Close(); Build(); return; }
         Refresh();
     }
+
+    // The window built again for what it shows now, if it's open (never opened by this).
+    void RebuildIfOpen() { if (window == null || !window.IsOpen) return; window.Close(); Build(); }
 
     void Build()
     {

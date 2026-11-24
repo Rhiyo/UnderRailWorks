@@ -209,6 +209,8 @@ public static partial class Dialogs
     internal static bool Prefix(dka screen, ref string name, b0b initiator, b0b target, List<ble> actors, bool ignoreCombat, bool barkMode, bool face,
         PropertyCollection temp, bool a8, bool ignoreHostility, ref bool result)
     {
+        // A copy of another game: conversations are the real game's (Co-op shows the host's in its own window).
+        if (Simulation.IsMirror && !Simulation.Applying && !barkMode) { Simulation.Refuses("a conversation (" + name + ")"); result = false; return false; }
         string over;
         if (target != null && overrides.TryGetValue(target, out over)) name = over;
         if (name != null && !barkMode && initiator is c5x && !Party.Allows(PartyNeed.Talk, name, Character.Of(initiator))) { result = false; return false; }

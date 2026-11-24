@@ -71,7 +71,7 @@ public sealed partial class Coop : WorksMod
     string WriteSheet(string name, string base64) { var path = SheetPath(name); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); System.IO.File.WriteAllBytes(path, Convert.FromBase64String(base64)); return path; }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, InWorld, Announced; public string[] Owns; public int SheetVersion; public string PlayerName; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, WorldWaiting, InWorld, Announced; public string[] Owns; public int SheetVersion; public string PlayerName; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
     Listener listener;
     static float Dist(Character a, Character b) { return Vector2.Distance(new Vector2(a.Position.X, a.Position.Y), new Vector2(b.Position.X, b.Position.Y)); }
     static bool Sees(Character who, Character other) { return who.CanSee(other) && Dist(who, other) <= who.SightRange; }
@@ -763,7 +763,10 @@ public sealed partial class Coop : WorksMod
                 s.Peer.Send("PLAYING", s.Record.Name, (int)c.Position.X, (int)c.Position.Y);
                 if (!s.Announced) { s.Announced = true; Notify.Log("Co-op: " + s.Peer.Name + " plays " + s.Record.Name, Say); if (Api != null) Api.RaiseJoined(s.Peer.Name, c); }
             }
-            foreach (var s in seats.Values.Where(s => s.Character != null)) SendWorld(s);     // the joiners follow into the new zone
+            // The joiners follow into the new zone, a moment later: a save in the zone's first moments stops what the
+            // game starts then (a new game's intro conversation never opened after a save at the zone's first frame).
+            worldSendAt = DateTime.UtcNow.AddSeconds(2);
+            foreach (var s in seats.Values.Where(s => s.Character != null)) { s.WorldPending = true; s.WorldWaiting = true; }
             orphans.RemoveAll(o => o.Character == null || o.Character.Area == null);
         });
         // The host loaded a save (or started a new game) while hosting: everyone stays connected; each one's character

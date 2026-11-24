@@ -201,6 +201,7 @@ static class UiWindows
         foreach (var w in Open.ToList()) try { CheckFit(w); } catch (Exception ex) { Log.Write("ui: checking a window: " + ex.Message); }
         try { MenuButtons(); } catch (Exception ex) { Log.Write("windows: the main menu's buttons: " + ex.Message); }
         try { MainMenuPage.Tick(); } catch (Exception ex) { Log.Write("main menu: page: " + ex.Message); }
+        try { Camera.Tick(); } catch (Exception ex) { Log.Write("camera: " + ex.Message); }
         if (Open.Count == 0)
         {
             dragging = null;

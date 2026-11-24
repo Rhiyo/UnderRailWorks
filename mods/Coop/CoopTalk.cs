@@ -16,6 +16,7 @@ public sealed partial class Coop
     // --- Host ---------------------------------------------------------------------------------------------------
     Seat talking;     // kept for older paths: nobody but the host holds a conversation now
     bool hostTalking;     // the host's conversation is open
+    readonly List<object[]> lastLine = new List<object[]>();     // its current line, for a joiner arriving meanwhile
     readonly Dictionary<string, int> suggested = new Dictionary<string, int>();     // player name -> answer index
     List<int> hostChoices = new List<int>();     // the line's answers' indexes, in the window's order
     List<string> hostChoiceTexts = new List<string>();
@@ -71,17 +72,16 @@ public sealed partial class Coop
             hostChoices = line.Choices.Select(o => o.Index).ToList();
             hostChoiceTexts = line.Choices.Select(o => o.Text).ToList();
             var talker = line.Talker == null ? "?" : line.Talker.Name;
-            foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null))
-            {
-                s.Peer.Send("DLGW", talker, line.Speaker, line.Text);
-                foreach (var o in line.Choices) s.Peer.Send("DLGOPT", o.Index, o.Enabled ? 1 : 0, o.Text);
-                s.Peer.Send("DLGSHOW");
-            }
+            lastLine.Clear();
+            lastLine.Add(new object[] { "DLGW", talker, line.Speaker, line.Text });
+            foreach (var o in line.Choices) lastLine.Add(new object[] { "DLGOPT", o.Index, o.Enabled ? 1 : 0, o.Text });
+            lastLine.Add(new object[] { "DLGSHOW" });
+            foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null)) foreach (var l in lastLine) s.Peer.Send(l);
         });
         GameEvents.DialogEnded.Add(this, name =>
         {
             if (listener == null) return;
-            hostTalking = false; suggested.Clear(); hostChoices.Clear(); hostChoiceTexts.Clear();
+            hostTalking = false; suggested.Clear(); hostChoices.Clear(); hostChoiceTexts.Clear(); lastLine.Clear();
             foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null)) s.Peer.Send("DLGEND");
         });
         // The host's window: who suggested each answer, after it.
@@ -95,6 +95,7 @@ public sealed partial class Coop
 
     // --- Joiner -------------------------------------------------------------------------------------------------
     UiWindow talkWindow;
+    bool talkActive;     // the host's conversation is going (its window may have gone with a HUD rebuild: shown again)
     bool talkEnding;
     string talkWatching;     // whose conversation it is (the host's)
     UiList talkList;
@@ -128,8 +129,8 @@ public sealed partial class Coop
                 }
                 if (talkWindow != null && talkWindow.IsOpen) ShowTalk();
                 return true;
-            case "DLGSHOW": Log.Info("conversation: " + talkSpeaker + ": " + talkText + " (" + talkChoices.Count + " answers)"); ShowTalk(); return true;
-            case "DLGEND": talkEnding = true; if (talkWindow != null && talkWindow.IsOpen) talkWindow.Close(); talkWindow = null; talkEnding = false; mySuggestion = -1; return true;
+            case "DLGSHOW": talkActive = true; Log.Info("conversation: " + talkSpeaker + ": " + talkText + " (" + talkChoices.Count + " answers)"); ShowTalk(); return true;
+            case "DLGEND": talkActive = false; talkEnding = true; if (talkWindow != null && talkWindow.IsOpen) talkWindow.Close(); talkWindow = null; talkEnding = false; mySuggestion = -1; return true;
         }
         return false;
     }
@@ -152,13 +153,13 @@ public sealed partial class Coop
         rowChoice.Clear();
         int width = talkList.View.Width - Ui.S(12);
         items.Add((talkWatching ?? "The host") + " is talking. Click an answer to suggest it (again to take it back):"); colours.Add(Grey); rowChoice.Add(-2);
-        foreach (var l in Ui.Wrap((string.IsNullOrEmpty(talkSpeaker) ? "" : talkSpeaker + ": ") + talkText, width)) { items.Add(l); colours.Add(Normal); rowChoice.Add(-2); }
+        foreach (var l in Ui.Wrap((string.IsNullOrEmpty(talkSpeaker) ? "" : talkSpeaker + ": ") + Narration(talkText), width)) { items.Add(l); colours.Add(Normal); rowChoice.Add(-2); }
         items.Add(""); colours.Add(Normal); rowChoice.Add(-2);
         for (int i = 0; i < talkChoices.Count; i++)
         {
             int index = talkChoices[i].Key;
             string who; talkSuggested.TryGetValue(index, out who);
-            var text = (i + 1) + ". " + talkChoices[i].Value + (string.IsNullOrEmpty(who) ? "" : "   [" + who + "]");
+            var text = (i + 1) + ". " + Plain(talkChoices[i].Value) + (string.IsNullOrEmpty(who) ? "" : "   [" + who + "]");
             var colour = !talkEnabled[i] ? Grey : index == mySuggestion ? Mine_ : Normal;
             foreach (var l in Ui.Wrap(text, width).Select((t, n) => n == 0 ? t : "    " + t))
             { items.Add(l); colours.Add(colour); rowChoice.Add(talkEnabled[i] ? index : -2); }
@@ -168,6 +169,18 @@ public sealed partial class Coop
         talkList.ItemColors = colours;
         talkList.Selection = -1;
         talkList.First = 0;
+    }
+
+    // A line as the game shows it: narration between "::" marks (the game shows it in another colour) as plain text.
+    static string Narration(string text) { return System.Text.RegularExpressions.Regex.Replace((text ?? "").Replace("::", " "), @"\s{2,}", " ").Trim(); }
+
+    // An answer as the game shows it: its markup off (meta answers like ::Continue: show as Continue).
+    static string Plain(string text)
+    {
+        var t = (text ?? "").Trim();
+        if (t.StartsWith("::")) t = t.Substring(2);
+        if (t.EndsWith(":") && t.Length > 1 && !t.EndsWith("::")) t = t.Substring(0, t.Length - 1);
+        return t.Trim();
     }
 
     void SuggestAnswer(int index)
