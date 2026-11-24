@@ -124,6 +124,7 @@ What a merchant charges: Markup is the multiplier so far (the game's: about 1.15
 
 - `static Vector2? Center` — The map position the view is centred on (tiles), or null (no world view). Setting it moves the view there.
 - `static void CenterOn(Character c)` — The view on a character: centred on it, at its height (a floor above or below draws elsewhere on screen).
+- `static Vector3? Position` — The camera's place in the world (map x, y and height): read it, or set it to look there (as CenterOn does).
 - `static float Height` — The camera's height (the floor level it looks at).
 - `static float Zoom` — The zoom (1 = 100%).
 - `static float TileWidth` — Interface units on screen for half a tile, across and down, at the current zoom (0 without a world view).
@@ -1416,6 +1417,7 @@ A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
 - `static void As(Character who, Action a)` — Runs a with who as the acting player (World.Player), back after (nests).
 - `static void LeveledUp(Character who, int level)` **(preview)** — A multiplayer mod: who reached a level on another machine; GameEvents.LeveledUp runs here with them as the player.
 - `static bool TriggersCountMembers` **(preview)** — The map's player-only triggers also fire for the party's other members: story and quest triggers, trigger barks, dialog and music areas, the scripted triggers marked player-only (the game's ya triggers on stepping in, out and around). For that moment the member counts as the player (its IsPlayer flag and player aspect set, then put back); what the trigger then does to "the player" itself (a dialog job, a cutscene) is the player's. NPCs' own reactions to the player (walking up to talk, guards, attacking on sight) still see only the player.
+- `static Character TriggeringCharacter` **(preview)** — While a map trigger runs for a party member (TriggersCountMembers): that member (e.g. a conversation the trigger starts was set off by them). Null otherwise.
 - `static bool FactionArmorCountsAnyMember` **(preview)** — The game's faction-armour conditions (map data: "wearing CAU armor", "wearing Tchortist armor", "not wearing the Gray Army uniform"; they read the player's gear) count the whole party: "wearing" if any member wears it, "not wearing" only if none does. One disguised member is enough for the group (and members can split factions).
 - `static bool ReactionsCountMembers` **(preview)** — NPCs' own reactions to the player (walking up to talk, guards warning trespassers, attacking on sight, noticing a sneaking player, idle comments: the AI steps whose code asks for the player's sheet) also react to the party's other members: such a step is asked again with the player's body taken to be the member's (the sheet, so stats and gear, stays the player's), and its action then runs for the member it passed for. Random steps that also look at the player are asked once per member, so they come up a little more often.
 - `static bool TrapsCountMembers` **(preview)** — Spotting and disarming traps work for the party's other members as for the player: a trap a member spots is revealed (the game's reveal and "Trap detected!" are the player's), and disarming one gives them its XP. For the scan or the disarm the member counts as the player (as for triggers).
@@ -1735,6 +1737,7 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 - `static bool IsOpen`
 - `static bool Choose(int index)` — Answers with choice index (as listed in the last line), or -1 to go on / end when it has none.
 - `static void Close()` — Ends the conversation now.
+- `static bool CloseShown()` — Ends whatever conversation the game's window shows now (any: the player's own, a mod's). False: none open.
 - `delegate string AnswerLabel(int index, string text)` — The player's own conversation window: each answer's text as shown (index from 0, the text as the dialog has it), changed by every handler in turn, e.g. a mark after an answer others would pick. The answer itself and what TalkLine reports are unchanged. RefreshAnswers() shows changed marks at once.
 - `static readonly Hook<AnswerLabel> AnswerText = new Hook<AnswerLabel>("TalkAs.AnswerText")`
 - `static bool RefreshAnswers()` — The open conversation window's answers built again (AnswerText asked again). False: no window open.
@@ -1746,7 +1749,9 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 
 - `Character Talker` — Who holds the conversation (the player, or TalkAs's speaker).
 - `string Speaker`
+- `Character SpeakerCharacter` — The character speaking the line (its entity in the world), or null (narration, a speaker not in the area).
 - `string Text`
+- `string RawText` — The line as the dialog has it, before the game made it ready to show (its tokens, its markup): to show it in another game's window, which makes it ready the same way.
 - `IList<TalkChoice> Choices` — Empty: the line only goes on (Choose(-1): Continue, or End when it's the last).
 
 ## TargetChoice  _(class, Ai.cs)_
@@ -2138,6 +2143,7 @@ The Works API version mods are checked against ("works": "0.9" in mod.json). Fro
 - `static bool OpenCharacterCreation()` **(preview)** — On the main menu: the game's character creation alone, for a character made for elsewhere (Co-op: for the host's game). The new game is made behind it as New Game makes it (cnk.arf), then StartCharacterGeneration runs; the Rules screen (difficulty, XP system: the game's, not the character's) is skipped. Its Cancel says backText (default "Back") and goes straight back to the main menu (no "are you sure": nothing is lost, there's no game). Pair it with GameEvents.CharacterCreated (BackToMainMenu = true), else Accept starts that new game. False: not on the main menu.
 - `static bool OpenCharacterCreation(string backText)` **(preview)**
 - `static bool ChooseNewGameRules(Action<NewGameRules> done)` **(preview)** — On the main menu: the game's own Rules screen for a new game (difficulty, XP system, custom rules, the Mods tab) alone, with Back instead of Close. Accept: done gets the rules chosen (to start a game with them later: StartNewGameAs(file, rules)); Back: done gets null. Either way the main menu comes back. False: not on the main menu.
+- `static bool ChooseNewGameRules(Action<NewGameRules> done, NewGameRules previous)` **(preview)** — previous: the screen opens with those rules chosen (difficulty, XP system, custom settings, the Mods tab).
 - `static bool StartNewGameAs(string characterFile, NewGameRules rules)` **(preview)** — A new game with these rules (no Rules screen) and the character in the .char (no creation). False: not on the main menu, or no such file.
 - `static string ExperienceSystemName` **(preview)** — This game's experience system ("Classic" or "Oddity"; null: no game).
 - `static bool StartNewGameAs(string characterFile)` **(preview)** — On the main menu: the game's New Game (its Rules screen: difficulty, XP system), then the game starts with the character in this .char (made earlier, e.g. with OpenCharacterCreation) instead of character creation. False: not on the main menu, or no such file.

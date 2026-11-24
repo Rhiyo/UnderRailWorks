@@ -102,6 +102,7 @@ public sealed partial class Coop
                 if (s.WorldWaiting || SaveGames.CanSave) { s.WorldWaiting = false; SendWorld(s); }
         if ((mirrorTimer -= dt) > 0) return;
         mirrorTimer = 0.1;
+        SendCamera();
         var watching = seats.Values.Where(s => s.InWorld && s.Peer != null && !s.Peer.Closed).ToList();
         if (watching.Count == 0) return;
         var p = World.Player;
@@ -176,7 +177,7 @@ public sealed partial class Coop
         {
             seat.InWorld = true; seat.Sent.Clear(); seat.Walks.Clear(); seat.Doors.Clear(); seat.Statuses.Clear(); seat.Peer.Send("YOU", "c:" + (seat.Character == null ? "" : seat.Character.Name)); Log.Info(seat.Peer.Name + " is in the world");
             // A conversation already going (a new game's intro starts before anyone is in): its current line.
-            if (hostTalking && lastLine.Count > 0) foreach (var l in lastLine) seat.Peer.Send(l);
+            if (hostTalking && lastLine.Count > 0) { foreach (var l in lastLine) seat.Peer.Send(l); lastCam = null; }     // and the camera with the next tick
         }
     }
 
@@ -356,7 +357,8 @@ public sealed partial class Coop
         Camera.Follow(c);
         Camera.CenterOn(c);
         Log.Info("mirror: view on " + c.Name + " at " + c.Position.X + "," + c.Position.Y + " (was " + (before.HasValue ? before.Value.X + "," + before.Value.Y : "none") + ", now " + (Camera.Center.HasValue ? Camera.Center.Value.X + "," + Camera.Center.Value.Y : "none") + ")");
-        if (talkActive && (talkWindow == null || !talkWindow.IsOpen)) ShowTalk();
+        // The host's conversation again: the window went with the old HUD.
+        if (talkActive) { if (dialogShown) { TalkAs.CloseShown(); dialogShown = false; } ShowConversation(); }
     }
     void FollowMe()
     {

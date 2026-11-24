@@ -57,6 +57,17 @@ namespace UnderRailWorks
         // The values shown on the screen now ("<mod>/<key>" -> value), and the same put into a new game later (rules chosen
         // ahead: World.ChooseNewGameRules / StartNewGameAs).
         internal static List<KeyValuePair<string, int>> Values() { lock (Options) return Shown.Select(kv => new KeyValuePair<string, int>(kv.Key.Mod.Id + "/" + kv.Key.Key, kv.Value.l())).ToList(); }
+        // The screen's sliders and choices set to these values (rules chosen before, shown again).
+        internal static void Show(List<KeyValuePair<string, int>> values)
+        {
+            if (values == null) return;
+            lock (Options)
+                foreach (var kv in Shown)
+                {
+                    var v = values.FirstOrDefault(x => x.Key == kv.Key.Mod.Id + "/" + kv.Key.Key);
+                    if (v.Key != null) kv.Value.e(v.Value);
+                }
+        }
         internal static void Apply(List<KeyValuePair<string, int>> values)
         {
             if (values == null || values.Count == 0) return;

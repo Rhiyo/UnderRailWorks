@@ -201,6 +201,10 @@ public sealed partial class Coop : WorksMod
         }
         if (seat.Character == null || seat.Character.IsDead || seat.Character.Area == null) { p.Send("SAID", seat.Character != null && seat.Character.IsDead ? "your character is dead" : "pick a character first"); return; }
         if (downed.Contains(seat.Character) && w[0] != "STATUS" && w[0] != "DLGSUGGEST") { p.Send("SAID", "you're down"); return; }
+        // A conversation is going: the game is paused for it (as in single player), so nobody moves or acts meanwhile
+        // (a step or an attack could start a fight in the middle of it).
+        if (hostTalking && Array.IndexOf(new[] { "GO", "ATTACK", "ATTACKID", "USE", "EXIT", "ABILITY", "TALK", "FOLLOW", "SWAP", "END", "GIVE", "GIVEMONEY", "TAKE", "TAKEALL" }, w[0]) >= 0)
+        { p.Send("SAID", "wait: a conversation is going"); return; }
         var said = Act(seat.Character, w);
         if (!string.IsNullOrEmpty(said)) p.Send("SAID", said);
     }
@@ -586,7 +590,7 @@ public sealed partial class Coop : WorksMod
         LoadGive();
         LoadXp();
         LoadHost();
-        LoadListening();
+        LoadListening(); LoadConversationView();
         LoadScreens();
         LoadDeath();
         LoadUi();

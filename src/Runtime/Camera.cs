@@ -35,6 +35,13 @@ namespace UnderRailWorks
             var e = c.Entity as b0b;
             cam.t2(e != null ? e.aj() : new Vector3(c.Position.X, c.Position.Y, c.Position.Z));     // the entity's own place (its height included)
         }
+        // The camera's place in the world (map x, y and height): read it, or set it to look there (as CenterOn does).
+        public static Vector3? Position
+        {
+            get { var v = View; var c = v == null ? null : v.an9(); return c == null ? (Vector3?)null : c.t1(); }
+            set { var v = View; var c = v == null ? null : v.an9(); if (c == null || value == null) return; FitToArea(); c.t2(value.Value); }
+        }
+
         // A world view made after its zone loaded (a HUD built again: World.MakePlayer) starts with the camera kept
         // inside (0,0)-(1,1) (ci3 builds it so; the zone's load widens it): widened to its area here.
         internal static string BoxText { get { var v = View; var c = v == null ? null : v.an9(); var a = v == null ? null : v.anz(); return c == null ? "?" : c.t4().X + "," + c.t4().Y + "-" + c.t6().X + "," + c.t6().Y + " area " + (a == null ? "none" : UnderrailDropdownScroll.W(a.Size) + "x" + UnderrailDropdownScroll.H(a.Size)); } }

@@ -63,6 +63,9 @@ namespace UnderRailWorks
         // back); what the trigger then does to "the player" itself (a dialog job, a cutscene) is the player's. NPCs' own
         // reactions to the player (walking up to talk, guards, attacking on sight) still see only the player.
         [Preview("multiplayer: built for Co-op so far")] public static bool TriggersCountMembers { get; set; }
+        // While a map trigger runs for a party member (TriggersCountMembers): that member (e.g. a conversation the
+        // trigger starts was set off by them). Null otherwise.
+        [Preview("multiplayer: built for Co-op so far")] public static Character TriggeringCharacter { get; internal set; }
 
         // The game's faction-armour conditions (map data: "wearing CAU armor", "wearing Tchortist armor", "not wearing the
         // Gray Army uniform"; they read the player's gear) count the whole party: "wearing" if any member wears it, "not
@@ -202,6 +205,7 @@ namespace UnderRailWorks.Internal
                 __state = new AsPlayerState { Body = body, Aspect = aspect, WasPlayer = false, WasAspect = aspect != null && aspect.@as() };
                 World.SetPlayerFlag(body, true);
                 if (aspect != null) aspect.h(true);
+                Party.TriggeringCharacter = c;
                 object seen;
                 if (!logged.TryGetValue(__instance, out seen)) { logged.Add(__instance, c); Log.Write("party: " + c.Name + " counts as the player for a trigger (" + __instance.GetType().Name + ")"); }
             }
@@ -212,6 +216,7 @@ namespace UnderRailWorks.Internal
         {
             if (__state != null)
             {
+                Party.TriggeringCharacter = null;
                 try { World.SetPlayerFlag(__state.Body, __state.WasPlayer); if (__state.Aspect != null) __state.Aspect.h(__state.WasAspect); }
                 catch (Exception ex) { Log.Write("party: trigger restore: " + ex.Message); }
             }

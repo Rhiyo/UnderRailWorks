@@ -288,7 +288,7 @@ public sealed partial class Coop
     {
         if (lobby != "new") return;
         inCreation = true;     // the lobby window opens again when the menu is back (Mirror: leftForCreation)
-        if (!World.ChooseNewGameRules(rules => { if (rules != null && lobby == "new") { hostRules = rules; Log.Info("rules: " + rules.Difficulty + ", " + rules.Experience); LobbyChanged(); } }))
+        if (!World.ChooseNewGameRules(rules => { if (rules != null && lobby == "new") { hostRules = rules; Log.Info("rules: " + rules.Difficulty + ", " + rules.Experience); LobbyChanged(); } }, hostRules))
         { inCreation = false; Notify.Log("Co-op: couldn't open the game's rules", Say); }
     }
     internal const string SaveFolder = "Co-op Saves";

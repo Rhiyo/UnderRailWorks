@@ -150,7 +150,9 @@ namespace UnderRailWorks
         // alone, with Back instead of Close. Accept: done gets the rules chosen (to start a game with them later:
         // StartNewGameAs(file, rules)); Back: done gets null. Either way the main menu comes back. False: not on the main
         // menu.
-        [Preview("multiplayer: built for Co-op so far")] public static bool ChooseNewGameRules(Action<NewGameRules> done)
+        [Preview("multiplayer: built for Co-op so far")] public static bool ChooseNewGameRules(Action<NewGameRules> done) { return ChooseNewGameRules(done, null); }
+        // previous: the screen opens with those rules chosen (difficulty, XP system, custom settings, the Mods tab).
+        [Preview("multiplayer: built for Co-op so far")] public static bool ChooseNewGameRules(Action<NewGameRules> done, NewGameRules previous)
         {
             if (done == null || !(UiPopups.Screen() is a8k)) return false;
             CreationOnly = true;     // the game made behind the screen isn't one: mods' NewGame / GameStarted wait
@@ -167,9 +169,38 @@ namespace UnderRailWorks
                     var b = f.GetValue(screen) as dak;
                     if (b != null && (b.Text == close || b.Text == cancel)) b.Text = "Back";
                 }
+                if (previous != null) try { ShowRules(screen, previous); } catch (Exception ex) { Log.Write("world: rules shown again: " + ex.Message); }
             }
             Log.Write("world: the Rules screen (for a game started later)");
             return true;
+        }
+
+        // The Rules screen showing rules chosen before: its difficulty and XP icons ticked (as its own click handlers do,
+        // c9v.c / a), the Custom tab enabled for a custom difficulty, its sliders set (c9v.a(GameDifficultySettings)),
+        // the Mods tab's values.
+        static void ShowRules(c9v screen, NewGameRules r)
+        {
+            const BindingFlags any = BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public;
+            foreach (var f in typeof(c9v).GetFields(any).Where(f => f.FieldType == typeof(List<bw9>)))
+            {
+                var items = f.GetValue(screen) as List<bw9>;
+                if (items == null) continue;
+                foreach (var i in items)
+                {
+                    if (i.Tag is TimelapseVertigo.Rules.GameDifficulty) i.Checked = (TimelapseVertigo.Rules.GameDifficulty)i.Tag == r.D;
+                    else if (i.Tag is TimelapseVertigo.Rules.Characters.ExperienceSystem) i.Checked = (TimelapseVertigo.Rules.Characters.ExperienceSystem)i.Tag == r.X;
+                }
+            }
+            var customTab = typeof(c9v).GetField("d", any);
+            var tab = customTab == null ? null : customTab.GetValue(screen) as euz;
+            if (tab != null) tab.Enabled = r.D == TimelapseVertigo.Rules.GameDifficulty.Custom;
+            if (r.Custom != null)
+            {
+                var set = typeof(c9v).GetMethods(any).FirstOrDefault(m => m.Name == "a" && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == r.Custom.GetType());
+                if (set != null) set.Invoke(screen, new[] { r.Custom });
+            }
+            NewGameOptions.Show(r.Mods);
+            Log.Write("world: the Rules screen shows " + r.Difficulty + ", " + r.Experience + " experience");
         }
 
         // hj's close handler: with ChooseNewGameRules, the rules are kept and the main menu comes back.

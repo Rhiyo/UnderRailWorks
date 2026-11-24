@@ -26,7 +26,12 @@ namespace UnderRailWorks
         // Who holds the conversation (the player, or TalkAs's speaker).
         public Character Talker { get; internal set; }
         public string Speaker { get; internal set; }
+        // The character speaking the line (its entity in the world), or null (narration, a speaker not in the area).
+        public Character SpeakerCharacter { get; internal set; }
         public string Text { get; internal set; }
+        // The line as the dialog has it, before the game made it ready to show (its tokens, its markup): to show it in
+        // another game's window, which makes it ready the same way.
+        public string RawText { get; internal set; }
         // Empty: the line only goes on (Choose(-1): Continue, or End when it's the last).
         public IList<TalkChoice> Choices { get; internal set; }
     }
@@ -69,6 +74,8 @@ namespace UnderRailWorks
         public static bool Choose(int index) { return TalkHooks.Choose(index); }
         // Ends the conversation now.
         public static void Close() { var a = TalkHooks.Active; if (a != null && a.Controller != null) a.Controller.ad(); }
+        // Ends whatever conversation the game's window shows now (any: the player's own, a mod's). False: none open.
+        public static bool CloseShown() { var c = TalkHooks.ShownController; if (c == null) return false; c.ad(); return true; }
 
         // The player's own conversation window: each answer's text as shown (index from 0, the text as the dialog has
         // it), changed by every handler in turn, e.g. a mark after an answer others would pick. The answer itself and
@@ -175,7 +182,9 @@ namespace UnderRailWorks.Internal
             if (node == null) return null;
             var speaker = controller.nt();
             var talker = Initiator == null ? null : Initiator.GetValue(controller) as c5x;
-            var line = new TalkLine { Talker = talker == null ? null : Character.Of(talker), Speaker = speaker == null ? "" : speaker.ActorName, Text = controller.nx() ?? node.b(), Choices = new List<TalkChoice>() };
+            var line = new TalkLine { Talker = talker == null ? null : Character.Of(talker), Speaker = speaker == null ? "" : speaker.ActorName, Text = controller.nx() ?? node.b(), RawText = node.b(), Choices = new List<TalkChoice>() };
+            var speakerEntity = speaker == null ? null : speaker.ActorEntity as c5x;
+            if (speakerEntity != null) line.SpeakerCharacter = Character.Of(speakerEntity);
             var choices = node.d();
             if (choices != null) for (int i = 0; i < choices.Count; i++) line.Choices.Add(new TalkChoice { Index = i, Text = choices[i].Text, Enabled = !choices[i].Answer.d() });
             return line;
@@ -214,6 +223,7 @@ namespace UnderRailWorks.Internal
 
         // The open window's controller (zq.nz runs for every line shown).
         static zq shownBy;
+        internal static zq ShownController { get { return shownBy; } }
         static readonly MethodInfo Rebuild = typeof(d49).GetMethod("a", Any, null, Type.EmptyTypes, null);
         internal static bool Refresh()
         {
@@ -221,12 +231,13 @@ namespace UnderRailWorks.Internal
             if (w == null || Rebuild == null) return false;
             try { Rebuild.Invoke(w, null); return true; } catch (Exception ex) { Log.Write("talk: refreshing answers: " + ex.Message); return false; }
         }
-        // ejl(number, text, ...): one answer row of the conversation window (only d49 makes them); "::Continue.::"
-        // rows have no index of their own and keep their text.
+        // ejl(number, text, ...): one answer row of the conversation window (only d49 makes them). Answers written in
+        // the game's meta markup ("::Skip intro:") are answers too; the game's own "::Continue.::" row (a line with no
+        // answers) has none behind it and keeps its text.
         static void AnswerRow(int __0, ref string __1)
         {
             var hook = TalkAs.AnswerText;
-            if (!hook.Any || __1 == null || __1.StartsWith("::")) return;
+            if (!hook.Any || __1 == null || __0 < 1 || __1 == "::Continue.::") return;
             var list = hook.Snapshot;
             for (int i = 0; i < list.Length; i++)
             {

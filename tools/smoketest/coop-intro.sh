@@ -4,7 +4,7 @@
 # those rules (no Rules screen) as the host's character. The new game's intro conversation must open for the host
 # (it didn't when the world was saved for the joiners in the zone's first moment), the joiner gets it in its
 # Conversation window and runs no trigger or conversation of its own; Skip intro takes both to the next zone.
-#   tools/smoketest/coop-intro.sh            (after ./build.sh)
+#   tools/smoketest/coop-intro.sh            (after ./build.sh; SHOTS=<folder>: screenshots of both games on the way)
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"; REPO="$(cd "$HERE/../.." && pwd)"
 SKILL="$REPO/.claude/skills/run-underrail/scripts"
@@ -29,7 +29,11 @@ j timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1; sleep 50
 printf 'coop.start\n' > "$HOST/Mods/WorksTest/menurun.txt"; sleep 8
 h "$SKILL/inp.sh" focus move 640 300 >/dev/null 2>&1; j "$SKILL/inp.sh" focus move 640 300 >/dev/null 2>&1
 sleep 12
-h "$SKILL/inp.sh" focus key 0x32 >/dev/null 2>&1; sleep 25     # 2. Skip intro
+shot() { [ -n "${SHOTS:-}" ] && { mkdir -p "$SHOTS"; h "$SKILL/shot.sh" "$SHOTS/$1-host.png" 50 >/dev/null; j "$SKILL/shot.sh" "$SHOTS/$1-join.png" 50 >/dev/null; }; }     # SHOTS=<folder>: screenshots
+j "$SKILL/inp.sh" focus click 430 628 >/dev/null 2>&1; sleep 4     # the joiner votes for 1 (Continue): a click on it in its own window (1280x720)
+shot 1-intro
+h "$SKILL/inp.sh" focus key 0x32 >/dev/null 2>&1; sleep 25     # 2. Skip intro (the host decides)
+shot 2-after-skip
 j timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 
 pass=0; fail=0
@@ -43,6 +47,8 @@ check "the host's intro opens"                   "$HL" "dialog intro1 with"
 check "the joiner gets the conversation"         "$JL" "Coop: conversation: Hadrian Tanner"
 never "no trigger runs on the joiner"            "$JL" "party: .* counts as the player"
 check "the joiner's own triggers are refused"    "$JL" "mirror: a map trigger refused"
+check "the joiner sees it in the game's window"   "$JL" "dialog coop/listen with Hadrian Tanner"
+check "the joiner's vote reaches the host"        "$HL" "Coop: Player suggests answer 1"
 check "the world goes when the zone has settled"  "$HL" "Coop: zone settled: sending the world"
 check "Skip intro: the host moves on"            "$HL" "zone loaded: StationAlpha-Level2"
 check "... its arrival conversation opens (a transition's trigger, not only a new game's)" "$HL" "dialog sgs_vencel with"

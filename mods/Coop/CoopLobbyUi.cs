@@ -47,10 +47,23 @@ public sealed partial class Coop
         int rows = slots.Count + 1;
         list = null; playerRows = new List<PlayerRow>();
         playersTable = PlayersTable(inner, rows, null);
-        at(playersTable, pad, y); y += TableHeight(rows) + section;
+        at(playersTable, pad, y); y += TableHeight(rows) + gap;
+        // Your character, under the players (a new game: the host makes one here too, as everyone does).
+        hostCreateButton = null;
+        if (editable)
+        {
+            hostCreateButton = Ui.Button(hostCharacter == null ? "Create character" : "Recreate character", CreateHostCharacter);
+            Ui.Tooltip(hostCreateButton, "Your character, made in the game's character creation; you come back here when it's done");
+            at(hostCreateButton, pad, y); y += hostCreateButton.Height;
+        }
+        y += section;
 
-        // Game settings
-        at(heading(saved ? "Game settings (kept from the save)" : "Game settings"), pad, y); y += line + gap;
+        // Game settings, with Edit settings beside the heading (a new game's rules: the game's Rules screen again).
+        UiElement edit = editable && hostRules != null ? Ui.Button("Edit settings", EditRules) : null;
+        int headH = edit == null ? line : Math.Max(line, edit.Height);
+        at(heading(saved ? "Game settings (kept from the save)" : "Game settings"), pad, y + (headH - line) / 2);
+        if (edit != null) { Ui.Tooltip(edit, "The game's rules again (difficulty, experience system)"); at(edit, pad + inner - edit.Width, y); }
+        y += headH + gap;
         Action<string, UiElement, int> row = (label, control, h) =>
         {
             int rh = Math.Max(line, h);
@@ -124,15 +137,6 @@ public sealed partial class Coop
 
         // Buttons
         var buttons = new List<UiElement>();
-        if (editable)
-        {
-            // The host makes their character here too (before the start), as everyone else does.
-            hostCreateButton = Ui.Button(hostCharacter == null ? "Create character" : "Recreate character", CreateHostCharacter);
-            Ui.Tooltip(hostCreateButton, "Your character, made in the game's character creation; you come back here when it's done");
-            buttons.Add(hostCreateButton);
-        }
-        else hostCreateButton = null;
-        if (editable && hostRules != null) { var edit = Ui.Button("Edit settings", EditRules); Ui.Tooltip(edit, "The game's rules again (difficulty, experience system)"); buttons.Add(edit); }
         var start = startButton = Ui.Button("Start game", () => { var r = StartGame(); if (r != "starting") Notify.Log("Co-op: " + r, Say); });
         buttons.Add(start);
         if (Online.Available) buttons.Add(Ui.Button("Invite friends...", () =>
@@ -142,16 +146,23 @@ public sealed partial class Coop
         }));
         var cancel = Ui.Button("Cancel", () => { StopHosting(); if (window != null) window.Close(); if (coopPage != null && MainMenu.IsShowing) coopPage.Open(); });     // back to the Co-op page
         buttons.Add(cancel);
-        // Wide enough for the buttons on one row where the screen allows; else they wrap (Ui.AddButtons).
-        int width = Math.Min(Math.Max(w, Ui.ButtonsWidth(buttons, pad)), Math.Max(w, Ui.ScreenWidth - Ui.S(40)));
-        int height = y + Ui.ButtonsHeight(buttons, width, pad) + pad;
-        window = Ui.Window(this, "coop", saved ? "Host saved game: " + (lobbySave ?? "") : "Host a new game", width, 22 + Ui.S(4) + height);
+        // The window keeps its width (the content is laid out for it): Start game (and Invite friends...) on the left,
+        // Cancel on the right; on a screen too narrow for that, the buttons wrap (Ui.AddButtons).
+        bool oneRow = Ui.ButtonsWidth(buttons, pad) + Ui.S(20) <= w;
+        int height = y + (oneRow ? buttons.Max(b => b.Height) : Ui.ButtonsHeight(buttons, w, pad)) + pad;
+        window = Ui.Window(this, "coop", saved ? "Host saved game: " + (lobbySave ?? "") : "Host a new game", w, 22 + Ui.S(4) + height);
         if (window == null) return;
         window.Closed += () => { window = null; builtFor = null; };
         int top = window.Top + Ui.S(4);
         foreach (var p in place) Ui.Add(window, p.Key, p.Value.X, top + p.Value.Y);
-        Ui.AddButtons(window, buttons, pad);
-        Ui.Tooltip(start, editable ? "When everyone (you too) has a character: the game's Rules, then the game starts with everyone who joined (open places are dropped)" : "Load the save (every place must be taken)");
+        if (oneRow)
+        {
+            int by = window.Height - pad - buttons.Max(b => b.Height), bx = pad;
+            foreach (var b in buttons.Where(b => b != cancel)) { Ui.Add(window, b, bx, by); bx += b.Width + gap; }
+            Ui.Add(window, cancel, window.Width - pad - cancel.Width, by);
+        }
+        else Ui.AddButtons(window, buttons, pad);
+        Ui.Tooltip(start, editable ? "When everyone (you too) has a character: the game starts with these settings and everyone who joined (open places are dropped)" : "Load the save (every place must be taken)");
         Ui.Tooltip(cancel, "Close the lobby: everyone who joined is sent back");
     }
 
