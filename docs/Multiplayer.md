@@ -26,6 +26,30 @@ character arriving mid-fight), so for the first release players join only in a l
   Saves). Inside the game's Saves folder on purpose: UnderRail's Steam Cloud rule is everything under
   `My Games\Underrail\Saves` (checked in Steam's app info), and the game's save list skips folders without an
   info.dat (d6f.arm), so the folder never shows in Load Game, with or without Works.
+- **A new game, start to intro** (Nov 24). Host New Game shows the game's own Rules screen first (Works'
+  `World.ChooseNewGameRules`: the screen alone, Back instead of Close; `NewGameRules` keeps difficulty, XP system,
+  custom settings and the Mods tab's values), then the lobby shows them as text with Edit settings for the host (sent to
+  the joiners as settings). Everyone (the host too) makes their character in the lobby (`World.OpenCharacterCreation`:
+  creation alone, no Rules screen, Back returns to the lobby and keeps the character made before; Accept:
+  `GameEvents.CharacterCreated` with BackToMainMenu, the sheet written as a .char). Start game is enabled when the host
+  and everyone who joined have one, and starts the game with the rules and the host's character
+  (`World.StartNewGameAs(file, rules)`: no Rules screen, no creation). A character built from a .char follows the
+  game's XP system.
+- **The intro, and what broke it** (Nov 24, measured: single-player and co-op runs, logs and shots):
+  - A save in a zone's first moments stops what the game starts then: a new game's intro conversation (`intro1`,
+    with its cutscene) never opened when the game was saved in the zone's first frame (single player too: a save
+    from autorun at zone load, no intro; the same save 2 s later, intro fine). Co-op saved the world for the joiners
+    right then, so the host started in the room, free to move, with no cutscene. Now the world goes 2 s after the zone
+    loads; during a host conversation the send-only save is written anyway (it leaves the conversation as it is).
+  - A joiner's game ran the map's triggers and conversations itself: it played its own intro once its window was
+    closed, and after the host's Skip intro the two games were in different places. Works now refuses map triggers
+    (ya.e/f/g/h) and dialog starts (dka.amu) on a mirror (`Simulation.IsMirror`); the joiner sees the host's
+    conversation in Co-op's Conversation window (a joiner arriving mid-conversation gets its current line).
+  - With `Party.TriggersCountMembers`, a joined character placed in the start room could count as the player for
+    the intro's trigger (`a7c`) before the host did; seen once, not the cause (the intro still failed with it off) but
+    worth knowing: a member can take a one-shot trigger meant for the player.
+  - Test trap: a test game's mouse parked at the screen's corner edge-scrolls its camera (the joiner's view seemed
+    off-centre). Park it mid-screen (`inp.sh move 640 300`) before judging a view.
 - **Host New Game** (main menu): straight into the lobby, with places for 4 players (the host and three others; Nov
   24, there was a player-count window before). Each joiner makes a character in the game's own creation on their
   machine and takes a place. The host starts once at least one has joined (places nobody took are dropped): they make
