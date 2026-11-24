@@ -175,7 +175,8 @@ static class ShowCovered
         if (Effects.TryGetValue(owner, out e)) return e;
         Refresh();
         var character = Character(owner);
-        e = character == null ? CoveredEffect.Off : character.IsPlayer ? player : Hostile(character) ? hostile : other;
+        // A character the game doesn't draw (a cutscene hides the player: its opacity 0) gets nothing either.
+        e = character == null || character.Opacity <= 0.01f ? CoveredEffect.Off : character.IsPlayer ? player : Hostile(character) ? hostile : other;
         Effects[owner] = e;
         return e;
     }

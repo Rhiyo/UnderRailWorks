@@ -47,6 +47,9 @@ public sealed partial class Character
     internal static Character Of(b0b entity) { return entity == null ? null : Wrappers.GetValue(entity, e => new Character(e)); }
 
     public bool IsPlayer { get { return Entities.IsPlayer(Entity); } }
+    // How opaque its body is drawn, 0 to 1 (1: normally). The game's scripts hide a character by setting it to 0 (the
+    // player in cutscenes: c5x.ae, with the "hidePlayer" flag); fades and stealth effects lower it too (c5x.ajl()).
+    public float Opacity { get { var e = Entity as c5x; var a = e == null ? null : e.ajl(); return a.HasValue ? a.Value : 1f; } }
     // Hostile or unfriendly to the player, not passive (red and orange outlines).
     public bool IsHostile { get { return Entities.IsHostile(Entity); } }
     // Map position (tiles; fractional while moving).
