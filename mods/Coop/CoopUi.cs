@@ -22,7 +22,8 @@ public sealed partial class Coop
     UiElement statusLabel;
     UiList list;
     int selected = -1;
-    string lastAddress = "127.0.0.1";
+    // The address last joined (remembered between sessions); none the first time.
+    string lastAddress { get { return Settings.Get("lastAddress") ?? ""; } set { Settings.Set("lastAddress", value); } }
     Keybind windowKey;
 
     void LoadUi()
@@ -208,11 +209,18 @@ public sealed partial class Coop
             if (window == null || !window.IsOpen) Build(); else Changed();
         });
         var refresh = Ui.Button("Refresh", () => fill());
+        var overlay = Ui.Button(Online.Service + " friends...", () =>
+        {
+            if (!Online.OpenFriends()) Tell("the " + Online.Service + " overlay isn't available here: friends hosting are listed above (Refresh)");
+        });
+        Ui.Tooltip(overlay, Online.Service + "'s friends list: Join Game on a friend who is hosting");
         var address = Ui.Button("By address...", () => { if (joinWindow != null) joinWindow.Close(); AskAddress(); });
         var close = Ui.Button("Close", () => { if (joinWindow != null) joinWindow.Close(); });
-        var buttons = new List<UiElement> { join, refresh, address, close };
+        var buttons = new List<UiElement> { join, refresh, overlay, address, close };
         int pad = Ui.S(10);
-        joinWindow = Ui.Window(this, "join", "Join a Game", Math.Max(Ui.S(520), Ui.ButtonsWidth(buttons)), Ui.S(360));
+        // Its width stays; the buttons wrap onto a second row when they don't fit (no wider window for them).
+        int jw = Ui.S(620);
+        joinWindow = Ui.Window(this, "join", "Join a Game", jw, Ui.S(300) + Ui.ButtonsHeight(buttons, jw));
         if (joinWindow == null) return;
         joinWindow.Closed += () => joinWindow = null;
         int w = joinWindow.Width, y = joinWindow.Top + Ui.S(4);

@@ -122,6 +122,9 @@ namespace UnderRailWorks
         public static IList<OnlinePlayer> FriendsHosting() { return Players(Available ? Store.Call("NetFriends") : null); }
         // The store's overlay invite dialog for our lobby (if the overlay runs in this game).
         public static bool OpenInviteDialog() { return Lobby != null && Store.Call("NetInvite") == "1"; }
+        // The store's overlay with the player's friends (Steam: Join Game on a friend there). False: no store, or it
+        // couldn't (the overlay may not run in this game, e.g. under Proton: nothing shows then either).
+        public static bool OpenFriends() { return Available && Store.Call("NetOverlay Friends") == "1"; }
 
         static List<OnlinePlayer> Players(string reply)
         {
@@ -291,6 +294,7 @@ namespace UnderRailWorks
                     return string.Join(" ", list.ToArray());
                 }
                 case "NetInvite": return "0";
+                case "NetOverlay": return "0";
             }
             return "?";
         }

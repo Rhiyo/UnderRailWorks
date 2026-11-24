@@ -17,7 +17,9 @@ public sealed partial class Coop
 
     static readonly Dictionary<string, string> JoinTitles = new Dictionary<string, string> { { "connecting", "Joining a game" }, { "choose", "Join a game" }, { "ready", "Join a game" }, { "play", "Co-op" } };
 
-    int builtPlaces, builtSettings;     // choose / ready: what the window was built for (more arriving: built again)
+    int builtPlaces;
+    string builtSettingsSign;     // the settings as built (the host edited one: built again)
+    string SettingsSign() { return string.Join("|", lobbySettings.Select(kv => kv.Key + "=" + kv.Value).ToArray()); }     // choose / ready: what the window was built for (more arriving: built again)
 
     void BuildJoiner()
     {
@@ -131,7 +133,7 @@ public sealed partial class Coop
     void BuildJoinLobby()
     {
         bool choosing = builtFor == "choose";
-        builtPlaces = choices.Count; builtSettings = lobbySettings.Count;
+        builtPlaces = choices.Count; builtSettingsSign = SettingsSign();
         bool picking = choosing && lobbyKindSeen == "saved";     // a save: pick which of its characters is yours; a new game: your place is given
         string who = hostName == null || hostName == "the host" ? "the host" : hostName;
         var v = new LobbyView
@@ -153,7 +155,7 @@ public sealed partial class Coop
     void RefreshJoinLobby(List<string> items, List<Color> colours)
     {
         // More places or settings than the window was built for (the list arrived after it opened): built again.
-        if (choices.Count != builtPlaces || lobbySettings.Count != builtSettings) { var w = window; builtFor = null; window = null; if (w != null) w.Close(); Build(); return; }
+        if (choices.Count != builtPlaces || SettingsSign() != builtSettingsSign) { var w = window; builtFor = null; window = null; if (w != null) w.Close(); Build(); return; }
         string who = hostName == null || hostName == "the host" ? "the host" : hostName;
         int taken = choices.Count(c => c.Value), open = choices.Count - taken;
         if (playersHeading != null) Ui.SetText(playersHeading, "Players  (" + (taken + 1) + " of " + (choices.Count + 1) + ")");

@@ -46,25 +46,17 @@ public sealed partial class Coop
         expansionTicks.Clear(); expansionLabels.Clear();
         if (editable)
         {
-            // Expansions: a tick each, one under the other, in one panel.
-            int rh = 0;
-            var rows = new List<KeyValuePair<UiTickBox, UiElement>>();
+            // Expansions: a tick each, one under the other.
+            var ticks = new List<KeyValuePair<UiElement, UiElement>>();
             foreach (var id in Expansions.Known)
             {
                 var tick = Ui.TickBox(Unavailable(id) == null && !unticked.Contains(id));
                 var label = Ui.Label(Expansions.Name(id), valueW - tick.Width - Ui.S(6));
                 Ui.Tooltip(tick, Expansions.Name(id) + ": everyone needs it to play this game");
                 expansionTicks[id] = tick; expansionLabels[id] = label;
-                rows.Add(new KeyValuePair<UiTickBox, UiElement>(tick, label));
-                rh = Math.Max(rh, Math.Max(tick.Height, line));
+                ticks.Add(new KeyValuePair<UiElement, UiElement>(tick, label));
             }
-            var panel = Ui.Panel(valueW, Math.Max(line, rows.Count * (rh + Ui.S(2))));
-            for (int i = 0; i < rows.Count; i++)
-            {
-                Ui.Add(panel, rows[i].Key, 0, i * (rh + Ui.S(2)));
-                Ui.Add(panel, rows[i].Value, rows[i].Key.Width + Ui.S(6), i * (rh + Ui.S(2)) + Math.Max(0, (rows[i].Key.Height - line) / 2));
-            }
-            v.Settings.Add(Pair("Expansions", panel));
+            v.Settings.Add(new LobbySetting { Label = "Expansions", Ticks = ticks });
         }
         else
         {
@@ -121,7 +113,6 @@ public sealed partial class Coop
         BuildLobbyWindow(v);
     }
 
-    static KeyValuePair<string, UiElement> Pair(string label, UiElement control) { return new KeyValuePair<string, UiElement>(label, control); }
 
     UiElement hostCreateButton, startButton;
     string hostCharacter, hostSheet;     // a new game's lobby: the host's character, made here (its .char)

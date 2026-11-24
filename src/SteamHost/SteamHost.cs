@@ -34,7 +34,7 @@ static class SteamHost
                     case "GalaxyClearAchievement": case "GalaxyIncrementStat":
                         reply = GalaxyRunner.Run(p[0], arg); break;
                     case "NetInfo": case "NetHost": case "NetJoin": case "NetLeave": case "NetSend": case "NetPoll":
-                    case "NetMembers": case "NetFriends": case "NetInvite":
+                    case "NetMembers": case "NetFriends": case "NetInvite": case "NetOverlay":
                         reply = OnlineHost.Do(p[0], arg); break;
                     case "ShowKeyboard":
                         string[] n = arg.Split(' ');

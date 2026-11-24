@@ -14,6 +14,11 @@ using UnderRailWorks;
 
 public sealed partial class Coop
 {
+    // A settings row: a label and its value (text, or a control), or a label and tick rows under each other (each a
+    // tick box and its label), laid straight into the window as the lobby always had them.
+    internal sealed class LobbySetting { public string Label; public UiElement Control; public List<KeyValuePair<UiElement, UiElement>> Ticks; }
+    static LobbySetting Pair(string label, UiElement control) { return new LobbySetting { Label = label, Control = control }; }
+
     internal sealed class LobbyView
     {
         public string Title;
@@ -23,7 +28,7 @@ public sealed partial class Coop
         public UiElement PlayerAction;         // under the players table
         public string SettingsHeading = "Game settings";
         public UiElement SettingsAction;       // beside the settings heading
-        public readonly List<KeyValuePair<string, UiElement>> Settings = new List<KeyValuePair<string, UiElement>>();
+        public readonly List<LobbySetting> Settings = new List<LobbySetting>();
         public string Note, NoteTip;
         public readonly List<UiElement> Left = new List<UiElement>();
         public UiElement Right;
@@ -66,9 +71,21 @@ public sealed partial class Coop
         y += headH + gap;
         foreach (var s in v.Settings)
         {
-            int h = s.Value == null ? line : Math.Max(line, s.Value.Height);
-            at(Ui.Label(s.Key, labelW), pad + Ui.S(10), y + (Math.Min(h, line + Ui.S(8)) - line) / 2);
-            if (s.Value != null) at(s.Value, pad + Ui.S(10) + labelW, y + (s.Value.Height < line ? (line - s.Value.Height) / 2 : 0));
+            int x = pad + Ui.S(10) + labelW;
+            if (s.Ticks != null)
+            {
+                at(Ui.Label(s.Label, labelW), pad + Ui.S(10), y);
+                foreach (var t in s.Ticks)
+                {
+                    at(t.Key, x, y); at(t.Value, x + t.Key.Width + Ui.S(6), y + Math.Max(0, (t.Key.Height - line) / 2));
+                    y += Math.Max(t.Key.Height, line) + Ui.S(2);
+                }
+                y += gap;
+                continue;
+            }
+            int h = s.Control == null ? line : Math.Max(line, s.Control.Height);
+            at(Ui.Label(s.Label, labelW), pad + Ui.S(10), y + (Math.Min(h, line + Ui.S(8)) - line) / 2);
+            if (s.Control != null) at(s.Control, x, y + (s.Control.Height < line ? (line - s.Control.Height) / 2 : 0));
             y += h + gap;
         }
         if (v.Settings.Count == 0) { var e = Ui.Label("(not sent by the host)", inner); Ui.SetColor(e, Grey); at(e, pad + Ui.S(10), y); y += line + gap; }

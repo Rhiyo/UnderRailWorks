@@ -17,6 +17,7 @@
 //   NetMembers              -> "<id>,<name b64> ..." (the lobby's members)
 //   NetFriends              -> "<id>,<name b64>,<lobby> ..." (friends in a lobby of this game)
 //   NetInvite               -> "1"/"0": the store's overlay invite dialog for the lobby
+//   NetOverlay <page>       -> "1"/"0": the store's overlay at that page ("Friends": join a friend's game from there)
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,6 +89,7 @@ static class SteamNet
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate ulong CallIntInt(IntPtr self, int a, int b);
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate ulong CallId(IntPtr self, ulong id);
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate void VoidId(IntPtr self, ulong id);
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate void VoidText(IntPtr self, [MarshalAs(UnmanagedType.LPStr)] string text);
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate int IntId(IntPtr self, ulong id);
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate IntPtr IdOut(IntPtr self, out ulong ret);
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate IntPtr IdOutIdInt(IntPtr self, out ulong ret, ulong id, int i);
@@ -120,7 +122,7 @@ static class SteamNet
     const int MmCreateLobby = 13, MmJoinLobby = 14, MmLeaveLobby = 15, MmNumMembers = 17, MmMemberByIndex = 18,
         MmSetLobbyData = 20, MmSetJoinable = 34, MmLobbyOwner = 35;
     const int NetSendP2P = 0, NetAvailable = 1, NetRead = 2, NetAccept = 3, NetClose = 4, NetAllowRelay = 7;
-    const int FrPersonaName = 0, FrFriendCount = 3, FrFriendByIndex = 4, FrFriendName = 7, FrGamePlayed = 8, FrInviteDialog = 27;
+    const int FrPersonaName = 0, FrFriendCount = 3, FrFriendByIndex = 4, FrFriendName = 7, FrGamePlayed = 8, FrOverlay = 22, FrInviteDialog = 27;
     const int UsSteamId = 2;
     const int UtAppId = 9, UtCallDone = 11, UtCallResult = 13;
 
@@ -232,6 +234,9 @@ static class SteamNet
                 case "NetInvite":
                     if (lobby == 0) return "0";
                     F<VoidId>(friends, FrInviteDialog)(friends, lobby);
+                    return "1";
+                case "NetOverlay":     // arg: the overlay's page ("Friends", ...): ISteamFriends::ActivateGameOverlay
+                    F<VoidText>(friends, FrOverlay)(friends, string.IsNullOrEmpty(arg) ? "Friends" : arg);
                     return "1";
             }
             return "?";
