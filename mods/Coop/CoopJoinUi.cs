@@ -147,11 +147,11 @@ public sealed partial class Coop
 
         playersHeading = heading("Players");
         at(playersHeading, pad, y); y += line + gap;
-        int rowH = line + Ui.S(6), rows = choices.Count + 1;
-        list = Ui.List(inner, rows * rowH + Ui.S(6), rowH);
+        int rows = choices.Count + 1;
         bool picking = choosing && lobbyKindSeen == "saved";     // a save: pick which of its characters is yours; a new game: your place is given
-        list.Selected += i => { if (picking) { selected = i; Refresh(); } else list.Selection = -1; };
-        at(list.View, pad, y); y += rows * rowH + Ui.S(6) + section;
+        list = null; playerRows = new List<PlayerRow>();
+        playersTable = PlayersTable(inner, rows, picking ? (Action<int>)(i => { selected = i; Refresh(); }) : null);
+        at(playersTable, pad, y); y += TableHeight(rows) + section;
 
         at(heading(lobbyKindSeen == "saved" ? "Game settings (kept from the save)" : "Game settings (the host's)"), pad, y); y += line + gap;
         foreach (var kv in lobbySettings)
@@ -185,18 +185,16 @@ public sealed partial class Coop
         string who = hostName == null || hostName == "the host" ? "the host" : hostName;
         int taken = choices.Count(c => c.Value), open = choices.Count - taken;
         if (playersHeading != null) Ui.SetText(playersHeading, "Players  (" + (taken + 1) + " of " + (choices.Count + 1) + ")");
-        items.Add(who == "the host" ? "Host" : who + "  -  host"); colours.Add(Grey);
+        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = who == "the host" ? "Host" : who, Tag = "Host", Host = true } };
         for (int i = 0; i < choices.Count; i++)
         {
             bool isNew = choices[i].Key == "(new character)";
             var taker = i < choiceTakers.Count ? choiceTakers[i] : new KeyValuePair<string, string>("", "");
             bool mine = (myLobbyName != null && taker.Key == myLobbyName) || (readyAs != null && (taker.Value == readyAs || (!isNew && choices[i].Key == readyAs)));
-            string text;
-            if (!choices[i].Value) text = isNew ? "Open  -  a new character" : choices[i].Key + "  -  saved character, free";
-            else if (isNew) text = (taker.Key == "" ? "Taken" : taker.Key) + (taker.Value == "" ? "  -  making a character..." : "  -  " + taker.Value + " (new character)");
-            else text = choices[i].Key + (taker.Key == "" ? "  -  taken" : "  -  " + taker.Key);
-            items.Add(text + (mine ? "   (you)" : "")); colours.Add(mine ? Mine_ : choices[i].Value ? Normal : Grey);
+            if (!choices[i].Value) rowsNow.Add(isNew ? new PlayerRow { Open = true } : new PlayerRow { Open = true, Character = choices[i].Key, Tag = "saved character" });
+            else rowsNow.Add(new PlayerRow { Player = taker.Key == "" ? "?" : taker.Key, Character = isNew ? (taker.Value == "" ? null : taker.Value) : choices[i].Key, Tag = mine ? "You" : null, Me = mine });
         }
+        playerRows = rowsNow;
         if (builtFor == "ready")
         {
             Ui.SetText(statusLabel, "You'll play " + readyAs + ".");

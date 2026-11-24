@@ -44,9 +44,10 @@ public sealed partial class Coop
         // Players
         playersHeading = heading("Players");
         at(playersHeading, pad, y); y += line + gap;
-        int rowH = line + Ui.S(6), rows = slots.Count + 1;
-        list = Ui.List(inner, rows * rowH + Ui.S(6), rowH);
-        at(list.View, pad, y); y += rows * rowH + Ui.S(6) + section;
+        int rows = slots.Count + 1;
+        list = null; playerRows = new List<PlayerRow>();
+        playersTable = PlayersTable(inner, rows, null);
+        at(playersTable, pad, y); y += TableHeight(rows) + section;
 
         // Game settings
         at(heading(saved ? "Game settings (kept from the save)" : "Game settings"), pad, y); y += line + gap;
@@ -156,19 +157,15 @@ public sealed partial class Coop
         else status = "Waiting for " + free + " more player" + (free == 1 ? "" : "s") + ": every saved character needs its player.";
         Ui.SetText(statusLabel, status); Ui.SetColor(statusLabel, colour);
         if (playersHeading != null) Ui.SetText(playersHeading, "Players  (" + (taken + 1) + " of " + (slots.Count + 1) + ")");
-        items.Add((World.Player != null ? World.Player.Name : "You") + "  -  host"); colours.Add(Mine_);
+        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "You", Character = World.Player != null ? World.Player.Name : null, Tag = "Host (you)", Me = true, Host = true } };
         foreach (var sl in slots)
         {
-            if (sl.Seat != null)
-            {
-                var who = sl.Seat.Peer.Name;
-                if (sl.Seat.Record == null) { items.Add(who + "  -  making a character..."); colours.Add(Grey); continue; }
-                items.Add(sl.New ? who + "  -  " + sl.Seat.Record.Name + " (new character)" : sl.Saved.Name + "  -  " + who);
-                colours.Add(Normal);
-            }
-            else { items.Add(sl.New ? "Open" : sl.Saved.Name + "  -  waiting for its player"); colours.Add(Grey); }
+            if (sl.Seat != null) rowsNow.Add(new PlayerRow { Player = sl.Seat.Peer.Name, Character = sl.New ? (sl.Seat.Record == null ? null : sl.Seat.Record.Name) : sl.Saved.Name });
+            else if (sl.New) rowsNow.Add(new PlayerRow { Open = true });
+            else rowsNow.Add(new PlayerRow { Open = true, Character = sl.Saved.Name, Tag = "saved character" });
         }
-        foreach (var s in seats.Values.Where(x => !slots.Any(sl => sl.Seat == x))) { items.Add(s.Peer.Name + "  -  choosing a character..."); colours.Add(Grey); }
+        foreach (var s in seats.Values.Where(x => !slots.Any(sl => sl.Seat == x))) rowsNow.Add(new PlayerRow { Player = s.Peer.Name, Tag = "choosing" });
+        playerRows = rowsNow;
     }
 
     // Hosting, in game: who plays what (health), who left; Give... / Stop hosting. Nobody new joins a game under way;
@@ -183,9 +180,10 @@ public sealed partial class Coop
         at(statusLabel, y); y += line + section;
         playersHeading = Ui.Label("Players", inner); Ui.SetColor(playersHeading, Mine_);
         at(playersHeading, y); y += line + gap;
-        int rowH = line + Ui.S(6), rows = Math.Max(2, Math.Min(6, seats.Count + orphans.Count + 1));
-        list = Ui.List(inner, rows * rowH + Ui.S(6), rowH);
-        at(list.View, y); y += rows * rowH + Ui.S(6) + gap;
+        int rows = Math.Max(2, Math.Min(6, seats.Count + orphans.Count + 1));
+        list = null; playerRows = new List<PlayerRow>();
+        playersTable = PlayersTable(inner, rows, null);
+        at(playersTable, y); y += TableHeight(rows) + gap;
         foreach (var l in Ui.Wrap("A player who leaves can come back to their character: Co-op, Join a Game, with the same name.", inner))
         { var e = Ui.Label(l, inner); Ui.SetColor(e, Grey); at(e, y); y += line + Ui.S(2); }
         y += section;
@@ -206,13 +204,11 @@ public sealed partial class Coop
         int n = seats.Values.Count(s => s.Character != null);
         Ui.SetText(statusLabel, "Hosting a co-op game: " + (n == 0 ? "nobody else is playing right now." : n + (n == 1 ? " other player." : " other players.")));
         if (playersHeading != null) Ui.SetText(playersHeading, "Players  (" + (n + 1) + ")");
+        Func<Character, string> hp = c => c == null ? null : c.IsDead ? "dead" : (int)c.Health + "/" + (int)c.MaxHealth + " HP";
         var me = World.Player;
-        if (me != null) { items.Add(me.Name + "  -  you (host)" + (me.IsDead ? ", dead" : ",  " + (int)me.Health + "/" + (int)me.MaxHealth + " HP")); colours.Add(Mine_); }
-        foreach (var s in seats.Values)
-        {
-            items.Add(s.Character == null ? s.Peer.Name + "  -  joining..." : s.Character.Name + "  -  " + s.Peer.Name + (s.Character.IsDead ? ", dead" : ",  " + (int)s.Character.Health + "/" + (int)s.Character.MaxHealth + " HP"));
-            colours.Add(s.Character == null ? Grey : Normal);
-        }
-        foreach (var o in orphans) { items.Add(o.Record.Name + "  -  player left (passes its turns)"); colours.Add(Grey); }
+        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "You", Character = me == null ? null : me.Name, Tag = (hp(me) ?? "") + "  Host", Me = true, Host = true } };
+        foreach (var s in seats.Values) rowsNow.Add(new PlayerRow { Player = s.Peer.Name, Character = s.Character == null ? null : s.Character.Name, Tag = s.Character == null ? "joining" : hp(s.Character) });
+        foreach (var o in orphans) rowsNow.Add(new PlayerRow { Player = (o.PlayerName ?? "?") + " (left)", Character = o.Record.Name, Tag = "passes its turns" });
+        playerRows = rowsNow;
     }
 }
