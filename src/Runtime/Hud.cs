@@ -100,6 +100,71 @@ public static class Hud
     // After the game showed or hid the HUD (its toggle sets every part's visibility): re-hide parts a mod hides.
     public static readonly Hook<Action<bool>> VisibilityChanged = new Hook<Action<bool>>("HudVisibilityChanged");
 
+    // --- Mod buttons: one strip on the HUD for every mod's own button --------------------------------------------
+    // A mod's way in from the HUD (its window, its mode): Hud.AddButton at Load, once. Works lays every mod's buttons
+    // out together in one HUD part ("Mod buttons", top right under the game's icons): the same size and style, in the
+    // mods' load order, none on top of another, and moved as one by layout tools. More than fit (MaxButtons): the rest
+    // behind "More...". Mods know nothing of each other's buttons. A mod's settings stay in Options -> Works.
+    //   var b = Hud.AddButton(this, "Co-op", OpenWindow, "Players, Give, Leave");   b.Visible = false;   b.Text = "...";
+    public sealed class HudButton
+    {
+        internal string Mod; internal Action Click; internal int Order;
+        string text, tooltip; bool visible = true;
+        public string Text { get { return text; } set { if (text != value) { text = value; Hud.ButtonsChanged(); } } }
+        public string Tooltip { get { return tooltip; } set { if (tooltip != value) { tooltip = value; Hud.ButtonsChanged(); } } }
+        public bool Visible { get { return visible; } set { if (visible != value) { visible = value; Hud.ButtonsChanged(); } } }
+        internal HudButton(string mod, string t, Action click, string tip) { Mod = mod; text = t; Click = click; tooltip = tip; }
+    }
+    static readonly List<HudButton> buttons = new List<HudButton>();
+    const int MaxButtons = 4;
+    static UiElement strip;
+    static bool buttonsDirty;
+    public static HudButton AddButton(WorksMod mod, string text, Action onClick, string tooltip = null)
+    {
+        if (mod == null) throw new ArgumentNullException("mod");
+        var b = new HudButton(mod.Id, text, onClick, tooltip) { Order = buttons.Count };
+        lock (buttons) { buttons.RemoveAll(x => x.Mod == mod.Id && x.Text == text); buttons.Add(b); }
+        ButtonsChanged();
+        return b;
+    }
+    internal static void ForgetButtons(string mod) { lock (buttons) buttons.RemoveAll(x => x.Mod == mod); ButtonsChanged(); }
+    internal static void ButtonsChanged() { buttonsDirty = true; }
+
+    // The strip built again (a new HUD, or the buttons changed): the next frame.
+    internal static void ButtonsTick()
+    {
+        if (!buttonsDirty || Current == null) return;
+        buttonsDirty = false;
+        if (strip != null) { Ui.Remove(strip); strip = null; }
+        List<HudButton> shown;
+        lock (buttons) shown = buttons.Where(b => b.Visible).OrderBy(b => ModLoader.Find(b.Mod) == null ? 0 : ModLoader.Find(b.Mod).LoadIndex).ThenBy(b => b.Order).ToList();
+        if (shown.Count == 0) return;
+        var direct = shown.Count <= MaxButtons ? shown : shown.Take(MaxButtons - 1).ToList();
+        var rest = shown.Skip(direct.Count).ToList();
+        var made = new List<UiElement>();
+        foreach (var b in direct)
+        {
+            var hb = b;
+            var e = Ui.Button(b.Text, () => { try { ModScope.As(hb.Mod, hb.Click, hb.Click); } catch (Exception ex) { ModErrors.Report(hb.Mod, "its HUD button", ex); } });
+            if (!string.IsNullOrEmpty(b.Tooltip)) Ui.Tooltip(e, b.Tooltip);
+            made.Add(e);
+        }
+        if (rest.Count > 0)
+        {
+            var more = Ui.Button("More...", () =>
+                Ui.Choose(null, "Mods", "", i => { if (i >= 0 && i < rest.Count) { var hb = rest[i]; try { ModScope.As(hb.Mod, hb.Click, hb.Click); } catch (Exception ex) { ModErrors.Report(hb.Mod, "its HUD button", ex); } } }, rest.Select(x => x.Text).Concat(new[] { "Close" }).ToArray()));
+            made.Add(more);
+        }
+        int w = made.Max(e => e.Width), gap = Ui.S(4), h = made.Sum(e => e.Height) + gap * (made.Count - 1);
+        var panel = Ui.Panel(w, h);
+        var look = panel.Control as UiPanelControl;
+        if (look != null) { look.Background = Color.Transparent; look.Border = Color.Transparent; }     // only the buttons show
+        int y = 0;
+        foreach (var e in made) { Ui.Resize(e, w, e.Height); Ui.Add(panel, e, 0, y); y += e.Height + gap; }
+        strip = panel;
+        AddPart(null, "Mod buttons", panel, (HudAnchor?)HudAnchor.TopRight, At(HudAnchor.TopRight, panel, 70, 62).X, At(HudAnchor.TopRight, panel, 70, 62).Y);
+    }
+
     // --- Parts mods add: listed with the game's, so layout tools can move them too ---------------------------------
     static readonly List<HudModPart> modParts = new List<HudModPart>();
     // Reloading a mod: its parts come off the HUD (the new code adds them again).
@@ -260,7 +325,7 @@ public static class Hud
 
     public static readonly Hook<Action<HudModPart>> PartAdded = new Hook<Action<HudModPart>>("HudPartAdded");
 
-    internal static void Created(ci3 screen) { UiWindows.HudGone(); Current = screen; modParts.Clear(); tracked.Clear(); }
+    internal static void Created(ci3 screen) { UiWindows.HudGone(); Current = screen; modParts.Clear(); tracked.Clear(); strip = null; buttonsDirty = true; }
     internal static void Gone() { UiWindows.HudGone(); Current = null; modParts.Clear(); tracked.Clear(); }
 
     // --- Mod elements on the HUD hide with the game's HUD --------------------------------------------------------

@@ -38,7 +38,7 @@ public sealed class HudLayout : WorksMod
 
     internal static bool Changed;
     HudLayoutConfig config;
-    UiElement layoutButton;
+    Hud.HudButton layoutButton;
     Keybind arrangeKey;
     UiElement hud, overlay;
     UiPanel help;
@@ -52,11 +52,11 @@ public sealed class HudLayout : WorksMod
         arrangeKey = Keybinds.Add(this, "arrange", "Arrange");     // unbound by default (Options -> Controls)
         UiEvents.HudCreated.Add(this, root =>
         {
-            hud = root; overlay = null; help = null; dragging = null; partDrag = null; barDrag = null; layoutButton = null; originals.Clear();
+            hud = root; overlay = null; help = null; dragging = null; partDrag = null; barDrag = null; originals.Clear();
             foreach (var p in Parts()) { originals[p.Name] = Default(p); Apply(p); }
             ShowButton();
         });
-        UiEvents.HudDestroyed.Add(this, () => { hud = null; overlay = null; help = null; dragging = null; layoutButton = null; });     // back to the main menu
+        UiEvents.HudDestroyed.Add(this, () => { hud = null; overlay = null; help = null; dragging = null; });     // back to the main menu
         // A mod's part was added (or rebuilt): where the player put it.
         Hud.PartAdded.Add(this, part =>
         {
@@ -213,14 +213,11 @@ public sealed class HudLayout : WorksMod
         return parts.Length == 2 && int.TryParse(parts[0], out w) && int.TryParse(parts[1], out h);
     }
 
-    // The Layout button on the HUD (a part of its own, so it can be moved too), while the setting is on.
+    // The Layout button in Works' strip of mod buttons, while the setting is on.
     void ShowButton()
     {
-        if (hud == null) return;
-        if (!config.HudButton) { if (layoutButton != null) Ui.Remove(layoutButton); layoutButton = null; return; }
-        if (layoutButton != null) return;
-        layoutButton = Ui.Button("Layout", () => { if (overlay == null) Begin(); });
-        Hud.AddPart(this, "Layout button", layoutButton, HudAnchor.TopRight, 70, 62);
+        if (layoutButton == null) layoutButton = Hud.AddButton(this, "Layout", () => { if (overlay == null) Begin(); }, "Arrange the HUD");
+        layoutButton.Visible = config.HudButton;
     }
 
     // Every part back where it was, and every saved place cleared (all HUD sizes).

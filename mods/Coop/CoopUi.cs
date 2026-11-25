@@ -29,12 +29,7 @@ public sealed partial class Coop
     void LoadUi()
     {
         windowKey = Keybinds.Add(this, "window", "Co-op window");
-        Hud.WhenReady(this, root =>
-        {
-            var button = Ui.Button("Co-op", Toggle);
-            Hud.AddPart(this, "Co-op button", button, HudAnchor.TopRight, 70, 62);
-
-        });
+        Hud.AddButton(this, "Co-op", Toggle, "Players, Give, Leave");     // in Works' strip of mod buttons
         GameEvents.Update.Add(this, dt => { if (windowKey.Pressed) Toggle(); });
     }
 
