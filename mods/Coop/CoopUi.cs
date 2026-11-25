@@ -29,14 +29,12 @@ public sealed partial class Coop
     void LoadUi()
     {
         windowKey = Keybinds.Add(this, "window", "Co-op window");
-        // The HUD button only in a co-op game (hosting or joined), not in single player.
-        var button = Hud.AddModButton(this, "Co-op", Toggle, "Players, Give, Leave");
-        button.Visible = false;
+        // Escape menu -> Mods -> Co-op, while hosting or joined (not in single player).
+        EscapeMenu.AddModAction(this, "Co-op", Toggle, "Players, Give, Leave", () => { var m = Mode(); return m == "host" || m == "play"; });
         GameEvents.Update.Add(this, dt =>
         {
             var m = Mode();
-            button.Visible = m == "host" || m == "play";
-            if (windowKey.Pressed && (button.Visible || window != null && window.IsOpen)) Toggle();
+            if (windowKey.Pressed && (m == "host" || m == "play" || window != null && window.IsOpen)) Toggle();
         });
     }
 

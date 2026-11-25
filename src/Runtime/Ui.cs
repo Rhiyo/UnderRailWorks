@@ -162,7 +162,7 @@ public static partial class Ui
         UnderrailDropdownScroll.Add(parent.Control, element.Control);
         RelayoutWorldViews(element.Control);     // now that it's on screen: a world view's position depends on its parents
         ModScope.Own(element);     // the running mod's: removed if its code is reloaded
-        if (parent.Control is ci3) Hud.Track(element);     // on the HUD: hidden with the game's HUD
+        if (parent.Control is ci3 && !(element is UiWindow && ((UiWindow)element).OverScreen)) Hud.Track(element);     // on the HUD: hidden with the game's HUD
     }
     public static void Remove(UiElement element) { if (element != null && element.Control.Parent != null) UnderrailDropdownScroll.Remove(element.Control.Parent, element.Control); }
     public static void Move(UiElement element, int x, int y) { UnderrailDropdownScroll.Move(element.Control, x, y); RelayoutWorldViews(element.Control); }
@@ -644,6 +644,7 @@ static class UiHooks
         Group("deaths and game over", () => DeathHooks.Install(harmony));
         Group("text feeds", () => FeedHooks.Install(harmony));
         Group("combat view", () => CombatViewHooks.Install(harmony));
+        Group("Escape menu", () => EscapeMenuHooks.Install(harmony));
         Group("assets", () => AssetStore.Install(harmony));
         Group("clock, items, crafting, stealing", () => ActivityHooks.Install(harmony));
         Group("item definitions and tooltips", () => ItemHooks.Install(harmony));

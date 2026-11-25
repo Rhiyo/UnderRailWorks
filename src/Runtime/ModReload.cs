@@ -349,7 +349,7 @@ namespace UnderRailWorks.Internal
             int ui = 0;
             step("windows", () => { foreach (var w in UiWindows.Open.Where(w => w.Mod != null && w.Mod.Id == id).ToList()) w.Close(); });
             step("HUD parts", () => UnderRailWorks.Hud.Forget(id));
-            step("HUD buttons", () => UnderRailWorks.Hud.ForgetButtons(id));
+            step("Escape menu actions", () => UnderRailWorks.EscapeMenu.Forget(id));
             step("interface", () => ui = ModScope.RemoveUi(id));
             step("commands", () => Commands.Forget(id));
             step("triggers", () => { lock (Triggers.All) Triggers.All.RemoveAll(t => t.Mod == id); });

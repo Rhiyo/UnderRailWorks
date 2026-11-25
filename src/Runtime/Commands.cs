@@ -130,6 +130,25 @@ namespace UnderRailWorks
                 foreach (var e in list) { var fa = Combat.Fighter(e); var c = fa == null ? null : Character.Of(fa.a8()); sb.Append("| ").Append(c == null ? "?" : c.Name).Append(" ap ").Append(Combat.Ap(e)).Append(" mp ").Append(Combat.Mp(e)); }
                 return sb.ToString();
             });
+            // Tests: the controls on screen whose text contains this (their type chain from the screen).
+            Add("UnderRailWorks", "works.findtext", "works.findtext <text>: (tests) controls showing that text, with their parents' types", a =>
+            {
+                var want = string.Join(" ", a);
+                var root = UiPopups.Screen();
+                if (root == null) return "no screen";
+                var found = new System.Collections.Generic.List<string>();
+                System.Action<euz, string> walk = null;
+                walk = (c, path) =>
+                {
+                    var here = path + "/" + c.GetType().Name;
+                    var p = c.GetType().GetProperty("Text", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public);
+                    var t = p == null || p.PropertyType != typeof(string) ? null : p.GetValue(c, null) as string;
+                    if (t != null && t.IndexOf(want, StringComparison.OrdinalIgnoreCase) >= 0) found.Add(here + " \"" + t + "\"");
+                    foreach (var ch in c.Controls.Cast<euz>().ToList()) walk(ch, here);
+                };
+                walk(root, "");
+                return found.Count + ": " + string.Join(" | ", found.ToArray());
+            });
             // Tests: where a character is on screen (pixels), to click it like a player.
             Add("UnderRailWorks", "works.screenof", "works.screenof <name>: (tests) the character's place on screen in pixels (its middle)", a =>
             {

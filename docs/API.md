@@ -521,6 +521,10 @@ The player putting an item into a gear or quick slot (Cancel: it stays where it 
 
 Values: `Helmet, Armor, Belt, Boots, Shield, PrimaryWeapon, SecondaryWeapon`
 
+## EscapeMenu  _(class, EscapeMenu.cs)_
+
+- `static ModAction AddModAction(WorksMod mod, string text, Action onClick, string tooltip = null, Func<bool> availableWhen = null)`
+
 ## Exit  _(struct, World.cs)_
 
 - `Rectangle Tiles`
@@ -702,10 +706,10 @@ Values: `EntranceHall, LivingRoom, Kitchen`
 - `static UiElement Get(HudPart part)` — A part of the game's HUD (null when the game didn't make it: zoom buttons are optional). Move it or hide it with Ui.Move / Ui.Show, from UiEvents.HudCreated (the game builds the HUD anew on loads and resolution changes). Resizing isn't supported: the parts are drawn at fixed sizes.
 - `static bool Visible` — The whole HUD shown (the game's HUD toggle).
 - `static readonly Hook<Action<bool>> VisibilityChanged = new Hook<Action<bool>>("HudVisibilityChanged")` — After the game showed or hid the HUD (its toggle sets every part's visibility): re-hide parts a mod hides.
-- `static void AddPart(WorksMod, string, UiElement, int, int)`
-- `static Hud.ModButton AddModButton(WorksMod, string, Action, string = null)`
-- `static IList<HudModPart> ModParts { get; }`
-- `static Hook<Action<HudModPart>> PartAdded`
+- `static void AddPart(WorksMod mod, string name, UiElement element, int x, int y)` — Adds a mod's element to the HUD as a named part (e.g. "Minimap") at its default place, and announces it (PartAdded), so a layout mod can move it where the player put it. Call it again when the element is rebuilt.
+- `static void AddPart(WorksMod mod, string name, UiElement element, HudAnchor anchor, int dx, int dy)` — Anchored: (dx, dy) from anchor (see At), so it sits right on any HUD size and layout mods know its anchor.
+- `static IList<HudModPart> ModParts` — The mod parts on the HUD now.
+- `static readonly Hook<Action<HudModPart>> PartAdded = new Hook<Action<HudModPart>>("HudPartAdded")`
 
 ## HudAnchor  _(enum, Hud.cs)_
 
@@ -1149,14 +1153,6 @@ A map tile (ak1), as the world pass hands it to the tile-extras step.
 ## ModBaseAbility  _(class, CustomStats.cs)_
 
 - `override int Value`
-
-## ModButton  _(class, Hud.cs)_
-
---- Mod buttons: the HUD's column of buttons that open mods' windows --------------------------------------- Hud.AddModButton puts a button for your mod on the in-game HUD: in a column under the game's icons at the top right (Inventory, Character, ...), with every other mod's buttons. It's the player's way into your mod from the game (your window, your mode), like the game's own icons. Call it once, in Load; it stays across loads and HUD rebuilds. Works lays the column out: the game's button style, all the same width, in the mods' load order, never on top of each other; past four, the rest behind a "More..." button. HUD Layout moves the column as one part ("Mod buttons"). Your mod's settings belong in Options -> Works, not here. var button = Hud.AddModButton(this, "Co-op", OpenWindow, "Players, Give, Leave"); button.Visible = false;      // hidden for now (e.g. a setting turned it off) button.Text = "Co-op (2)";   // relabelled
-
-- `string Text`
-- `string Tooltip`
-- `bool Visible`
 
 ## ModConfig  _(class, ModConfig.cs)_
 

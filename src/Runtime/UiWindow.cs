@@ -17,6 +17,7 @@ namespace UnderRailWorks
 
 public sealed class UiWindow : UiPanel
 {
+    internal bool OverScreen;     // over the game's screens (the Escape menu), not part of the HUD: not hidden with it
     internal WorksMod Mod;
     internal string Id;
     internal UiWindow(a9t window) : base(window) { }
@@ -100,17 +101,19 @@ public static partial class Ui
     }
 
     // mod null: Works' own window (the Mods screen): opened in the middle each time, its place not remembered.
-    internal static UiWindow OpenWindow(WorksMod mod, string id, string title, int width, int height)
+    // overScreen: on the game's top screen, over whatever it shows (the Escape menu hides the HUD), as the game opens
+    // its Options there.
+    internal static UiWindow OpenWindow(WorksMod mod, string id, string title, int width, int height, bool overScreen = false)
     {
         if (PlayerScreens.ActingIsRemote) { Log.Write("mods: " + (mod == null ? "UnderRailWorks" : mod.Id) + ": a window (" + title + ") for a player on another machine: not opened here"); return null; }
-        var hud = Hud.Root;
+        var hud = overScreen && UiPopups.Screen() != null ? UiElement.Of(UiPopups.Screen()) : Hud.Root;
         if (hud == null) { var screen = UiPopups.Screen(); if (screen is a8k) hud = UiElement.Of(screen); }     // on the main menu: over it (closed when a game starts)
         if (hud == null) return null;
         var open = UiWindows.Open.FirstOrDefault(o => o.Mod == mod && o.Id == id && o.IsOpen);
         if (open != null) return open;
         var game = new a9t();
         game.Text = title;
-        var w = new UiWindow(game) { Mod = mod, Id = id };
+        var w = new UiWindow(game) { Mod = mod, Id = id, OverScreen = overScreen };
         // height: as if the title bar were 22 high (the content keeps its room at every interface size)
         // at least as wide as its title in the title font (a9t's title label), plus the close button
         var titleLabel = game.Controls.Cast<euz>().OfType<avo>().FirstOrDefault();
@@ -122,7 +125,7 @@ public static partial class Ui
         int minHeight = frame is esj ? UnderrailDropdownScroll.H((esj)frame) + 4 : 100;
         game.Size = new esj(width, Math.Max(minHeight, height - 22 + w.TitleHeight));
         game.a((EventHandler<el5>)((sender, e) => w.Close()));     // its own close button
-        Add(hud, w, (hud.Width - UnderrailDropdownScroll.W(game.Size)) / 2, Math.Max(10, hud.Height / 6));
+        Add(hud, w, (hud.Width - UnderrailDropdownScroll.W(game.Size)) / 2, overScreen ? Math.Max(10, (hud.Height - UnderrailDropdownScroll.H(game.Size)) / 2) : Math.Max(10, hud.Height / 6));
         { var inside = Ui.KeepInside(w, w.X, w.Y); if (inside.X != w.X || inside.Y != w.Y) Ui.Move(w, inside.X, inside.Y); }     // a tall or wide window: on screen from the start
         var place = mod == null ? null : mod.Settings.Get("window." + id);
         if (!string.IsNullOrEmpty(place)) Restore(w, place);
@@ -216,7 +219,6 @@ static class UiWindows
         try { MenuButtons(); } catch (Exception ex) { Log.Write("windows: the main menu's buttons: " + ex.Message); }
         try { MainMenuPage.Tick(); } catch (Exception ex) { Log.Write("main menu: page: " + ex.Message); }
         try { Camera.Tick(); } catch (Exception ex) { Log.Write("camera: " + ex.Message); }
-        try { Hud.ButtonsTick(); } catch (Exception ex) { Log.Write("hud: mod buttons: " + ex.Message); }
         Saves.ProbeTick();
         if (Open.Count == 0)
         {

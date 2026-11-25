@@ -17,8 +17,6 @@ using UnderRailWorks;
 public sealed class HudLayoutConfig : ModConfig
 {
     [Header("HUD Layout")]
-    [Label("Show a Layout button on the HUD"), Tooltip("A small button that starts arranging; it can be moved like the rest.")]
-    public bool HudButton = false;
     [Label("Snap to a grid"), Tooltip("Positions snap to the grid, counted from the edge (or the centre) the part is anchored to. Hold Shift while dragging to place freely.")]
     public bool Snap = true;
     [Label("Grid size"), Range(2, 40), Increment(1), Tooltip("In interface units. The game keeps its own parts 10 from the screen edges.")]
@@ -38,7 +36,6 @@ public sealed class HudLayout : WorksMod
 
     internal static bool Changed;
     HudLayoutConfig config;
-    Hud.ModButton layoutButton;
     Keybind arrangeKey;
     UiElement hud, overlay;
     UiPanel help;
@@ -50,11 +47,11 @@ public sealed class HudLayout : WorksMod
     {
         config = GetConfig<HudLayoutConfig>();
         arrangeKey = Keybinds.Add(this, "arrange", "Arrange");     // unbound by default (Options -> Controls)
+        EscapeMenu.AddModAction(this, "Arrange the HUD", () => { if (hud != null && overlay == null) Begin(); }, "Move the HUD's parts where you want them");
         UiEvents.HudCreated.Add(this, root =>
         {
             hud = root; overlay = null; help = null; dragging = null; partDrag = null; barDrag = null; originals.Clear();
             foreach (var p in Parts()) { originals[p.Name] = Default(p); Apply(p); }
-            ShowButton();
         });
         UiEvents.HudDestroyed.Add(this, () => { hud = null; overlay = null; help = null; dragging = null; });     // back to the main menu
         // A mod's part was added (or rebuilt): where the player put it.
@@ -67,7 +64,6 @@ public sealed class HudLayout : WorksMod
         GameEvents.Update.Add(this, seconds =>
         {
             if (hud == null) return;
-            if (Changed) { Changed = false; ShowButton(); }
             if (arrangeKey.Pressed) { if (overlay == null) Begin(); else End(); }
             if (overlay == null) return;
             var m = Input.Mouse;
@@ -213,12 +209,6 @@ public sealed class HudLayout : WorksMod
         return parts.Length == 2 && int.TryParse(parts[0], out w) && int.TryParse(parts[1], out h);
     }
 
-    // The Layout button in Works' strip of mod buttons, while the setting is on.
-    void ShowButton()
-    {
-        if (layoutButton == null) layoutButton = Hud.AddModButton(this, "Layout", () => { if (overlay == null) Begin(); }, "Arrange the HUD");
-        layoutButton.Visible = config.HudButton;
-    }
 
     // Every part back where it was, and every saved place cleared (all HUD sizes).
     void ResetAll()
