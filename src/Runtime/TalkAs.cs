@@ -76,6 +76,11 @@ namespace UnderRailWorks
         public static void Close() { var a = TalkHooks.Active; if (a != null && a.Controller != null) a.Controller.ad(); }
         // Ends whatever conversation the game's window shows now (any: the player's own, a mod's). False: none open.
         public static bool CloseShown() { var c = TalkHooks.ShownController; if (c == null) return false; c.ad(); return true; }
+        // Text in a colour of its own inside the game's rich text (conversation lines and answers: TalkAs.AnswerText
+        // marks, a mod's dialog lines), e.g. a player's name in their colour. The game's own markup has none ("::"
+        // narration, "*" bold); Works splits the marked part into its own run (cm3.a).
+        public static string Colored(string text, Microsoft.Xna.Framework.Color colour) { return "\u0002" + colour.R.ToString("X2") + colour.G.ToString("X2") + colour.B.ToString("X2") + (text ?? "") + "\u0003"; }
+
         // A conversation is in the game's window now (any).
         public static bool IsShown { get { return TalkHooks.ShownController != null; } }
 
@@ -250,6 +255,49 @@ namespace UnderRailWorks.Internal
             }
         }
 
+        // cm3.a(size, text, ...): the game's rich text, a line per row, runs of (font, colour). A run with TalkAs.Colored
+        // marks (\u0002RRGGBB ... \u0003) is split, the marked part in its colour (the run's font).
+        static void RichText(ecs __result)
+        {
+            var rows = __result == null ? null : RichRows.GetValue(__result) as List<dl6>;
+            if (rows == null) return;
+            try
+            {
+                foreach (var row in rows)
+                {
+                    var parts = row == null ? null : RowRuns.GetValue(row) as List<bph>;
+                    if (parts == null || !parts.Any(r => r != null && r.b != null && r.b.IndexOf('\u0002') >= 0)) continue;
+                    var runs = new List<bph>();
+                    foreach (var r in parts)
+                    {
+                        if (r == null || r.b == null || r.b.IndexOf('\u0002') < 0) { runs.Add(r); continue; }
+                        var text = r.b; int i = 0;
+                        while (i < text.Length)
+                        {
+                            int start = text.IndexOf('\u0002', i);
+                            if (start < 0) { runs.Add(RichRun(r, text.Substring(i), null)); break; }
+                            if (start > i) runs.Add(RichRun(r, text.Substring(i, start - i), null));
+                            int end = text.IndexOf('\u0003', start);
+                            if (end < 0 || end - start < 7) { runs.Add(RichRun(r, text.Substring(start + 1), null)); break; }
+                            var hex = text.Substring(start + 1, 6);
+                            var colour = new Microsoft.Xna.Framework.Color(Convert.ToInt32(hex.Substring(0, 2), 16), Convert.ToInt32(hex.Substring(2, 2), 16), Convert.ToInt32(hex.Substring(4, 2), 16));
+                            runs.Add(RichRun(r, text.Substring(start + 7, end - start - 7), colour));
+                            i = end + 1;
+                        }
+                    }
+                    parts.Clear(); parts.AddRange(runs.Where(x => x != null));
+                }
+            }
+            catch (Exception ex) { Log.Write("talk: coloured text: " + ex.Message); }
+        }
+        static readonly FieldInfo RichRows = typeof(ecs).GetField("a", BindingFlags.Instance | BindingFlags.Public), StyleFont = typeof(d22).GetField("a", BindingFlags.Instance | BindingFlags.Public), RowRuns = typeof(dl6).GetField("a", BindingFlags.Instance | BindingFlags.Public);     // also method names
+        static bph RichRun(bph like, string text, Microsoft.Xna.Framework.Color? colour)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            var style = colour.HasValue ? new d22((string)StyleFont.GetValue(like.a), colour.Value) : like.a;
+            return new bph(style, text);
+        }
+
         internal static void Install(HarmonyLib.Harmony harmony)
         {
             Func<string, HarmonyLib.HarmonyMethod> m = n => new HarmonyLib.HarmonyMethod(typeof(TalkHooks).GetMethod(n, BindingFlags.Static | BindingFlags.NonPublic));
@@ -260,6 +308,8 @@ namespace UnderRailWorks.Internal
             harmony.Patch(typeof(zq).GetMethod("nz", Any, null, Type.EmptyTypes, null), postfix: m("Shown"));
             var row = typeof(ejl).GetConstructor(Any, null, new[] { typeof(int), typeof(string), typeof(int), typeof(bool), typeof(object) }, null);
             if (row != null) harmony.Patch(row, prefix: m("AnswerRow")); else Log.Write("talk: the answer row's constructor wasn't found: no answer marks");
+            var rich = typeof(cm3).GetMethods(BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic).FirstOrDefault(x => x.Name == "a" && x.ReturnType == typeof(ecs) && x.GetParameters().Length == 6 && x.GetParameters()[1].ParameterType == typeof(string));
+            if (rich != null) harmony.Patch(rich, postfix: m("RichText")); else Log.Write("talk: the rich text builder wasn't found: no coloured text");
             Log.Write("talk: hooks in place (answer " + (Answer != null) + ", model " + (Model != null) + ")");
         }
     }

@@ -66,7 +66,7 @@ public sealed partial class Character
     public Rectangle? ScreenBounds { get { return World.ScreenBoundsOf(Entity); } }
     public Attitude Attitude { get { return Entities.AttitudeOf(Entity); } }
     // The colour holding Tab outlines it in (gold for the player, sandy brown if passive, else by attitude).
-    public Color OutlineColor { get { return Entities.OutlineColor(Entity); } }
+    public Color OutlineColor { get { var p = Party.ColorOf(this); return p ?? Entities.OutlineColor(Entity); } }     // a player's colour first (Party.SetColor)
     // --- Character data (efk), as the game's own console commands read and change it ---------------------------
     internal efk GameData { get { return Data; } }
     efk Data { get { var c = Entities.Character(Entity); return c == null ? null : c.GetAspect<amc>().aa(); } }

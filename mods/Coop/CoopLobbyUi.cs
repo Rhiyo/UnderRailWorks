@@ -151,10 +151,10 @@ public sealed partial class Coop
         else status = "Waiting for " + free + " more player" + (free == 1 ? "" : "s") + ": every saved character needs its player.";
         Ui.SetText(statusLabel, status); Ui.SetColor(statusLabel, colour);
         if (playersHeading != null) Ui.SetText(playersHeading, "Players  (" + (taken + 1) + " of " + (slots.Count + 1) + ")");
-        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "You", Character = World.Player != null ? World.Player.Name : hostCharacter, Tag = "Host (you)", Me = true, Host = true } };
+        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "You", Character = World.Player != null ? World.Player.Name : hostCharacter, Tag = "Host (you)", Me = true, Host = true, Color = HostColor } };
         foreach (var sl in slots)
         {
-            if (sl.Seat != null) rowsNow.Add(new PlayerRow { Player = sl.Seat.Peer.Name, Character = sl.New ? (sl.Seat.Record == null ? null : sl.Seat.Record.Name) : sl.Saved.Name });
+            if (sl.Seat != null) { GiveColor(sl.Seat); rowsNow.Add(new PlayerRow { Player = sl.Seat.Peer.Name, Character = sl.New ? (sl.Seat.Record == null ? null : sl.Seat.Record.Name) : sl.Saved.Name, Color = ColorOf(sl.Seat) }); }
             else if (sl.New) rowsNow.Add(new PlayerRow { Open = true });
             else rowsNow.Add(new PlayerRow { Open = true, Character = sl.Saved.Name, Tag = "saved character" });
         }
@@ -168,31 +168,10 @@ public sealed partial class Coop
     // a player who left comes back to their own character with Co-op, Join a Game.
     void BuildHosting()
     {
-        int pad = Ui.S(12), w = Ui.S(600), line = Ui.LineHeight, gap = Ui.S(6), section = Ui.S(14), inner = w - 2 * pad;
-        var place = new List<KeyValuePair<UiElement, Point>>();
-        int y = 0;
-        Action<UiElement, int> at = (e, yy) => place.Add(new KeyValuePair<UiElement, Point>(e, new Point(pad, yy)));
-        statusLabel = Ui.Label("", inner);
-        at(statusLabel, y); y += line + section;
-        playersHeading = Ui.Label("Players", inner); Ui.SetColor(playersHeading, Mine_);
-        at(playersHeading, y); y += line + gap;
-        int rows = Math.Max(2, Math.Min(6, seats.Count + orphans.Count + 1));
-        list = null; playerRows = new List<PlayerRow>();
-        playersTable = PlayersTable(inner, rows, null);
-        at(playersTable, y); y += TableHeight(rows) + gap;
-        foreach (var l in Ui.Wrap("A player who leaves can come back to their character: Co-op, Join a Game, with the same name.", inner))
-        { var e = Ui.Label(l, inner); Ui.SetColor(e, Grey); at(e, y); y += line + Ui.S(2); }
-        y += section;
-        var buttons = new List<UiElement>();
-        if (World.Player != null) { var g = Ui.Button("Give...", OpenGive); Ui.Tooltip(g, "Give an item or charons to another player"); buttons.Add(g); }
-        var stop = Ui.Button("Stop hosting", () => StopHosting()); Ui.Tooltip(stop, "End the co-op game: everyone else is sent back to their main menu"); buttons.Add(stop);
-        int bh = buttons.Max(b => b.Height);
-        window = Ui.Window(this, "coop", "Co-op", Math.Max(w, Ui.ButtonsWidth(buttons, pad)), 22 + Ui.S(4) + y + bh + pad);
-        if (window == null) return;
-        window.Closed += () => { window = null; builtFor = null; };
-        int top = window.Top + Ui.S(4);
-        foreach (var p in place) Ui.Add(window, p.Key, p.Value.X, top + p.Value.Y);
-        Ui.AddButtons(window, buttons, pad);
+        var left = new List<UiElement>();
+        if (World.Player != null) { var g = Ui.Button("Give...", OpenGive); Ui.Tooltip(g, "Give an item or charons to another player"); left.Add(g); }
+        var stop = Ui.Button("Stop hosting", () => StopHosting()); Ui.Tooltip(stop, "End the co-op game: everyone else is sent back to their main menu");
+        BuildInGameWindow(Math.Max(2, Math.Min(6, seats.Count + orphans.Count + 1)), "A player who leaves can come back to their character: Co-op, Join a Game, with the same name.", left, stop);
     }
 
     void RefreshHosting(List<string> items, List<Color> colours)
@@ -202,8 +181,8 @@ public sealed partial class Coop
         if (playersHeading != null) Ui.SetText(playersHeading, "Players  (" + (n + 1) + ")");
         Func<Character, string> hp = c => c == null ? null : c.IsDead ? "dead" : (int)c.Health + "/" + (int)c.MaxHealth + " HP";
         var me = World.Player;
-        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "You", Character = me == null ? null : me.Name, Tag = (hp(me) ?? "") + "  Host", Me = true, Host = true } };
-        foreach (var s in seats.Values) rowsNow.Add(new PlayerRow { Player = s.Peer.Name, Character = s.Character == null ? null : s.Character.Name, Tag = s.Character == null ? "joining" : hp(s.Character) });
+        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = Online.Available && !string.IsNullOrEmpty(Online.MyName) ? Online.MyName : "You", Character = me == null ? null : me.Name, Tag = (hp(me) ?? "") + "  Host", Me = true, Host = true, Color = HostColor } };
+        foreach (var s in seats.Values) { GiveColor(s); rowsNow.Add(new PlayerRow { Player = s.Peer.Name, Character = s.Character == null ? null : s.Character.Name, Tag = s.Character == null ? "joining" : hp(s.Character), Color = ColorOf(s) }); }
         foreach (var o in orphans) rowsNow.Add(new PlayerRow { Player = (o.PlayerName ?? "?") + " (left)", Character = o.Record.Name, Tag = "passes its turns" });
         playerRows = rowsNow;
     }

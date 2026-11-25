@@ -189,7 +189,7 @@ public sealed partial class Coop
     UiWindow joinWindow;
     void AskJoin()
     {
-        if (!Online.Available) { AskAddress(); return; }
+        if (!Online.CheckNow()) { AskAddress(); return; }     // asked now: the first Join right after launch found no store yet
         if (joinWindow != null && joinWindow.IsOpen) joinWindow.Close();
         var friendsList = new List<OnlinePlayer>();
         int chosen = -1;
@@ -209,14 +209,9 @@ public sealed partial class Coop
             if (window == null || !window.IsOpen) Build(); else Changed();
         });
         var refresh = Ui.Button("Refresh", () => fill());
-        var overlay = Ui.Button(Online.Service + " friends...", () =>
-        {
-            if (!Online.OpenFriends()) Tell("the " + Online.Service + " overlay isn't available here: friends hosting are listed above (Refresh)");
-        });
-        Ui.Tooltip(overlay, Online.Service + "'s friends list: Join Game on a friend who is hosting");
         var address = Ui.Button("By address...", () => { if (joinWindow != null) joinWindow.Close(); AskAddress(); });
         var close = Ui.Button("Close", () => { if (joinWindow != null) joinWindow.Close(); });
-        var buttons = new List<UiElement> { join, refresh, overlay, address, close };
+        var buttons = new List<UiElement> { join, refresh, address, close };
         int pad = Ui.S(10);
         // Its width stays; the buttons wrap onto a second row when they don't fit (no wider window for them).
         int jw = Ui.S(620);

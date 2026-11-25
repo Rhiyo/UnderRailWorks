@@ -34,6 +34,37 @@ public sealed partial class Coop
         public UiElement Right;
     }
 
+    // The in-game Co-op window, one layout for the host and the joiners (BuildHosting, BuildJoiner "play"): a status
+    // line, the players table (player, character, health), a grey note, Give... on the left, the leave/stop button on
+    // the right. Nothing else (the game's own windows do the rest).
+    void BuildInGameWindow(int rows, string note, List<UiElement> left, UiElement right)
+    {
+        int pad = LobbyPad, w = LobbyWidth, inner = LobbyInner, line = Ui.LineHeight, gap = Ui.S(6), section = Ui.S(14);
+        var place = new List<KeyValuePair<UiElement, Point>>();
+        int y = 0;
+        Action<UiElement, int> at = (e, yy) => place.Add(new KeyValuePair<UiElement, Point>(e, new Point(pad, yy)));
+        statusLabel = Ui.Label("", inner);
+        at(statusLabel, y); y += line + section;
+        joinDetail = null;
+        playersHeading = Ui.Label("Players", inner); Ui.SetColor(playersHeading, Mine_);
+        at(playersHeading, y); y += line + gap;
+        list = null; playerRows = new List<PlayerRow>();
+        playersTable = PlayersTable(inner, rows, null);
+        at(playersTable, y); y += TableHeight(rows) + gap;
+        if (!string.IsNullOrEmpty(note)) foreach (var l in Ui.Wrap(note, inner)) { var e = Ui.Label(l, inner); Ui.SetColor(e, Grey); at(e, y); y += line + Ui.S(2); }
+        y += section;
+        var all = left.Concat(new[] { right }).ToList();
+        int bh = all.Max(b => b.Height);
+        window = Ui.Window(this, "coop", "Co-op", w, 22 + Ui.S(4) + y + bh + pad);
+        if (window == null) return;
+        window.Closed += () => { window = null; builtFor = null; };
+        int top = window.Top + Ui.S(4);
+        foreach (var p in place) Ui.Add(window, p.Key, p.Value.X, top + p.Value.Y);
+        int by = window.Height - pad - bh, bx = pad;
+        foreach (var b in left) { Ui.Add(window, b, bx, by); bx += b.Width + gap; }
+        Ui.Add(window, right, window.Width - pad - right.Width, by);
+    }
+
     // The lobby's sizes: the window's width and its columns.
     static int LobbyWidth { get { return Ui.S(600); } }
     static int LobbyPad { get { return Ui.S(12); } }

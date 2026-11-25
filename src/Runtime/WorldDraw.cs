@@ -244,6 +244,19 @@ public static class Outlines
     // eg0: right before bym.a(outline): the layer is hidden if only a request made it, or during a transition.
     internal static void Added(bym layers, a2f outline)
     {
+        // A player's colour (Party.SetColor) on their Tab outline; white (hovered, targeted) stays.
+        try
+        {
+            var e = layers == null ? null : layers.b as c5x;
+            var c = e == null ? null : Character.Of(e);
+            var colour = c == null ? null : Party.ColorOf(c);
+            if (colour.HasValue && outline != null && outline.v != null)
+            {
+                object was;
+                if (!outline.v.TryGetValue("OutlineColor", out was) || !(was is Color) || (Color)was != Color.White) outline.v["OutlineColor"] = colour.Value;
+            }
+        }
+        catch (Exception ex) { Log.Write("outlines: a player's colour: " + ex.Message); }
         if (transition) { transition = false; forced = true; }
         if (forced) { forced = false; HiddenSet.Remove(outline); HiddenSet.Add(outline, Mark); }
         HasSet.Remove(layers); HasSet.Add(layers, Mark);

@@ -62,6 +62,7 @@ public sealed partial class Coop
         var seat = seats.Values.FirstOrDefault(s => s.Character == c);
         int i;
         if (seat == null || !hostTalking || !int.TryParse(index, out i) || !hostChoices.Contains(i)) return "";
+        if (hostChoices.Count <= 1) return "";     // one answer: nothing to vote on
         var name = seat.Peer.Name;
         int was;
         if (suggested.TryGetValue(name, out was) && was == i) suggested.Remove(name); else suggested[name] = i;
@@ -117,10 +118,10 @@ public sealed partial class Coop
                 // The joiner's window: the votes after each answer, as on the host's.
                 if (index < 0 || index >= talkChoices.Count) return text;
                 string voters; talkSuggested.TryGetValue(talkChoices[index].Key, out voters);
-                return string.IsNullOrEmpty(voters) ? text : text + "   [" + voters.Replace(",", ", ") + "]";     // "Alice, Bob" as on the host's
+                return string.IsNullOrEmpty(voters) ? text : text + "   [" + string.Join(", ", voters.Split(',').Select(ColoredName).ToArray()) + "]";     // each in their colour, as on the host's
             }
             if (listener == null || !hostTalking || index < 0 || index >= hostChoices.Count || hostChoiceTexts[index] != text) return text;
-            var names = suggested.Where(kv => kv.Value == hostChoices[index]).Select(kv => kv.Key).ToList();
+            var names = suggested.Where(kv => kv.Value == hostChoices[index]).Select(kv => ColoredName(kv.Key)).ToList();
             return names.Count == 0 ? text : text + "   [" + string.Join(", ", names.ToArray()) + "]";
         });
     }
@@ -271,7 +272,8 @@ public sealed partial class Coop
             for (int i = 0; i < choices.Count; i++)
             {
                 int index = choices[i].Key;
-                if (enabled[i]) l.Option(choices[i].Value, "l", Outcome.Code(() => SuggestAnswer(index)));
+                if (enabled[i] && choices.Count > 1) l.Option(choices[i].Value, "l", Outcome.Code(() => SuggestAnswer(index)));
+                else if (enabled[i]) l.Option(choices[i].Value, "l");     // one answer: nothing to vote on (the host goes on)
                 else l.OptionGreyed(choices[i].Value, "l", Condition.Code(() => false));
             }
         });

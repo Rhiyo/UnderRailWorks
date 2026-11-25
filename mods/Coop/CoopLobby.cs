@@ -190,11 +190,11 @@ public sealed partial class Coop
         p.Send("LISTEND");
         SendExpansions(p);
     }
-    void LobbyChanged() { foreach (var s in seats.Values) if (s.Peer != null && !s.Peer.Closed) SendLobbyList(s.Peer); Changed(false); }
+    void LobbyChanged() { foreach (var s in seats.Values) if (s.Peer != null && !s.Peer.Closed) SendLobbyList(s.Peer); ShareColors(); Changed(false); }
 
     void TakeSlot(Seat seat, Slot slot, Record r)
     {
-        slot.Seat = seat; seat.Record = r;
+        slot.Seat = seat; seat.Record = r; GiveColor(seat);
         seat.Peer.Send("READY", r.Name);
         Log.Info(seat.Peer.Name + " will play " + r.Name);
         Notify.Log("Co-op: " + seat.Peer.Name + " will play " + r.Name + (FreePlaces() == 0 ? ". Everyone is here: Start." : lobby == "new" ? ". Start when everyone is here." : ""), Say);

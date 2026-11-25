@@ -61,6 +61,10 @@ namespace UnderRailWorks
         // was started by it (Steam's "+connect_lobby"; raised once the main menu is up).
         public static readonly Hook<Action<string>> InviteAccepted = new Hook<Action<string>>("Online.InviteAccepted");
 
+        // Asks the store again now if it hasn't answered yet (e.g. before a Join window: Steam may have come up since
+        // the last try, which is otherwise every 10 s). True: a store is there.
+        public static bool CheckNow() { if (service == null) { askTimer = 0; Ask(); } return service != null; }
+
         static void Ask()
         {
             if (service != null || askTimer > 0) return;

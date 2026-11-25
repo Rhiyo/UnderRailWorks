@@ -131,6 +131,13 @@ public static class Keybinds
     public static IList<Keybind> Of(string modId) { return all.Where(k => k.Mod == modId).ToList(); }
 
     // A key's name as the game writes it.
+    // The key the game's own setting binds to one of its actions (its Hotkey names, e.g. "EndTurn", "Inventory").
+    // Keys.None: no such action, or unbound.
+    public static Keys GameKey(string action)
+    {
+        try { var hk = (TimelapseVertigo.Common.Settings.Hotkey)Enum.Parse(typeof(TimelapseVertigo.Common.Settings.Hotkey), action, true); return d1o.a(hk); }
+        catch { return Keys.None; }
+    }
     public static string Name(Keys key) { return key == Keys.None ? "(none)" : key.ToString(); }
 
     static Keybind Find(Hotkey h) { int i = (int)h - First; return i >= 0 && i < all.Count ? all[i] : null; }

@@ -13,6 +13,12 @@ add a rule when the player gives one, fix a line when it stops being true.
   the same places (your character's action under the players table, settings beside their heading, the leave/cancel
   button bottom right). Both lobbies are built by one layout (`CoopLobbyView.cs`, `BuildLobbyWindow`): change it there,
   not in one side only. Anything new shown on both sides should come from one builder too.
+- **One builder for anything both sides show; the game's own window where the game has one.** Lobby, in-game Co-op
+  window, players table: shared builders (`CoopLobbyView.cs`, `CoopPlayersUi.cs`). Looting, trading, conversations:
+  the joiner gets the game's real window fed from the host's state, not a recreation, so it's "like the real game".
+- **Each player has a colour, used everywhere they show** (`CoopColors.cs`): the host the game's own player colour
+  (gold, Tab), then pink, turquoise, violet (clear of the game's attitude colours and its orange UI). Tab outline,
+  minimap dot (Works' `Party.SetColor`), name in the lobby, in votes (`TalkAs.Colored`).
 - **Joiners see what the host sees.** A conversation looks the same for everyone (the game's own window on every
   screen, built from the host's line: `CoopTalk.cs`), the camera in a conversation is the host's, and it opens on
   whoever started the conversation (a joiner's click, or a member who set off its trigger).

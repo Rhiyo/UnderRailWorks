@@ -89,6 +89,12 @@ namespace UnderRailWorks
         [Preview("multiplayer: built for Co-op so far")] public static bool Safeguards { get; set; }
 
         public static void Add(WorksMod mod, Character c) { if (c != null) lock (others) others[c] = mod.Id; }
+
+        // A player's colour (co-op: each player's), used wherever that player shows: their Tab outline, minimap dots
+        // (Character.OutlineColor), names in text. Null: none (the game's own colours).
+        static readonly Dictionary<Character, Color> colours = new Dictionary<Character, Color>();
+        [Preview("multiplayer: built for Co-op so far")] public static void SetColor(WorksMod mod, Character c, Color? colour) { if (c == null) return; lock (colours) { if (colour.HasValue) colours[c] = colour.Value; else colours.Remove(c); } }
+        [Preview("multiplayer: built for Co-op so far")] public static Color? ColorOf(Character c) { if (c == null) return null; lock (colours) { Color k; if (colours.TryGetValue(c, out k)) return k; if (colours.Count == 0) return null; var hit = colours.FirstOrDefault(kv => kv.Key.Entity == c.Entity); return hit.Key == null ? (Color?)null : hit.Value; } }
         public static void Remove(Character c) { if (c != null) lock (others) others.Remove(c); }
         public static bool Contains(Character c) { if (c == null) return false; if (c.IsPlayer) return true; lock (others) return others.ContainsKey(c); }
 

@@ -19,13 +19,18 @@ j() { TEST_GAME="$JOIN" RUN=coopij "$@"; }
 h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; j timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 gamecopy "$HOST" || exit 1; gamecopy "$JOIN" || exit 1
 HL="$HOST/UnderRailWorks.log" JL="$JOIN/UnderRailWorks.log"
+# waitfor <log> <regex> [seconds]: until the log has that line (steps wait for what they need, not a fixed time).
+waitfor() { local n=0; until grep -qE "$2" "$1" 2>/dev/null || [ $n -ge ${3:-60} ]; do sleep 1; n=$((n+1)); done; }
 # Host New Game: the Rules screen; the first difficulty (Easy), Accept (1280x720).
 printf 'wait 8\ncoop.ui hostnew\n' > "$HOST/Mods/WorksTest/menurun.txt"
 h timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1; sleep 24
-h "$SKILL/inp.sh" focus click 214 239 sleep 300 click 902 678 >/dev/null 2>&1; sleep 6
-printf 'coop.ui hostcreate\nwait 10\nworks.accept Hosty\n' > "$HOST/Mods/WorksTest/menurun.txt"; sleep 25
+h "$SKILL/inp.sh" focus click 214 239 sleep 300 click 902 678 >/dev/null 2>&1
+waitfor "$HL" "Coop: lobby: new game"
+printf 'coop.ui hostcreate\nwait 10\nworks.accept Hosty\n' > "$HOST/Mods/WorksTest/menurun.txt"
+waitfor "$HL" "Coop: the host will play Hosty"
 printf 'wait 8\ncoop.join 127.0.0.1:%s\nwait 6\ncoop.ui create\nwait 10\nworks.accept Bobby\n' "$PORT" > "$JOIN/Mods/WorksTest/menurun.txt"
-j timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1; sleep 50
+j timeout 100 "$SKILL/launch.sh" 1280 720 >/dev/null 2>&1
+waitfor "$HL" "Coop: Player will play Bobby" 120; sleep 3
 shot() { [ -n "${SHOTS:-}" ] && { mkdir -p "$SHOTS"; h "$SKILL/shot.sh" "$SHOTS/$1-host.png" 50 >/dev/null; j "$SKILL/shot.sh" "$SHOTS/$1-join.png" 50 >/dev/null; }; }     # SHOTS=<folder>: screenshots
 shot 0-lobby
 printf 'coop.start\n' > "$HOST/Mods/WorksTest/menurun.txt"; sleep 8
@@ -37,6 +42,7 @@ h "$SKILL/inp.sh" focus key 0x32 >/dev/null 2>&1; sleep 25     # 2. Skip intro (
 shot 2-after-skip
 h "$SKILL/inp.sh" focus key 0x31 >/dev/null 2>&1; sleep 8     # the host goes on (1. Continue) in the next zone's conversation
 shot 3-after-continue
+[ -n "${SHOTS:-}" ] && { h "$SKILL/inp.sh" focus key 0x31 >/dev/null 2>&1; sleep 4; printf 'coop.ui coop\n' > "$HOST/Mods/WorksTest/autorun.txt"; printf 'coop.ui coop\n' > "$JOIN/Mods/WorksTest/autorun.txt"; sleep 4; shot 4-coop-window; }
 j timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1; h timeout 60 "$SKILL/stop.sh" >/dev/null 2>&1
 
 pass=0; fail=0

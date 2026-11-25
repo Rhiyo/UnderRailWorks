@@ -24,6 +24,14 @@ public sealed partial class Coop
     void BuildJoiner()
     {
         if (builtFor == "choose" || builtFor == "ready") { BuildJoinLobby(); return; }
+        if (builtFor == "play")
+        {
+            // In game: the host's window, with Leave where the host has Stop hosting.
+            var give = Ui.Button("Give...", OpenGive); Ui.Tooltip(give, "Give an item or charons to another player");
+            var leave = Ui.Button("Leave", Leave); Ui.Tooltip(leave, "Leave the game (your character stays, passing its turns, until you come back)");
+            BuildInGameWindow(Math.Max(2, Math.Min(6, colorOrder.Count)), null, new List<UiElement> { give }, leave);
+            return;
+        }
         int pad = Ui.S(12), w = Ui.S(600), line = Ui.LineHeight, gap = Ui.S(6), section = Ui.S(14), inner = w - 2 * pad;
         var place = new List<KeyValuePair<UiElement, Point>>();
         int y = 0;
@@ -112,18 +120,22 @@ public sealed partial class Coop
                 break;
             case "play":
             {
+                // Your character's health and whose turn, then everyone as the host's window lists them.
                 var s = state;
-                if (s == null || s.Length < 11) { Ui.SetText(statusLabel, "Waiting for the host..."); Ui.SetText(joinDetail, ""); }
-                else
-                {
-                    Ui.SetText(statusLabel, s[10] == "1" ? s[1] + " is dead." : s[1] + ":  " + s[2] + "/" + s[3] + " HP" + (s[4] == "1" ? (s[5] == s[1] ? "   -   your turn: AP " + s[6] + ", MP " + s[7] : "   -   " + s[5] + "'s turn") : ""));
-                    var others = new List<string>();
-                    var p = party;
-                    if (p != null) for (int k = 0; k + 3 < p.Length; k += 4) if (p[k] != s[1]) others.Add(p[k] + (p[k + 3] == "1" ? " (down)" : " " + p[k + 1] + "/" + p[k + 2]));
-                    Ui.SetText(joinDetail, others.Count == 0 ? "" : "With " + string.Join(",  ", others.ToArray()));
-                }
+                if (s == null || s.Length < 11) Ui.SetText(statusLabel, "Waiting for the host...");
+                else Ui.SetText(statusLabel, s[10] == "1" ? s[1] + " is dead." : s[4] == "1" ? (s[5] == s[1] ? "Your turn: AP " + s[6] + ", MP " + s[7] + "   (" + Keybinds.Name(Keybinds.GameKey("EndTurn")) + ": end turn)" : s[5] + "'s turn") : "Playing " + s[1] + ".");
                 Ui.SetColor(statusLabel, s != null && s.Length > 5 && s[4] == "1" && s[5] == s[1] ? Mine_ : Normal);
-                items.AddRange(messages.Skip(Math.Max(0, messages.Count - 40))); colours.AddRange(items.Select(_ => Normal));
+                var health = new Dictionary<string, string>();
+                var p = party;
+                if (p != null) for (int k = 0; k + 3 < p.Length; k += 4) health[p[k]] = p[k + 3] == "1" ? "down" : p[k + 1] + "/" + p[k + 2] + " HP";
+                var rowsNow = new List<PlayerRow>();
+                foreach (var e in colorOrder)
+                {
+                    string hp; health.TryGetValue(e.Value, out hp);
+                    bool me = s != null && s.Length > 1 && e.Value == s[1];
+                    rowsNow.Add(new PlayerRow { Player = e.Key, Character = e.Value, Tag = (hp ?? "") + (rowsNow.Count == 0 ? "  Host" : me ? "  You" : ""), Me = me, Host = rowsNow.Count == 0, Color = PlayerColor(e.Key) });
+                }
+                playerRows = rowsNow;
                 break;
             }
         }
@@ -159,14 +171,14 @@ public sealed partial class Coop
         string who = hostName == null || hostName == "the host" ? "the host" : hostName;
         int taken = choices.Count(c => c.Value), open = choices.Count - taken;
         if (playersHeading != null) Ui.SetText(playersHeading, "Players  (" + (taken + 1) + " of " + (choices.Count + 1) + ")");
-        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = who == "the host" ? "Host" : who, Character = hostCharacterSeen, Tag = "Host", Host = true } };
+        var rowsNow = new List<PlayerRow> { new PlayerRow { Player = who == "the host" ? "Host" : who, Character = hostCharacterSeen, Tag = "Host", Host = true, Color = PlayerColor(hostName) ?? HostColor } };
         for (int i = 0; i < choices.Count; i++)
         {
             bool isNew = choices[i].Key == "(new character)";
             var taker = i < choiceTakers.Count ? choiceTakers[i] : new KeyValuePair<string, string>("", "");
             bool mine = (myLobbyName != null && taker.Key == myLobbyName) || (readyAs != null && (taker.Value == readyAs || (!isNew && choices[i].Key == readyAs)));
             if (!choices[i].Value) rowsNow.Add(isNew ? new PlayerRow { Open = true } : new PlayerRow { Open = true, Character = choices[i].Key, Tag = "saved character" });
-            else rowsNow.Add(new PlayerRow { Player = taker.Key == "" ? "?" : taker.Key, Character = isNew ? (taker.Value == "" ? null : taker.Value) : choices[i].Key, Tag = mine ? "You" : null, Me = mine });
+            else rowsNow.Add(new PlayerRow { Player = taker.Key == "" ? "?" : taker.Key, Character = isNew ? (taker.Value == "" ? null : taker.Value) : choices[i].Key, Tag = mine ? "You" : null, Me = mine, Color = PlayerColor(taker.Key) });
         }
         playerRows = rowsNow;
         if (builtFor == "ready")

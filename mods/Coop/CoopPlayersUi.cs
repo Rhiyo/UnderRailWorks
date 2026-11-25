@@ -10,7 +10,7 @@ using UnderRailWorks;
 
 public sealed partial class Coop
 {
-    internal sealed class PlayerRow { public string Player, Character, Tag; public bool Open, Me, Host; }
+    internal sealed class PlayerRow { public string Player, Character, Tag; public bool Open, Me, Host; public Color? Color; }
     List<PlayerRow> playerRows = new List<PlayerRow>();
     UiElement playersTable;
     int tableSelected = -1;
@@ -44,7 +44,7 @@ public sealed partial class Coop
                 int ty = row.Y + (rh - line) / 2;
                 int nameW = b.Width * 2 / 5, charX = row.X + pad + nameW;
                 int tagW = string.IsNullOrEmpty(r.Tag) ? 0 : Ui.TextWidth(r.Tag);
-                c.Text(Cut(r.Open ? "Open" : r.Player, nameW - pad), row.X + pad, ty, r.Open ? Grey : r.Me ? Mine_ : Normal);
+                c.Text(Cut(r.Open ? "Open" : r.Player, nameW - pad), row.X + pad, ty, r.Open ? Grey : r.Color ?? (r.Me ? Mine_ : Normal));     // the player's colour (CoopColors)
                 if (!r.Open || !string.IsNullOrEmpty(r.Character))     // an open place of a save: its character
                 {
                     bool none = string.IsNullOrEmpty(r.Character);

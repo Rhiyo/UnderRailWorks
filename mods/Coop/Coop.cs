@@ -71,7 +71,7 @@ public sealed partial class Coop : WorksMod
     string WriteSheet(string name, string base64) { var path = SheetPath(name); System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)); System.IO.File.WriteAllBytes(path, Convert.FromBase64String(base64)); return path; }
 
     // --- Host ---------------------------------------------------------------------------------------------------
-    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, WorldWaiting, InWorld, Announced; public string[] Owns; public int SheetVersion; public string PlayerName; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
+    sealed class Seat { public Peer Peer; public Record Record; public Character Character; public string LastState; public string LastSign; public bool WorldPending, WorldWaiting, InWorld, Announced; public string[] Owns; public int SheetVersion; public string PlayerName; public int ColorIndex = -1; public readonly Dictionary<string, string> Sent = new Dictionary<string, string>(), Walks = new Dictionary<string, string>(), Doors = new Dictionary<string, string>(), Statuses = new Dictionary<string, string>(); }
     Listener listener;
     static float Dist(Character a, Character b) { return Vector2.Distance(new Vector2(a.Position.X, a.Position.Y), new Vector2(b.Position.X, b.Position.Y)); }
     static bool Sees(Character who, Character other) { return who.CanSee(other) && Dist(who, other) <= who.SightRange; }
@@ -176,7 +176,7 @@ public sealed partial class Coop : WorksMod
                 // A new game's lobby: a place of their own straight away (they make the character for it); a save's: they
                 // pick which of its characters is theirs.
                 var place = lobby == "new" ? slots.FirstOrDefault(s => s.Seat == null) : null;
-                if (place != null) place.Seat = joined;
+                if (place != null) { place.Seat = joined; GiveColor(joined); }
                 p.Name = joined.PlayerName = UniqueName(p.Name, p);
                 Log.Info(p.Name + " connected from " + p.Address);
                 Changed(false);
@@ -407,6 +407,7 @@ public sealed partial class Coop : WorksMod
                 choiceTakers.Add(new KeyValuePair<string, string>(w.Length > 4 ? w[4] : "", w.Length > 5 ? w[5] : ""));
                 return;
             case "SETTING": if (w.Length > 2) lobbySettings.Add(new KeyValuePair<string, string>(w[1], w[2])); return;
+            case "COLORS": ColorsArrived(w); return;
             case "LISTEND":
                 Log.Info("characters: " + hostName + " (host), " + string.Join(", ", choices.Select((c, i) => (i + 1) + ". " + c.Key + (c.Value ? " (taken)" : "")).ToArray()));
                 Commands.Print("co-op: characters: " + hostName + " (host), " + string.Join(", ", choices.Select((c, i) => (i + 1) + ". " + c.Key + (c.Value ? " (taken)" : "")).ToArray()) + ". coop.pick <number> or coop.new <name>");
@@ -590,7 +591,7 @@ public sealed partial class Coop : WorksMod
         LoadGive();
         LoadXp();
         LoadHost();
-        LoadListening(); LoadConversationView();
+        LoadListening(); LoadConversationView(); LoadColors();
         LoadScreens();
         LoadDeath();
         LoadUi();
