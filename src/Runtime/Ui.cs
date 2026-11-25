@@ -642,6 +642,7 @@ static class UiHooks
         Group("party and exits", () => PartyHooks.Install(harmony));
         Group("world map marks", () => WorldMapHooks.Install(harmony));
         Group("deaths and game over", () => DeathHooks.Install(harmony));
+        Group("text feeds", () => FeedHooks.Install(harmony));
         Group("assets", () => AssetStore.Install(harmony));
         Group("clock, items, crafting, stealing", () => ActivityHooks.Install(harmony));
         Group("item definitions and tooltips", () => ItemHooks.Install(harmony));

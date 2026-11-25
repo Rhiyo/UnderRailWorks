@@ -423,6 +423,7 @@ public sealed partial class Coop : WorksMod
             case "DIED": playing = false; state = null; LeftWorld(); Changed(); return;
             case "PARTY": party = w.Skip(1).ToArray(); Changed(false); return;
             case "SAID": Tell(w.Length > 1 ? w[1] : ""); return;
+            case "FEED": if (inWorld && w.Length > 1) Notify.AddFeedLine(FeedLine.Decode(w[1])); return;     // the host's combat feed, line by line
         }
         if (w[0] == "POPUP") { ShowPopup(w); return; }
         if (!TalkMessage(w) && !LootMessage(w) && !TradeMessage(w) && !ModMessage(null, w)) MirrorMessage(w);

@@ -61,8 +61,10 @@ public sealed partial class Coop
         Ai.IgnoresTarget.Add(this, (npc, who) => listener != null && who != null && downed.Contains(who));
         // ...and any action aimed at a downed player is called off (the NPC's tree tries something else).
         Ai.Acting.Add(this, a => { var t = a.Target as Character; if (listener != null && t != null && downed.Contains(t)) a.Cancel = true; }, HookOrder.First);
-        // A downed joined character's turn passes; the host's own is theirs to end (the game shows it as incapacitated).
-        Combat.TurnStarted.Add(this, c => { if (listener != null && c != null && downed.Contains(c) && !c.IsPlayer) c.EndTurn(); });
+        // A downed player's turn passes, the host's too (down means out of the fight: the host could still attack at 1
+        // health before), and the host's clicks do nothing while down.
+        Combat.TurnStarted.Add(this, c => { if (listener != null && c != null && downed.Contains(c)) c.EndTurn(); });
+        GameEvents.PlayerOrdering.Add(this, o => { var me = World.Player; if (listener != null && me != null && downed.Contains(me)) o.Cancel = true; }, HookOrder.First);
     }
 
     void Down(Character c)
@@ -74,7 +76,7 @@ public sealed partial class Coop
         foreach (var e in World.CharactersNear(c.Position, 60).Where(e => e != c && !e.IsDead && Ai.CurrentTarget(e) == c)) Ai.SetCurrentTarget(e, null);
         Notify.Log("Co-op: " + c.Name + " is down" + (deathRule == 1 ? ": another player can revive them (Revive, next to them)" : ": they'll get up when the fight is over"), Bad);
         foreach (var s in seats.Values.Where(x => x.Peer != null)) s.Peer.Send("SAID", (s.Character == c ? "you're" : c.Name + " is") + " down" + (deathRule == 1 ? " (another player can revive " + (s.Character == c ? "you" : "them") + ")" : " until the fight is over"));
-        if (c.IsTakingTurn && !c.IsPlayer) c.EndTurn();
+        if (c.IsTakingTurn) c.EndTurn();
         CheckGameOver();
     }
 

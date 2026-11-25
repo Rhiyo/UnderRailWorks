@@ -30,6 +30,10 @@ namespace UnderRailWorks
         {
             var screen = bpo.GetService<ps>() as dka;
             if (screen == null || DeathHooks.End == null) return false;
+            // The game calls this when the player has died, which ends any fight. A mod's game over can come with the
+            // player alive (co-op: downed at 1 health): the world stops behind the death screen, or the enemies' fight
+            // starts and ends again and again (measured: 9 times in a second). Until the next game or load.
+            Simulation.Frozen = true; DeathHooks.FrozeForEnd = true;
             DeathHooks.End.Invoke(screen, null);
             return true;
         }
@@ -42,6 +46,8 @@ namespace UnderRailWorks.Internal
     {
         internal static readonly MethodInfo End = typeof(dka).GetMethod("y", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, Type.EmptyTypes, null);
 
+        internal static bool FrozeForEnd;
+        internal static void NewWorld() { if (FrozeForEnd) { FrozeForEnd = false; Simulation.Frozen = false; } }
         [ThreadStatic] static Character lastDied;     // for GameOverAttempt.Who: the death that ends the game comes just before
         static bool Dies(efk __instance, cru __1)
         {

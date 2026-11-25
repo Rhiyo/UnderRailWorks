@@ -200,7 +200,7 @@ public static class Text
     internal static bool Lookup(string path, out string text) { return added.TryGetValue(path ?? "", out text); }
 }
 
-public static class Notify
+public static partial class Notify
 {
     static readonly ConstructorInfo PenCtor = typeof(d22).GetConstructors().First(c => c.GetParameters().Length == 2);
     static readonly ConstructorInfo FloatingCtor = typeof(d53).GetConstructors().First(c => c.GetParameters().Length == 4);

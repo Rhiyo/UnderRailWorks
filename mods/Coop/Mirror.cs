@@ -391,16 +391,44 @@ public sealed partial class Coop
         // comes in its own window.
     }
 
+    // Out of the host's game (left, or the connection gone). A copy of the host's world must never go on as a game
+    // of its own (its fight ran on: the host's character died on this screen): it stays frozen, still a copy, and the
+    // game goes back to the main menu, where it's let go.
+    bool quittingWorld;
     void LeftWorld()
     {
+        bool hadWorld = inWorld || loading || receiving || World.Player != null && Simulation.IsMirror;
         receiving = loading = inWorld = false;
+        myKey = null; followed = null; spawned.Clear(); early.Clear(); sheets.Clear();
+        if (hadWorld && World.Player != null)
+        {
+            Simulation.Frozen = true;
+            quittingWorld = true;
+            World.QuitToMainMenu();
+            return;
+        }
         Simulation.Frozen = false;
         Simulation.IsMirror = false;
-        myKey = null; followed = null; spawned.Clear(); early.Clear(); sheets.Clear();
+    }
+    void BackOnMainMenu()
+    {
+        if (!quittingWorld) return;
+        quittingWorld = false;
+        Simulation.Frozen = false;
+        Simulation.IsMirror = false;
     }
 
     void LoadMirror()
     {
+        UiEvents.MainMenuCreated.Add(this, menu => BackOnMainMenu());
+        // The combat feed (the log at the bottom left) as the host's: its lines go to the joiners in the world, whose
+        // copy runs no fight of its own to make them.
+        GameEvents.FeedLineAdded.Add(this, line =>
+        {
+            if (listener == null || !line.In("Combat")) return;
+            string text = null;
+            foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null)) s.Peer.Send("FEED", text = text ?? line.Encode());
+        });
         // The joiner's own weapon swap (X): done on the host (the game's swap needs no order: it's direct).
         GameEvents.WeaponSwitching.Add(this, e =>
         {

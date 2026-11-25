@@ -234,6 +234,7 @@ public sealed partial class WorksTest : WorksMod
             return "containers";
         });
         Commands.Add(this, "wt.goto", "wt.goto x y: teleport the player to a tile", args => "goto: " + World.Player.TeleportTo(int.Parse(args[0]), int.Parse(args[1])));
+        Commands.Add(this, "wt.put", "wt.put <name> x y: teleport that character to a tile", args => { var c = World.Characters.FirstOrDefault(x => x.Name == args[0]); return c == null ? "none" : "put: " + c.TeleportTo(int.Parse(args[1]), int.Parse(args[2])); });
         Commands.Add(this, "wt.tiles", "wt.tiles x y r: a map of free floor tiles around x,y (log)", args =>
         {
             int x = int.Parse(args[0]), y = int.Parse(args[1]), r = int.Parse(args[2]);

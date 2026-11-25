@@ -114,6 +114,34 @@ namespace UnderRailWorks
                 var c = Camera.Center;
                 return "view at " + UnderrailDropdownScroll.X(at) + "," + UnderrailDropdownScroll.Y(at) + " size " + UnderrailDropdownScroll.W(v.Size) + "x" + UnderrailDropdownScroll.H(v.Size) + ", centre " + (c.HasValue ? c.Value.X + "," + c.Value.Y : "?") + ", height " + Camera.Height + (World.Player != null ? " (player at " + World.Player.Position.X + "," + World.Player.Position.Y + "," + World.Player.Position.Z + ", opacity " + World.Player.Opacity + ", entity at " + ((b0b)World.Player.Entity).aj() + ")" : "") + ", box " + Camera.BoxText + ", zoom " + Camera.Zoom + ", screen " + (hud == null ? "?" : UnderrailDropdownScroll.W(hud.Size) + "x" + UnderrailDropdownScroll.H(hud.Size));
             });
+            // Tests: the combat manager's state (its fields, the turn order with AP/MP).
+            Add("UnderRailWorks", "works.crp", "works.crp: (tests) the combat manager's state", a =>
+            {
+                var m = Combat.Manager;
+                if (m == null) return "none";
+                var sb = new System.Text.StringBuilder();
+                foreach (var f in typeof(crp).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public))
+                {
+                    var v = f.GetValue(m);
+                    if (v == null || v.GetType().IsPrimitive || v is Enum || v is Guid || Nullable.GetUnderlyingType(f.FieldType) != null) sb.Append(f.Name).Append('=').Append(v == null ? "null" : v.ToString()).Append(' ');
+                    else if (v is System.Collections.ICollection) sb.Append(f.Name).Append("#").Append(((System.Collections.ICollection)v).Count).Append(' ');
+                }
+                var list = (System.Collections.Generic.List<d4n>)typeof(crp).GetFields(System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic).First(f => f.FieldType == typeof(System.Collections.Generic.List<d4n>)).GetValue(m);
+                foreach (var e in list) { var fa = Combat.Fighter(e); var c = fa == null ? null : Character.Of(fa.a8()); sb.Append("| ").Append(c == null ? "?" : c.Name).Append(" ap ").Append(Combat.Ap(e)).Append(" mp ").Append(Combat.Mp(e)); }
+                return sb.ToString();
+            });
+            // Tests: where a character is on screen (pixels), to click it like a player.
+            Add("UnderRailWorks", "works.screenof", "works.screenof <name>: (tests) the character's place on screen in pixels (its middle)", a =>
+            {
+                var name = string.Join(" ", a);
+                var c = World.Characters.FirstOrDefault(x => x.Name == name);
+                if (c == null) return "no " + name;
+                var sb = c.ScreenBounds;
+                if (sb == null) return "not on screen";
+                var b = sb.Value;
+                var p = UiScaleFix.ToScreen(new Microsoft.Xna.Framework.Point(b.X + b.Width / 2, b.Y + b.Height / 2));
+                return "screen " + name + " " + p.X + " " + p.Y;
+            });
             Add("UnderRailWorks", "works.newgame", "works.newgame: (tests) on the main menu, character creation for a new game (default rules); works.accept <name> starts it", a =>
                 World.OpenCharacterCreation(null) ? "character creation" : "not on the main menu");
             Add("UnderRailWorks", "works.accept", "works.accept <name>: (tests) in character creation, name the character and accept it as it is", a =>

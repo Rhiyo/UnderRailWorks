@@ -325,7 +325,7 @@ public static class Hud
 
     public static readonly Hook<Action<HudModPart>> PartAdded = new Hook<Action<HudModPart>>("HudPartAdded");
 
-    internal static void Created(ci3 screen) { UiWindows.HudGone(); Current = screen; modParts.Clear(); tracked.Clear(); strip = null; buttonsDirty = true; }
+    internal static void Created(ci3 screen) { DeathHooks.NewWorld(); UiWindows.HudGone(); Current = screen; modParts.Clear(); tracked.Clear(); strip = null; buttonsDirty = true; }
     internal static void Gone() { UiWindows.HudGone(); Current = null; modParts.Clear(); tracked.Clear(); }
 
     // --- Mod elements on the HUD hide with the game's HUD --------------------------------------------------------
