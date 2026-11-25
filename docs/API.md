@@ -267,7 +267,18 @@ What a merchant charges: Markup is the multiplier so far (the game's: about 1.15
 - `static int MovementPoints(Character c)`
 - `static void Log(string text, Color? colour = null, Character actor = null)` — A line in the chat/combat log, and floating text over a character (the game's own). A line in the combat feed (the log during fights; Notify.Log writes to the chat feed, which a fight hides), as the game's own combat lines (vr, shown through bey.a when the player's side is involved). {0} in the text is the actor's name (default: the player).
 - `static int Damage(Character target, int amount, string type = "Mechanical", Character source = null, bool resistances = true)` — Damage the game's way (as its traps and scripts do: Defense.a with a hit): resistances and thresholds when resistances is true, shields, the combat log, death, and Works' damage events. type: Mechanical, Heat, Cold, Electricity, Acid, Energy, Bio. Returns the health it took (0 when dead already or immune).
+- `static CombatView View()` **(preview)** — The fight as the HUD shows it now (Active false: no fight).
 - `static Shot ShotBreakdown(Character target)` — The player's plain attack on target with the weapon in hand (no special attack), or null (no target, no weapon).
+
+## CombatFighter  _(class, CombatView.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
+
+- `Character Who; public int ActionPoints; public int MovementPoints`
+
+## CombatView  _(class, CombatView.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
+
+- `bool Active`
+- `List<CombatFighter> Fighters = new List<CombatFighter>();     // in turn order`
+- `int Current = -1;                                             // index in Fighters of whose turn it is`
 
 ## Commands  _(class, Commands.cs)_
 
@@ -548,6 +559,23 @@ Zone exits (the tiles World.ExitTiles lists) switched off and on. An exit that's
 - `static bool SetDescription(WorksMod mod, string key, string text)` — Its description (the level-up screen and the character sheet).
 - `static bool Give(Character who, string key)` — Gives a feat (a mod's or the game's, by key) to a character, as the game does (no feat point is spent).
 
+## FeedLine  _(class, Feeds.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
+
+One line of a feed: its rows (as the game wrapped them before its own wrapping), each a list of coloured runs.
+
+- `string[] Feeds = new string[0]`
+- `bool NewBlock`
+- `List<List<FeedRun>> Rows = new List<List<FeedRun>>()`
+- `bool In(string feed)`
+- `string Text`
+- `string Encode()` — One line of text without tabs or line breaks (for a network message), and back.
+- `static FeedLine Decode(string text)`
+
+## FeedRun  _(struct, Feeds.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
+
+- `string Text; public Color Color`
+- `FeedRun(string text, Color color)`
+
 ## GameBatch  _(struct, DrawApi.cs)_
 
 - `bool IsNull`
@@ -588,6 +616,7 @@ Zone exits (the tiles World.ExitTiles lists) switched off and on. An exit that's
 - `static readonly Hook<Action<GameOverAttempt>> GameOver = new Hook<Action<GameOverAttempt>>("GameOver")` **(preview)** — The game is about to end (a death in the player's faction: Who). Cancel: it goes on.
 - `static readonly Hook<Action<EquipChange>> Equipped = new Hook<Action<EquipChange>>("Equipped")` — An item went into one of a character's slots (gear or quick slot), or came out of one.
 - `static readonly Hook<Action<EquipChange>> Unequipped = new Hook<Action<EquipChange>>("Unequipped")`
+- `static readonly Hook<Action<FeedLine>> FeedLineAdded = new Hook<Action<FeedLine>>("FeedLineAdded")` **(preview)** — A line went into the game's feeds (Combat, Chat). Not raised for lines added with Notify.AddFeedLine.
 - `static readonly Hook<Action<StatusChange>> StatusApplying = new Hook<Action<StatusChange>>("StatusApplying")` — A status effect is about to be applied (set Cancel to refuse it), was applied, or was removed (also on expiry).
 - `static readonly Hook<Action<StatusChange>> StatusApplied = new Hook<Action<StatusChange>>("StatusApplied")`
 - `static readonly Hook<Action<StatusChange>> StatusRemoved = new Hook<Action<StatusChange>>("StatusRemoved")`
@@ -673,10 +702,10 @@ Values: `EntranceHall, LivingRoom, Kitchen`
 - `static UiElement Get(HudPart part)` — A part of the game's HUD (null when the game didn't make it: zoom buttons are optional). Move it or hide it with Ui.Move / Ui.Show, from UiEvents.HudCreated (the game builds the HUD anew on loads and resolution changes). Resizing isn't supported: the parts are drawn at fixed sizes.
 - `static bool Visible` — The whole HUD shown (the game's HUD toggle).
 - `static readonly Hook<Action<bool>> VisibilityChanged = new Hook<Action<bool>>("HudVisibilityChanged")` — After the game showed or hid the HUD (its toggle sets every part's visibility): re-hide parts a mod hides.
-- `static void AddPart(WorksMod mod, string name, UiElement element, int x, int y)` — Adds a mod's element to the HUD as a named part (e.g. "Minimap") at its default place, and announces it (PartAdded), so a layout mod can move it where the player put it. Call it again when the element is rebuilt.
-- `static void AddPart(WorksMod mod, string name, UiElement element, HudAnchor anchor, int dx, int dy)` — Anchored: (dx, dy) from anchor (see At), so it sits right on any HUD size and layout mods know its anchor.
-- `static IList<HudModPart> ModParts` — The mod parts on the HUD now.
-- `static readonly Hook<Action<HudModPart>> PartAdded = new Hook<Action<HudModPart>>("HudPartAdded")`
+- `static void AddPart(WorksMod, string, UiElement, int, int)`
+- `static Hud.ModButton AddModButton(WorksMod, string, Action, string = null)`
+- `static IList<HudModPart> ModParts { get; }`
+- `static Hook<Action<HudModPart>> PartAdded`
 
 ## HudAnchor  _(enum, Hud.cs)_
 
@@ -883,7 +912,8 @@ Item definitions by path (data/Rules/Items/<path>.item, e.g. "consumables\\medic
 - `static Keybind Add(WorksMod mod, string id, string label)` — Registers an action (call from Load). id: unique within the mod; label: what the Controls tab shows after the mod's name ("Minimap: Show/hide"): keep it short, the column is narrow. The player's key is kept in the mod's settings.ini (key.<id>).
 - `static Keybind Add(WorksMod mod, string id, string label, Keys defaultKey)` — (Not an optional parameter: an enum default value makes the build's retargeting resolve XNA itself.)
 - `static IList<Keybind> Of(string modId)` — A mod's keys (for its settings page).
-- `static string Name(Keys key)` — A key's name as the game writes it.
+- `static Keys GameKey(string action)` — A key's name as the game writes it. The key the game's own setting binds to one of its actions (its Hotkey names, e.g. "EndTurn", "Inventory"). Keys.None: no such action, or unbound.
+- `static string Name(Keys key)`
 
 ## Layer  _(struct, DrawApi.cs)_
 
@@ -1120,6 +1150,14 @@ A map tile (ak1), as the world pass hands it to the tile-extras step.
 
 - `override int Value`
 
+## ModButton  _(class, Hud.cs)_
+
+--- Mod buttons: the HUD's column of buttons that open mods' windows --------------------------------------- Hud.AddModButton puts a button for your mod on the in-game HUD: in a column under the game's icons at the top right (Inventory, Character, ...), with every other mod's buttons. It's the player's way into your mod from the game (your window, your mode), like the game's own icons. Call it once, in Load; it stays across loads and HUD rebuilds. Works lays the column out: the game's button style, all the same width, in the mods' load order, never on top of each other; past four, the rest behind a "More..." button. HUD Layout moves the column as one part ("Mod buttons"). Your mod's settings belong in Options -> Works, not here. var button = Hud.AddModButton(this, "Co-op", OpenWindow, "Players, Give, Leave"); button.Visible = false;      // hidden for now (e.g. a setting turned it off) button.Text = "Co-op (2)";   // relabelled
+
+- `string Text`
+- `string Tooltip`
+- `bool Visible`
+
 ## ModConfig  _(class, ModConfig.cs)_
 
 - `ModInfo Mod`
@@ -1319,6 +1357,7 @@ A new game's rules chosen on the game's Rules screen (World.ChooseNewGameRules):
 - `static void Log(string text, Color? colour = null)` — A line in the game's chat/log (where "New journal entry: ..." appears).
 - `static void OverPlayer(string text, Color? colour = null, bool big = false)` — Floating text over the player (always shown, like the game's own notices); big = enlarged.
 - `static void Over(Character who, string text, Color? colour = null, bool big = false)` — Floating text over any character.
+- `static bool AddFeedLine(FeedLine line)` **(preview)** — A line into this game's feeds, shown as the game shows its own (its font, wrapping, the feed tabs).
 
 ## NpcAction  _(class, Ai.cs)_
 
@@ -1353,6 +1392,7 @@ A new game's rules chosen on the game's Rules screen (World.ChooseNewGameRules):
 - `static readonly Hook<Action<string>> MemberLeft = new Hook<Action<string>>("Online.MemberLeft")` — A member left the lobby or their connection failed (id). For a joiner: the host's id means the game is gone.
 - `static readonly Hook<Action<string, byte[]>> Received = new Hook<Action<string, byte[]>>("Online.Received")`
 - `static readonly Hook<Action<string>> InviteAccepted = new Hook<Action<string>>("Online.InviteAccepted")` — The player accepted an invite or chose Join Game in the store's friends list (lobby id), also when the game was started by it (Steam's "+connect_lobby"; raised once the main menu is up).
+- `static bool CheckNow()` — Asks the store again now if it hasn't answered yet (e.g. before a Join window: Steam may have come up since the last try, which is otherwise every 10 s). True: a store is there.
 - `static bool Host(int maxMembers)` — Makes a friends-only lobby for up to maxMembers players (you included). Answered by Hosted or Failed.
 - `static bool Join(string lobby)` — Enters a friend's lobby. Answered by Entered or Failed.
 - `static void Leave()`
@@ -1360,6 +1400,7 @@ A new game's rules chosen on the game's Rules screen (World.ChooseNewGameRules):
 - `static IList<OnlinePlayer> Members()`
 - `static IList<OnlinePlayer> FriendsHosting()` — Friends hosting (or in) a lobby of this game, with their lobby.
 - `static bool OpenInviteDialog()` — The store's overlay invite dialog for our lobby (if the overlay runs in this game).
+- `static bool OpenFriends()` — The store's overlay with the player's friends (Steam: Join Game on a friend there). False: no store, or it couldn't (the overlay may not run in this game, e.g. under Proton: nothing shows then either).
 
 ## OnlinePlayer  _(class, Online.cs)_
 
@@ -1424,6 +1465,8 @@ A condition's or effect's arguments, for ContentPack.AddCondition / AddEffect.
 - `static bool TrapsCountMembers` **(preview)** — Spotting and disarming traps work for the party's other members as for the player: a trap a member spots is revealed (the game's reveal and "Trap detected!" are the player's), and disarming one gives them its XP. For the scan or the disarm the member counts as the player (as for triggers).
 - `static bool Safeguards` **(preview)** — Safeguards for members the game doesn't expect: scripts that remove every non-player character in a place (the lift cutscenes kill whoever rides along) spare them, and a member's pickpocketing is refused (the game's window for it opens for the player, with the player's bag).
 - `static void Add(WorksMod mod, Character c)`
+- `static void SetColor(WorksMod mod, Character c, Color? colour)` **(preview)**
+- `static Color? ColorOf(Character c)` **(preview)**
 - `static void Remove(Character c)`
 - `static bool Contains(Character c)`
 - `static void NeedTogether(WorksMod mod, PartyNeed need, string key, float distance = 8)` — That (entering a zone by its id, a conversation by its name, an object by its EntityId; key null: every one) needs every party member within distance tiles of the character doing it.
@@ -1478,7 +1521,7 @@ A character placed by a mod: re-created each time its zone loads, while When hol
 
 ## PlayerOrder  _(class, Remote.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
 
-The player ordered their character to do something (a click on the world, the attack key). Cancel: it doesn't. Walk: X, Y the tile; Attack / Talk: Target. Walk / Travel: X, Y the tile (Travel: the exit's tile). Attack / Talk: Target. Use: TargetEntityId (a door, lever, container...; also set for Attack and Talk) and X, Y its tile.
+The player ordered their character to do something (a click on the world, the attack key). Cancel: it doesn't. EndTurn: only in a copy (Simulation.IsMirror): the player's End Turn (button, key, the automatic end at 0 AP). Walk / Travel: X, Y the tile (Travel: the exit's tile). Attack / Talk: Target. Use: TargetEntityId (a door, lever, container...; also set for Attack and Talk) and X, Y its tile.
 
 - `PlayerOrderKind Kind`
 - `int X`
@@ -1492,7 +1535,7 @@ The player ordered their character to do something (a click on the world, the at
 
 ## PlayerOrderKind  _(enum, Remote.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
 
-Values: `Walk, Attack, Talk, Use, Ability, Travel, Other`
+Values: `Walk, Attack, Talk, Use, Ability, Travel, Other, EndTurn`
 
 ## PlayerScreens  _(class, PlayerScreens.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
 
@@ -1640,10 +1683,11 @@ The Options page while the player edits it (ModConfig.OnEdit): read and change s
 - `double IfClose`
 - `double IfLit`
 
-## Simulation  _(class, Remote.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
+## Simulation  _(class, CombatView.cs)_  **Preview** (multiplayer: built for Co-op so far): may change in any Works release
 
 Frozen: nothing in the zone moves or acts by itself (no walking, attacks, AI, combat turns), while it is still drawn and the UI works: for a world set from elsewhere (PlaceAt, Health).
 
+- `static void ShowCombat(CombatView view)` — In a copy (IsMirror): the HUD shows this fight (turn panel, AP bar, End Turn) as the other game has it. Fighters not in this game are left out. Inactive: out of combat mode.
 - `static bool Frozen`
 - `static bool IsMirror` — This game is a copy of another one, set from there (a co-op joiner's): Works' calls that change the world (Spawn, Place, SpawnFromCharacterFile, items in and out of bags and containers, GiveExperience, TeleportTo, Travel, Use) do nothing here, so other mods running on this machine don't make things only it would see. The mod that keeps the copy makes its changes inside Apply.
 - `static void Apply(Action changes)`
@@ -1739,6 +1783,7 @@ Values: `Neutral, Hostile, PlayerOnly, Ally`
 - `static bool Choose(int index)` — Answers with choice index (as listed in the last line), or -1 to go on / end when it has none.
 - `static void Close()` — Ends the conversation now.
 - `static bool CloseShown()` — Ends whatever conversation the game's window shows now (any: the player's own, a mod's). False: none open.
+- `static string Colored(string text, Microsoft.Xna.Framework.Color colour)` — Text in a colour of its own inside the game's rich text (conversation lines and answers: TalkAs.AnswerText marks, a mod's dialog lines), e.g. a player's name in their colour. The game's own markup has none ("::" narration, "*" bold); Works splits the marked part into its own run (cm3.a).
 - `static bool IsShown` — A conversation is in the game's window now (any).
 - `delegate string AnswerLabel(int index, string text)` — The player's own conversation window: each answer's text as shown (index from 0, the text as the dialog has it), changed by every handler in turn, e.g. a mark after an answer others would pick. The answer itself and what TalkLine reports are unchanged. RefreshAnswers() shows changed marks at once.
 - `static readonly Hook<AnswerLabel> AnswerText = new Hook<AnswerLabel>("TalkAs.AnswerText")`

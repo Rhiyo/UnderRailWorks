@@ -214,9 +214,9 @@ namespace UnderRailWorks
         }
     }
 
-    [Preview("multiplayer: built for Co-op so far")] public enum PlayerOrderKind { Walk, Attack, Talk, Use, Ability, Travel, Other }
+    [Preview("multiplayer: built for Co-op so far")] public enum PlayerOrderKind { Walk, Attack, Talk, Use, Ability, Travel, Other, EndTurn }
     // The player ordered their character to do something (a click on the world, the attack key). Cancel: it doesn't.
-    // Walk: X, Y the tile; Attack / Talk: Target.
+    // EndTurn: only in a copy (Simulation.IsMirror): the player's End Turn (button, key, the automatic end at 0 AP).
     // Walk / Travel: X, Y the tile (Travel: the exit's tile). Attack / Talk: Target. Use: TargetEntityId (a door, lever,
     // container...; also set for Attack and Talk) and X, Y its tile.
     [Preview("multiplayer: built for Co-op so far")] public sealed class PlayerOrder : Cancellable
@@ -324,7 +324,7 @@ namespace UnderRailWorks
 
     // Frozen: nothing in the zone moves or acts by itself (no walking, attacks, AI, combat turns), while it is still drawn
     // and the UI works: for a world set from elsewhere (PlaceAt, Health).
-    [Preview("multiplayer: built for Co-op so far")] public static class Simulation
+    [Preview("multiplayer: built for Co-op so far")] public static partial class Simulation
     {
         public static bool Frozen { get; set; }
 

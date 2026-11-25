@@ -395,6 +395,21 @@ public sealed partial class Coop
     // of its own (its fight ran on: the host's character died on this screen): it stays frozen, still a copy, and the
     // game goes back to the main menu, where it's let go.
     bool quittingWorld;
+    string lastCombat;     // host: the combat view last sent
+    double combatResend;
+    // Joiner: the host's fight into this game's HUD.
+    void CombatArrived(string[] w)
+    {
+        if (!inWorld || w.Length < 3) return;
+        var v = new CombatView { Active = w[1] == "1", Current = int.Parse(w[2]) };
+        for (int i = 3; i + 2 < w.Length; i += 3)
+        {
+            var c = w[i] == myKey ? World.Player : Local(w[i]);
+            int ap, mp; int.TryParse(w[i + 1], out ap); int.TryParse(w[i + 2], out mp);
+            v.Fighters.Add(new CombatFighter { Who = c, ActionPoints = ap, MovementPoints = mp });
+        }
+        Simulation.ShowCombat(v);
+    }
     void LeftWorld()
     {
         bool hadWorld = inWorld || loading || receiving || World.Player != null && Simulation.IsMirror;
@@ -421,6 +436,20 @@ public sealed partial class Coop
     void LoadMirror()
     {
         UiEvents.MainMenuCreated.Add(this, menu => BackOnMainMenu());
+        // The fight as the host's HUD shows it (turn order, AP, MP, whose turn): to the joiners whenever it changes, so
+        // their HUD shows the game's own turn panel, AP bar and End Turn button.
+        GameEvents.Update.Add(this, dt =>
+        {
+            if (listener == null || !seats.Values.Any(x => x.InWorld && x.Peer != null)) { lastCombat = null; return; }
+            var v = Combat.View();
+            var words = new List<object> { "COMBAT", v.Active ? 1 : 0, v.Current };
+            foreach (var f in v.Fighters) { words.Add(KeyOf(f.Who)); words.Add(f.ActionPoints); words.Add(f.MovementPoints); }
+            var sign = string.Join(" ", words.Select(x => x.ToString()).ToArray());
+            combatResend -= dt;
+            if (sign == lastCombat && combatResend > 0) return;     // again every 2 s: a joiner who just arrived gets it too
+            lastCombat = sign; combatResend = 2;
+            foreach (var s in seats.Values.Where(x => x.InWorld && x.Peer != null)) s.Peer.Send(words.ToArray());
+        });
         // The combat feed (the log at the bottom left) as the host's: its lines go to the joiners in the world, whose
         // copy runs no fight of its own to make them.
         GameEvents.FeedLineAdded.Add(this, line =>
@@ -499,6 +528,7 @@ public sealed partial class Coop
                 }
                 case PlayerOrderKind.Use: if (o.TargetEntityId != null) host.Send("USE", o.TargetEntityId, o.X, o.Y); break;
                 case PlayerOrderKind.Travel: host.Send("EXIT", o.X, o.Y); break;
+                case PlayerOrderKind.EndTurn: host.Send("END"); break;
                 case PlayerOrderKind.Talk:
                 {
                     var key = o.Target == null ? o.TargetEntityId : spawned.Where(kv => kv.Value == o.Target).Select(kv => kv.Key).FirstOrDefault() ?? o.Target.EntityId;

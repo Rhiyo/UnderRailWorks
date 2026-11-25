@@ -102,15 +102,6 @@ public sealed partial class Coop
             else if (host != null && !host.Closed) ApplyColors();
         });
         GameEvents.ZoneLoaded.Add(this, (zone, first) => ApplyColors());
-        // A joiner's own End Turn key (the game's setting): their turn ends on the host (this game is a copy: its own
-        // combat doesn't run).
-        GameEvents.Update.Add(this, dt =>
-        {
-            var s = state;
-            if (listener != null || !playing || s == null || s.Length < 6 || s[4] != "1" || s[5] != s[1] || Input.Typing) return;
-            var key = Keybinds.GameKey("EndTurn");
-            if (key != Microsoft.Xna.Framework.Input.Keys.None && Input.Pressed(key)) Run("END");
-        });
     }
     string colorSign;
 }

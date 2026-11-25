@@ -38,7 +38,7 @@ public sealed class HudLayout : WorksMod
 
     internal static bool Changed;
     HudLayoutConfig config;
-    Hud.HudButton layoutButton;
+    Hud.ModButton layoutButton;
     Keybind arrangeKey;
     UiElement hud, overlay;
     UiPanel help;
@@ -216,7 +216,7 @@ public sealed class HudLayout : WorksMod
     // The Layout button in Works' strip of mod buttons, while the setting is on.
     void ShowButton()
     {
-        if (layoutButton == null) layoutButton = Hud.AddButton(this, "Layout", () => { if (overlay == null) Begin(); }, "Arrange the HUD");
+        if (layoutButton == null) layoutButton = Hud.AddModButton(this, "Layout", () => { if (overlay == null) Begin(); }, "Arrange the HUD");
         layoutButton.Visible = config.HudButton;
     }
 
