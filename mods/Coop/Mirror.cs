@@ -400,9 +400,9 @@ public sealed partial class Coop
     // Joiner: the host's fight into this game's HUD.
     void CombatArrived(string[] w)
     {
-        if (!inWorld || w.Length < 3) return;
-        var v = new CombatView { Active = w[1] == "1", Current = int.Parse(w[2]) };
-        for (int i = 3; i + 2 < w.Length; i += 3)
+        if (!inWorld || w.Length < 4) return;
+        var v = new CombatView { Active = w[1] == "1", Current = int.Parse(w[2]), Round = int.Parse(w[3]) };
+        for (int i = 4; i + 2 < w.Length; i += 3)
         {
             var c = w[i] == myKey ? World.Player : Local(w[i]);
             int ap, mp; int.TryParse(w[i + 1], out ap); int.TryParse(w[i + 2], out mp);
@@ -442,7 +442,7 @@ public sealed partial class Coop
         {
             if (listener == null || !seats.Values.Any(x => x.InWorld && x.Peer != null)) { lastCombat = null; return; }
             var v = Combat.View();
-            var words = new List<object> { "COMBAT", v.Active ? 1 : 0, v.Current };
+            var words = new List<object> { "COMBAT", v.Active ? 1 : 0, v.Current, v.Round };
             foreach (var f in v.Fighters) { words.Add(KeyOf(f.Who)); words.Add(f.ActionPoints); words.Add(f.MovementPoints); }
             var sign = string.Join(" ", words.Select(x => x.ToString()).ToArray());
             combatResend -= dt;

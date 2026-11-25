@@ -25,6 +25,7 @@ namespace UnderRailWorks
         public bool Active;
         public List<CombatFighter> Fighters = new List<CombatFighter>();     // in turn order
         public int Current = -1;                                             // index in Fighters of whose turn it is
+        public int Round;                                                    // Combat.Round
     }
 
     public static partial class Combat
@@ -36,6 +37,7 @@ namespace UnderRailWorks
             var m = Manager;
             if (m == null || !m.ahg()) return v;
             v.Active = true;
+            v.Round = Combat.Round;
             var cur = m.ahe();
             foreach (var e in CombatViewHooks.Order(m))
             {
@@ -115,6 +117,7 @@ namespace UnderRailWorks.Internal
                 foreach (var e in order) map[((amc)FighterField.GetValue(e)).aa()] = e;
                 var list = Order(m); list.Clear(); list.AddRange(order);
                 Index.SetValue(m, current);
+                Combat.Round = view.Round;     // a copy's manager never ends a round itself
                 Phase.SetValue(m, bh3.b);
                 Ended.SetValue(m, false);
                 State.SetValue(m, azz.b);
